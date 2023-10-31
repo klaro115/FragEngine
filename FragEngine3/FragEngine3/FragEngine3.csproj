@@ -1,0 +1,46 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net7.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+  </PropertyGroup>
+
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+  </PropertyGroup>
+  <ItemGroup>
+    <None Remove="Graphics\" />
+    <None Remove="Graphics\Config\" />
+    <None Remove="EngineCore\Config\" />
+    <None Remove="Graphics\Internal\" />
+    <None Remove="Graphics\MacOS\" />
+    <None Remove="Graphics\Resources\" />
+    <None Remove="Graphics\Data\" />
+    <None Remove="Graphics\Stack\" />
+    <None Remove="Graphics\Resources\Import\" />
+  </ItemGroup>
+  <ItemGroup>
+    <Folder Include="Graphics\" />
+    <Folder Include="Graphics\Config\" />
+    <Folder Include="EngineCore\Config\" />
+    <Folder Include="Graphics\Internal\" />
+    <Folder Include="Graphics\MacOS\" />
+    <Folder Include="Graphics\Resources\" />
+    <Folder Include="Graphics\Data\" />
+    <Folder Include="Graphics\Stack\" />
+    <Folder Include="Graphics\Resources\Import\" />
+  </ItemGroup>
+  <ItemGroup>
+    <PackageReference Include="Vk" Version="1.0.25" />
+    <PackageReference Include="Veldrid" Version="4.9.0" />
+    <PackageReference Include="Veldrid.OpenGLBindings" Version="4.9.0" />
+    <PackageReference Include="Veldrid.SDL2" Version="4.9.0" />
+    <PackageReference Include="Veldrid.MetalBindings" Version="4.9.0" />
+    <PackageReference Include="Veldrid.StartupUtilities" Version="4.9.0" />
+  </ItemGroup>
+</Project>
