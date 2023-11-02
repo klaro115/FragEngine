@@ -14,7 +14,7 @@ namespace FragEngine3.Graphics.Stack
 		#endregion
 		#region Fields
 
-		private readonly List<Component> renderers = new(256);
+		private readonly List<IRenderer> renderers = new(256);
 
 		#endregion
 		#region Properties
@@ -66,10 +66,22 @@ namespace FragEngine3.Graphics.Stack
 			throw new NotImplementedException();
 		}
 
-		public override bool RebuildLayer(Scene _scene, List<Component> _unassignedRenderers)
+		public override bool RebuildLayer(Scene _scene, List<GraphicsStackRendererHandle> _unassignedRenderers)
 		{
-			//TODO
-			throw new NotImplementedException();
+			renderers.Clear();
+
+			foreach (GraphicsStackRendererHandle handle in _unassignedRenderers)
+			{
+				if (handle.IsValid &&
+					!handle.isAssigned &&
+					handle.renderer.RenderMode == RenderMode.Opaque)
+				{
+					renderers.Add(handle.renderer);
+					handle.isAssigned = true;
+				}
+			}
+
+			return true;
 		}
 
 		public override bool DrawLayer(Scene _scene, CommandList _cmdList)

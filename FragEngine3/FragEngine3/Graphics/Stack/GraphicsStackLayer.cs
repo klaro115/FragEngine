@@ -3,6 +3,20 @@ using Veldrid;
 
 namespace FragEngine3.Graphics.Stack
 {
+	public sealed record GraphicsStackRendererHandle
+	{
+		public GraphicsStackRendererHandle(IRenderer _renderer)
+		{
+			renderer = _renderer;
+		}
+
+		public readonly IRenderer renderer;
+		public bool isAssigned = false;
+
+		public bool IsValid => renderer != null && !renderer.IsDisposed;
+		public bool IsVisible => IsValid && renderer.IsVisible;
+	}
+
 	public abstract class GraphicsStackLayer : IDisposable
 	{
 		#region Constructors
@@ -85,12 +99,12 @@ namespace FragEngine3.Graphics.Stack
 		/// by the renderers themselves should be sufficient to determine whether and how to bind them to this
 		/// layer.</param>
 		/// <param name="_unassignedRenderers">List of all remaining renderers in the scene that have not yet
-		/// been bound to or claimed by any of the preceding layers. This layer will remove any renderers it
-		/// claims from the list, which is then passed on to the next layer.<para/>
+		/// been bound to or claimed by any of the preceding layers. This layer will mark any renderers it claims
+		/// as assigned, subsequent layers may not claim assigned renderers.<para/>
 		/// NOTE: If no renderers are claimed by this layer, the flag '<see cref="IsEmpty"/>' should be set to
 		/// true, which will cause the layer to be skipped during rendering.</param>
 		/// <returns>True if the layer was rebuilt successfully, and is ready for operation, false otherwise.</returns>
-		public abstract bool RebuildLayer(Scene _scene, List<Component> _unassignedRenderers);
+		public abstract bool RebuildLayer(Scene _scene, List<GraphicsStackRendererHandle> _unassignedRenderers);
 
 		/// <summary>
 		/// Draw the layer's bound renderers by issuing draw calls for each.

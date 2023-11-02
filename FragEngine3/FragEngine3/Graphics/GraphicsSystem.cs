@@ -41,8 +41,8 @@ namespace FragEngine3.Graphics
 			if (graphicsCore == null || graphicsCore.IsDisposed) throw new NullReferenceException("Main graphics core may not be null!");
 			graphicsCore.Initialize();
 
-			// Initialize renderer:
-			renderer = new(this);
+			// Initialize draw call helper:
+			drawCallHelper = new(this);
 		}
 
 		#endregion
@@ -54,7 +54,7 @@ namespace FragEngine3.Graphics
 
 		public readonly GraphicsCore graphicsCore;
 		private readonly List<GraphicsCore> allGraphicsCores = new(1);
-		public readonly GraphicsRenderer renderer;
+		public readonly GraphicsDrawCallHelper drawCallHelper;
 
 		private DirtyFlags dirtyFlags = 0;
 

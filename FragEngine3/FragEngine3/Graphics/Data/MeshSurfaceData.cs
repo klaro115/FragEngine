@@ -14,8 +14,8 @@ namespace FragEngine3.Graphics.Data
 	{
 		#region Fields
 
-		public Mesh.BasicVertex[] verticesBasic = Array.Empty<Mesh.BasicVertex>();
-		public Mesh.ExtendedVertex[]? verticesExt = null;
+		public BasicVertex[] verticesBasic = Array.Empty<BasicVertex>();
+		public ExtendedVertex[]? verticesExt = null;
 
 		public ushort[]? indices16 = null;
 		public int[]? indices32 = null;
@@ -68,7 +68,7 @@ namespace FragEngine3.Graphics.Data
 		{
 			return new()
 			{
-				verticesBasic = verticesBasic != null ? (Mesh.BasicVertex[])verticesBasic.Clone() : Array.Empty<Mesh.BasicVertex>(),
+				verticesBasic = verticesBasic != null ? (BasicVertex[])verticesBasic.Clone() : Array.Empty<BasicVertex>(),
 				verticesExt = verticesExt,
 
 				indices16 = (ushort[]?)indices16?.Clone(),
@@ -90,7 +90,7 @@ namespace FragEngine3.Graphics.Data
 
 			if (verticesBasic == null || verticesBasic.Length != newVertexCount)
 			{
-				verticesBasic = new Mesh.BasicVertex[newVertexCount];
+				verticesBasic = new BasicVertex[newVertexCount];
 			}
 
 			for (int i = 0; i < newVertexCount; ++i)
@@ -119,7 +119,7 @@ namespace FragEngine3.Graphics.Data
 
 			if (verticesExt == null || verticesExt.Length != newVertexCount)
 			{
-				verticesExt = new Mesh.ExtendedVertex[newVertexCount];
+				verticesExt = new ExtendedVertex[newVertexCount];
 			}
 
 			for (int i = 0; i < newVertexCount; ++i)
@@ -257,8 +257,8 @@ namespace FragEngine3.Graphics.Data
 			{
 				for (int i = 0; i < verticesBasic.Length; ++i)
 				{
-					Mesh.BasicVertex vb = verticesBasic[i];
-					Mesh.ExtendedVertex ve = verticesExt![i];
+					BasicVertex vb = verticesBasic[i];
+					ExtendedVertex ve = verticesExt![i];
 
 					vb.position = _pose.TransformPoint(vb.position);
 					vb.normal = _pose.TransformDirection(vb.normal);
@@ -272,7 +272,7 @@ namespace FragEngine3.Graphics.Data
 			{
 				for (int i = 0; i < verticesBasic.Length; ++i)
 				{
-					Mesh.BasicVertex vb = verticesBasic[i];
+					BasicVertex vb = verticesBasic[i];
 
 					vb.position = _pose.TransformPoint(vb.position);
 					vb.normal = _pose.TransformDirection(vb.normal);
@@ -294,8 +294,8 @@ namespace FragEngine3.Graphics.Data
 			{
 				for (int i = 0; i < verticesBasic.Length; ++i)
 				{
-					Mesh.BasicVertex vb = verticesBasic[i];
-					Mesh.ExtendedVertex ve = verticesExt![i];
+					BasicVertex vb = verticesBasic[i];
+					ExtendedVertex ve = verticesExt![i];
 
 
 					vb.position = Vector3.Transform(vb.position, _mtxTransformation);
@@ -310,7 +310,7 @@ namespace FragEngine3.Graphics.Data
 			{
 				for (int i = 0; i < verticesBasic.Length; ++i)
 				{
-					Mesh.BasicVertex vb = verticesBasic[i];
+					BasicVertex vb = verticesBasic[i];
 
 					vb.position = Vector3.Transform(vb.position, _mtxTransformation);
 					vb.normal = Vector3.TransformNormal(vb.normal, _mtxTransformation);
@@ -353,7 +353,7 @@ namespace FragEngine3.Graphics.Data
 			int indexCount = IndexCount;
 
 			// Flip order of the 2nd and 3rd index of each triangle:
-			if (indices16 != null && indices16.Length != 0)
+			if (indices16 != null && indices16.Length >= 3)
 			{
 				for (int i = 0; i < indexCount; i += 3)
 				{
@@ -363,7 +363,7 @@ namespace FragEngine3.Graphics.Data
 					indices16[i + 2] = idx1;
 				}
 			}
-			else if (indices32 != null && indices32.Length != 0)
+			else if (indices32 != null && indices32.Length >= 3)
 			{
 				for (int i = 0; i < indexCount; i += 3)
 				{

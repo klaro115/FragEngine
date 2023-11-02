@@ -1,4 +1,5 @@
-﻿using Veldrid;
+﻿using FragEngine3.Graphics.Resources;
+using Veldrid;
 
 namespace FragEngine3.Graphics
 {
@@ -55,41 +56,34 @@ namespace FragEngine3.Graphics
 		};
 
 		/// <summary>
-		/// Base data for standard vertex layout, stored in primary vertex buffer (Slot 0).<para/>
-		/// [Pos, Norm, Tex] => 32 byte
-		/// </summary>
-		public static readonly VertexLayoutDescription SURFACE_VERTEX_LAYOUT_DESC_BASIC = new(
-			8 * sizeof(float),
-			new VertexElementDescription("Position", VertexElementSemantic.Position, VertexElementFormat.Float3, 0),
-			new VertexElementDescription("Normal", VertexElementSemantic.Normal, VertexElementFormat.Float3, 3 * sizeof(float)),
-			new VertexElementDescription("UV", VertexElementSemantic.TextureCoordinate, VertexElementFormat.Float2, 6 * sizeof(float)));
-
-		/// <summary>
-		/// Extended data for standard vertex layout, stored in a secondary vertex buffer (Slot 1).<para/>
-		/// [Tan, Tex2] => 20 byte
-		/// </summary>
-		public static readonly VertexLayoutDescription SURFACE_VERTEX_LAYOUT_DESC_EXT1 = new(
-			5 * sizeof(float),
-			new VertexElementDescription("Tangent", VertexElementSemantic.Normal, VertexElementFormat.Float3, 0),
-			new VertexElementDescription("UV2", VertexElementSemantic.TextureCoordinate, VertexElementFormat.Float2, 3 * sizeof(float)));
-
-		/// <summary>
 		/// Vertex layut description with basic static geometry data.<para/>
 		/// [Pos, Norm, Tex]
 		/// </summary>
 		public static readonly VertexLayoutDescription[] SURFACE_VERTEX_LAYOUT_BASIC = new VertexLayoutDescription[]
 		{
-			SURFACE_VERTEX_LAYOUT_DESC_BASIC,	// [Pos, Norm, Tex]
+			BasicVertex.vertexLayoutDesc,			// [Pos, Norm, Tex]
 		};
 
 		/// <summary>
 		/// Vertex layut description with full static geometry data.<para/>
 		/// [Pos, Norm, Tex] + [Tan, Tex2]
 		/// </summary>
-		public static readonly VertexLayoutDescription[] SURFACE_VERTEX_LAYOUT_FULL = new VertexLayoutDescription[]
+		public static readonly VertexLayoutDescription[] SURFACE_VERTEX_LAYOUT_EXTENDED = new VertexLayoutDescription[]
 		{
-			SURFACE_VERTEX_LAYOUT_DESC_BASIC,	// [Pos, Norm, Tex]
-			SURFACE_VERTEX_LAYOUT_DESC_EXT1,	// [Tan, Tex2]
+			BasicVertex.vertexLayoutDesc,			// [Pos, Norm, Tex]
+			ExtendedVertex.vertexLayoutDesc,		// [Tan, Tex2]
+		};
+
+		/// <summary>
+		/// Vertex layut description for characters with extended surface geometry data, blend shapes, and bone animations.<para/>
+		/// [Pos, Norm, Tex] + [Tan, Tex2] + [BlendIndices, BlendWeight] + [BoneIndices, BoneWeights]
+		/// </summary>
+		public static readonly VertexLayoutDescription[] SURFACE_VERTEX_LAYOUT_CHARACTER = new VertexLayoutDescription[]
+		{
+			BasicVertex.vertexLayoutDesc,			// [Pos, Norm, Tex]
+			ExtendedVertex.vertexLayoutDesc,		// [Tan, Tex2]
+			IndexedWeightedVertex.vertexLayoutDesc,	// [BlendIndices, BlendWeight]
+			IndexedWeightedVertex.vertexLayoutDesc,	// [BoneIndices, BoneWeights]
 		};
 
 		#endregion

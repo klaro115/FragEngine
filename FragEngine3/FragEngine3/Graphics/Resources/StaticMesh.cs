@@ -51,7 +51,7 @@ namespace FragEngine3.Graphics.Resources
 		public override VertexLayoutDescription[] GetVertexLayoutDesc()
 		{
 			return useFullSurfaceDef
-				? GraphicsContants.SURFACE_VERTEX_LAYOUT_FULL
+				? GraphicsContants.SURFACE_VERTEX_LAYOUT_EXTENDED
 				: GraphicsContants.SURFACE_VERTEX_LAYOUT_BASIC;
 		}
 

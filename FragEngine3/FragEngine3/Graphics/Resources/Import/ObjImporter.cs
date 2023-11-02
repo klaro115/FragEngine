@@ -102,7 +102,7 @@ namespace FragEngine3.Graphics.Resources.Import
 
 
 			// Generate badic vertex data only for referenced vertices, and remap duplicate vertex indices:
-			Stack<Mesh.BasicVertex> vertices = new(positions.Count);	// Stack of all unique verts, in reverse order of use.
+			Stack<BasicVertex> vertices = new(positions.Count);	// Stack of all unique verts, in reverse order of use.
 			int[] mappedIndices = new int[vertexIndices.Count];			// for each triangle idx, contains idx of first occurancee of duplicate vert.
 			int[] uniqueVertexIndices = new int[vertexIndices.Count];	// for unique verts, contains idx of vertex on stack.
 
@@ -128,7 +128,7 @@ namespace FragEngine3.Graphics.Resources.Import
 				if (isUniqueVertex)
 				{
 					uniqueVertexIndices[i] = vertices.Count;
-					vertices.Push(new Mesh.BasicVertex()
+					vertices.Push(new BasicVertex()
 					{
 						position = viA.position >= 0 && viA.position < positions.Count ? positions[viA.position] : Vector3.Zero,
 						normal   = viA.normal >= 0 && viA.normal < normals.Count ? normals[viA.normal] : Vector3.UnitY,

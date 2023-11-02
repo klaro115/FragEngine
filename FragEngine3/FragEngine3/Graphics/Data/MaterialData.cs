@@ -1,4 +1,5 @@
-﻿using Veldrid;
+﻿using FragEngine3.Graphics.Resources;
+using Veldrid;
 
 namespace FragEngine3.Graphics.Data
 {
@@ -35,6 +36,8 @@ namespace FragEngine3.Graphics.Data
 		[Serializable]
 		public sealed class ShaderData
 		{
+			public bool IsSurfaceMaterial { get; set; } = true;
+
 			public string Compute { get; set; } = string.Empty;
 
 			public string Vertex { get; set; } = "DefaultSurface_VS";
@@ -58,6 +61,8 @@ namespace FragEngine3.Graphics.Data
 		public StateData States { get; set; } = new();
 		public ShaderData Shaders { get; set; } = new();
 		public ResourceData Resources { get; set; } = new();
+
+		public MeshVertexDataFlags[] PreloadVariants { get; set; } = { MeshVertexDataFlags.BasicSurfaceData };
 
 		#endregion
 		#region Methods
@@ -85,7 +90,7 @@ namespace FragEngine3.Graphics.Data
 			}
 
 			// For non-compute shaders:
-			if (string.IsNullOrEmpty(Shaders.Compute))
+			if (Shaders.IsSurfaceMaterial || string.IsNullOrEmpty(Shaders.Compute))
 			{
 				// At least vertex and pixel shaders must be assigned:
 				if (string.IsNullOrEmpty(Shaders.Vertex) ||
@@ -98,6 +103,15 @@ namespace FragEngine3.Graphics.Data
 					(!string.IsNullOrEmpty(Shaders.TesselationCtrl) && string.IsNullOrEmpty(Shaders.TesselationEval)))
 				{
 					return false;
+				}
+
+				// For surface materials, make sure basic vertex data is a requirement for all pre-loaded variants:
+				if (Shaders.IsSurfaceMaterial && PreloadVariants != null)
+				{
+					foreach (MeshVertexDataFlags variantFlags in PreloadVariants)
+					{
+						if (!variantFlags.HasFlag(MeshVertexDataFlags.BasicSurfaceData)) return false;
+					}
 				}
 			}
 

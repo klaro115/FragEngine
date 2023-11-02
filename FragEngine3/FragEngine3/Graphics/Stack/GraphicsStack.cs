@@ -48,7 +48,7 @@ namespace FragEngine3.Graphics.Stack
 		private Scene? lastDrawnScene = null;
 		private int lastDrawnSceneState = -1;
 
-		private readonly List<Component> allRenderers = new(64);
+		private readonly List<GraphicsStackRendererHandle> allRenderers = new(64);
 
 		#endregion
 		#region Properties

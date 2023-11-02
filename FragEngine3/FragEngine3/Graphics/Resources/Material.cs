@@ -7,6 +7,8 @@ namespace FragEngine3.Graphics.Resources
 {
 	public sealed class Material : Resource
 	{
+		//TODO: Rewrite this to use variants, one for each vertex data configuration. Define basic+ext immediately, blend shapes and animations on demand only.
+
 		#region Types
 
 		[Flags]
@@ -170,8 +172,10 @@ namespace FragEngine3.Graphics.Resources
 		/// the previous pipeline should still be valid and is returned instead.
 		/// </summary>
 		/// <param name="_outPipeline">Outputs the graphics pipeline encoding how to render stuff with this material.</param>
+		/// <param name="_vertexDataFlags">Flags for which vertex data must be bound to the pipeline.<para/>
+		/// NOTE: At least '<see cref="MeshVertexDataFlags.BasicSurfaceData"/>' must be set, all others are optional.</param>
 		/// <returns>True if the pipeline could be retrieved or updated successfully, false otherwise.</returns>
-		public bool GetOrUpdatePipeline(out Pipeline _outPipeline)
+		public bool GetOrUpdatePipeline(out Pipeline _outPipeline, MeshVertexDataFlags _vertexDataFlags = MeshVertexDataFlags.BasicSurfaceData)
 		{
 			if (IsDirty || pipeline == null)
 			{

@@ -48,7 +48,7 @@ namespace FragEngine3.Graphics.Internal
 		/// surface geometry data will have been assigned and used.</param>
 		/// <param name="_indices">Triangle indices, with each set of three indices referencing the three vertices
 		/// that make up one triangle face. Length will be a multiple of 3.</param>
-		public delegate void CallbackReceiveDownloadedData(Mesh _mesh, Mesh.BasicVertex[] _basicData, Mesh.ExtendedVertex[]? _extendedData, int[] _indices);
+		public delegate void CallbackReceiveDownloadedData(Mesh _mesh, BasicVertex[] _basicData, ExtendedVertex[]? _extendedData, int[] _indices);
 
 		#endregion
 		#region Constructors
@@ -86,8 +86,8 @@ namespace FragEngine3.Graphics.Internal
 
 		public DeviceBuffer[]? stagingBuffers = null;
 
-		public Mesh.BasicVertex[]? dstBasicDataBuffer = null;
-		public Mesh.ExtendedVertex[]? dstExtendedDataBuffer = null;
+		public BasicVertex[]? dstBasicDataBuffer = null;
+		public ExtendedVertex[]? dstExtendedDataBuffer = null;
 		public int[]? dstIndexBuffer = null;
 
 		#endregion

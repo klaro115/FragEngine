@@ -1,5 +1,4 @@
 ﻿using System.Numerics;
-using System.Runtime.InteropServices;
 using FragEngine3.Graphics.Internal;
 using FragEngine3.Resources;
 using Veldrid;
@@ -8,34 +7,6 @@ namespace FragEngine3.Graphics.Resources
 {
 	public abstract class Mesh : Resource
 	{
-		#region Types
-
-		/// <summary>
-		/// Vertex data definition for basic surface geometry. This is what one element in the primary vertex buffer looks like.
-		/// </summary>
-		[StructLayout(LayoutKind.Sequential, Pack = 4, Size = (int)byteSize)]
-		public struct BasicVertex
-		{
-			public Vector3 position;
-			public Vector3 normal;
-			public Vector2 uv;
-
-			public const uint byteSize = 8 * sizeof(float);
-		}
-
-		/// <summary>
-		/// Vertex data definition for extended surface geometry. This is what one element in a secondary vertex buffer may look like.
-		/// </summary>
-		[StructLayout(LayoutKind.Sequential, Pack = 4, Size = (int)byteSize)]
-		public struct ExtendedVertex
-		{
-			public Vector3 tangent;
-			public Vector2 uv2;
-
-			public const uint byteSize = 5 * sizeof(float);
-		}
-
-		#endregion
 		#region Constructors
 
 		protected Mesh(ResourceHandle _handle, GraphicsCore _core, bool _useFullSurfaceDef) : base(_handle)
