@@ -27,6 +27,7 @@ namespace FragEngine3.EngineCore.Test
 
 		protected override bool BeginLoadingState()
 		{
+			// Create an empty scene:
 			Scene scene = new(Engine, "Test")
 			{
 				UpdatedInEngineStates = EngineState.Running,
@@ -40,10 +41,8 @@ namespace FragEngine3.EngineCore.Test
 
 		protected override bool EndLoadingState()
 		{
-			GraphicsStack stack = new(Engine.GraphicsSystem.graphicsCore)
-			{
-				OutputToMainSwapchain = true,
-			};
+			// Create scene's graphics stack:
+			GraphicsStack stack = new(Engine.GraphicsSystem.graphicsCore);
 
 			//TODO: Add layers to graphics stack.
 
@@ -66,7 +65,12 @@ namespace FragEngine3.EngineCore.Test
 
 		protected override bool BeginRunningState()
 		{
-			if (Engine.ResourceManager.GetResource("Rabbit.obj", out ResourceHandle handle))
+			// Import 3D models:
+			if (Engine.ResourceManager.GetResource("Cube.obj", out ResourceHandle handle))
+			{
+				handle.Load(true);
+			}
+			if (Engine.ResourceManager.GetResource("Rabbit.obj", out handle))
 			{
 				handle.Load(true);
 			}

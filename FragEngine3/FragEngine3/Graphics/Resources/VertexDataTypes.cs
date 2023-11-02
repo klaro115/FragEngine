@@ -178,7 +178,7 @@ namespace FragEngine3.Graphics.Resources
 		/// followed by a contiguous vertex buffer containing all vertex offsets for each of the
 		/// indexed blend shapes.
 		/// </summary>
-		BlendShapes = 4,
+		BlendShapes			= 4,
 		/// <summary>
 		/// Bone animation vertex data, includes bone indices and weights for each vertex.<para/>
 		/// NOTE: If raised, the next vertex buffer after blend shape data buffers must contain
@@ -186,7 +186,9 @@ namespace FragEngine3.Graphics.Resources
 		/// followed by a contiguous vertex buffer containing all bone matrices describing bone
 		/// transformations in model space.
 		/// </summary>
-		Aninations = 8,
+		Animations			= 8,
 		//...
+
+		ALL					= BasicSurfaceData | ExtendedSurfaceData | BlendShapes | Animations
 	}
 }

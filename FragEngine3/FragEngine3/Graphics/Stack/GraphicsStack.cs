@@ -55,11 +55,6 @@ namespace FragEngine3.Graphics.Stack
 
 		public bool IsDisposed { get; private set; } = false;
 
-		/// <summary>
-		/// Gets or sets whether to draw the final layers' output directly to main swapchain's framebuffer.
-		/// </summary>
-		public bool OutputToMainSwapchain { get; set; } = true;
-
 		#endregion
 		#region Methods
 
@@ -189,7 +184,7 @@ namespace FragEngine3.Graphics.Stack
 			{
 				// Check if this and all following layers are single-threaded only and non-parallelizable:
 				bool parallelizeWithNext = i < layers.Count - 1 && parallelizationStartIndices[i + 1] > i;
-				bool isFinalSingleThreadStretch = OutputToMainSwapchain && !parallelizeWithNext;
+				bool isFinalSingleThreadStretch = !parallelizeWithNext;
 				if (isFinalSingleThreadStretch)
 				{
 					for (int j = i; j < layers.Count; ++j)

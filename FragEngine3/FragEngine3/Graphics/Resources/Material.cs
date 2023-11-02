@@ -7,21 +7,19 @@ namespace FragEngine3.Graphics.Resources
 {
 	public sealed class Material : Resource
 	{
-		//TODO: Rewrite this to use variants, one for each vertex data configuration. Define basic+ext immediately, blend shapes and animations on demand only.
-
 		#region Types
 
 		[Flags]
-		private enum DirtyFlags : byte
+		public enum DirtyFlags : byte
 		{
-			None				= 0x00,
+			None = 0x00,
 
-			DepthStencil		= 1,
-			Rasterizer			= 2,
-			ShaderSet			= 4,
-			ResourceLayouts		= 8,
+			DepthStencil = 1,
+			Rasterizer = 2,
+			ShaderSet = 4,
+			ResourceLayouts = 8,
 
-			All					= DepthStencil | Rasterizer | ShaderSet | ResourceLayouts
+			All = DepthStencil | Rasterizer | ShaderSet | ResourceLayouts
 		}
 
 		public struct StencilBehaviourDesc
@@ -47,17 +45,17 @@ namespace FragEngine3.Graphics.Resources
 
 		public readonly GraphicsCore graphicsCore;
 
-		private Pipeline? pipeline = null;
+		private MaterialVariant?[] variants = Array.Empty<MaterialVariant?>();
 
 		private ResourceHandle vertexShader = null!;
 		private ResourceHandle? geometryShader = null;
 		private ResourceHandle? tesselationShader = null;
 		private ResourceHandle pixelShader = null!;
 
-		private GraphicsPipelineDescription pipelineDesc;
-		private ResourceLayoutDescription[] resLayoutDescs = Array.Empty<ResourceLayoutDescription>();
-		private ResourceLayout[] resLayouts = Array.Empty<ResourceLayout>();
 		private Shader[] shaders = Array.Empty<Shader>();
+
+		private ResourceLayout[] resLayouts = Array.Empty<ResourceLayout>();
+		private ResourceLayoutDescription[] resLayoutDescs = Array.Empty<ResourceLayoutDescription>();
 
 		private bool enableDepthRead = true;
 		private bool enableDepthWrite = true;
@@ -66,8 +64,6 @@ namespace FragEngine3.Graphics.Resources
 		private bool enableCulling = true;
 
 		private DirtyFlags dirtyFlags = DirtyFlags.None;
-
-		private readonly object lockObj = new();
 
 		#endregion
 		#region Properties
@@ -144,15 +140,23 @@ namespace FragEngine3.Graphics.Resources
 				//TODO: Drop bound resources.
 			}
 
+			if (variants != null)
+			{
+				foreach (MaterialVariant? variant in variants)
+				{
+					variant?.Dispose();
+				}
+			}
 			foreach (ResourceLayout layout in resLayouts)
 			{
-				if (!layout.IsDisposed) layout.Dispose();
+				if (layout != null && !layout.IsDisposed) layout.Dispose();
 			}
 
 			if (_disposing)
 			{
-				resLayouts = Array.Empty<ResourceLayout>();
+				variants = Array.Empty<MaterialVariant>();
 				shaders = Array.Empty<Shader>();
+				resLayouts = Array.Empty<ResourceLayout>();
 			}
 		}
 
@@ -177,76 +181,45 @@ namespace FragEngine3.Graphics.Resources
 		/// <returns>True if the pipeline could be retrieved or updated successfully, false otherwise.</returns>
 		public bool GetOrUpdatePipeline(out Pipeline _outPipeline, MeshVertexDataFlags _vertexDataFlags = MeshVertexDataFlags.BasicSurfaceData)
 		{
-			if (IsDirty || pipeline == null)
+			if (!_vertexDataFlags.HasFlag(MeshVertexDataFlags.BasicSurfaceData))
 			{
-				try
-				{
-					lock (lockObj)
-					{
-						// Purge any outdated previously created pipelines:
-						if (pipeline != null && !pipeline.IsDisposed)
-						{
-							pipeline.Dispose();
-						}
+				Console.WriteLine($"Error! Material's vertex data flags must include at least '{MeshVertexDataFlags.BasicSurfaceData}'!");
+				_outPipeline = null!;
+				return false;
+			}
 
-						// Update outputs:
-						OutputDescription outputs = new();
+			// Variants are stored in an array, with as many elements as there are vertex flag permutations:
+			if (variants == null || variants.Length < (int)_vertexDataFlags)
+			{
+				MaterialVariant?[]? oldVariants = variants;
+				variants = new MaterialVariant?[(int)MeshVertexDataFlags.ALL];
+				oldVariants?.CopyTo(variants, 0);
+			}
 
-						// Recreate full description:
-						if (dirtyFlags.HasFlag(DirtyFlags.All))
-						{
-							pipelineDesc = new(
-								BlendStateDescription.SingleOverrideBlend,
-								GetDepthStencilDesc(),
-								GetRasterizerStateDesc(),
-								PrimitiveTopology.TriangleList,
-								GetShaderSet(),
-								resLayouts,
-								outputs,
-								ResourceBindingModel.Improved);
-						}
-						// Update current description:
-						else
-						{
-							if (dirtyFlags.HasFlag(DirtyFlags.DepthStencil))
-							{
-								pipelineDesc.DepthStencilState = GetDepthStencilDesc();
-							}
-							if (dirtyFlags.HasFlag(DirtyFlags.Rasterizer))
-							{
-								pipelineDesc.RasterizerState = GetRasterizerStateDesc();
-							}
-							if (dirtyFlags.HasFlag(DirtyFlags.ShaderSet))
-							{
-								pipelineDesc.ShaderSet = GetShaderSet();
-							}
-							if (dirtyFlags.HasFlag(DirtyFlags.ResourceLayouts))
-							{
-								pipelineDesc.ResourceLayouts = GetResourceLayouts();
-							}
-						}
+			// Get or create, then update pipeline for the requested variant:
+			int variantIdx = (int)_vertexDataFlags - 1;
+			MaterialVariant? variant = variants[variantIdx];
 
-						// create new pipeline resource:
-						pipeline = graphicsCore.MainFactory.CreateGraphicsPipeline(ref pipelineDesc);
-					}
-				}
-				catch (Exception ex)
-				{
-					Console.WriteLine($"Error! Failed to create graphics pipeline for material '{resourceKey}'!\nException type: '{ex.GetType()}'\nException message: '{ex.Message}'");
-					_outPipeline = null!;
-					return false;
-				}
+			if (variant == null || variant.IsDisposed)
+			{
+				variant = new MaterialVariant(this, _vertexDataFlags);
+				variants[variantIdx] = variant;
+			}
+			else if (IsDirty && !variant.UpdatePipeline(dirtyFlags))
+			{
+				_outPipeline = null!;
+				return false;
 			}
 
 			// Reset all dirty flags:
 			dirtyFlags = DirtyFlags.None;
 
 			// Output up-to-date pipeline and return success:
-			_outPipeline = pipeline;
-			return true;
+			_outPipeline = variant.Pipeline;
+			return !variant.IsDisposed && !_outPipeline.IsDisposed;
 		}
 
-		private DepthStencilStateDescription GetDepthStencilDesc()
+		internal DepthStencilStateDescription GetDepthStencilDesc()
 		{
 			if (enableStencil)
 			{
@@ -270,14 +243,14 @@ namespace FragEngine3.Graphics.Resources
 			}
 		}
 
-		private RasterizerStateDescription GetRasterizerStateDesc()
+		internal RasterizerStateDescription GetRasterizerStateDesc()
 		{
 			return enableCulling
 				? RasterizerStateDescription.Default
 				: RasterizerStateDescription.CullNone;
 		}
 
-		private ShaderSetDescription GetShaderSet()
+		internal ShaderSetDescription GetShaderSet(in VertexLayoutDescription[] vertexLayoutDescs)
 		{
 			// Determine the number of (supported) shader stages:
 			bool hasGeometry = geometryShader != null && graphicsCore.GetCapabilities().geometryShaders;
@@ -303,7 +276,7 @@ namespace FragEngine3.Graphics.Resources
 
 			// Assemble shader set description:
 			return new ShaderSetDescription(
-				GraphicsContants.SURFACE_VERTEX_LAYOUT_BASIC,
+				vertexLayoutDescs,
 				shaders);
 
 
@@ -318,7 +291,7 @@ namespace FragEngine3.Graphics.Resources
 			}
 		}
 
-		private ResourceLayout[] GetResourceLayouts()
+		internal ResourceLayout[] GetResourceLayouts()
 		{
 			const int resLayoutCount = 1;
 
@@ -337,7 +310,7 @@ namespace FragEngine3.Graphics.Resources
 				{
 					foreach (ResourceLayout resLayout in resLayouts)
 					{
-						resLayout.Dispose();
+						resLayout?.Dispose();
 					}
 				}
 
@@ -347,7 +320,6 @@ namespace FragEngine3.Graphics.Resources
 			{
 				resLayouts[i] = graphicsCore.MainFactory.CreateResourceLayout(ref resLayoutDescs[i]);
 			}
-
 			return resLayouts;
 		}
 
