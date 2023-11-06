@@ -47,6 +47,18 @@ namespace FragEngine3.Graphics
 			[ShaderStages.Fragment] = SHADER_DEFAULT_ENTRYPOINT_PIXEL,
 		};
 
+		public const string SHADER_VARIANT_ENTRYPOINT_SUFFIX_EXTENDED = "Ext";
+		public const string SHADER_VARIANT_ENTRYPOINT_SUFFIX_BLENDSHAPES = "Blend";
+		public const string SHADER_VARIANT_ENTRYPOINT_SUFFIX_ANIMATIONS = "Anim";
+
+		public static readonly Dictionary<MeshVertexDataFlags, string> shaderVariantEntryPointSuffixes = new()
+		{
+			[MeshVertexDataFlags.ExtendedSurfaceData] = SHADER_VARIANT_ENTRYPOINT_SUFFIX_EXTENDED,
+			[MeshVertexDataFlags.BlendShapes] = SHADER_VARIANT_ENTRYPOINT_SUFFIX_BLENDSHAPES,
+			[MeshVertexDataFlags.Animations] = SHADER_VARIANT_ENTRYPOINT_SUFFIX_ANIMATIONS,
+			//...
+		};
+
 		#endregion
 		#region Constants Pipelines
 

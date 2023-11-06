@@ -1,4 +1,5 @@
 ﻿using FragEngine3.Resources;
+using FragEngine3.Utility;
 using Veldrid;
 
 namespace FragEngine3.Graphics.Resources
@@ -13,13 +14,20 @@ namespace FragEngine3.Graphics.Resources
 		}
 
 		#endregion
+		#region Fields
+
+		private MeshVertexDataFlags[] vertexVariants = { MeshVertexDataFlags.BasicSurfaceData };
+		private Shader?[] shaderVariants = Array.Empty<Shader?>();
+
+		#endregion
 		#region Properties
 
 		public readonly GraphicsCore graphicsCore;
 
-		public Shader Shader { get; private set; } = null!;
 		public ShaderStages Stage { get; private set; } = ShaderStages.None;
 
+		public int VertexVariantCount => vertexVariants != null ? vertexVariants.Length : 0;
+		
 		public override ResourceType ResourceType => ResourceType.Shader;
 
 		#endregion
@@ -29,12 +37,73 @@ namespace FragEngine3.Graphics.Resources
 		{
 			IsDisposed = false;
 
-			Shader?.Dispose();
+			if (shaderVariants != null)
+			{
+				for (int i = 0; i < shaderVariants.Length; ++i)
+				{
+					shaderVariants[i]?.Dispose();
+					shaderVariants[i] = null;
+				}
+			}
 			if (_disposing)
 			{
-				Shader = null!;
+				vertexVariants = Array.Empty<MeshVertexDataFlags>();
+				shaderVariants = Array.Empty<Shader>();
 				Stage = ShaderStages.None;
 			}
+		}
+
+		/// <summary>
+		/// Check whether a variant of the shader exists for a specific vertex definition.
+		/// </summary>
+		/// <param name="_variantFlags">Flags describing the vertex definitions of a mesh.<para/>
+		/// NOTE: At least '<see cref="MeshVertexDataFlags.BasicSurfaceData"/>' must be raised for any surface shader.</param>
+		/// <returns>True if this shader resource has a program for the given variant, false otherwise.</returns>
+		public bool HasVariant(MeshVertexDataFlags _variantFlags)
+		{
+			for (int i = 0; i < vertexVariants.Length; ++i)
+			{
+				if (vertexVariants[i].HasFlag(_variantFlags))
+				{
+					return true;
+				}
+			}
+			return false;
+		}
+
+		/// <summary>
+		/// Gets the vertex definition flags for a specific variant that is supported by this shader's programs.
+		/// </summary>
+		/// <param name="_variantIndex">Index of the variant in question. Must be between 0 and '<see cref="VertexVariantCount"/>'.</param>
+		/// <param name="_outVariantFlags">Outputs the mesh vertex definition flags for this variant.</param>
+		/// <returns>True if the variant index and flags were valid, false otherwise.</returns>
+		public bool GetVariantVertexDataFlags(int _variantIndex, out MeshVertexDataFlags _outVariantFlags)
+		{
+			if (_variantIndex >= 0 && _variantIndex < VertexVariantCount)
+			{
+				_outVariantFlags = vertexVariants[_variantIndex];
+				return _outVariantFlags.HasFlag(MeshVertexDataFlags.BasicSurfaceData);
+			}
+			_outVariantFlags = 0;
+			return false;
+		}
+
+		/// <summary>
+		/// Get the shader program corresponding to a specific vertex definition.
+		/// </summary>
+		/// <param name="_variantFlags">Flags describing the vertex definitions of a mesh.<para/>
+		/// <param name="_outShader">Outputs the corresponding shader program, or null, if no such variant exists.</param>
+		/// <returns>True if the shader variant exists, false otherwise.</returns>
+		public bool GetShaderProgram(MeshVertexDataFlags _variantFlags, out Shader? _outShader)
+		{
+			int variantIdx = (int)_variantFlags - 1;
+			if (variantIdx >= 0 && variantIdx < shaderVariants.Length)
+			{
+				_outShader = shaderVariants[variantIdx];
+				return _outShader != null;
+			}
+			_outShader = null;
+			return false;
 		}
 
 		public override IEnumerator<ResourceHandle> GetResourceDependencies()
@@ -147,13 +216,34 @@ namespace FragEngine3.Graphics.Resources
 				return false;
 			}
 
+			// Find all variant entry points:
+			List<MeshVertexDataFlags> variantEntryPoints = new((int)MeshVertexDataFlags.ALL);
+			try
+			{
+				CharEnumerationTools.CharIteratorState state = new();
+				IEnumerator<char> e = CharEnumerationTools.ReadUtf16FromUtf8Bytes(bytes, state, bytes.Length);
+
+				// Loop over all entry points we find:
+				int utf8Idx;
+				while ((utf8Idx = CharEnumerationTools.FindStringInUtf16Enumerator(e, state, _entryPoint)) >= 0)
+				{
+					
+				}
+			}
+			catch (Exception ex)
+			{
+				Console.WriteLine($"Error! Failed to read variant entry points for shader '{_handle.Key}' ({_stage})!\nException type: '{ex.GetType()}'\nException message: '{ex.Message}'");
+				_outShaderRes = null;
+				return false;
+			}
+
 			// Try compiling shader:
 			Shader shader;
 			try
 			{
 				ShaderDescription shaderDesc = new(_stage, bytes, _entryPoint);
 
-				shader = _graphicsCore.MainFactory.CreateShader(shaderDesc);
+				shader = _graphicsCore.MainFactory.CreateShader(ref shaderDesc);
 			}
 			catch (Exception ex)
 			{
@@ -165,7 +255,7 @@ namespace FragEngine3.Graphics.Resources
 			// Output finished shader resource:
 			_outShaderRes = new(_handle, _graphicsCore)
 			{
-				Shader = shader,
+				shaderVariants = shaderVariants,
 				Stage = _stage,
 			};
 			return _outShaderRes.IsLoaded;

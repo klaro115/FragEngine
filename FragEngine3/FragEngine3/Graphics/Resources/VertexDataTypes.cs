@@ -157,7 +157,7 @@ namespace FragEngine3.Graphics.Resources
 	/// Flags describing which vertex data is present or must be present for a mesh.
 	/// </summary>
 	[Flags]
-	public enum MeshVertexDataFlags
+	public enum MeshVertexDataFlags : byte
 	{
 		/// <summary>
 		/// Basic vertex data, includes position, normals, and texture coordinates.<para/>

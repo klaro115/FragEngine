@@ -1,4 +1,5 @@
-﻿using Veldrid;
+﻿using FragEngine3.Resources;
+using Veldrid;
 
 namespace FragEngine3.Graphics.Resources
 {
@@ -25,6 +26,7 @@ namespace FragEngine3.Graphics.Resources
 		public readonly MeshVertexDataFlags vertexDataFlags;
 		private readonly VertexLayoutDescription[] vertexLayoutDescs;
 
+		private Shader[] shaders = Array.Empty<Shader>();
 		private Pipeline pipeline = null!;
 
 		private GraphicsPipelineDescription pipelineDesc;
@@ -52,6 +54,11 @@ namespace FragEngine3.Graphics.Resources
 			IsDisposed = true;
 
 			pipeline?.Dispose();
+
+			if (_disposing)
+			{
+				shaders = Array.Empty<Shader>();
+			}
 		}
 
 		public bool UpdatePipeline(Material.DirtyFlags _dirtyFlags)
@@ -88,7 +95,7 @@ namespace FragEngine3.Graphics.Resources
 							material.GetDepthStencilDesc(),
 							material.GetRasterizerStateDesc(),
 							PrimitiveTopology.TriangleList,
-							material.GetShaderSet(in vertexLayoutDescs),
+							GetShaderSet(in vertexLayoutDescs, vertexDataFlags),
 							material.GetResourceLayouts(),
 							outputs,
 							ResourceBindingModel.Improved);
@@ -104,9 +111,9 @@ namespace FragEngine3.Graphics.Resources
 						{
 							pipelineDesc.RasterizerState = material.GetRasterizerStateDesc();
 						}
-						if (_dirtyFlags.HasFlag(Material.DirtyFlags.ShaderSet))
+						if (_dirtyFlags.HasFlag(Material.DirtyFlags.ShaderSet) || shaders == null || shaders.Length == 0)
 						{
-							pipelineDesc.ShaderSet = material.GetShaderSet(in vertexLayoutDescs);
+							pipelineDesc.ShaderSet = GetShaderSet(in vertexLayoutDescs, vertexDataFlags);
 						}
 						if (_dirtyFlags.HasFlag(Material.DirtyFlags.ResourceLayouts))
 						{
@@ -135,25 +142,68 @@ namespace FragEngine3.Graphics.Resources
 			if (vertexDataFlags.HasFlag(MeshVertexDataFlags.BlendShapes)) resLayoutCount++;
 			if (vertexDataFlags.HasFlag(MeshVertexDataFlags.Animations)) resLayoutCount++;
 
-			VertexLayoutDescription[] vertexLayoutDescs = new VertexLayoutDescription[resLayoutCount];
+			VertexLayoutDescription[] newVertexLayoutDescs = new VertexLayoutDescription[resLayoutCount];
 
 			// Assemble descriptions:
 			int i = 0;
-			vertexLayoutDescs[i++] = BasicVertex.vertexLayoutDesc;
+			newVertexLayoutDescs[i++] = BasicVertex.vertexLayoutDesc;
 			if (vertexDataFlags.HasFlag(MeshVertexDataFlags.ExtendedSurfaceData))
 			{
-				vertexLayoutDescs[i++] = ExtendedVertex.vertexLayoutDesc;
+				newVertexLayoutDescs[i++] = ExtendedVertex.vertexLayoutDesc;
 			}
 			if (vertexDataFlags.HasFlag(MeshVertexDataFlags.BlendShapes))
 			{
-				vertexLayoutDescs[i++] = IndexedWeightedVertex.vertexLayoutDesc;
+				newVertexLayoutDescs[i++] = IndexedWeightedVertex.vertexLayoutDesc;
 			}
 			if (vertexDataFlags.HasFlag(MeshVertexDataFlags.Animations))
 			{
-				vertexLayoutDescs[i++] = IndexedWeightedVertex.vertexLayoutDesc;
+				newVertexLayoutDescs[i++] = IndexedWeightedVertex.vertexLayoutDesc;
 			}
 
-			return vertexLayoutDescs;
+			return newVertexLayoutDescs;
+		}
+
+		private ShaderSetDescription GetShaderSet(in VertexLayoutDescription[] vertexLayoutDescs, MeshVertexDataFlags _variantFlags)
+		{
+			// Determine the number of (supported) shader stages:
+			bool hasGeometry = material.GeometryShader != null && material.graphicsCore.GetCapabilities().geometryShaders;
+			bool hasTesselation = material.TesselationShader != null && material.graphicsCore.GetCapabilities().tesselationShaders;
+
+			int shaderCount = 2;
+			if (hasGeometry) shaderCount++;
+			if (hasTesselation) shaderCount++;
+
+			// Populate shader stages:
+			int i = 0;
+			shaders = new Shader[shaderCount];
+			shaders[i++] = GetShader(material.VertexShader);
+			if (hasGeometry)
+			{
+				shaders[i++] = GetShader(material.GeometryShader!);
+			}
+			if (hasTesselation)
+			{
+				shaders[i++] = GetShader(material.TesselationShader!);
+			}
+			shaders[i++] = GetShader(material.PixelShader);
+
+			// Assemble shader set description:
+			return new ShaderSetDescription(
+				vertexLayoutDescs,
+				shaders);
+
+
+			// Local helper method for loading shader programs from resource handle:
+			Shader GetShader(ResourceHandle _handle)
+			{
+				if (_handle != null &&
+					_handle.GetResource(true, true) is ShaderResource res &&
+					res.GetShaderProgram(_variantFlags, out Shader? shader))
+				{
+					return shader!;
+				}
+				return null!;
+			}
 		}
 
 		#endregion

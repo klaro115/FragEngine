@@ -52,8 +52,6 @@ namespace FragEngine3.Graphics.Resources
 		private ResourceHandle? tesselationShader = null;
 		private ResourceHandle pixelShader = null!;
 
-		private Shader[] shaders = Array.Empty<Shader>();
-
 		private ResourceLayout[] resLayouts = Array.Empty<ResourceLayout>();
 		private ResourceLayoutDescription[] resLayoutDescs = Array.Empty<ResourceLayoutDescription>();
 
@@ -155,7 +153,6 @@ namespace FragEngine3.Graphics.Resources
 			if (_disposing)
 			{
 				variants = Array.Empty<MaterialVariant>();
-				shaders = Array.Empty<Shader>();
 				resLayouts = Array.Empty<ResourceLayout>();
 			}
 		}
@@ -248,47 +245,6 @@ namespace FragEngine3.Graphics.Resources
 			return enableCulling
 				? RasterizerStateDescription.Default
 				: RasterizerStateDescription.CullNone;
-		}
-
-		internal ShaderSetDescription GetShaderSet(in VertexLayoutDescription[] vertexLayoutDescs)
-		{
-			// Determine the number of (supported) shader stages:
-			bool hasGeometry = geometryShader != null && graphicsCore.GetCapabilities().geometryShaders;
-			bool hasTesselation = tesselationShader != null && graphicsCore.GetCapabilities().tesselationShaders;
-
-			int shaderCount = 2;
-			if (hasGeometry) shaderCount++;
-			if (hasTesselation) shaderCount++;
-
-			// Populate shader stages:
-			int i = 0;
-			shaders = new Shader[shaderCount];
-			shaders[i++] = GetShader(vertexShader);
-			if (hasGeometry)
-			{
-				shaders[i++] = GetShader(geometryShader!);
-			}
-			if (hasTesselation)
-			{
-				shaders[i++] = GetShader(tesselationShader!);
-			}
-			shaders[i++] = GetShader(pixelShader);
-
-			// Assemble shader set description:
-			return new ShaderSetDescription(
-				vertexLayoutDescs,
-				shaders);
-
-
-			// Local helper method for loading shader programs from resource handle:
-			static Shader GetShader(ResourceHandle _handle)
-			{
-				if (_handle != null && _handle.GetResource(true, true) is ShaderResource res)
-				{
-					return res.Shader;
-				}
-				return null!;
-			}
 		}
 
 		internal ResourceLayout[] GetResourceLayouts()
