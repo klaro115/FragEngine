@@ -3,6 +3,9 @@ namespace FragEngine3.Utility
 {
 	public static class CharEnumerationTools
 	{
+
+		//TODO: Replace this by dedicated Iterator types for UTF-8, UTF-16 and unicode codepoints! Indexing and usability are a mess right now.
+
 		#region Types
 
 		public sealed class CharIteratorState
@@ -44,7 +47,7 @@ namespace FragEngine3.Utility
 
 			_state ??= CharIteratorState.Zero;
 
-			int codePoint;
+			int codePoint = -1;
 			IEnumerator<int> e = ReadCodepointsFromUtf8Bytes(_utf8Bytes, _state, _utf8ByteLength);
 			while (e.MoveNext() && (codePoint = e.Current) != 0)
 			{
@@ -64,7 +67,10 @@ namespace FragEngine3.Utility
 				}
 			}
 
-			yield return '\0';
+			if (codePoint != 0)
+			{
+				yield return '\0';
+			}
 		}
 
 		/// <summary>
@@ -150,24 +156,159 @@ namespace FragEngine3.Utility
 			}
 		}
 
+		public static IEnumerator<int> ReadCodepointsFromUtf16Enumerator(IEnumerator<char> _utf16Enumerator)
+		{
+			// If null or no code units to read, return only a string terminator:
+			if (_utf16Enumerator == null)
+			{
+				yield return 0;
+				yield break;
+			}
+
+			char prevC = '\0';
+			char curC = (char)0xFFFF;
+			while (_utf16Enumerator.MoveNext() && (curC = _utf16Enumerator.Current) != '\0')
+			{
+				// Low surrogate:
+				if ((curC & 0xDC) == 0xDC)
+				{
+					int high = (prevC - 0xD8) << 10;
+					int low = curC - 0xDC;
+					yield return high + low;
+				}
+				// High surrogate:
+				else if ((curC & 0xDC) == 0xD8)
+				{
+					//skip and wait for low surrogate.
+				}
+				// BMP, single code unit:
+				else
+				{
+					yield return curC;
+				}
+				prevC = curC;
+			}
+
+			if (curC != '\0')
+			{
+				yield return 0;
+			}
+		}
+
 		/// <summary>
 		/// Advance a UTF-16 enumerator by a given number of characters.
 		/// </summary>
-		/// <param name="_utf16Enumerator"></param>
-		/// <param name="_utf16Offset"></param>
-		/// <returns>The actual number </returns>
-		public static int AdvanceUtf16Enumerator(IEnumerator<char> _utf16Enumerator, int _utf16Offset)
+		/// <param name="_utf16Enumerator">An enumerator for going over UTF-16 characters.</param>
+		/// <param name="_utf16Offset">The number of UTF-16 code units (chars) to advance the iterator by.</param>
+		/// <returns>The actual number of characters that was iterated over. May be less than the given offset if
+		/// a string terminator was hit or the enumeration ended.</returns>
+		public static int AdvanceUtf16EnumeratorByCharacters(IEnumerator<char> _utf16Enumerator, int _utf16Offset)
 		{
-			if (_utf16Enumerator == null)
+			if (_utf16Enumerator == null || _utf16Offset <= 0)
+			{
+				return 0;
+			}
+
+			int curOffset = 0;
+			while (curOffset < _utf16Offset && _utf16Enumerator.MoveNext() && _utf16Enumerator.Current != '\0')
+			{
+				curOffset++;
+			}
+
+			return curOffset;
+		}
+
+		/// <summary>
+		/// Advance a UTF-16 enumerator by a given number of characters.
+		/// </summary>
+		/// <param name="_utf16Enumerator">An enumerator for going over UTF-16 characters.</param>
+		/// <param name="_codepointOffset">The number of unicode codepoints to advance the iterator by.</param>
+		/// <returns>The actual number of codepoints that was iterated over. May be less than the given offset if
+		/// a string terminator was hit or the enumeration ended.</returns>
+		public static int AdvanceUtf16EnumeratorByCodepoints(IEnumerator<char> _utf16Enumerator, int _codepointOffset)
+		{
+			if (_utf16Enumerator == null || _codepointOffset <= 0)
 			{
 				return 0;
 			}
 
 			int curOffset = 0;
 			char c;
-			while (curOffset < _utf16Offset && _utf16Enumerator.MoveNext() && (c = _utf16Enumerator.Current) != '\0') { }
+			while (curOffset < _codepointOffset && _utf16Enumerator.MoveNext() && (c = _utf16Enumerator.Current) != '\0')
+			{
+				// Only increment offset if the character is not a low surrogate code unit:
+				if ((c & 0xDC) != 0xDC)
+				{
+					curOffset++;
+				}
+			}
 
 			return curOffset;
+		}
+
+		/// <summary>
+		/// Advance a UTF-16 enumerator by a given number of equivalent UTF-8 code units.
+		/// </summary>
+		/// <param name="_utf16Enumerator">An enumerator for going over UTF-16 characters.</param>
+		/// <param name="_state">An iterator state tracking the iteration over the UTF-16 enumerator. May not be null,
+		/// and must be tied to the given iterator; endless loop ensues if an unrelated state object is used.</param>
+		/// <param name="_utf8Offset">The number of UTF-8 code units (bytes) to advance the iterator by.</param>
+		/// <returns>The actual number of UTF-8 bytes that was iterated over. May be less than the given offset if
+		/// a string terminator was hit or the enumeration ended.</returns>
+		public static int AdvanceUtf16EnumeratorByUtf8Bytes(IEnumerator<char> _utf16Enumerator, CharIteratorState _state, int _utf8Offset)
+		{
+			if (_utf16Enumerator == null || _utf8Offset <= 0 || _state == null)
+			{
+				return 0;
+			}
+
+			// Use UTF-8 position from state object to measure current offset as we go:
+			int startPosition = _state.utf8Position;
+			while (_state.utf8Position - startPosition < _utf8Offset && _utf16Enumerator.MoveNext() && _utf16Enumerator.Current != '\0') { }
+
+			return _state.utf8Position - startPosition;
+		}
+
+		public static int AdvanceUtf16EnumeratorByUtf8Bytes(IEnumerator<char> _utf16Enumerator, int _utf8Offset)
+		{
+			if (_utf16Enumerator == null || _utf8Offset <= 0)
+			{
+				return 0;
+			}
+
+			int curOffset = 0;
+
+			IEnumerator<int> e = ReadCodepointsFromUtf16Enumerator(_utf16Enumerator);
+			while (curOffset < _utf8Offset && e.MoveNext() && e.Current != 0)
+			{
+				curOffset += GetUtf8ByteCountForCodepoint(e.Current);
+			}
+
+			return curOffset;
+		}
+
+		public static int GetUtf8ByteCountForCodepoint(int _codepoint)
+		{
+			// Single-byte UTF-8/ASCII character, starting at U+0:
+			if (_codepoint < 0x80)
+			{
+				return 1;
+			}
+			// 2 bytes, starting at U+80:
+			else if (_codepoint < 0x800)
+			{
+				return 2;
+			}
+			// 3 bytes, starting at U+800:
+			else if (_codepoint < 0x10000)
+			{
+				return 3;
+			}
+			// 4 bytes, starting at U+10000:
+			else
+			{
+				return 4;
+			}
 		}
 
 		public static int FindStringInUtf8Bytes(byte[] _utf8Bytes, int _utf8Length, string _query)
@@ -181,7 +322,7 @@ namespace FragEngine3.Utility
 
 			IEnumerator<char> e = ReadUtf16FromUtf8Bytes(_utf8Bytes, state, _utf8Length);
 
-			if (FindStringInUtf16Enumerator(e, state, _query) < 0)
+			if (FindStringInUtf16Enumerator(e, _query) < 0)
 			{
 				return -1;
 			}
@@ -189,7 +330,7 @@ namespace FragEngine3.Utility
 			return state.utf8Position;
 		}
 
-		public static int FindStringInUtf16Enumerator(IEnumerator<char> _utf16Enumerator, CharIteratorState _state, string _query)
+		public static int FindStringInUtf16Enumerator(IEnumerator<char> _utf16Enumerator, string _query)
 		{
 			if (string.IsNullOrEmpty(_query))
 			{
@@ -197,8 +338,6 @@ namespace FragEngine3.Utility
 			}
 
 			char queryStartChar = _query[0];
-
-			_state ??= CharIteratorState.Zero;
 
 			// Iterate over all characters while converting to UTF-16 on demand:
 			char c;

@@ -51,11 +51,18 @@ namespace FragEngine3.Graphics
 		public const string SHADER_VARIANT_ENTRYPOINT_SUFFIX_BLENDSHAPES = "Blend";
 		public const string SHADER_VARIANT_ENTRYPOINT_SUFFIX_ANIMATIONS = "Anim";
 
-		public static readonly Dictionary<MeshVertexDataFlags, string> shaderVariantEntryPointSuffixes = new()
+		public static readonly Dictionary<MeshVertexDataFlags, string> shaderVariantsForEntryPointSuffixes = new()
 		{
 			[MeshVertexDataFlags.ExtendedSurfaceData] = SHADER_VARIANT_ENTRYPOINT_SUFFIX_EXTENDED,
 			[MeshVertexDataFlags.BlendShapes] = SHADER_VARIANT_ENTRYPOINT_SUFFIX_BLENDSHAPES,
 			[MeshVertexDataFlags.Animations] = SHADER_VARIANT_ENTRYPOINT_SUFFIX_ANIMATIONS,
+			//...
+		};
+		public static readonly Dictionary<string, MeshVertexDataFlags> shaderEntryPointSuffixesForVariants = new()
+		{
+			[SHADER_VARIANT_ENTRYPOINT_SUFFIX_EXTENDED] = MeshVertexDataFlags.ExtendedSurfaceData,
+			[SHADER_VARIANT_ENTRYPOINT_SUFFIX_BLENDSHAPES] = MeshVertexDataFlags.BlendShapes,
+			[SHADER_VARIANT_ENTRYPOINT_SUFFIX_ANIMATIONS] = MeshVertexDataFlags.Animations,
 			//...
 		};
 

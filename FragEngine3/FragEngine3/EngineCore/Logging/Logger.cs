@@ -18,7 +18,7 @@ namespace FragEngine3.EngineCore
 
 		private readonly List<LogEntry> entries = new(256);
 		private readonly int maxEntryCount = 256;
-		private readonly int writeLogsEveryNEntries = 1;
+		//private readonly int writeLogsEveryNEntries = 1;
 
 		#endregion
 		#region Methods
@@ -26,6 +26,18 @@ namespace FragEngine3.EngineCore
 		public void LogMessage(string _message)
 		{
 			LogEntry entry = new(LogEntryType.Message, _message);
+			LogNewEntry(entry);
+		}
+
+		public void LogError(string _message, int _errorCode = 0, LogEntrySeverity _severity = LogEntrySeverity.Normal)
+		{
+			LogEntry entry = new(LogEntryType.Error, _message, _errorCode, _severity);
+			LogNewEntry(entry);
+		}
+
+		public void LogException(string _message, Exception _exception, LogEntrySeverity _severity = LogEntrySeverity.Normal)
+		{
+			LogEntry entry = new(LogEntryType.Error, _message, 0, _severity, _exception);
 			LogNewEntry(entry);
 		}
 
@@ -42,6 +54,8 @@ namespace FragEngine3.EngineCore
 				}
 				entries.RemoveRange(0, excessCount);
 			}
+
+			Console.WriteLine(_entry.ToString());
 		}
 
 		public bool WriteLogs()

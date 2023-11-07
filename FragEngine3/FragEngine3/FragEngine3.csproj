@@ -24,6 +24,7 @@
     <None Remove="Graphics\Stack\" />
     <None Remove="Graphics\Resources\Import\" />
     <None Remove="EngineCore\Logging\" />
+    <None Remove="Utility\Unicode\" />
   </ItemGroup>
   <ItemGroup>
     <Folder Include="Graphics\" />
@@ -36,6 +37,7 @@
     <Folder Include="Graphics\Stack\" />
     <Folder Include="Graphics\Resources\Import\" />
     <Folder Include="EngineCore\Logging\" />
+    <Folder Include="Utility\Unicode\" />
   </ItemGroup>
   <ItemGroup>
     <PackageReference Include="Vk" Version="1.0.25" />
