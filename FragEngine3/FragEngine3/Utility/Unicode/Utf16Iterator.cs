@@ -11,6 +11,28 @@ namespace FragEngine3.Utility.Unicode
 	/// </summary>
 	public sealed class Utf16Iterator : IEnumerator<char>
 	{
+		#region Types
+
+		public readonly struct Position
+		{
+			public Position(int _utf8Position, int _codepointPosition, int _utf16Position)
+			{
+				utf8Position = _utf8Position;
+				codepointPosition = _codepointPosition;
+				utf16Position = _utf16Position;
+			}
+
+			public readonly int utf8Position;
+			public readonly int codepointPosition;
+			public readonly int utf16Position;
+
+			public static Position Invalid => new(-1, -1, -1);
+			public bool IsValid => utf8Position >= 0 && codepointPosition >= 0 && utf16Position >= 0;
+
+			public override string ToString() => $"(UTF-8: {utf8Position}, CodePt: {codepointPosition}, UTF-16: {utf16Position})";
+		}
+
+		#endregion
 		#region Constructors
 
 		public Utf16Iterator(IList<byte> _utf8Bytes, int _utf8Length)
@@ -49,6 +71,10 @@ namespace FragEngine3.Utility.Unicode
 		/// the number of Unicode codepoints that were read.
 		/// </summary>
 		public int Utf16Position { get; private set; } = -1;
+		/// <summary>
+		/// Gets the current reading positions in one structure containing UTF-8 byte offset, UTF-16 code units, and in unicode codepoints.
+		/// </summary>
+		public Position CurrentPosition => new(Utf8Position, CodepointPosition, Utf16Position);
 
 		public int CurrentCodepoint { get; private set; } = 0;
 		public char Current { get; private set; } = '\0';
@@ -259,6 +285,53 @@ namespace FragEngine3.Utility.Unicode
 				curOffset++;
 			}
 			return curOffset;
+		}
+
+		/// <summary>
+		/// Advance the enumerator until the first occurrance of a given query text is found. If none is found, the
+		/// iterator continues until the end of the enumeration.<para/>
+		/// NOTE: The enumerator will always advance past the starting position of a search result. It will however
+		/// return the starting position of the match. To get the current reading positions after finding a result,
+		/// use '<see cref="CurrentPosition"/>'.
+		/// </summary>
+		/// <param name="_query">A text query to look for in this enumerator's UTF-8 byte array. If null or empty,
+		/// the iterator will ignore the query and stay where it is.</param>
+		/// <returns>A structure containing the starting position of the first search result that was encountered.
+		/// If no match was found, the position's indices will be all negative, use '<see cref="Position.IsValid"/>'
+		/// to check for this. Position indices will be in UTF-8 byte order, Unicode codepoint count, and UTF-16
+		/// code unit count, starting from the beginning of the enumerator's source array.</returns>
+		public Position FindNext(string _query)
+		{
+			if (string.IsNullOrEmpty(_query))
+			{
+				return Position.Invalid;
+			}
+
+			// Iterate over characters until we reach the first symbol of the query string:
+			do
+			{
+				if (Current == _query[0])
+				{
+					int utf8FoundIdx = Utf8Position;
+					int codepointFoundIdx = CodepointPosition;
+					int utf16FoundIdx = Utf16Position;
+
+					// Iterate and check for continued query overlap as we go:
+					int i = 1;
+					while (MoveNext() && Current == _query[i])
+					{
+						i++;
+					}
+					if (i >= _query.Length)
+					{
+						// Return the starting position in all encodings that were involved in the process:
+						return new Position(utf8FoundIdx, codepointFoundIdx, utf16FoundIdx);
+					}
+				}
+			}
+			while (MoveNext());
+
+			return Position.Invalid;
 		}
 
 		#endregion

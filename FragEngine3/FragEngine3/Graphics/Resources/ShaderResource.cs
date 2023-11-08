@@ -1,6 +1,7 @@
 ﻿using System.Text;
 using FragEngine3.Resources;
 using FragEngine3.Utility;
+using FragEngine3.Utility.Unicode;
 using Veldrid;
 
 namespace FragEngine3.Graphics.Resources
@@ -222,54 +223,40 @@ namespace FragEngine3.Graphics.Resources
 			int maxVariantIndex = -1;
 			try
 			{
-				CharEnumerationTools.CharIteratorState state = new();
-				IEnumerator<char> e = CharEnumerationTools.ReadUtf16FromUtf8Bytes(bytes, state, bytes.Length);
-				StringBuilder entryPointBuilder = new(256);
+				StringBuilder variantBuilder = new(256);
+				StringBuilder suffixBuilder = new(128);
+				Utf16Iterator e = new(bytes, bytes.Length);
+				Utf16Iterator.Position pos;
 
-				// Loop over all entry points we find:
-				int utf8Idx;
-				while ((utf8Idx = CharEnumerationTools.FindStringInUtf16Enumerator(e, _entryPoint)) >= 0)
+				// Find next entry point:
+				while ((pos = e.FindNext(_entryPoint)).IsValid)
 				{
-					entryPointBuilder.Clear();
-					MeshVertexDataFlags variantFlags = 0;
+					variantBuilder.Clear();
+					variantBuilder.Append(_entryPoint);
+					MeshVertexDataFlags variantFlags = MeshVertexDataFlags.BasicSurfaceData;
 
-					CharEnumerationTools.AdvanceUtf16EnumeratorByCharacters(e, _entryPoint.Length);
-
-					// Identify further suffixes:
-					if (e.MoveNext() && e.Current == '_')				//TODO: Redo most of this using the Utf16Iterator type!!!
+					// Iterate over suffixes: (separated by underscores)
+					while (e.Current == '_')
 					{
-						entryPointBuilder.Append('_');
-
-						const int MAX_SUFFIX_LENGTH = 128;
-						char[] suffixBuffer = new char[MAX_SUFFIX_LENGTH];
-						int suffixLength = 0;
-						string suffix = string.Empty;
+						variantBuilder.Append('_');
+						suffixBuilder.Clear();
 						char c;
-						while (e.MoveNext() && (c = e.Current) != '\0' && c != '_' && suffixLength < MAX_SUFFIX_LENGTH)
+						string txt;
+						while (e.MoveNext() && (c = e.Current) != '_' && c != '(' && !char.IsWhiteSpace(c) && !char.IsControl(c))
 						{
-							suffixBuffer[suffixLength++] = c;
-							entryPointBuilder.Append(c);
+							variantBuilder.Append(c);
+							suffixBuilder.Append(c);
 						}
-						if (suffixLength > 0)
+						if (suffixBuilder.Length != 0 && GraphicsContants.shaderEntryPointSuffixesForVariants.TryGetValue((txt = suffixBuilder.ToString()), out MeshVertexDataFlags flag))
 						{
-							suffix = new string(suffixBuffer, 0, suffixLength).ToLowerInvariant();
-							var match = GraphicsContants.shaderVariantsForEntryPointSuffixes.
-								FirstOrDefault(o => string.Compare(o.Value, suffix, StringComparison.InvariantCultureIgnoreCase) == 0);
-							if (match.Key != 0 && !string.IsNullOrEmpty(match.Value))
-							{
-								variantFlags |= match.Key;
-							}
+							variantFlags |= flag;
 						}
-					}
-					else
-					{
-						variantFlags |= MeshVertexDataFlags.BasicSurfaceData;
 					}
 
-					if (variantFlags != 0)
+					// Add the variant entry point to out lookup table:
+					if (!variantEntryPoints.ContainsKey(variantFlags))
 					{
-						variantFlags |= MeshVertexDataFlags.BasicSurfaceData;
-						variantEntryPoints.Add(variantFlags, entryPointBuilder.ToString());
+						variantEntryPoints.Add(variantFlags, variantBuilder.ToString());
 						maxVariantIndex = Math.Max(maxVariantIndex, (int)variantFlags - 1);
 					}
 				}
@@ -288,17 +275,18 @@ namespace FragEngine3.Graphics.Resources
 				return false;
 			}
 
+			// Try compiling shader:
 			Shader?[] shaderVariants = new Shader[maxVariantIndex + 1];
-			for (int i = 0; i < maxVariantIndex + 1; ++i)
+			for (int i = 0; i < shaderVariants.Length; ++i)
 			{
 				MeshVertexDataFlags variantFlags = (MeshVertexDataFlags)(i + 1);
 				if (variantEntryPoints.ContainsKey(variantFlags))
 				{
-					//TODO
+					//TODO: Move the shader compilation from below here! We'll be compiling once for each variant, rather than just one program!
 				}
 			}
 
-			// Try compiling shader:
+			// Try compiling shader:	[OLD]
 			Shader shader;
 			try
 			{
