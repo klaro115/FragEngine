@@ -2,6 +2,7 @@
 using FragEngine3.EngineCore;
 using FragEngine3.EngineCore.Config;
 using FragEngine3.Graphics.Config;
+using FragEngine3.Graphics.D3D12;
 using FragEngine3.Graphics.MacOS;
 using FragEngine3.Utility.Serialization;
 
@@ -167,10 +168,10 @@ namespace FragEngine3.Graphics
 
 			if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
 			{
-				// On Windows, create Vulkan devices if 'config.PreferNativeFramework' is false, otherwise use Direct3D:
+				// On Windows, create Direct3D devices if 'config.PreferNativeFramework' is true, otherwise use Vulkan:
 				if (config.Graphics.PreferNativeFramework)
 				{
-					throw new NotImplementedException("Windows Direct3D graphics have not been implemented!");
+					newCore = new Dx12GraphicsCore(this, config);
 				}
 				else
 				{

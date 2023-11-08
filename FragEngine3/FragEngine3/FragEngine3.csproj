@@ -27,7 +27,6 @@
     <None Remove="Utility\Unicode\" />
   </ItemGroup>
   <ItemGroup>
-    <Folder Include="Graphics\" />
     <Folder Include="Graphics\Config\" />
     <Folder Include="EngineCore\Config\" />
     <Folder Include="Graphics\Internal\" />

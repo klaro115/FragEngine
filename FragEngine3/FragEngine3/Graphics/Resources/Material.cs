@@ -5,6 +5,16 @@ using Veldrid;
 
 namespace FragEngine3.Graphics.Resources
 {
+	/// <summary>
+	/// A graphics resource depicting how a geometry surface shall be rendered. A material is a composite resource made out
+	/// of shader programs (for each pipeline stage, and for different vertex variants), bound textures and buffers, as well
+	/// as resource layouts and other reusable pipeline definitions that are used for efficiently rendering the surface.<para/>
+	/// IMPORT: Resource dependencies and pipeline objects are generated on-demand and just-in-time when they are first used,
+	/// if they haven't been loaded in the background beforehand.<para/>
+	/// LIFECYCLE: Disposing the material will only release the material resource itself; all shaders and textures referenced
+	/// by the material will remain loaded unless they are explicitly disposed themselves - multiple materials and assets may
+	/// be referencing a same resource instance as a shared dependency.
+	/// </summary>
 	public sealed class Material : Resource
 	{
 		#region Types

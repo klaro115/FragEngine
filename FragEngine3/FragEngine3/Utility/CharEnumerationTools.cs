@@ -1,6 +1,8 @@
-﻿using System;
+﻿using FragEngine3.Utility.Unicode;
+
 namespace FragEngine3.Utility
 {
+	[Obsolete($"Deprecated and to be replaced by specialized text iterators, such as the {nameof(Utf16Iterator)}.")]
 	public static class CharEnumerationTools
 	{
 

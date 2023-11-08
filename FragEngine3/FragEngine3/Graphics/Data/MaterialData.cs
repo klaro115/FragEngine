@@ -62,8 +62,6 @@ namespace FragEngine3.Graphics.Data
 		public ShaderData Shaders { get; set; } = new();
 		public ResourceData Resources { get; set; } = new();
 
-		public MeshVertexDataFlags[] PreloadVariants { get; set; } = { MeshVertexDataFlags.BasicSurfaceData };
-
 		#endregion
 		#region Methods
 
@@ -103,15 +101,6 @@ namespace FragEngine3.Graphics.Data
 					(!string.IsNullOrEmpty(Shaders.TesselationCtrl) && string.IsNullOrEmpty(Shaders.TesselationEval)))
 				{
 					return false;
-				}
-
-				// For surface materials, make sure basic vertex data is a requirement for all pre-loaded variants:
-				if (Shaders.IsSurfaceMaterial && PreloadVariants != null)
-				{
-					foreach (MeshVertexDataFlags variantFlags in PreloadVariants)
-					{
-						if (!variantFlags.HasFlag(MeshVertexDataFlags.BasicSurfaceData)) return false;
-					}
 				}
 			}
 

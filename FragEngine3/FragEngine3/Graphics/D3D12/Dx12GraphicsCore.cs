@@ -1,16 +1,15 @@
 ﻿using FragEngine3.EngineCore.Config;
 using FragEngine3.Graphics.Internal;
 using Veldrid;
-using Veldrid.MetalBindings;
 using Veldrid.StartupUtilities;
 
-namespace FragEngine3.Graphics.MacOS
+namespace FragEngine3.Graphics.D3D12
 {
-	internal sealed class MacGraphicsCore : GraphicsCore
+	internal sealed class Dx12GraphicsCore : GraphicsCore
 	{
 		#region Constructors
 
-		public MacGraphicsCore(GraphicsSystem _graphicsSystem, EngineConfig _config) : base(_graphicsSystem, _config) { }
+		public Dx12GraphicsCore(GraphicsSystem _graphicsSystem, EngineConfig _config) : base(_graphicsSystem, _config) { }
 
 		#endregion
 		#region Fields
@@ -24,16 +23,16 @@ namespace FragEngine3.Graphics.MacOS
 		{
 			if (IsDisposed)
 			{
-				Console.WriteLine("Error! Cannot initialize disposed metal graphics devices!");
+				Console.WriteLine("Error! Cannot initialize disposed D3D graphics devices!");
 				return false;
 			}
 			if (IsInitialized)
 			{
-				Console.WriteLine("Error! Metal graphics devices are already initialized!");
+				Console.WriteLine("Error! D3D graphics devices are already initialized!");
 				return true;
 			}
 
-			Console.Write("# Initializing Metal graphics device... ");
+			Console.Write("# Initializing D3D graphics device... ");
 
 			try
 			{
@@ -69,7 +68,8 @@ namespace FragEngine3.Graphics.MacOS
 					true,
 					useSrgb);
 
-				Device = VeldridStartup.CreateGraphicsDevice(Window, deviceOptions, GraphicsBackend.Metal);
+				Device = VeldridStartup.CreateGraphicsDevice(Window, GraphicsBackend.Direct3D11);
+				//Device = VeldridStartup.CreateGraphicsDevice(Window, deviceOptions, GraphicsBackend.Direct3D11);
 				Device.WaitForIdle();
 				Device.SwapBuffers();
 
@@ -83,7 +83,7 @@ namespace FragEngine3.Graphics.MacOS
 			catch (Exception ex)
 			{
 				Console.WriteLine("FAIL.");
-				Console.WriteLine($"Error! Failed to create system default metal graphics device!\nException type: '{ex.GetType()}'\nException message: '{ex.Message}'");
+				Console.WriteLine($"Error! Failed to create system default D3D12 graphics device!\nException type: '{ex.GetType()}'\nException message: '{ex.Message}'");
 				Shutdown();
 				return false;
 			}
@@ -113,18 +113,15 @@ namespace FragEngine3.Graphics.MacOS
 					capabilities.textures1D = features.Texture1D;
 				}
 
-				// Log Metal specific information:
-				if (Device.GetMetalInfo(out BackendInfoMetal mtlInfo))
+				// Log D3D specific information:
+				if (Device.GetD3D11Info(out BackendInfoD3D11 d3dInfo))
 				{
-					Console.WriteLine("+ Metal feature sets:");
-					foreach (MTLFeatureSet featureSet in mtlInfo.FeatureSet)
-					{
-						Console.WriteLine($"  - {featureSet}");
-					}
+					Console.WriteLine("+ D3D device details:");
+					Console.WriteLine($"  - PCI ID: {d3dInfo.DeviceId}");
 				}
 				else
 				{
-					Console.WriteLine("Error! Could not query Metal feature sets!");
+					Console.WriteLine("Error! Could not query D3D device details!");
 				}
 			}
 
@@ -161,4 +158,3 @@ namespace FragEngine3.Graphics.MacOS
 		#endregion
 	}
 }
-

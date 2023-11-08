@@ -1,11 +1,18 @@
 ﻿using System.Text;
 using FragEngine3.Resources;
-using FragEngine3.Utility;
 using FragEngine3.Utility.Unicode;
 using Veldrid;
 
 namespace FragEngine3.Graphics.Resources
 {
+	/// <summary>
+	/// A graphics resource representing all vertex variants of a same GPU shader program.<para/>
+	/// IMPORT: Each shader resource depicts a single pipeline stage. Multiple stages may be defined in a same shader source file,
+	/// but all variants of a stage must be contained within one contiguous file.<para/>
+	/// LIFECYCLE: Disposing a shader resource will dispose all variant programs created from it. The shader resource holds no
+	/// additional external resource dependencies and can always be disposed safely once all materials referencing it have been
+	/// disposed.
+	/// </summary>
 	public sealed class ShaderResource : Resource
 	{
 		#region Constructors
@@ -19,7 +26,7 @@ namespace FragEngine3.Graphics.Resources
 		#region Fields
 
 		private MeshVertexDataFlags[] vertexVariants = { MeshVertexDataFlags.BasicSurfaceData };
-		private Shader?[] shaderVariants = Array.Empty<Shader?>();
+		private Shader?[] shaderVariants = Array.Empty<Shader?>();      // array of variant shader programs, indexed via MeshVertexDataFlags enum value.
 
 		#endregion
 		#region Properties
@@ -63,9 +70,13 @@ namespace FragEngine3.Graphics.Resources
 		/// <returns>True if this shader resource has a program for the given variant, false otherwise.</returns>
 		public bool HasVariant(MeshVertexDataFlags _variantFlags)
 		{
+			if (_variantFlags == 0)
+			{
+				return false;
+			}
 			for (int i = 0; i < vertexVariants.Length; ++i)
 			{
-				if (vertexVariants[i].HasFlag(_variantFlags))
+				if (vertexVariants[i] == _variantFlags)
 				{
 					return true;
 				}
@@ -277,6 +288,7 @@ namespace FragEngine3.Graphics.Resources
 
 			// Try compiling shader:
 			Shader?[] shaderVariants = new Shader[maxVariantIndex + 1];
+			int shadersCompiledCount = 0;
 			for (int i = 0; i < shaderVariants.Length; ++i)
 			{
 				MeshVertexDataFlags variantFlags = (MeshVertexDataFlags)(i + 1);
@@ -298,7 +310,14 @@ namespace FragEngine3.Graphics.Resources
 					}
 
 					shaderVariants[i] = shader;
+					shadersCompiledCount++;
 				}
+			}
+			if (shadersCompiledCount == 0)
+			{
+				Console.WriteLine($"Error! All variants of shader '{_handle.Key}' ({_stage}) have failed to compile! Shader resource may be broken or incomplete!");
+				_outShaderRes = null;
+				return false;
 			}
 
 			// Output finished shader resource:
