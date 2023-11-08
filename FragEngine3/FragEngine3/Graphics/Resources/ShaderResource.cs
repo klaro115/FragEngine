@@ -280,25 +280,25 @@ namespace FragEngine3.Graphics.Resources
 			for (int i = 0; i < shaderVariants.Length; ++i)
 			{
 				MeshVertexDataFlags variantFlags = (MeshVertexDataFlags)(i + 1);
-				if (variantEntryPoints.ContainsKey(variantFlags))
+				if (variantEntryPoints.TryGetValue(variantFlags, out string? variantEntryPoint))
 				{
-					//TODO: Move the shader compilation from below here! We'll be compiling once for each variant, rather than just one program!
+					// Try compiling shader for each variant:
+					Shader? shader = null;
+					try
+					{
+						ShaderDescription shaderDesc = new(_stage, bytes, variantEntryPoint);
+
+						shader = _graphicsCore.MainFactory.CreateShader(ref shaderDesc);
+					}
+					catch (Exception ex)
+					{
+						Console.WriteLine($"Error! Failed to compile variant '{variantFlags}' for shader '{_handle.Key}' ({_stage})!\nException type: '{ex.GetType()}'\nException message: '{ex.Message}'");
+						shader?.Dispose();
+						continue;
+					}
+
+					shaderVariants[i] = shader;
 				}
-			}
-
-			// Try compiling shader:	[OLD]
-			Shader shader;
-			try
-			{
-				ShaderDescription shaderDesc = new(_stage, bytes, _entryPoint);
-
-				shader = _graphicsCore.MainFactory.CreateShader(ref shaderDesc);
-			}
-			catch (Exception ex)
-			{
-				Console.WriteLine($"Error! Failed to compile shader '{_handle.Key}' ({_stage})!\nException type: '{ex.GetType()}'\nException message: '{ex.Message}'");
-				_outShaderRes = null;
-				return false;
 			}
 
 			// Output finished shader resource:
