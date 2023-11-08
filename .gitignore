@@ -4,7 +4,9 @@
 ## Get latest from https://github.com/github/gitignore/blob/main/VisualStudio.gitignore
 
 # [Custom] Exceptions for assets:
-!FragEngine3\data\**\*.obj
+!FragEngine3/data/**/*.obj
+!FragEngine3/data/**/**/*.obj
+!FragEngine3/data/**/**/**/*.obj
 
 # User-specific files
 *.rsuser
