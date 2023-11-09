@@ -3,6 +3,7 @@ using FragEngine3.Graphics.Resources;
 using FragEngine3.Graphics.Resources.Import;
 using FragEngine3.Resources.Management;
 using System.Collections.Concurrent;
+using System.Diagnostics;
 
 namespace FragEngine3.Resources
 {
@@ -30,6 +31,9 @@ namespace FragEngine3.Resources
 			engine = _engine ?? throw new ArgumentNullException(nameof(engine), "Engine may not be null!");
 			fileLoader = new(this);
 
+			stopwatch = new();
+			stopwatch.Start();
+
 			try
 			{
 				importThread = new Thread(RunAsyncImportThread);
@@ -51,6 +55,7 @@ namespace FragEngine3.Resources
 
 		public readonly Engine engine;
 		public readonly ResourceFileLoader fileLoader;
+		private readonly Stopwatch stopwatch;
 
 		private Thread? fileLoaderThread = null;
 		private CancellationTokenSource? fileLoaderThreadCancellationSrc = new();
@@ -123,6 +128,8 @@ namespace FragEngine3.Resources
 			{
 				importThreadProgress?.Finish();
 			}
+
+			stopwatch.Stop();
 		}
 
 		public void DisposeAllResources()
@@ -627,6 +634,8 @@ namespace FragEngine3.Resources
 				return false;
 			}
 
+			long startTimestampMs = stopwatch.ElapsedMilliseconds;
+
 			// Call importers to actually load the resource:
 			bool success;
 			switch (_handle.resourceType)
@@ -667,13 +676,16 @@ namespace FragEngine3.Resources
 				return false;
 			}
 
+			long endTimestampMs = stopwatch.ElapsedMilliseconds;
+			long loadDurationMs = endTimestampMs - startTimestampMs;
+
 			// On success, mark as loaded and return:
 			lock (resourceLockObj)
 			{
 				_handle.loadState = ResourceLoadState.Loaded;
 			}
 
-			Console.WriteLine($"* Loaded resource: '{_handle}'");
+			Console.WriteLine($"* Loaded resource: '{_handle}' ({loadDurationMs}ms)");
 			return true;
 		}
 
