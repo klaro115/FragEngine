@@ -61,7 +61,7 @@ namespace FragEngine3.Scenes.Data
 		{
 			if (_jsonTxt == null)
 			{
-				Console.WriteLine("Error! Cannot deserialize scene data from null JSON string!");
+				Logger.Instance?.LogError("Cannot deserialize scene data from null JSON string!");
 				_outData = new();
 				return false;
 			}
@@ -74,7 +74,7 @@ namespace FragEngine3.Scenes.Data
 		{
 			if (string.IsNullOrEmpty(_filePath))
 			{
-				Console.WriteLine("Error! Cannot deserialize scene data from null or blank file path!");
+				Logger.Instance?.LogError("Cannot deserialize scene data from null or blank file path!");
 				_outData = new();
 				return false;
 			}

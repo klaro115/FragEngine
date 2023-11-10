@@ -104,7 +104,7 @@ namespace FragEngine3.EngineCore
 
 		public void Exit()
 		{
-			Logger.LogError("Exit was requested.");
+			Logger.LogMessage("Exit was requested.");
 
 			if (mainLoopCancellationSrc != null)
 			{
@@ -136,15 +136,15 @@ namespace FragEngine3.EngineCore
 				{
 					string message = State switch
 					{
-						EngineState.None => "\n### ENTERING STANDBY...",
-						EngineState.Startup => "\n### STARTING UP...",
-						EngineState.Loading => "\n### LOADING CONTENT...",
-						EngineState.Running => "\n### RUNNING CONTENT...",
-						EngineState.Unloading => "\n### UNLOADING CONTENT...",
-						EngineState.Shutdown => "\n### SHUTTING DOWN...",
-						_ => "\n### wtf",
+						EngineState.None => "### ENTERING STANDBY...",
+						EngineState.Startup => "### STARTING UP...",
+						EngineState.Loading => "### LOADING CONTENT...",
+						EngineState.Running => "### RUNNING CONTENT...",
+						EngineState.Unloading => "### UNLOADING CONTENT...",
+						EngineState.Shutdown => "### SHUTTING DOWN...",
+						_ => "### wtf",
 					};
-					Console.WriteLine(message);
+					Logger.LogStatus(message);
 				}
 
 				// Update states of application logic; exit if an error occures at this level:

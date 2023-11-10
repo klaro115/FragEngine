@@ -1,6 +1,6 @@
-﻿using FragEngine3.Scenes.Data;
+﻿using FragEngine3.EngineCore;
+using FragEngine3.Scenes.Data;
 using FragEngine3.Scenes.EventSystem;
-using System.Reflection;
 
 namespace FragEngine3.Scenes
 {
@@ -23,13 +23,18 @@ namespace FragEngine3.Scenes
 		public readonly SceneNode node;
 
 		private static readonly SceneEventType[] emptyEventArray = Array.Empty<SceneEventType>();
-		private static readonly Dictionary<string, Type> componentTypeRegistry = new(32);
+		//private static readonly Dictionary<string, Type> componentTypeRegistry = new(32);
 
 		#endregion
 		#region Properties
 
 		public bool IsDisposed { get; private set; } = false;
 		public SceneElementType ElementType => SceneElementType.Component;
+
+		/// <summary>
+		/// Gets the engine's logging module for error and debug output.
+		/// </summary>
+		public Logger Logger => node.Logger ?? Logger.Instance!;
 
 		#endregion
 		#region Methods
@@ -101,7 +106,7 @@ namespace FragEngine3.Scenes
 				_outComponent = newComponent as T;
 				if (_outComponent == null)
 				{
-					Console.WriteLine($"Error! Type mismatch when trying to create component! Expected '{typeof(T)}', found '{newComponent.GetType()}'");
+					_node.Logger.LogError($"Type mismatch when trying to create component! Expected '{typeof(T)}', found '{newComponent.GetType()}'");
 					newComponent.Dispose();
 					return false;
 				}
@@ -119,7 +124,7 @@ namespace FragEngine3.Scenes
 			}
 			catch (Exception ex)
 			{
-				Console.WriteLine($"Error! Failed to parse component type name '{_typeName}' for node '{_node.Name}'!\nException type: '{ex.GetType()}'\nException message: '{ex.Message}'");
+				_node.Logger.LogException($"Failed to parse component type name '{_typeName}' for node '{_node.Name}'!", ex);
 				_outComponent = null;
 				return false;
 			}
@@ -130,7 +135,7 @@ namespace FragEngine3.Scenes
 			}
 			else
 			{
-				Console.WriteLine($"Error! Component type name '{_typeName}' could not be found!");
+				_node?.Logger.LogError($"Component type name '{_typeName}' could not be found!");
 				_outComponent = null;
 				return false;
 			}
@@ -139,25 +144,25 @@ namespace FragEngine3.Scenes
 		{
 			if (_node == null || _node.IsDisposed)
 			{
-				Console.WriteLine($"Error! Cannot create component for null or disposed node!");
+				Logger.Instance?.LogError("Cannot create component for null or disposed node!");
 				_outComponent = null;
 				return false;
 			}
 			if (_type == null)
 			{
-				Console.WriteLine($"Error! Component type may not be null!");
+				_node.Logger.LogError("Component type may not be null!");
 				_outComponent = null;
 				return false;
 			}
 			if (_type.IsPrimitive || _type.IsValueType || _type.IsInterface)
 			{
-				Console.WriteLine($"Error! Component type may not be a primitive, value type, or interface!");
+				_node.Logger.LogError($"Component type may not be a primitive, value type, or interface! Found: '{_type}'");
 				_outComponent = null;
 				return false;
 			}
 			if (_type.IsAbstract)
 			{
-				Console.WriteLine($"Error! Cannot create instance of abstract component type '{_type}'!");
+				_node.Logger.LogError($"Cannot create instance of abstract component type '{_type}'!");
 				_outComponent = null;
 				return false;
 			}
@@ -187,7 +192,7 @@ namespace FragEngine3.Scenes
 			}
 			catch (Exception ex)
 			{
-				Console.WriteLine($"Error! Failed to create instance of component type '{_type}' for node '{_node.Name}'!\nException type: '{ex.GetType()}'\nException message: '{ex.Message}'");
+				_node.Logger.LogException($"Failed to create instance of component type '{_type}' for node '{_node.Name}'!", ex);
 				_outComponent = null;
 				return false;
 			}

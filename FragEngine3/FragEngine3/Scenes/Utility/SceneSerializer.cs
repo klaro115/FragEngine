@@ -34,7 +34,7 @@ namespace FragEngine3.Scenes.Utility
 
 			if (_scene == null || _scene.IsDisposed)
 			{
-				Console.WriteLine("Error! Cannot serialize null or disposed scene!");
+				Logger.Instance?.LogError("Cannot serialize null or disposed scene!");
 				goto abort;
 			}
 
@@ -55,7 +55,7 @@ namespace FragEngine3.Scenes.Utility
 				out int maxComponentCount,
 				out int totalComponentCount))
 			{
-				Console.WriteLine("Error! Failed to generate ID mapping for scene!");
+				Logger.Instance?.LogError("Failed to generate ID mapping for scene!");
 				goto abort;
 			}
 
@@ -93,7 +93,7 @@ namespace FragEngine3.Scenes.Utility
 			// Save all scene-wide behaviours data first:
 			if (!SaveSceneBehaviours(in _scene, in idMap, _outData, _outProgress))
 			{
-				Console.WriteLine("Error! Failed to save scene behaviours for scene!");
+				Logger.Instance?.LogError("Failed to save scene behaviours for scene!");
 				goto abort;
 			}
 
@@ -106,7 +106,7 @@ namespace FragEngine3.Scenes.Utility
 			};
 			if (!SceneBranchSerializer.SaveSceneNodes(in allNodes, in idMap, branchData, _outProgress))
 			{
-				Console.WriteLine("Error! Failed to save node hierarchy for scene!");
+				Logger.Instance?.LogError("Failed to save node hierarchy for scene!");
 				goto abort;
 			}
 
@@ -211,7 +211,7 @@ namespace FragEngine3.Scenes.Utility
 				{
 					if (!behaviour.SaveToData(out SceneBehaviourData data))
 					{
-						Console.WriteLine($"Error! Failed to save scene component '{behaviour}' to data!");
+						Logger.Instance?.LogError($"Failed to save scene component '{behaviour}' to data!");
 						return false;
 					}
 
@@ -253,13 +253,13 @@ namespace FragEngine3.Scenes.Utility
 
 			if (_engine == null || _engine.IsDisposed)
 			{
-				Console.WriteLine("Error! Cannot load scene for null or disposed engine!");
+				Logger.Instance?.LogError("Cannot load scene for null or disposed engine!");
 				_outScene = null;
 				return false;
 			}
 			if (_data == null)
 			{
-				Console.WriteLine("Error! Cannot load scene from null scene data!");
+				Logger.Instance?.LogError("Cannot load scene from null scene data!");
 				_outScene = null;
 				return false;
 			}
@@ -273,7 +273,7 @@ namespace FragEngine3.Scenes.Utility
 			// First, try to recreate the ID mapping of all elements in the scene:
 			if (!ReconstructSceneIdMap(in _data, _outProgress, out Dictionary<int, ISceneElementData> idMap, out int totalComponentCount))
 			{
-				Console.WriteLine("Error! Failed to reconstruct ID map from scene data!");
+				Logger.Instance?.LogError("Failed to reconstruct ID map from scene data!");
 				goto abort;
 			}
 
@@ -282,7 +282,7 @@ namespace FragEngine3.Scenes.Utility
 			// Recreate and reattach scene-wide behaviours to the scene:
 			if (!LoadSceneBehaviours(in _data, in idMap, _outScene, _outProgress))
 			{
-				Console.WriteLine("Error! Failed to load and recreate scene-wide behaviours!");
+				Logger.Instance?.LogError("Failed to load and recreate scene-wide behaviours!");
 				goto abort;
 			}
 
@@ -295,14 +295,14 @@ namespace FragEngine3.Scenes.Utility
 			};
 			if (!SceneBranchSerializer.LoadBranchNodes(in branchData, in idMap, _outScene.rootNode, _outProgress, out Dictionary<int, SceneNode> nodeIdMap))
 			{
-				Console.WriteLine("Error! Failed to load and recreate scene hierarchy!");
+				Logger.Instance?.LogError("Failed to load and recreate scene hierarchy!");
 				goto abort;
 			}
 
 			// Create and all components and reattach them to nodes:
 			if (!SceneBranchSerializer.LoadComponents(in branchData, in idMap, in nodeIdMap, _outProgress, totalComponentCount))
 			{
-				Console.WriteLine("Error! Failed to load and recreate components!");
+				Logger.Instance?.LogError("Failed to load and recreate components!");
 				goto abort;
 			}
 
@@ -400,7 +400,7 @@ namespace FragEngine3.Scenes.Utility
 				{
 					if (!SceneBehaviour.CreateBehaviour(_scene, data.Type, out SceneBehaviour? behaviour) || behaviour == null)
 					{
-						Console.WriteLine($"Error! Failed to create scene-wide behaviour of type '{data.Type}' for scene '{_scene.Name}'!");
+						Logger.Instance?.LogError($"Failed to create scene-wide behaviour of type '{data.Type}' for scene '{_scene.Name}'!");
 						return false;
 					}
 					_scene.AddSceneBehaviour(behaviour);

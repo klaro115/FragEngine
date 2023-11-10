@@ -1,4 +1,5 @@
-﻿using FragEngine3.EngineCore;
+﻿using System.Xml.Linq;
+using FragEngine3.EngineCore;
 using FragEngine3.Graphics.Stack;
 using FragEngine3.Scenes.EventSystem;
 
@@ -71,6 +72,11 @@ namespace FragEngine3.Scenes
 		}
 
 		/// <summary>
+		/// Gets the engine's logging module for error and debug output.
+		/// </summary>
+		public Logger Logger => engine.Logger ?? Logger.Instance!;
+
+		/// <summary>
 		/// Gets or sets the graphics stack to use for drawing this scene. Must be non-null. When assigning a new stack, the previous one is disposed.<para/>
 		/// NOTE: If no stack is assigned when a call to '<see cref="DrawScene"/>' arrives, a default forward+light graphics stack without UI or post-processing pass
 		/// is created instead.
@@ -82,7 +88,7 @@ namespace FragEngine3.Scenes
 			{
 				if (value != null && value.IsDisposed)
 				{
-					Console.WriteLine("Error! Scene graphics stack may not be disposed!");
+					Logger.LogError("Scene graphics stack may not be disposed!");
 					return;
 				}
 				if (graphicsStack != null && !graphicsStack.IsDisposed)
@@ -107,11 +113,11 @@ namespace FragEngine3.Scenes
 			{
 				if (value.HasFlag(EngineState.Startup) || value.HasFlag(EngineState.Shutdown))
 				{
-					Console.WriteLine("Error! Only update flags for Loading, Unloading, and Running engine states are allowed! Resetting corresponding flags.");
+					Logger.LogError("Only update flags for Loading, Unloading, and Running engine states are allowed! Resetting corresponding flags.");
 					value &= ~(EngineState.Startup | EngineState.Shutdown);
 				}
-				if (updatedInEngineStates != 0 && value == 0) Console.WriteLine($"Disabling updates of scene '{name}'...");
-				else if (updatedInEngineStates == 0 && value != 0) Console.WriteLine($"Enabling updates of scene '{name}'...");
+				if (updatedInEngineStates != 0 && value == 0) Logger.LogMessage($"Disabling updates of scene '{name}'...");
+				else if (updatedInEngineStates == 0 && value != 0) Logger.LogMessage($"Enabling updates of scene '{name}'...");
 				updatedInEngineStates = value;
 			}
 		}
@@ -130,11 +136,11 @@ namespace FragEngine3.Scenes
 			{
 				if (value.HasFlag(EngineState.Startup) || value.HasFlag(EngineState.Shutdown))
 				{
-					Console.WriteLine("Error! Only update flags for Loading, Unloading, and Running engine states are allowed! Resetting corresponding flags.");
+					Logger.LogError("Only update flags for Loading, Unloading, and Running engine states are allowed! Resetting corresponding flags.");
 					value &= ~(EngineState.Startup | EngineState.Shutdown);
 				}
-				if (drawnInEngineStates != 0 && value == 0) Console.WriteLine($"Disabling drawing of scene '{name}'...");
-				else if (drawnInEngineStates == 0 && value != 0) Console.WriteLine($"Enabling drawing of scene '{name}'...");
+				if (drawnInEngineStates != 0 && value == 0) Logger.LogMessage($"Disabling drawing of scene '{name}'...");
+				else if (drawnInEngineStates == 0 && value != 0) Logger.LogMessage($"Enabling drawing of scene '{name}'...");
 				drawnInEngineStates = value;
 			}
 		}
@@ -203,14 +209,14 @@ namespace FragEngine3.Scenes
 		{
 			if (IsDisposed)
 			{
-				Console.WriteLine("Error! Cannot create new scene behaviour on disposed scene!");
+				Logger.LogError("Cannot create new scene behaviour on disposed scene!");
 				_outNewBehaviour = null;
 				return false;
 			}
 
 			if (!SceneBehaviour.CreateBehaviour(this, out _outNewBehaviour, _params) || _outNewBehaviour == null)
 			{
-				Console.WriteLine($"Error! Failed to create new scene behaviour of type '{typeof(T)}' for scene '{name}'!");
+				Logger.LogError($"Failed to create new scene behaviour of type '{typeof(T)}' for scene '{name}'!");
 				_outNewBehaviour = null;
 				return false;
 			}
@@ -223,17 +229,17 @@ namespace FragEngine3.Scenes
 		{
 			if (IsDisposed)
 			{
-				Console.WriteLine("Error! Cannot add behaviour to disposed scene!");
+				Logger.LogError("Cannot add behaviour to disposed scene!");
 				return false;
 			}
 			if (_newBehaviour == null || _newBehaviour.IsDisposed)
 			{
-				Console.WriteLine($"Error! Cannot add null or disposed behaviour to disposed scene '{name}'!");
+				Logger.LogError($"Cannot add null or disposed behaviour to disposed scene '{name}'!");
 				return false;
 			}
 			if (sceneBehaviours.Contains(_newBehaviour))
 			{
-				Console.WriteLine($"Error! Scene behaviour '{_newBehaviour}' was already added to scene '{name}'!");
+				Logger.LogError($"Scene behaviour '{_newBehaviour}' was already added to scene '{name}'!");
 				return false;
 			}
 
@@ -322,7 +328,7 @@ namespace FragEngine3.Scenes
 			{
 				if (_funcSelector == null)
 				{
-					Console.WriteLine("Error! Selector function delegate may not be null!");
+					Logger.LogError("Selector function delegate may not be null!");
 					_outNode = null;
 					return false;
 				}
@@ -389,7 +395,7 @@ namespace FragEngine3.Scenes
 		{
 			if (IsDisposed)
 			{
-				Console.WriteLine("Error! Cannot update disposed scene!");
+				Logger.LogError("Cannot update disposed scene!");
 				return false;
 			}
 
@@ -415,7 +421,7 @@ namespace FragEngine3.Scenes
 
 			if (updateStage == null)
 			{
-				Console.WriteLine($"Error! Invalid update stage '{_stageFlag}'!");
+				Logger.LogError("Invalid update stage '{_stageFlag}'!");
 				return false;
 			}
 
@@ -433,7 +439,7 @@ namespace FragEngine3.Scenes
 			if (IsDisposed) return false;
 			if (_node == null || _node.IsDisposed)
 			{
-				Console.WriteLine("Error! Cannot register update stages for null or disposed node");
+				Logger.LogError("Cannot register update stages for null or disposed node");
 				return false;
 			}
 
@@ -463,7 +469,7 @@ namespace FragEngine3.Scenes
 			if (IsDisposed) return false;
 			if (_node == null || _node.IsDisposed)
 			{
-				Console.WriteLine("Error! Cannot update registration of update stages for null or disposed node");
+				Logger.LogError("Cannot update registration of update stages for null or disposed node");
 				return false;
 			}
 
@@ -499,7 +505,7 @@ namespace FragEngine3.Scenes
 			if (IsDisposed) return false;
 			if (_node == null || _node.IsDisposed)
 			{
-				Console.WriteLine("Error! Cannot unregister update stages for null or disposed node");
+				Logger.LogError("Cannot unregister update stages for null or disposed node");
 				return false;
 			}
 
@@ -514,7 +520,7 @@ namespace FragEngine3.Scenes
 		{
 			if (IsDisposed)
 			{
-				Console.WriteLine("Error! Cannot draw disposed scene!");
+				Logger.LogError("Cannot draw disposed scene!");
 				return false;
 			}
 
@@ -529,7 +535,7 @@ namespace FragEngine3.Scenes
 
 			if (drawStage == null)
 			{
-				Console.WriteLine($"Error! Invalid draw stage '{SceneEventType.OnDraw}'!");
+				Logger.LogError($"Invalid draw stage '{SceneEventType.OnDraw}'!");
 				return false;
 			}
 
@@ -547,7 +553,7 @@ namespace FragEngine3.Scenes
 			if (IsDisposed) return false;
 			if (_node == null || _node.IsDisposed)
 			{
-				Console.WriteLine("Error! Cannot register draw stage for null or disposed node");
+				Logger.LogError("Cannot register draw stage for null or disposed node");
 				return false;
 			}
 
@@ -564,7 +570,7 @@ namespace FragEngine3.Scenes
 			if (IsDisposed) return false;
 			if (_node == null || _node.IsDisposed)
 			{
-				Console.WriteLine("Error! Cannot unregister draw stage for null or disposed node");
+				Logger.LogError("Cannot unregister draw stage for null or disposed node");
 				return false;
 			}
 

@@ -1,4 +1,5 @@
-﻿using FragEngine3.Containers;
+﻿using System.Diagnostics;
+using FragEngine3.Containers;
 using FragEngine3.Utility;
 
 namespace FragEngine3.Resources.Management
@@ -93,6 +94,9 @@ namespace FragEngine3.Resources.Management
 
 			_outProgress = new Progress("Gathering all resource files", 0);
 
+			Stopwatch timer = new();
+			timer.Start();
+
 			Console.WriteLine($"- Verifying resource paths...");
 			if (!VerifyResourcePaths(_outProgress))
 			{
@@ -114,7 +118,10 @@ namespace FragEngine3.Resources.Management
 				return false;
 			}
 
-			Console.WriteLine("\n# Loading resource libraries...");
+			Console.WriteLine($"# Finished gathering all resource files. ({timer.ElapsedMilliseconds}ms)\n");
+			timer.Restart();
+
+			Console.WriteLine("# Loading resource libraries...");
 
 			int taskCount = 3 + resourceLibraries.Count;
 			_outProgress.Update("Loading resource libraries", 3, taskCount);
@@ -196,6 +203,7 @@ namespace FragEngine3.Resources.Management
 					if (libDir.source == ResourceSource.Core)
 					{
 						Console.WriteLine($"Error! Core resource library '{libDir.name}' could not be processed! Aborting resource gathering!");
+						timer.Stop();
 						return false;
 					}
 				}
@@ -207,7 +215,8 @@ namespace FragEngine3.Resources.Management
 				looseDataFiles.Clear();
 			}
 
-			Console.WriteLine("\n# Finished loading resource libraries.");
+			timer.Stop();
+			Console.WriteLine($"# Finished loading resource libraries. ({timer.ElapsedMilliseconds}ms)\n");
 
 			_outProgress.Finish();
 			return true;

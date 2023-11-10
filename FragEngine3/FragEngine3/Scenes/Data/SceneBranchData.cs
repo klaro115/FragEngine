@@ -1,4 +1,5 @@
-﻿using FragEngine3.Utility.Serialization;
+﻿using FragEngine3.EngineCore;
+using FragEngine3.Utility.Serialization;
 
 namespace FragEngine3.Scenes.Data
 {
@@ -36,7 +37,7 @@ namespace FragEngine3.Scenes.Data
 		{
 			if (_jsonTxt == null)
 			{
-				Console.WriteLine("Error! Cannot deserialize scene branch data from null JSON string!");
+				Logger.Instance?.LogError("Cannot deserialize scene branch data from null JSON string!");
 				_outData = new();
 				return false;
 			}
@@ -49,7 +50,7 @@ namespace FragEngine3.Scenes.Data
 		{
 			if (string.IsNullOrEmpty(_filePath))
 			{
-				Console.WriteLine("Error! Cannot deserialize scene branch data from null or blank file path!");
+				Logger.Instance?.LogError("Cannot deserialize scene branch data from null or blank file path!");
 				_outData = new();
 				return false;
 			}

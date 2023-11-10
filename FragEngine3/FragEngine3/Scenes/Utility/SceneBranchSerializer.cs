@@ -1,4 +1,5 @@
 ﻿using FragEngine3.Containers;
+using FragEngine3.EngineCore;
 using FragEngine3.Scenes.Data;
 using FragEngine3.Scenes.EventSystem;
 using FragEngine3.Utility.Serialization;
@@ -40,7 +41,7 @@ namespace FragEngine3.Scenes.Utility
 
 			if (_node == null || _node.IsDisposed)
 			{
-				Console.WriteLine("Error! Cannot serialize null or disposed scene!");
+				Logger.Instance?.LogError("Cannot serialize null or disposed scene!");
 				goto abort;
 			}
 
@@ -64,7 +65,7 @@ namespace FragEngine3.Scenes.Utility
 				out int maxComponentCount,
 				out int totalComponentCount))
 			{
-				Console.WriteLine("Error! Failed to generate ID mapping for scene node branch!");
+				Logger.Instance?.LogError("Failed to generate ID mapping for scene node branch!");
 				goto abort;
 			}
 
@@ -92,7 +93,7 @@ namespace FragEngine3.Scenes.Utility
 			// Save all node data:
 			if (!SaveSceneNodes(in allNodes, in idMap, _outData, _outProgress))
 			{
-				Console.WriteLine("Error! Failed to save node hierarchy for scene!");
+				Logger.Instance?.LogError("Failed to save node hierarchy for scene!");
 				goto abort;
 			}
 
@@ -180,7 +181,7 @@ namespace FragEngine3.Scenes.Utility
 				{
 					if (!node.SaveToData(out SceneNodeData nData))
 					{
-						Console.WriteLine($"Error! Failed to save scene node '{node}' to data!");
+						Logger.Instance?.LogError($"Failed to save scene node '{node}' to data!");
 						return false;
 					}
 
@@ -199,7 +200,7 @@ namespace FragEngine3.Scenes.Utility
 						{
 							if (!component.SaveToData(out ComponentData cData, _idMap))
 							{
-								Console.WriteLine($"Error! Failed to save component '{component}' of scene node '{node}' to data!");
+								Logger.Instance?.LogError($"Failed to save component '{component}' of scene node '{node}' to data!");
 								return false;
 							}
 
@@ -265,13 +266,13 @@ namespace FragEngine3.Scenes.Utility
 
 			if (_parentNode == null || _parentNode.IsDisposed)
 			{
-				Console.WriteLine("Error! Cannot load hierarchy branch under null or disposed parent node!");
+				Logger.Instance?.LogError("Cannot load hierarchy branch under null or disposed parent node!");
 				_outNode = null;
 				goto abort;
 			}
 			if (_data == null)
 			{
-				Console.WriteLine("Error! Cannot load hierarchy branch from null branch data!");
+				Logger.Instance?.LogError("Cannot load hierarchy branch from null branch data!");
 				_outNode = null;
 				goto abort;
 			}
@@ -279,7 +280,7 @@ namespace FragEngine3.Scenes.Utility
 			// First, try to recreate the ID mapping of all elements in the scene:
 			if (!ReconstructBranchIdMap(in _data, out Dictionary<int, ISceneElementData> idMap, out int totalComponentCount))
 			{
-				Console.WriteLine("Error! Failed to reconstruct ID map from scene data!");
+				Logger.Instance?.LogError("Failed to reconstruct ID map from scene data!");
 				_outNode = null;
 				goto abort;
 			}
@@ -293,14 +294,14 @@ namespace FragEngine3.Scenes.Utility
 			// Create all nodes:
 			if (!LoadBranchNodes(in _data, in idMap, _outNode, _outProgress, out Dictionary<int, SceneNode> nodeIdMap))
 			{
-				Console.WriteLine("Error! Failed to load and recreate scene hierarchy!");
+				Logger.Instance?.LogError("Failed to load and recreate scene hierarchy!");
 				goto abort;
 			}
 
 			// Create and all components and reattach them to nodes:
 			if (!LoadComponents(in _data, in idMap, in nodeIdMap, _outProgress, totalComponentCount))
 			{
-				Console.WriteLine("Error! Failed to load and recreate components!");
+				Logger.Instance?.LogError("Failed to load and recreate components!");
 				goto abort;
 			}
 
@@ -379,14 +380,14 @@ namespace FragEngine3.Scenes.Utility
 			int nodeCount = Math.Min(_data.Hierarchy.NodeData.Length, _data.Hierarchy.TotalNodeCount);
 			if (nodeCount == 0)
 			{
-				Console.WriteLine("Error! Hierarchy branch must contain at least a root node!");
+				Logger.Instance?.LogError("Hierarchy branch must contain at least a root node!");
 				return false;
 			}
 
 			SceneNodeData rootNodeData = _data.Hierarchy.NodeData[0];
 			if (!_prefabNode.LoadFromData(in rootNodeData))
 			{
-				Console.WriteLine("Error! Failed to load prefabNode node from data!");
+				Logger.Instance?.LogError("Failed to load prefabNode node from data!");
 				return false;
 			}
 			_outNodeIdMap.Add(rootNodeData.ID, _prefabNode);
@@ -399,7 +400,7 @@ namespace FragEngine3.Scenes.Utility
 					SceneNode node = parentNode.CreateChild(data.Name);
 					if (!node.LoadFromData(in data))
 					{
-						Console.WriteLine($"Error! Failed to load node '{data.Name ?? string.Empty}' from data!");
+						Logger.Instance?.LogError($"Failed to load node '{data.Name ?? string.Empty}' from data!");
 						return false;
 					}
 
@@ -443,7 +444,7 @@ namespace FragEngine3.Scenes.Utility
 
 					if (!Component.CreateComponent(node, cData.Type, out Component? component) || component == null)
 					{
-						Console.WriteLine($"Error! Failed to create component of type '{cData.Type}' for node '{node}'!");
+						Logger.Instance?.LogError($"Failed to create component of type '{cData.Type}' for node '{node}'!");
 						return false;
 					}
 					node.AddComponent(component);
@@ -465,7 +466,7 @@ namespace FragEngine3.Scenes.Utility
 
 				if (!component.LoadFromData(in data, _idMap))
 				{
-					Console.WriteLine($"Error! Failed to load and initialize component '{component}' on scene node '{component.node}'!");
+					Logger.Instance?.LogError($"Failed to load and initialize component '{component}' on scene node '{component.node}'!");
 					return false;
 				}
 

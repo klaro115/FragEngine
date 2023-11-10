@@ -1,4 +1,6 @@
 ﻿
+using FragEngine3.EngineCore;
+
 namespace FragEngine3.Scenes.EventSystem
 {
 	/// <summary>
@@ -98,13 +100,13 @@ namespace FragEngine3.Scenes.EventSystem
         {
             if (_idNumber < 0)
             {
-                if (_verbose) Console.WriteLine("Error! ID number for custom eventy may not be negative! Possible collision with internal event types!");
+                if (_verbose) Logger.Instance?.LogError("ID number for custom eventy may not be negative! Possible collision with internal event types!");
                 _outEventType = SceneEventType.None;
                 return false;
             }
             if (_idNumber == 0)
             {
-				if (_verbose) Console.WriteLine("Error! ID number for custom eventy may not be zero! Possible ambiguity with custom event type flag!");
+				if (_verbose) Logger.Instance?.LogError("ID number for custom eventy may not be zero! Possible ambiguity with custom event type flag!");
 				_outEventType = SceneEventType.None;
 				return false;
 			}

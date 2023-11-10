@@ -34,6 +34,8 @@ namespace FragEngine3.EngineCore.Logging
 		public readonly string exceptionMessage = string.Empty;
 		public readonly string exceptionTrace = string.Empty;
 
+		public static readonly ConsoleColor defaultConsoleColor = Console.ForegroundColor;
+
 		#endregion
 		#region Constants
 
@@ -58,6 +60,19 @@ namespace FragEngine3.EngineCore.Logging
 				}
 			}
 			return txt;
+		}
+
+		public ConsoleColor GetConsoleColor()
+		{
+			return type switch
+			{
+				LogEntryType.Message => defaultConsoleColor,
+				LogEntryType.Warning => ConsoleColor.Yellow,
+				LogEntryType.Error => ConsoleColor.Red,
+				LogEntryType.Exception => ConsoleColor.DarkRed,
+				LogEntryType.Status => ConsoleColor.Green,
+				_ => defaultConsoleColor,
+			};
 		}
 
 		public int CompareTo(LogEntry? other)

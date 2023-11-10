@@ -1,4 +1,5 @@
 ﻿using System.Numerics;
+using FragEngine3.EngineCore;
 using FragEngine3.Scenes.Data;
 using FragEngine3.Scenes.EventSystem;
 using FragEngine3.Scenes.Utility;
@@ -90,6 +91,11 @@ namespace FragEngine3.Scenes
 		/// Gets the node's immediate parent node. May return null only if the node is disposed or if this is the scene's root node.
 		/// </summary>
 		public SceneNode Parent => !IsDisposed ? parentNode : null!;
+
+		/// <summary>
+		/// Gets the engine's logging module for error and debug output.
+		/// </summary>
+		public Logger Logger => scene.engine.Logger ?? Logger.Instance!;
 
 		#endregion
 		#region Properties Transformations
@@ -297,13 +303,13 @@ namespace FragEngine3.Scenes
 		{
 			if (IsDisposed)
 			{
-				scene.engine.Logger.LogError("Cannot duplicate disposed node!");
+				Logger.LogError("Cannot duplicate disposed node!");
 				_outDuplicate = null;
 				return false;
 			}
 			if (_newParentNode != null && _newParentNode.IsDisposed)
 			{
-				scene.engine.Logger.LogError("Cannot duplicate node as child of disposed parent node!");
+				Logger.LogError("Cannot duplicate node as child of disposed parent node!");
 				_outDuplicate = null;
 				return false;
 			}
@@ -312,13 +318,13 @@ namespace FragEngine3.Scenes
 			// Save and then reload hierarchy branch starting from this node to create the duplicate:
 			if (!SceneBranchSerializer.SaveBranchToData(this, out SceneBranchData data, out _, false))
 			{
-				scene.engine.Logger.LogError("Failed to copy node data for duplication!");
+				Logger.LogError("Failed to copy node data for duplication!");
 				_outDuplicate = null;
 				return false;
 			}
 			if (!SceneBranchSerializer.LoadBranchFromData(_newParentNode, in data, out _outDuplicate, out _) || _outDuplicate == null)
 			{
-				scene.engine.Logger.LogError("Failed to paste node data for duplication!");
+				Logger.LogError("Failed to paste node data for duplication!");
 				return false;
 			}
 
@@ -429,17 +435,17 @@ namespace FragEngine3.Scenes
 				throw new ObjectDisposedException(name, "Cannot change parent of disposed node!");
 			if (IsRootNode)
 			{
-				scene.engine.Logger.LogError("Cannot change parent of a scene's root node!");
+				Logger.LogError("Cannot change parent of a scene's root node!");
 				return false;
 			}
 			if (_newParent?.scene != scene)
 			{
-				scene.engine.Logger.LogError("Parent node must belong to the same scene!");
+				Logger.LogError("Parent node must belong to the same scene!");
 				return false;
 			}
 			if (_newParent == this)
 			{
-				scene.engine.Logger.LogError("A node cannot be its own parent!");
+				Logger.LogError("A node cannot be its own parent!");
 				return false;
 			}
 
@@ -581,7 +587,7 @@ namespace FragEngine3.Scenes
 		{
 			if (_results == null)
 			{
-				scene.engine.Logger.LogError("Cannot store components in results list that is null!");
+				Logger.LogError("Cannot store components in results list that is null!");
 				return;
 			}
 
@@ -658,12 +664,12 @@ namespace FragEngine3.Scenes
 		{
 			if (_component == null)
 			{
-				scene.engine.Logger.LogError("Cannot remove null component from node!");
+				Logger.LogError("Cannot remove null component from node!");
 				return false;
 			}
 			if (IsDisposed)
 			{
-				scene.engine.Logger.LogError("Cannot remove component from disposed node!");
+				Logger.LogError("Cannot remove component from disposed node!");
 				return false;
 			}
 
@@ -705,13 +711,13 @@ namespace FragEngine3.Scenes
 		{
 			if (IsDisposed)
 			{
-				scene.engine.Logger.LogError("Cannot create new component on disposed node!");
+				Logger.LogError("Cannot create new component on disposed node!");
 				_outNewComponent = null;
 				return false;
 			}
 			if (!Component.CreateComponent(this, out _outNewComponent, _params) || _outNewComponent == null)
 			{
-				scene.engine.Logger.LogError($"Failed to create new component on node '{Name}'!");
+				Logger.LogError($"Failed to create new component on node '{Name}'!");
 				_outNewComponent?.Dispose();
 				_outNewComponent = null;
 				return false;
@@ -752,17 +758,17 @@ namespace FragEngine3.Scenes
 		{
 			if (IsDisposed)
 			{
-				scene.engine.Logger.LogError("Cannot add new component on disposed node!");
+				Logger.LogError("Cannot add new component on disposed node!");
 				return false;
 			}
 			if (_newComponent == null || _newComponent.IsDisposed)
 			{
-				scene.engine.Logger.LogError($"Cannot add null or disposed component to node '{Name}'!");
+				Logger.LogError($"Cannot add null or disposed component to node '{Name}'!");
 				return false;
 			}
 			if (_newComponent.node != this)
 			{
-				scene.engine.Logger.LogError($"Cannot add component '{_newComponent}' to node '{Name}', as it was created for a different node!");
+				Logger.LogError($"Cannot add component '{_newComponent}' to node '{Name}', as it was created for a different node!");
 				return false;
 			}
 
@@ -775,7 +781,7 @@ namespace FragEngine3.Scenes
 			{
 				if (components.Contains(_newComponent))
 				{
-					scene.engine.Logger.LogError("Component has already been added to this node!");
+					Logger.LogError("Component has already been added to this node!");
 					return false;
 				}
 				components.Add(_newComponent);

@@ -1,4 +1,5 @@
-﻿using FragEngine3.Scenes.Data;
+﻿using FragEngine3.EngineCore;
+using FragEngine3.Scenes.Data;
 using FragEngine3.Scenes.EventSystem;
 
 namespace FragEngine3.Scenes
@@ -24,6 +25,8 @@ namespace FragEngine3.Scenes
 
 		public bool IsDisposed { get; private set; } = false;
 		public SceneElementType ElementType => SceneElementType.SceneBehaviour;
+
+		public Logger Logger => scene.engine.Logger ?? Logger.Instance!;
 
 		#endregion
 		#region Methods
@@ -87,7 +90,7 @@ namespace FragEngine3.Scenes
 				_outBehaviour = newBehaviour as T;
 				if (_outBehaviour == null)
 				{
-					Console.WriteLine($"Error! Type mismatch when trying to create scene behaviour! Expected '{typeof(T)}', found '{newBehaviour.GetType()}'");
+					_scene.Logger.LogError($"Type mismatch when trying to create scene behaviour! Expected '{typeof(T)}', found '{newBehaviour.GetType()}'");
 					newBehaviour.Dispose();
 					return false;
 				}
@@ -105,7 +108,7 @@ namespace FragEngine3.Scenes
 			}
 			catch (Exception ex)
 			{
-				Console.WriteLine($"Error! Failed to parse behaviour type name '{_typeName}' for scene '{_scene.Name}'!\nException type: '{ex.GetType()}'\nException message: '{ex.Message}'");
+				_scene?.Logger.LogException($"Failed to parse behaviour type name '{_typeName}' for scene '{_scene.Name}'!", ex);
 				_outBehaviour = null;
 				return false;
 			}
@@ -116,7 +119,7 @@ namespace FragEngine3.Scenes
 			}
 			else
 			{
-				Console.WriteLine($"Error! Behaviour type name '{_typeName}' could not be found!");
+				_scene.Logger.LogError($"Behaviour type name '{_typeName}' could not be found!");
 				_outBehaviour = null;
 				return false;
 			}
@@ -125,25 +128,25 @@ namespace FragEngine3.Scenes
 		{
 			if (_scene == null || _scene.IsDisposed)
 			{
-				Console.WriteLine($"Error! Cannot create scene behaviour for null or disposed scene!");
+				_scene?.Logger.LogError($"Cannot create scene behaviour for null or disposed scene!");
 				_outBehaviour = null;
 				return false;
 			}
 			if (_type == null)
 			{
-				Console.WriteLine($"Error! Scene behaviour type may not be null!");
+				_scene.Logger.LogError("Scene behaviour type may not be null!");
 				_outBehaviour = null;
 				return false;
 			}
 			if (_type.IsPrimitive || _type.IsValueType || _type.IsInterface)
 			{
-				Console.WriteLine($"Error! Scene behaviour type may not be a primitive, value type, or interface!");
+				_scene.Logger.LogError("Scene behaviour type may not be a primitive, value type, or interface!");
 				_outBehaviour = null;
 				return false;
 			}
 			if (_type.IsAbstract)
 			{
-				Console.WriteLine($"Error! Cannot create instance of abstract scene behaviour type '{_type}'!");
+				_scene.Logger.LogError($"Cannot create instance of abstract scene behaviour type '{_type}'!");
 				_outBehaviour = null;
 				return false;
 			}
@@ -173,7 +176,7 @@ namespace FragEngine3.Scenes
 			}
 			catch (Exception ex)
 			{
-				Console.WriteLine($"Error! Failed to create instance of scene behaviour type '{_type}' for node '{_scene.Name}'!\nException type: '{ex.GetType()}'\nException message: '{ex.Message}'");
+				_scene.Logger.LogException($"Failed to create instance of scene behaviour type '{_type}' for node '{_scene.Name}'!", ex);
 				_outBehaviour = null;
 				return false;
 			}

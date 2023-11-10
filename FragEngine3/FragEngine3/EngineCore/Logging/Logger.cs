@@ -20,11 +20,8 @@ namespace FragEngine3.EngineCore
 
 		public readonly Engine engine;
 
-		private readonly List<LogEntry> entries = new(64);
-		private readonly int maxEntryCountBeforeClear = 64;
-		private readonly int keepEntryCountAfterClear = 4;
+		private readonly Queue<LogEntry> entries = new(64);
 		private readonly int writeLogsEveryNEntries = 1;
-		private int entriesKeptAfterClear = 0;
 
 		public readonly string applicationPath;
 		public readonly string logDirAbsPath;
@@ -37,7 +34,7 @@ namespace FragEngine3.EngineCore
 
 		public bool IsInitialized { get; private set; } = false;
 
-		public static Logger? I { get; private set; } = null;
+		public static Logger? Instance { get; private set; } = null;
 
 		#endregion
 		#region Methods
@@ -45,6 +42,8 @@ namespace FragEngine3.EngineCore
 		public bool Initialize()
 		{
 			if (IsInitialized) return true;
+
+			entries.Clear();
 
 			// Ensure the log file and its parent directory exist:
 			bool createdNew = false;
@@ -76,9 +75,9 @@ namespace FragEngine3.EngineCore
 				writer?.Close();
 			}
 
-			if (I == null || !I.IsInitialized)
+			if (Instance == null || !Instance.IsInitialized)
 			{
-				I = this;
+				Instance = this;
 			}
 
 			// Log the moment the log file was created and written to:
@@ -96,16 +95,17 @@ namespace FragEngine3.EngineCore
 
 		public void Shutdown()
 		{
+			if (!IsInitialized) return;
+
 			LogMessage("Logging session ended.");
 			LogMessage("-----------------------------------------------");
 
 			// Write all pending entries to file:
-			int pendingEntryCount = Math.Max(entries.Count - entriesKeptAfterClear, 0);
-			WriteLogs(entriesKeptAfterClear, pendingEntryCount);
+			WriteLogs();
 
-			if (I == this)
+			if (Instance == this)
 			{
-				I = null;
+				Instance = null;
 			}
 
 			IsInitialized = false;
@@ -114,6 +114,12 @@ namespace FragEngine3.EngineCore
 		public void LogMessage(string _message)
 		{
 			LogEntry entry = new(LogEntryType.Message, _message);
+			LogNewEntry(entry);
+		}
+
+		public void LogWarning(string _message)
+		{
+			LogEntry entry = new(LogEntryType.Warning, _message);
 			LogNewEntry(entry);
 		}
 
@@ -139,36 +145,37 @@ namespace FragEngine3.EngineCore
 			LogNewEntry(entry);
 		}
 
+		public void LogStatus(string _message, LogEntrySeverity _severity = LogEntrySeverity.Normal)
+		{
+			LogEntry entry = new(LogEntryType.Status, _message, 0, _severity);
+			LogNewEntry(entry);
+		}
+
 		public void LogNewEntry(LogEntry _entry)
 		{
-			entries.Add(_entry);
-
-			// Once enough new 
-			if (entries.Count - keepEntryCountAfterClear >= writeLogsEveryNEntries)
+			lock(lockObj)
 			{
-				int excessCount = Math.Max(entries.Count - maxEntryCountBeforeClear, 0);
-				int firstNewEntryIdx = Math.Clamp(entriesKeptAfterClear - 1, 0, entries.Count);
-				
-				WriteLogs(firstNewEntryIdx, excessCount);
-				entries.RemoveRange(0, excessCount);
+				entries.Enqueue(_entry);
 			}
 
-			// Clear list of log entries after a certain number has been logged:
-			if (entries.Count > maxEntryCountBeforeClear)
+			// Once enough new entries have been queued up, write them to file:
+			if (entries.Count >= writeLogsEveryNEntries)
 			{
-				int excessCount = Math.Max(entries.Count - keepEntryCountAfterClear, 0);
-				entriesKeptAfterClear = Math.Max(entries.Count - excessCount, 0);
-
-				entries.RemoveRange(0, excessCount);
+				WriteLogs();
 			}
 
 			// Write the log entry to console for instant user debugging:
-			Console.WriteLine(_entry.ToString());
+			lock (lockObj)
+			{
+				Console.ForegroundColor = _entry.GetConsoleColor();
+				Console.WriteLine(_entry.ToString());
+				Console.ForegroundColor = LogEntry.defaultConsoleColor;
+			}
 		}
 
-		private bool WriteLogs(int _startIdx, int _count)
+		private bool WriteLogs()
 		{
-			if (_count == 0) return true;
+			if (entries.Count == 0) return true;
 
 			lock(lockObj)
 			{
@@ -179,10 +186,8 @@ namespace FragEngine3.EngineCore
 					stream = File.Open(logFileAbsPath, FileMode.Append, FileAccess.Write);
 					writer = new StreamWriter(stream);
 
-					int endIdx = Math.Min(_startIdx + _count, entries.Count);
-					for (int i = _startIdx; i < endIdx; ++i)
+					while (entries.TryDequeue(out LogEntry? entry))
 					{
-						LogEntry entry = entries[i];
 						writer.WriteLine(entry.ToString());
 					}
 				}

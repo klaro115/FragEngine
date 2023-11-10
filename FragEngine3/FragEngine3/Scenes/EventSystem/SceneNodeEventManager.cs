@@ -66,7 +66,7 @@ namespace FragEngine3.Scenes.EventSystem
 
 			if (node.IsDisposed)
 			{
-				Console.WriteLine("Error! Cannot update event listeners for disposed node!");
+				node.Logger.LogError("Cannot update event listeners for disposed node!");
 				return false;
 			}
 
@@ -161,7 +161,7 @@ namespace FragEngine3.Scenes.EventSystem
 		{
 			if (_component == null)
 			{
-				Console.WriteLine("Error! Cannot remove listeners of null component!");
+				node.Logger.LogError("Cannot remove listeners of null component!");
 				return false;
 			}
 
@@ -210,7 +210,7 @@ namespace FragEngine3.Scenes.EventSystem
 		{
 			if (_component == null || _component.IsDisposed)
 			{
-				Console.WriteLine("Error! Cannot add listeners of null or disposed component!");
+				node.Logger.LogError("Cannot add listeners of null or disposed component!");
 				return false;
 			}
 
