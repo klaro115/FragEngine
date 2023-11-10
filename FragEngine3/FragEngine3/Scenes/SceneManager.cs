@@ -63,17 +63,17 @@ namespace FragEngine3.Scenes
 		{
 			if (IsDisposed)
 			{
-				Console.WriteLine("Error! Cannot add scene to disposed scene manager!");
+				engine.Logger.LogError("Cannot add scene to disposed scene manager!");
 				return false;
 			}
 			if (_newScene == null || _newScene.IsDisposed)
 			{
-				Console.WriteLine("Error! Cannot add null or disposed scene to manager!");
+				engine.Logger.LogError("Cannot add null or disposed scene to manager!");
 				return false;
 			}
 			if (scenes.Contains(_newScene))
 			{
-				Console.WriteLine($"Error! Scene '{_newScene.Name}' was already to manager!");
+				engine.Logger.LogError($"Scene '{_newScene.Name}' was already to manager!");
 				return false;
 			}
 
@@ -87,12 +87,12 @@ namespace FragEngine3.Scenes
 		{
 			if (IsDisposed)
 			{
-				Console.WriteLine("Error! Cannot remove scene from disposed scene manager!");
+				engine.Logger.LogError("Cannot remove scene from disposed scene manager!");
 				return false;
 			}
 			if (_scene == null)
 			{
-				Console.WriteLine("Error! Cannot remove nul scene from manager!");
+				engine.Logger.LogError("Cannot remove nul scene from manager!");
 				return false;
 			}
 
@@ -104,7 +104,7 @@ namespace FragEngine3.Scenes
 			}
 			else
 			{
-				Console.WriteLine($"Error! Cannot remove scene '{_scene.Name}' from manager; it was not added to the manager.");
+				engine.Logger.LogError($"Cannot remove scene '{_scene.Name}' from manager; it was not added to the manager.");
 			}
 
 			if (_disposeScene)
@@ -118,7 +118,7 @@ namespace FragEngine3.Scenes
 		{
 			if (IsDisposed)
 			{
-				Console.WriteLine("Error! Cannot broadcast event through disposed scene manager!");
+				engine.Logger.LogError("Cannot broadcast event through disposed scene manager!");
 				return false;
 			}
 
@@ -147,7 +147,7 @@ namespace FragEngine3.Scenes
 		{
 			if (IsDisposed)
 			{
-				Console.WriteLine("Error! Cannot update scenes of disposed scene manager!");
+				engine.Logger.LogError("Cannot update scenes of disposed scene manager!");
 				return false;
 			}
 
@@ -168,12 +168,12 @@ namespace FragEngine3.Scenes
 		{
 			if (IsDisposed)
 			{
-				Console.WriteLine("Error! Cannot update scene of disposed scene manager!");
+				engine.Logger.LogError("Cannot update scene of disposed scene manager!");
 				return false;
 			}
 			if (_scene == null || _scene.IsDisposed)
 			{
-				Console.WriteLine("Error! Cannot update null or disposed scene!");
+				engine.Logger.LogError("Cannot update null or disposed scene!");
 				return false;
 			}
 
@@ -184,7 +184,7 @@ namespace FragEngine3.Scenes
 		{
 			if (IsDisposed)
 			{
-				Console.WriteLine("Error! Cannot draw scenes of disposed scene manager!");
+				engine.Logger.LogError("Cannot draw scenes of disposed scene manager!");
 				return false;
 			}
 
@@ -205,12 +205,12 @@ namespace FragEngine3.Scenes
 		{
 			if (IsDisposed)
 			{
-				Console.WriteLine("Error! Cannot draw scene of disposed scene manager!");
+				engine.Logger.LogError("Cannot draw scene of disposed scene manager!");
 				return false;
 			}
 			if (_scene == null || _scene.IsDisposed)
 			{
-				Console.WriteLine("Error! Cannot draw null or disposed scene!");
+				engine.Logger.LogError("Cannot draw null or disposed scene!");
 				return false;
 			}
 

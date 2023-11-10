@@ -1,4 +1,5 @@
 ﻿using FragEngine3.EngineCore.Config;
+using FragEngine3.EngineCore.Logging;
 using FragEngine3.Graphics;
 using FragEngine3.Resources;
 using FragEngine3.Scenes;
@@ -15,8 +16,14 @@ namespace FragEngine3.EngineCore
 			applicationLogic = _applicationLogic ?? throw new ArgumentNullException(nameof(_applicationLogic), "Application logic may not be null!");
 			config = _config?.Clone() ?? throw new ArgumentNullException(nameof(_config), "Engine config may not be null!");
 
+			// Create logger before any other module:
+			Logger = new(this);
+			if (!Logger.Initialize()) throw new ApplicationException("Logging system failed to initialize!");
+
+			// Initialize application logic:
 			applicationLogic.AssignEngine(this);
 
+			// Create main engine modules:
 			PlatformSystem = new PlatformSystem(this);
 			ResourceManager = new ResourceManager(this);
 			InputManager = new InputManager(this);
@@ -54,6 +61,7 @@ namespace FragEngine3.EngineCore
 		public bool IsRunning => !IsDisposed && State == EngineState.Running;
 		public EngineState State { get; private set; } = EngineState.None;
 
+		public Logger Logger { get; private set; } = null!;
 		public PlatformSystem PlatformSystem { get; private set; } = null!;
 		public ResourceManager ResourceManager { get; private set; } = null!;
 		public InputManager InputManager { get; private set; } = null!;
@@ -84,6 +92,8 @@ namespace FragEngine3.EngineCore
 			//...
 
 			mainLoopCancellationSrc?.Dispose();
+
+			Logger?.Shutdown();
 		}
 
 		/// <summary>
@@ -94,7 +104,7 @@ namespace FragEngine3.EngineCore
 
 		public void Exit()
 		{
-			Console.WriteLine("Exit was requested.");
+			Logger.LogError("Exit was requested.");
 
 			if (mainLoopCancellationSrc != null)
 			{
@@ -150,7 +160,7 @@ namespace FragEngine3.EngineCore
 		{
 			if (State != EngineState.None)
 			{
-				Console.WriteLine("Error! Engine is already running!");
+				Logger.LogError("Error! Engine is already running!");
 				return false;
 			}
 			Instance ??= this;
@@ -180,7 +190,7 @@ namespace FragEngine3.EngineCore
 			}
 			catch (Exception ex)
 			{
-				Console.WriteLine($"Error! An unhandled exception caused the engine's main loop to crash!\nException type: '{ex.GetType()}'\nException message: '{ex.Message}'\nTrace: {ex.StackTrace ?? "NULL"}");
+				Logger.LogException("An unhandled exception caused the engine's main loop to crash!", ex, LogEntrySeverity.Critical);
 				SetState(EngineState.None);
 				success = false;
 			}
@@ -201,7 +211,7 @@ namespace FragEngine3.EngineCore
 
 			if (!ResourceManager.GatherAllResourceFiles(false, out Containers.Progress fileGatherProgress))
 			{
-				Console.WriteLine("Error! Failed to start up resource manager!");
+				Logger.LogError("Error! Failed to start up resource manager!", _severity: LogEntrySeverity.Critical);
 				return false;
 			}
 

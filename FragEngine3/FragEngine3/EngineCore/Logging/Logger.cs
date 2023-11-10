@@ -37,6 +37,8 @@ namespace FragEngine3.EngineCore
 
 		public bool IsInitialized { get; private set; } = false;
 
+		public static Logger? I { get; private set; } = null;
+
 		#endregion
 		#region Methods
 
@@ -74,6 +76,11 @@ namespace FragEngine3.EngineCore
 				writer?.Close();
 			}
 
+			if (I == null || !I.IsInitialized)
+			{
+				I = this;
+			}
+
 			// Log the moment the log file was created and written to:
 			if (createdNew)
 			{
@@ -81,6 +88,7 @@ namespace FragEngine3.EngineCore
 			}
 
 			LogMessage("-----------------------------------------------");
+			LogMessage("Logging session started.");
 
 			IsInitialized = true;
 			return true;
@@ -91,7 +99,14 @@ namespace FragEngine3.EngineCore
 			LogMessage("Logging session ended.");
 			LogMessage("-----------------------------------------------");
 
-			//TODO: Write all pending entries to file!
+			// Write all pending entries to file:
+			int pendingEntryCount = Math.Max(entries.Count - entriesKeptAfterClear, 0);
+			WriteLogs(entriesKeptAfterClear, pendingEntryCount);
+
+			if (I == this)
+			{
+				I = null;
+			}
 
 			IsInitialized = false;
 		}

@@ -1,4 +1,5 @@
 ﻿using System.Text.Json;
+using FragEngine3.EngineCore;
 
 namespace FragEngine3.Utility.Serialization
 {
@@ -30,7 +31,7 @@ namespace FragEngine3.Utility.Serialization
 		{
 			if (_data == null)
 			{
-				Console.WriteLine("Error! Cannot serialize null data to JSON!");
+				Logger.I?.LogError("Cannot serialize null data to JSON!");
 				_outJsonTxt = string.Empty;
 				return false;
 			}
@@ -42,7 +43,7 @@ namespace FragEngine3.Utility.Serialization
 			}
 			catch (Exception ex)
 			{
-				Console.WriteLine($"Error! Failed to serialize data '{_data}' to JSON!\nException type: '{ex.GetType()}'\nException message: '{ex.Message}'");
+				Logger.I?.LogException($"Failed to serialize data '{_data}' to JSON!", ex);
 				_outJsonTxt = string.Empty;
 				return false;
 			}
@@ -52,7 +53,7 @@ namespace FragEngine3.Utility.Serialization
 		{
 			if (string.IsNullOrEmpty(_filePath))
 			{
-				Console.WriteLine("Error! Cannot write serialized JSON to file at null or blank file path!");
+				Logger.I?.LogError("Cannot write serialized JSON to file at null or blank file path!");
 				return false;
 			}
 			if (!SerializeToJson(_data, out string jsonTxt))
@@ -67,7 +68,7 @@ namespace FragEngine3.Utility.Serialization
 			}
 			catch (Exception ex)
 			{
-				Console.WriteLine($"Error! Failed to write JSON to file at path '{_filePath}'!\nException type: '{ex.GetType()}'\nException message: '{ex.Message}'");
+				Logger.I?.LogException($"Failed to write JSON to file at path '{_filePath}'!", ex);
 				return false;
 			}
 		}
@@ -76,7 +77,7 @@ namespace FragEngine3.Utility.Serialization
 		{
 			if (string.IsNullOrEmpty(_jsonTxt))
 			{
-				Console.WriteLine("Error! Cannot deserialized data from null or blank JSON!");
+				Logger.I?.LogError("Cannot deserialized data from null or blank JSON!");
 				_outData = default;
 				return false;
 			}
@@ -88,7 +89,7 @@ namespace FragEngine3.Utility.Serialization
 			}
 			catch (Exception ex)
 			{
-				Console.WriteLine($"Error! Failed to deserialize data of type '{typeof(T)}' from JSON!\nException type: '{ex.GetType()}'\nException message: '{ex.Message}'");
+				Logger.I?.LogException($"Failed to deserialize data of type '{typeof(T)}' from JSON!", ex);
 				_outData = default;
 				return false;
 			}
@@ -98,7 +99,7 @@ namespace FragEngine3.Utility.Serialization
 		{
 			if (string.IsNullOrEmpty(_filePath))
 			{
-				Console.WriteLine("Error! Cannot deserialize JSON from null or blank file path!");
+				Logger.I?.LogError("Cannot deserialize JSON from null or blank file path!");
 				_outData = default;
 				return false;
 			}
@@ -110,7 +111,7 @@ namespace FragEngine3.Utility.Serialization
 			}
 			catch (Exception ex)
 			{
-				Console.WriteLine($"Error! Failed to read JSON from file at path '{_filePath}'!\nException type: '{ex.GetType()}'\nException message: '{ex.Message}'");
+				Logger.I?.LogException($"Error! Failed to read JSON from file at path '{_filePath}'!", ex);
 				_outData = default;
 				return false;
 			}

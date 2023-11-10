@@ -26,7 +26,7 @@ namespace FragEngine3.EngineCore
 			}
 			if (engine != null)
 			{
-				Console.WriteLine("Error! An engine was already assigned to this application logic module!");
+				engine.Logger.LogError("An engine was already assigned to this application logic module!");
 				return false;
 			}
 
@@ -36,6 +36,8 @@ namespace FragEngine3.EngineCore
 
 		public bool SetEngineState(EngineState _prevState, EngineState _newState)
 		{
+			if (engine == null || engine.IsDisposed) return false;
+
 			bool successEnd = _prevState switch
 			{
 				EngineState.Loading => EndLoadingState(),
@@ -45,7 +47,7 @@ namespace FragEngine3.EngineCore
 			};
 			if (!successEnd)
 			{
-				Console.WriteLine($"Error! Failed to execute exit logic for previous engine state '{_prevState}'!");
+				engine.Logger.LogError($"Failed to execute exit logic for previous engine state '{_prevState}'!");
 			}
 
 			bool successBegin = _newState switch
@@ -59,7 +61,7 @@ namespace FragEngine3.EngineCore
 			};
 			if (!successBegin)
 			{
-				Console.WriteLine($"Error! Failed to execute beginning logic for new engine state '{_newState}'!");
+				engine.Logger.LogError($"Error! Failed to execute beginning logic for new engine state '{_newState}'!");
 			}
 
 			return successEnd && successBegin;

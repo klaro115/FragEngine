@@ -50,12 +50,12 @@ namespace FragEngine3.EngineCore
 		{
 			if (IsDisposed)
 			{
-				Console.WriteLine("Error! Cannot update input states on disposed input manager!");
+				engine.Logger.LogError("Cannot update input states on disposed input manager!");
 				return false;
 			}
 			if (_snapshot == null)
 			{
-				Console.WriteLine("Error! Cannot update input states from null snapshot!");
+				engine.Logger.LogError("Cannot update input states from null snapshot!");
 				return false;
 			}
 
