@@ -1,4 +1,5 @@
-﻿using FragEngine3.EngineCore.Config;
+﻿using FragEngine3.EngineCore;
+using FragEngine3.EngineCore.Config;
 using FragEngine3.Graphics.Internal;
 using Veldrid;
 using Veldrid.Sdl2;
@@ -18,18 +19,23 @@ namespace FragEngine3.Graphics.D3D12
 		private static readonly GraphicsCapabilities capabilities = new();
 
 		#endregion
+		#region Properties
+
+		private Logger Logger => graphicsSystem.engine.Logger ?? Logger.Instance!;
+
+		#endregion
 		#region Methods
 
 		public override bool Initialize()
 		{
 			if (IsDisposed)
 			{
-				Console.WriteLine("Error! Cannot initialize disposed D3D graphics devices!");
+				Logger.LogError("Cannot initialize disposed D3D graphics devices!");
 				return false;
 			}
 			if (IsInitialized)
 			{
-				Console.WriteLine("Error! D3D graphics devices are already initialized!");
+				Logger.LogError("D3D graphics devices are already initialized!");
 				return true;
 			}
 
@@ -82,11 +88,13 @@ namespace FragEngine3.Graphics.D3D12
 				MainCommandList = Device.ResourceFactory.CreateCommandList();
 
 				Console.WriteLine("done.");
+				Logger.LogMessage("# Initializing D3D graphics device... done.", true);
 			}
 			catch (Exception ex)
 			{
 				Console.WriteLine("FAIL.");
-				Console.WriteLine($"Error! Failed to create system default D3D graphics device!\nException type: '{ex.GetType()}'\nException message: '{ex.Message}'\nStack trace: '{ex.StackTrace}'");
+				Logger.LogMessage("# Initializing D3D graphics device... FAIL.", true);
+				Logger.LogException("Failed to create system default D3D graphics device!", ex);
 				Shutdown();
 				return false;
 			}
@@ -94,21 +102,21 @@ namespace FragEngine3.Graphics.D3D12
 			if (Device != null)
 			{
 				// Log general GPU information:
-				Console.WriteLine("+ Graphics device details:");
-				Console.WriteLine($"  - Name: {Device.DeviceName}");
-				Console.WriteLine($"  - Vendor: {Device.VendorName}");
-				Console.WriteLine($"  - Backend: {Device.BackendType}");
-				Console.WriteLine($"  - API version: {Device.ApiVersion}");
+				Logger.LogMessage("+ Graphics device details:");
+				Logger.LogMessage($"  - Name: {Device.DeviceName}");
+				Logger.LogMessage($"  - Vendor: {Device.VendorName}");
+				Logger.LogMessage($"  - Backend: {Device.BackendType}");
+				Logger.LogMessage($"  - API version: {Device.ApiVersion}");
 
 				// Log GPU features:
 				GraphicsDeviceFeatures features = Device.Features;
-				Console.WriteLine("+ Graphics device features:");
-				Console.WriteLine($"  - Compute shader: {features.ComputeShader}");
-				Console.WriteLine($"  - Geometry shader: {features.GeometryShader}");
-				Console.WriteLine($"  - Tesselation: {features.TessellationShaders}");
-				Console.WriteLine($"  - Structured buffers: {features.StructuredBuffer}");
-				Console.WriteLine($"  - 1D textures: {features.Texture1D}");
-				Console.WriteLine($"  - Float64 in shaders: {features.ShaderFloat64}");
+				Logger.LogMessage("+ Graphics device features:");
+				Logger.LogMessage($"  - Compute shader: {features.ComputeShader}");
+				Logger.LogMessage($"  - Geometry shader: {features.GeometryShader}");
+				Logger.LogMessage($"  - Tesselation: {features.TessellationShaders}");
+				Logger.LogMessage($"  - Structured buffers: {features.StructuredBuffer}");
+				Logger.LogMessage($"  - 1D textures: {features.Texture1D}");
+				Logger.LogMessage($"  - Float64 in shaders: {features.ShaderFloat64}");
 				{
 					capabilities.computeShaders = features.ComputeShader;
 					capabilities.geometryShaders = features.GeometryShader;
@@ -119,16 +127,21 @@ namespace FragEngine3.Graphics.D3D12
 				// Log D3D specific information:
 				if (Device.GetD3D11Info(out BackendInfoD3D11 d3dInfo))
 				{
-					Console.WriteLine("+ D3D device details:");
-					Console.WriteLine($"  - PCI ID: {d3dInfo.DeviceId}");
+					Logger.LogMessage("+ D3D device details:");
+					Logger.LogMessage($"  - PCI ID: {d3dInfo.DeviceId}");
 				}
 				else
 				{
-					Console.WriteLine("Error! Could not query D3D device details!");
+					Logger.LogError("Could not query D3D device details!");
 				}
 			}
 
-			isInitialized = Device != null;
+			isInitialized = Device != null && Window != null;
+			if (isInitialized)
+			{
+				Logger.LogMessage($"# Finished initializing D3D graphics device.\n");
+			}
+
 			quitMessageReceived = false;
 			return isInitialized;
 		}

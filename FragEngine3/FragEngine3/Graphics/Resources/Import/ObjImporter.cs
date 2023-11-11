@@ -1,4 +1,5 @@
-﻿using FragEngine3.Graphics.Data;
+﻿using FragEngine3.EngineCore;
+using FragEngine3.Graphics.Data;
 using System.Numerics;
 using System.Text;
 
@@ -71,13 +72,13 @@ namespace FragEngine3.Graphics.Resources.Import
 		{
 			if (_streamUtf8 == null)
 			{
-				Console.WriteLine("Error! Cannot import OBJ model from null stream!");
+				Logger.Instance?.LogError("Cannot import OBJ model from null stream!");
 				_outMeshData = null;
 				return false;
 			}
 			if (!_streamUtf8.CanRead)
 			{
-				Console.WriteLine("Error! Cannot import OBJ model from write-only stream!");
+				Logger.Instance?.LogError("Cannot import OBJ model from write-only stream!");
 				_outMeshData = null;
 				return false;
 			}

@@ -41,7 +41,7 @@ namespace FragEngine3.Resources
 			}
 			catch (Exception ex)
 			{
-				Console.WriteLine($"Error! Failed to create and start resource import thread!\nException type: '{ex.GetType()}'\nException message: '{ex.Message}'");
+				engine.Logger.LogException("Failed to create and start resource import thread!", ex);
 				importThread = null!;
 			}
 		}
@@ -190,7 +190,7 @@ namespace FragEngine3.Resources
 		{
 			if (fileLoaderThread != null && fileLoaderThread.IsAlive)
 			{
-				Console.WriteLine("Error! Another file loader operation is currently running! Wait for that to conclude before issueing further calls.");
+				engine.Logger.LogError("Another file loader operation is currently running! Wait for that to conclude before issueing further calls.");
 				_outProgress = new(string.Empty, 0);
 				return false;
 			}
@@ -222,7 +222,7 @@ namespace FragEngine3.Resources
 				}
 				catch (Exception ex)
 				{
-					Console.WriteLine($"Error! Failed to create and start file loader thread!\nException type: '{ex.GetType()}'\nException message: '{ex.Message}'");
+					engine.Logger.LogException("Failed to create and start file loader thread!", ex);
 					fileLoaderThreadCancellationSrc?.Cancel();
 					fileLoaderThreadCancellationSrc = null;
 					fileLoaderThread = null;
@@ -302,7 +302,7 @@ namespace FragEngine3.Resources
 		{
 			if (string.IsNullOrEmpty(_fileKey))
 			{
-				Console.WriteLine("Error! Cannot find resource file using null or blank key!");
+				engine.Logger.LogError("Cannot find resource file using null or blank key!");
 				_outHandle = ResourceFileHandle.None;
 				return false;
 			}
@@ -319,17 +319,17 @@ namespace FragEngine3.Resources
 		{
 			if (_handle == null)
 			{
-				Console.WriteLine("Error! Cannot register null resource!");
+				engine.Logger.LogError("Cannot register null resource!");
 				return false;
 			}
 			if (!_handle.IsValid)
 			{
-				Console.WriteLine("Error! Cannot register invalid or incomplete resource!");
+				engine.Logger.LogError("Cannot register invalid or incomplete resource!");
 				return false;
 			}
 			if (HasFile(_handle.Key))
 			{
-				Console.WriteLine($"Error! A resource file with key '{_handle.Key}' already exists!");
+				engine.Logger.LogError($"A resource file with key '{_handle.Key}' already exists!");
 				return false;
 			}
 
@@ -347,7 +347,7 @@ namespace FragEngine3.Resources
 		{
 			if (string.IsNullOrEmpty(_fileKey))
 			{
-				Console.WriteLine("Error! Cannot unregister file using null or blank file key!");
+				engine.Logger.LogError("Cannot unregister file using null or blank file key!");
 				return false;
 			}
 
@@ -369,7 +369,7 @@ namespace FragEngine3.Resources
 		{
 			if (string.IsNullOrEmpty(_resourceKey))
 			{
-				Console.WriteLine("Error! Resource key may not be null or blank!");
+				engine.Logger.LogError("Resource key may not be null or blank!");
 				_outFileHandle = null;
 				return false;
 			}
@@ -418,7 +418,7 @@ namespace FragEngine3.Resources
 		{
 			if (string.IsNullOrEmpty(_resourceKey))
 			{
-				Console.WriteLine("Error! Cannot find resource using null or blank key!");
+				engine.Logger.LogError("Cannot find resource using null or blank key!");
 				_outHandle = ResourceHandle.None;
 				return false;
 			}
@@ -435,17 +435,17 @@ namespace FragEngine3.Resources
 		{
 			if (_handle == null)
 			{
-				Console.WriteLine("Error! Cannot register null resource!");
+				engine.Logger.LogError("Cannot register null resource!");
 				return false;
 			}
 			if (!_handle.IsValid)
 			{
-				Console.WriteLine("Error! Cannot register invalid or incomplete resource!");
+				engine.Logger.LogError("Cannot register invalid or incomplete resource!");
 				return false;
 			}
 			if (HasResource(_handle.Key))
 			{
-				Console.WriteLine($"Error! A resource with key '{_handle.Key}' already exists!");
+				engine.Logger.LogError($"A resource with key '{_handle.Key}' already exists!");
 				return false;
 			}
 
@@ -470,7 +470,7 @@ namespace FragEngine3.Resources
 		{
 			if (string.IsNullOrEmpty(_resourceKey))
 			{
-				Console.WriteLine("Error! Cannot unregister resource using null or blank resource key!");
+				engine.Logger.LogError("Cannot unregister resource using null or blank resource key!");
 				return false;
 			}
 
@@ -538,12 +538,12 @@ namespace FragEngine3.Resources
 		{
 			if (_handle == null)
 			{
-				Console.WriteLine("Error! Cannot load null resource handle!");
+				engine.Logger.LogError("Cannot load null resource handle!");
 				return false;
 			}
 			if (!_handle.IsValid)
 			{
-				Console.WriteLine("Error! Cannot load invalid or incomplete resource handle!");
+				engine.Logger.LogError($"Cannot load invalid or incomplete resource handle '{_handle}'!");
 				_handle.loadState = ResourceLoadState.NotLoaded;
 				return false;
 			}
@@ -552,13 +552,35 @@ namespace FragEngine3.Resources
 				return true;
 			}
 
+			// If the resource has no dependencies, load it as-is:
+			if (_handle.DependencyCount == 0)
+			{
+				return LoadResource_internal(_handle, _loadImmediately, _assignResourceCallback);
+			}
 
+			// Recursively load all dependencies first, if those hasn't been loaded yet:
+			int failureCount = 0;
+			foreach (string dependencyKey in _handle.dependencies!)
+			{
+				if (GetResource(dependencyKey, out ResourceHandle dependencyHandle) && dependencyHandle.IsValid && !dependencyHandle.IsLoaded)
+				{
+					if (!dependencyHandle.Load(_loadImmediately))
+					{
+						failureCount++;
+					}
+				}
+			}
+			if (failureCount != 0)
+			{
+				engine.Logger.LogError($"Failed to load {failureCount}/{_handle.DependencyCount} dependencies for resource '{_handle}'!");
+			}
 
-			// TODO: Load dependencies before enqueueing or loading handle!
+			return failureCount != 0;
+		}
 
-
-
-			bool success = true;
+		private bool LoadResource_internal(ResourceHandle _handle, bool _loadImmediately, ResourceHandle.FuncAssignResourceCallback _assignResourceCallback)
+		{
+			bool result = true;
 
 			// Load resource immediately on the main thread:
 			if (_loadImmediately)
@@ -566,7 +588,7 @@ namespace FragEngine3.Resources
 				// If resource is queued up already, dequeue it first:
 				if (_handle.loadState == ResourceLoadState.Queued)
 				{
-					lock(queueLockObj)
+					lock (queueLockObj)
 					{
 						loadQueue.RemoveAll(o => o.resourceHandle == _handle);
 						_handle.loadState = ResourceLoadState.NotLoaded;
@@ -588,20 +610,19 @@ namespace FragEngine3.Resources
 				// Execute immediate loading:
 				if (_handle.loadState == ResourceLoadState.NotLoaded)
 				{
-					success &= LoadImmediately(_handle, _assignResourceCallback);
+					result &= LoadImmediately(_handle, _assignResourceCallback);
 				}
 			}
 			// Queue resource up for asynchronous loading by the import thread:
 			else
 			{
-				lock(queueLockObj)
+				lock (queueLockObj)
 				{
 					_handle.loadState = ResourceLoadState.Queued;
 					loadQueue.Add(new QueueHandle(_handle, _assignResourceCallback));
 				}
 			}
-
-			return success;
+			return result;
 		}
 
 		/// <summary>
@@ -616,7 +637,7 @@ namespace FragEngine3.Resources
 		{
 			if (_handle == null)
 			{
-				Console.WriteLine("Error! Cannot load null resource handle!");
+				engine.Logger.LogError("Cannot load null resource handle!");
 				return false;
 			}
 			if (_handle.IsLoaded)
@@ -629,7 +650,7 @@ namespace FragEngine3.Resources
 
 			if (_assignResourceCallback == null)
 			{
-				Console.WriteLine("Error! Resource assignment callback may not be null!");
+				engine.Logger.LogError("Resource assignment callback may not be null!");
 				_handle.loadState = ResourceLoadState.NotLoaded;
 				return false;
 			}
@@ -668,7 +689,7 @@ namespace FragEngine3.Resources
 			// Abort and reset load state if import has failed:
 			if (!success)
 			{
-				Console.WriteLine($"Error! Failed to load resource '{_handle}'!");
+				engine.Logger.LogError($"Failed to load resource '{_handle}'!");
 				lock (resourceLockObj)
 				{
 					_handle.loadState = ResourceLoadState.NotLoaded;
@@ -685,7 +706,7 @@ namespace FragEngine3.Resources
 				_handle.loadState = ResourceLoadState.Loaded;
 			}
 
-			Console.WriteLine($"* Loaded resource: '{_handle}' ({loadDurationMs}ms)");
+			engine.Logger.LogMessage($" * Loaded resource: '{_handle}' ({loadDurationMs}ms)");
 			return true;
 		}
 
@@ -701,7 +722,7 @@ namespace FragEngine3.Resources
 		{
 			if (_assignResourceCallback == null)
 			{
-				Console.WriteLine("Error! Resource assignment callback may not be null!");
+				engine.Logger.LogError("Resource assignment callback may not be null!");
 				return false;
 			}
 			if (!GetResource(_resourceKey, out ResourceHandle handle))
@@ -722,7 +743,7 @@ namespace FragEngine3.Resources
 		{
 			if (!GetResource(_resourceKey, out ResourceHandle handle))
 			{
-				if (!_silentFailure) Console.WriteLine($"Error! Cannot unload resource with unregistered/unknown key '{_resourceKey ?? "NULL"}'!");
+				if (!_silentFailure) engine.Logger.LogError($"Cannot unload resource with unregistered/unknown key '{_resourceKey ?? "NULL"}'!");
 				return false;
 			}
 

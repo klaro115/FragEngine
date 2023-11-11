@@ -71,6 +71,8 @@ namespace FragEngine3.Graphics
 
 		public bool IsDirty => dirtyFlags != 0;
 
+		private Logger Logger => engine.Logger ?? Logger.Instance!;
+
 		#endregion
 		#region Methods
 
@@ -105,14 +107,14 @@ namespace FragEngine3.Graphics
 		{
 			if (IsDisposed)
 			{
-				Console.WriteLine("Error! Cannot load settings for disposed graphics system!");
+				Logger.LogError("Cannot load settings for disposed graphics system!");
 				_outSettings = null;
 				return false;
 			}
-			if (engine?.ResourceManager?.fileLoader == null ||
+			if (engine.ResourceManager?.fileLoader == null ||
 				engine.ResourceManager.IsDisposed)
 			{
-				Console.WriteLine("Error! Cannot determine settings path using null or disposed resource manager!");
+				Logger.LogError("Cannot determine settings path using null or disposed resource manager!");
 				_outSettings = null;
 				return false;
 			}
@@ -123,14 +125,14 @@ namespace FragEngine3.Graphics
 
 			if (!File.Exists(filePath))
 			{
-				if (!_silent) Console.WriteLine($"Graphics settings file does not exist at path '{filePath}'!");
+				if (!_silent) Logger.LogError($"Graphics settings file does not exist at path '{filePath}'!");
 				_outSettings = null;
 				return false;
 			}
 
 			if (!Serializer.DeserializeJsonFromFile(filePath, out _outSettings) || _outSettings == null)
 			{
-				if (!_silent) Console.WriteLine("Failed to load graphics settings from file!");
+				if (!_silent) Logger.LogError("Failed to load graphics settings from file!");
 				_outSettings = null;
 				return false;
 			}
@@ -143,13 +145,13 @@ namespace FragEngine3.Graphics
 		{
 			if (IsDisposed)
 			{
-				Console.WriteLine("Error! Cannot save settings of disposed graphics system!");
+				Logger.LogError("Cannot save settings of disposed graphics system!");
 				return false;
 			}
-			if (engine?.ResourceManager?.fileLoader == null ||
+			if (engine.ResourceManager?.fileLoader == null ||
 				engine.ResourceManager.IsDisposed)
 			{
-				Console.WriteLine("Error! Cannot determine settings path using null or disposed resource manager!");
+				Logger.LogError("Cannot determine settings path using null or disposed resource manager!");
 				return false;
 			}
 
@@ -218,12 +220,12 @@ namespace FragEngine3.Graphics
 		{
 			if (IsDisposed)
 			{
-				Console.WriteLine("Error! Cannot begin new frame on disposed graphics system!");
+				Logger.LogError("Cannot begin new frame on disposed graphics system!");
 				return false;
 			}
 			if (graphicsCore == null || !graphicsCore.IsInitialized)
 			{
-				Console.WriteLine("Error! Cannot begin new frame with null or uninitialized graphics core!");
+				Logger.LogError("Cannot begin new frame with null or uninitialized graphics core!");
 				return false;
 			}
 
@@ -245,12 +247,12 @@ namespace FragEngine3.Graphics
 		{
 			if (IsDisposed)
 			{
-				Console.WriteLine("Error! Cannot end frame on disposed graphics system!");
+				Logger.LogError("Cannot end frame on disposed graphics system!");
 				return false;
 			}
 			if (graphicsCore == null || !graphicsCore.IsInitialized)
 			{
-				Console.WriteLine("Error! Cannot end frame with null or uninitialized graphics core!");
+				Logger.LogError("Cannot end frame with null or uninitialized graphics core!");
 				return false;
 			}
 

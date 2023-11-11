@@ -43,7 +43,10 @@ namespace FragEngine3.EngineCore
 		{
 			if (IsInitialized) return true;
 
-			entries.Clear();
+			lock(lockObj)
+			{
+				entries.Clear();
+			}
 
 			// Ensure the log file and its parent directory exist:
 			bool createdNew = false;
@@ -75,9 +78,12 @@ namespace FragEngine3.EngineCore
 				writer?.Close();
 			}
 
-			if (Instance == null || !Instance.IsInitialized)
+			lock(lockObj)
 			{
-				Instance = this;
+				if (Instance == null || !Instance.IsInitialized)
+				{
+					Instance = this;
+				}
 			}
 
 			// Log the moment the log file was created and written to:
@@ -86,8 +92,8 @@ namespace FragEngine3.EngineCore
 				LogMessage("Log file created.");
 			}
 
-			LogMessage("-----------------------------------------------");
-			LogMessage("Logging session started.");
+			LogStatus("-----------------------------------------------");
+			LogStatus("Logging session started.");
 
 			IsInitialized = true;
 			return true;
@@ -97,8 +103,8 @@ namespace FragEngine3.EngineCore
 		{
 			if (!IsInitialized) return;
 
-			LogMessage("Logging session ended.");
-			LogMessage("-----------------------------------------------");
+			LogStatus("Logging session ended.");
+			LogStatus("-----------------------------------------------\n\n\n\n");
 
 			// Write all pending entries to file:
 			WriteLogs();
@@ -111,10 +117,10 @@ namespace FragEngine3.EngineCore
 			IsInitialized = false;
 		}
 
-		public void LogMessage(string _message)
+		public void LogMessage(string _message, bool _dontPrintToConsole = false)
 		{
 			LogEntry entry = new(LogEntryType.Message, _message);
-			LogNewEntry(entry);
+			LogNewEntry(entry, _dontPrintToConsole);
 		}
 
 		public void LogWarning(string _message)
@@ -151,7 +157,7 @@ namespace FragEngine3.EngineCore
 			LogNewEntry(entry);
 		}
 
-		public void LogNewEntry(LogEntry _entry)
+		public void LogNewEntry(LogEntry _entry, bool _dontPrintToConsole = false)
 		{
 			lock(lockObj)
 			{
@@ -165,20 +171,25 @@ namespace FragEngine3.EngineCore
 			}
 
 			// Write the log entry to console for instant user debugging:
-			lock (lockObj)
+			if (!_dontPrintToConsole)
 			{
-				Console.ForegroundColor = _entry.GetConsoleColor();
-				Console.WriteLine(_entry.ToString());
-				Console.ForegroundColor = LogEntry.defaultConsoleColor;
+				lock (lockObj)
+				{
+					Console.ForegroundColor = _entry.GetConsoleColor();
+					Console.WriteLine(_entry.ToString());
+					Console.ForegroundColor = LogEntry.defaultConsoleColor;
+				}
 			}
 		}
 
 		private bool WriteLogs()
 		{
-			if (entries.Count == 0) return true;
+			bool success;
 
 			lock(lockObj)
 			{
+				if (entries.Count == 0) return true;
+
 				FileStream? stream = null;
 				TextWriter? writer = null;
 				try
@@ -188,8 +199,13 @@ namespace FragEngine3.EngineCore
 
 					while (entries.TryDequeue(out LogEntry? entry))
 					{
-						writer.WriteLine(entry.ToString());
+						writer.WriteLine(entry.FormatLogString());
 					}
+					success = true;
+				}
+				catch
+				{
+					success = false;
 				}
 				finally
 				{
@@ -198,7 +214,7 @@ namespace FragEngine3.EngineCore
 				}
 			}
 
-			return true;
+			return success;
 		}
 
 		#endregion

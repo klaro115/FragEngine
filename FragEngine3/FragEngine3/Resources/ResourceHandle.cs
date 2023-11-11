@@ -92,6 +92,8 @@ namespace FragEngine3.Resources
 		public bool IsLoaded => loadState == ResourceLoadState.Loaded && resource != null && !resource.IsDisposed;
 		public bool IsValid => resourceManager != null && !string.IsNullOrEmpty(Key) && filePath != null && resourceType != ResourceType.Unknown && (fileType == ResourceFileType.None | !string.IsNullOrEmpty(filePath));
 
+		public int DependencyCount => dependencies != null ? dependencies.Count : 0;
+
 		/// <summary>
 		/// Returns an empty, invalid, and unassigned resource handle.
 		/// </summary>

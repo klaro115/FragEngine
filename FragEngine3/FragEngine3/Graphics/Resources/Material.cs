@@ -1,4 +1,5 @@
-﻿using FragEngine3.Graphics.Data;
+﻿using FragEngine3.EngineCore;
+using FragEngine3.Graphics.Data;
 using FragEngine3.Resources;
 using FragEngine3.Utility.Serialization;
 using Veldrid;
@@ -131,6 +132,8 @@ namespace FragEngine3.Graphics.Resources
 			set { bool isChanged = enableCulling != value; enableCulling = value; if (isChanged) { MarkDirty(DirtyFlags.Rasterizer); } }
 		}
 
+		private Logger Logger => graphicsCore.graphicsSystem.engine.Logger ?? Logger.Instance!;
+
 		#endregion
 		#region Methods
 
@@ -190,7 +193,7 @@ namespace FragEngine3.Graphics.Resources
 		{
 			if (!_vertexDataFlags.HasFlag(MeshVertexDataFlags.BasicSurfaceData))
 			{
-				Console.WriteLine($"Error! Material's vertex data flags must include at least '{MeshVertexDataFlags.BasicSurfaceData}'!");
+				Logger.LogError($"Material's vertex data flags must include at least '{MeshVertexDataFlags.BasicSurfaceData}'!");
 				_outPipeline = null!;
 				return false;
 			}
@@ -315,19 +318,19 @@ namespace FragEngine3.Graphics.Resources
 		{
 			if (_handle == null || !_handle.IsValid)
 			{
-				Console.WriteLine("Error! Cannot create material from null or invalid resource handle!");
+				Logger.Instance?.LogError("Cannot create material from null or invalid resource handle!");
 				_outMaterial = null;
 				return false;
 			}
 			if (_handle.resourceManager == null || _handle.resourceManager.IsDisposed)
 			{
-				Console.WriteLine("Error! Cannot create material using null or disposed resource manager!");
+				Logger.Instance?.LogError("Cannot create material using null or disposed resource manager!");
 				_outMaterial = null;
 				return false;
 			}
 			if (_graphicsCore == null || !_graphicsCore.IsInitialized)
 			{
-				Console.WriteLine("Error! Cannot create material using null or uninitialized graphics core!");
+				_handle.resourceManager.engine.Logger.LogError("Cannot create material using null or uninitialized graphics core!");
 				_outMaterial = null;
 				return false;
 			}
@@ -339,10 +342,12 @@ namespace FragEngine3.Graphics.Resources
 				return true;
 			}
 
+			Logger logger = _graphicsCore.graphicsSystem.engine.Logger ?? Logger.Instance!;
+
 			// Retrieve the file that this resource is loaded from:
 			if (!_handle.resourceManager.GetFileWithResource(_handle.Key, out ResourceFileHandle? fileHandle) || fileHandle == null)
 			{
-				Console.WriteLine($"Error! Could not find source file for resource handle '{_handle}'!");
+				logger.LogError($"Could not find source file for resource handle '{_handle}'!");
 				_outMaterial = null;
 				return false;
 			}
@@ -350,7 +355,7 @@ namespace FragEngine3.Graphics.Resources
 			// Try reading raw byte data from file:
 			if (!fileHandle.TryReadResourceBytes(_handle, out byte[] bytes))
 			{
-				Console.WriteLine($"Error! Failed to read material JSON for resource '{_handle}'!");
+				logger.LogError($"Failed to read material JSON for resource '{_handle}'!");
 				_outMaterial = null;
 				return false;
 			}
@@ -363,7 +368,7 @@ namespace FragEngine3.Graphics.Resources
 			}
 			catch (Exception ex)
 			{
-				Console.WriteLine($"Error! Failed to decode JSON for resource '{_handle}'!\nException type: '{ex.GetType()}'\nException message: '{ex.Message}'");
+				logger.LogException($"Failed to decode JSON for resource '{_handle}'!", ex);
 				_outMaterial = null;
 				return false;
 			}
@@ -378,7 +383,7 @@ namespace FragEngine3.Graphics.Resources
 			// Double-check if the data actually makes any sense:
 			if (!data.IsValid())
 			{
-				Console.WriteLine($"Error! Material data for resource '{_handle}' is incomplete or invalid!");
+				logger.LogError($"Material data for resource '{_handle}' is incomplete or invalid!");
 				_outMaterial = null;
 				return false;
 			}

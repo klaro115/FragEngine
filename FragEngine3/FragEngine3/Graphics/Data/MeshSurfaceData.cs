@@ -1,4 +1,5 @@
 ﻿using System.Numerics;
+using FragEngine3.EngineCore;
 using FragEngine3.Graphics.Resources;
 using FragEngine3.Scenes;
 using Veldrid;
@@ -80,7 +81,7 @@ namespace FragEngine3.Graphics.Data
 		{
 			if (_positions == null || _normals == null || _uvs == null)
 			{
-				Console.WriteLine("Error! Cannot set basic vertex data from null data arrays!");
+				Logger.Instance?.LogError("Cannot set basic vertex data from null data arrays!");
 				return false;
 			}
 
@@ -109,7 +110,7 @@ namespace FragEngine3.Graphics.Data
 		{
 			if (_tangents == null || _uvs2 == null)
 			{
-				Console.WriteLine("Error! Cannot set extended vertex data from null data arrays!");
+				Logger.Instance?.LogError("Cannot set extended vertex data from null data arrays!");
 				return false;
 			}
 
@@ -137,13 +138,13 @@ namespace FragEngine3.Graphics.Data
 		{
 			if (_indices == null)
 			{
-				Console.WriteLine("Error! Cannot set index data from null source array! (32-bit indices)");
+				Logger.Instance?.LogError("Cannot set index data from null source array! (32-bit indices)");
 				return false;
 			}
 			int newIndexCount = _overrideIndexCount < 0 ? _indices.Count : Math.Min(_overrideIndexCount, _indices.Count);
 			if (newIndexCount % 3 != 0)
 			{
-				Console.WriteLine("Error! Mesh index count must be a multiple of 3! (32-bit indices)");
+				Logger.Instance?.LogError("Mesh index count must be a multiple of 3! (32-bit indices)");
 				return false;
 			}
 
@@ -170,13 +171,13 @@ namespace FragEngine3.Graphics.Data
 		{
 			if (_indices == null)
 			{
-				Console.WriteLine("Error! Cannot set index data from null source array! (16-bit indices)");
+				Logger.Instance?.LogError("Cannot set index data from null source array! (16-bit indices)");
 				return false;
 			}
 			int newIndexCount = _overrideIndexCount < 0 ? _indices.Count : Math.Min(_overrideIndexCount, _indices.Count);
 			if (newIndexCount % 3 != 0)
 			{
-				Console.WriteLine("Error! Mesh index count must be a multiple of 3! (16-bit indices)");
+				Logger.Instance?.LogError("Mesh index count must be a multiple of 3! (16-bit indices)");
 				return false;
 			}
 

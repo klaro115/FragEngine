@@ -39,14 +39,38 @@ namespace FragEngine3.EngineCore.Logging
 		#endregion
 		#region Constants
 
-		private const string timeFormat = "yyyy.MM.dd HH:mm:ss.FFF";
+		private const string timeFormat = "yyyy.MM.dd HH:mm:ss";
 
 		#endregion
 		#region Methods
 
+		public string FormatLogString()
+		{
+			string txt = type.IsThisGood()
+				? $"{timestampUtc.ToString(timeFormat)} - {type}: {message}"
+				: $"{timestampUtc.ToString(timeFormat)} - {type}: {message} [{errorCode} | {severity}]";
+
+			if (type == LogEntryType.Exception)
+			{
+				txt += $"\n=> Exception type: {exceptionType?.ToString() ?? "Unknown"}";
+				if (!string.IsNullOrEmpty(exceptionMessage))
+				{
+					txt += $"\n=> Exception message: {exceptionMessage}";
+				}
+				if (!string.IsNullOrEmpty(exceptionTrace))
+				{
+					txt += $"\n=> Exception trace: {exceptionTrace}";
+				}
+			}
+			return txt;
+		}
+
 		public override string ToString()
 		{
-			string txt = $"{timestampUtc.ToString(timeFormat)} - {type}: {message} [{errorCode} | {severity}]";
+			string txt = type.IsThisGood()
+				? message
+				: $"{type}: {message} [{errorCode} | {severity}]";
+
 			if (type == LogEntryType.Exception)
 			{
 				txt += $"\n=> Exception type: {exceptionType?.ToString() ?? "Unknown"}";

@@ -1,5 +1,6 @@
 ﻿using FragEngine3.Resources;
 using FragEngine3.Graphics.Data;
+using FragEngine3.EngineCore;
 
 namespace FragEngine3.Graphics.Resources.Import
 {
@@ -14,21 +15,23 @@ namespace FragEngine3.Graphics.Resources.Import
 		{
 			if (_handle == null || !_handle.IsValid)
 			{
-				Console.WriteLine("Error! Resource handle for model import may not be null or invalid!");
+				Logger.Instance?.LogError("Resource handle for model import may not be null or invalid!");
 				_outSurfaceData = null;
 				return false;
 			}
 			if (_handle.resourceManager == null || _handle.resourceManager.IsDisposed)
 			{
-				Console.WriteLine("Error! Cannot load model using null or disposed resource manager!");
+				Logger.Instance?.LogError("Cannot load model using null or disposed resource manager!");
 				_outSurfaceData = null;
 				return false;
 			}
 
+			Logger logger = _handle.resourceManager.engine.Logger ?? Logger.Instance!;
+
 			// Retrieve the file that this resource is loaded from:
 			if (!_handle.resourceManager.GetFileWithResource(_handle.Key, out ResourceFileHandle? fileHandle) || fileHandle == null)
 			{
-				Console.WriteLine($"Error! Could not find source file for resource handle '{_handle}'!");
+				logger.LogError("Could not find source file for resource handle '{_handle}'!");
 				_outSurfaceData = null;
 				return false;
 			}
@@ -39,7 +42,7 @@ namespace FragEngine3.Graphics.Resources.Import
 				// Open file stream:
 				if (!fileHandle.TryOpenDataStream(_handle.fileOffset, _handle.fileSize, out stream))
 				{
-					Console.WriteLine($"Error! Failed to open file stream for resource handle '{_handle}'!");
+					logger.LogError("Failed to open file stream for resource handle '{_handle}'!");
 					_outSurfaceData = null;
 					return false;
 				}
@@ -51,7 +54,7 @@ namespace FragEngine3.Graphics.Resources.Import
 			}
 			catch (Exception ex)
 			{
-				Console.WriteLine($"Error! Failed to import model data for resource handle '{_handle}'!\nException type: '{ex.GetType()}'\nExcepion message: '{ex.Message}'");
+				logger.LogException($"Failed to import model data for resource handle '{_handle}'!", ex);
 				_outSurfaceData = null;
 				return false;
 			}
@@ -69,13 +72,13 @@ namespace FragEngine3.Graphics.Resources.Import
 		{
 			if (_stream == null || !_stream.CanRead)
 			{
-				Console.WriteLine("Error! Cannot import model data from null or write-only stream!");
+				Logger.Instance?.LogError("Cannot import model data from null or write-only stream!");
 				_outSurfaceData = null;
 				return false;
 			}
 			if (string.IsNullOrWhiteSpace(_formatExt))
 			{
-				Console.WriteLine("Error! Cannot import model data using unspecified 3D file format extension!");
+				Logger.Instance?.LogError("Cannot import model data using unspecified 3D file format extension!");
 				_outSurfaceData = null;
 				return false;
 			}
@@ -89,7 +92,7 @@ namespace FragEngine3.Graphics.Resources.Import
 			//...
 			else
 			{
-				Console.WriteLine($"Error! Unknown 3D file format extension '{_formatExt}', cannot import model data!");
+				Logger.Instance?.LogError($"Unknown 3D file format extension '{_formatExt}', cannot import model data!");
 				_outSurfaceData = null;
 				return false;
 			}
@@ -102,6 +105,15 @@ namespace FragEngine3.Graphics.Resources.Import
 			/* in ... */
 			out Mesh? _outMesh)
 		{
+			if (_handle == null || !_handle.IsValid)
+			{
+				Logger.Instance?.LogError("Resource handle for mesh creation may not be null or invalid!");
+				_outMesh = null;
+				return false;
+			}
+
+			Logger logger = _handle.resourceManager.engine.Logger ?? Logger.Instance!;
+
 			bool useFullVertexDef = _surfaceData.HasExtendedVertexData;
 
 			//TODO: Determine which mesh type to create, based on which data was provided.
@@ -119,7 +131,7 @@ namespace FragEngine3.Graphics.Resources.Import
 			}
 			if (!success)
 			{
-				Console.WriteLine($"Error! Failed to set vertex data on mesh for resource '{_handle}'!");
+				logger.LogError($"Failed to set vertex data on mesh for resource '{_handle}'!");
 				goto abort;
 			}
 
@@ -134,7 +146,7 @@ namespace FragEngine3.Graphics.Resources.Import
 			}
 			if (!success)
 			{
-				Console.WriteLine($"Error! Failed to set indeex data on mesh for resource '{_handle}'!");
+				logger.LogError($"Failed to set indeex data on mesh for resource '{_handle}'!");
 				goto abort;
 			}
 
