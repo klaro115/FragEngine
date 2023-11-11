@@ -1,4 +1,5 @@
 ﻿using System.Text;
+using FragEngine3.EngineCore;
 using FragEngine3.Resources;
 using FragEngine3.Utility.Unicode;
 using Veldrid;
@@ -135,7 +136,7 @@ namespace FragEngine3.Graphics.Resources
 			// Verify parameters and system states:
 			if (_handle == null || !_handle.IsValid)
 			{
-				Console.WriteLine("Error! Cannot create shader resource from null or invalid resource handle!");
+				_graphicsCore.graphicsSystem.engine.Logger.LogError("Cannot create shader resource from null or invalid resource handle!");
 				_outShaderRes = null;
 				return false;
 			}
@@ -164,7 +165,8 @@ namespace FragEngine3.Graphics.Resources
 			// Determine standard entry point function name based on shader stage:
 			if (!GraphicsContants.defaultShaderStageEntryPoints.TryGetValue(_stage, out string? entryPoint))
 			{
-				Console.WriteLine($"Error! Could not determine entry point name for shader stage '{_stage}'!");
+				Logger logger = _graphicsCore?.graphicsSystem.engine.Logger ?? Logger.Instance!;
+				logger.LogError($"Could not determine entry point name for shader stage '{_stage}'!");
 				_outShaderRes = null;
 				return false;
 			}
@@ -183,25 +185,28 @@ namespace FragEngine3.Graphics.Resources
 			// Verify parameters and system states:
 			if (_handle == null || !_handle.IsValid)
 			{
-				Console.WriteLine("Error! Cannot create shader resource from null or invalid resource handle!");
+				Logger.Instance?.LogError("Cannot create shader resource from null or invalid resource handle!");
 				_outShaderRes = null;
 				return false;
 			}
 			if (_handle.resourceManager == null || _handle.resourceManager.IsDisposed)
 			{
-				Console.WriteLine("Error! Cannot create shader resource using null or disposed resource manager!");
+				Logger.Instance?.LogError("Cannot create shader resource using null or disposed resource manager!");
 				_outShaderRes = null;
 				return false;
 			}
 			if (_graphicsCore == null || !_graphicsCore.IsInitialized)
 			{
-				Console.WriteLine("Error! Cannot create shader resource using null or uninitialized graphics core!");
+				Logger.Instance?.LogError("Cannot create shader resource using null or uninitialized graphics core!");
 				_outShaderRes = null;
 				return false;
 			}
+
+			Logger logger = _graphicsCore.graphicsSystem.engine.Logger ?? Logger.Instance!;
+
 			if (_stage == ShaderStages.None)
 			{
-				Console.WriteLine("Error! Cannot creste shader resource for unknown stage!");
+				logger.LogError("Cannot creste shader resource for unknown stage!");
 				_outShaderRes = null;
 				return false;
 			}
@@ -216,7 +221,7 @@ namespace FragEngine3.Graphics.Resources
 			// Retrieve the file that this resource is loaded from:
 			if (!_handle.resourceManager.GetFileWithResource(_handle.Key, out ResourceFileHandle? fileHandle) || fileHandle == null)
 			{
-				Console.WriteLine($"Error! Could not find source file for resource handle '{_handle}'!");
+				logger.LogError($"Could not find source file for resource handle '{_handle}'!");
 				_outShaderRes = null;
 				return false;
 			}
@@ -224,7 +229,7 @@ namespace FragEngine3.Graphics.Resources
 			// Try reading raw byte data from file:
 			if (!fileHandle.TryReadResourceBytes(_handle, out byte[] bytes))
 			{
-				Console.WriteLine($"Error! Failed to read shader code for resource '{_handle}'!");
+				logger.LogError($"Failed to read shader code for resource '{_handle}'!");
 				_outShaderRes = null;
 				return false;
 			}
@@ -274,14 +279,14 @@ namespace FragEngine3.Graphics.Resources
 			}
 			catch (Exception ex)
 			{
-				Console.WriteLine($"Error! Failed to read variant entry points for shader '{_handle.Key}' ({_stage})!\nException type: '{ex.GetType()}'\nException message: '{ex.Message}'");
+				logger.LogException($"Failed to read variant entry points for shader '{_handle.Key}' ({_stage})!", ex);
 				_outShaderRes = null;
 				return false;
 			}
 
 			if (maxVariantIndex < 0)
 			{
-				Console.WriteLine($"Error! Could not find any entry points for shader '{_handle.Key}' ({_stage})!");
+				logger.LogError($"Could not find any entry points for shader '{_handle.Key}' ({_stage})!");
 				_outShaderRes = null;
 				return false;
 			}
@@ -304,7 +309,7 @@ namespace FragEngine3.Graphics.Resources
 					}
 					catch (Exception ex)
 					{
-						Console.WriteLine($"Error! Failed to compile variant '{variantFlags}' for shader '{_handle.Key}' ({_stage})!\nException type: '{ex.GetType()}'\nException message: '{ex.Message}'");
+						logger.LogException($"Failed to compile variant '{variantFlags}' for shader '{_handle.Key}' ({_stage})!", ex);
 						shader?.Dispose();
 						continue;
 					}
@@ -315,7 +320,7 @@ namespace FragEngine3.Graphics.Resources
 			}
 			if (shadersCompiledCount == 0)
 			{
-				Console.WriteLine($"Error! All variants of shader '{_handle.Key}' ({_stage}) have failed to compile! Shader resource may be broken or incomplete!");
+				logger.LogError($"All variants of shader '{_handle.Key}' ({_stage}) have failed to compile! Shader resource may be broken or incomplete!");
 				_outShaderRes = null;
 				return false;
 			}

@@ -92,7 +92,7 @@ namespace FragEngine3.EngineCore
 				LogMessage("Log file created.");
 			}
 
-			LogStatus("-----------------------------------------------");
+			LogMessage("-----------------------------------------------");
 			LogStatus("Logging session started.");
 
 			IsInitialized = true;
@@ -104,7 +104,7 @@ namespace FragEngine3.EngineCore
 			if (!IsInitialized) return;
 
 			LogStatus("Logging session ended.");
-			LogStatus("-----------------------------------------------\n\n\n\n");
+			LogMessage("-----------------------------------------------\n\n\n\n");
 
 			// Write all pending entries to file:
 			WriteLogs();

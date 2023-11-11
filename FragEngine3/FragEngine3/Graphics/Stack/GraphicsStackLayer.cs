@@ -1,4 +1,5 @@
-﻿using FragEngine3.Scenes;
+﻿using FragEngine3.EngineCore;
+using FragEngine3.Scenes;
 using Veldrid;
 
 namespace FragEngine3.Graphics.Stack
@@ -49,6 +50,8 @@ namespace FragEngine3.Graphics.Stack
 		/// Gets the total number of renderers that have been claimed by and bound to this layer.
 		/// </summary>
 		public abstract int RendererCount { get; }
+
+		protected Logger Logger => stack.core.graphicsSystem.engine.Logger ?? Logger.Instance!;
 
 		#endregion
 		#region Methods

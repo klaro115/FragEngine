@@ -1,4 +1,5 @@
-﻿using FragEngine3.Resources;
+﻿using FragEngine3.EngineCore;
+using FragEngine3.Resources;
 using Veldrid;
 
 namespace FragEngine3.Graphics.Resources
@@ -41,6 +42,8 @@ namespace FragEngine3.Graphics.Resources
 
 		public Pipeline Pipeline => pipeline;
 
+		private Logger Logger => material.graphicsCore.graphicsSystem.engine.Logger ?? Logger.Instance!;
+
 		#endregion
 		#region Methods
 
@@ -65,7 +68,7 @@ namespace FragEngine3.Graphics.Resources
 		{
 			if (IsDisposed || material.IsDisposed)
 			{
-				Console.WriteLine("Cannot recreate pipeline for disposed material or variant!");
+				Logger.LogError("Cannot recreate pipeline for disposed material or variant!");
 				return false;
 			}
 
@@ -128,7 +131,7 @@ namespace FragEngine3.Graphics.Resources
 			}
 			catch (Exception ex)
 			{
-				Console.WriteLine($"Error! Failed to create graphics pipeline for variant '{vertexDataFlags}' of material '{material.resourceKey}'!\nException type: '{ex.GetType()}'\nException message: '{ex.Message}'");
+				Logger.LogException($"Failed to create graphics pipeline for variant '{vertexDataFlags}' of material '{material.resourceKey}'!", ex);
 				return false;
 			}
 		}

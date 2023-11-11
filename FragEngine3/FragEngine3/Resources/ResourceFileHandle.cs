@@ -1,7 +1,9 @@
-﻿using FragEngine3.Resources.Data;
+﻿using FragEngine3.EngineCore;
+using FragEngine3.Resources.Data;
 using FragEngine3.Resources.Management;
 using System.IO.Compression;
 using System.Resources;
+using static System.Runtime.InteropServices.JavaScript.JSType;
 
 namespace FragEngine3.Resources
 {
@@ -124,6 +126,8 @@ namespace FragEngine3.Resources
 		/// </summary>
 		public static ResourceFileHandle None => none;
 
+		private Logger Logger => resourceManager.engine.Logger ?? Logger.Instance!;
+
 		#endregion
 		#region Methods
 
@@ -131,17 +135,19 @@ namespace FragEngine3.Resources
 		{
 			if (_resourceManager == null || _resourceManager.IsDisposed)
 			{
-				Console.WriteLine("Error! Cannot create file handle using null or disposed resource manager!");
+				Logger.Instance?.LogError("Cannot create file handle using null or disposed resource manager!");
 				goto abort;
 			}
+
+			Logger logger = _resourceManager.engine.Logger ?? Logger.Instance!;
 			if (string.IsNullOrWhiteSpace(_filePath))
 			{
-				Console.WriteLine("Error! Cannot create file handle for null or blank file path!");
+				logger.LogError("Cannot create file handle for null or blank file path!");
 				goto abort;
 			}
 			if (!File.Exists(_filePath))
 			{
-				Console.WriteLine($"Error! The resource file at path '{_filePath}' does not exist!");
+				logger.LogError($"The resource file at path '{_filePath}' does not exist!");
 				goto abort;
 			}
 
@@ -153,20 +159,20 @@ namespace FragEngine3.Resources
 			{
 				if (!ResourceFileMetadata.DeserializeFromFile(metadataFilePath, out metadata))
 				{
-					Console.WriteLine($"Error! Failed to load metadata for resource file at path '{_filePath}'!");
+					logger.LogError($"Failed to load metadata for resource file at path '{_filePath}'!");
 					goto abort;
 				}
 			}
 			// If no metadata file exists, try generating it from the data file instead:
 			else if (!ResourceFileFinder.GetMetadataFromDataFilePath(_filePath, out metadata))
 			{
-				Console.WriteLine($"Error! Failed to generate metadata for resource data file at path '{_filePath}'!");
+				logger.LogError($"Failed to generate metadata for resource data file at path '{_filePath}'!");
 				goto abort;
 			}
 
 			if (metadata == null || !metadata.IsValid())
 			{
-				Console.WriteLine($"Error! Failed to retrieve metadata for resource file at path '{_filePath}'!");
+				logger.LogError($"Error! Failed to retrieve metadata for resource file at path '{_filePath}'!");
 				goto abort;
 			}
 
@@ -191,7 +197,7 @@ namespace FragEngine3.Resources
 			}
 			catch (Exception ex)
 			{
-				Console.WriteLine($"Error! The resource file at path '{metadata.DataFilePath}' could not be accessed!\nException type: '{ex.GetType()}'\nException message: '{ex.Message}'");
+				logger.LogException($"The resource file at path '{metadata.DataFilePath}' could not be accessed!", ex);
 				goto abort;
 			}
 
@@ -199,7 +205,7 @@ namespace FragEngine3.Resources
 			_outFileHandle = new ResourceFileHandle(_resourceManager, metadata, _fileSource, lastModifiedUtc);
 			if (!_outFileHandle.IsValid)
 			{
-				Console.WriteLine($"Error! Resource metadata file at path '{_filePath}' is invalid or incomplete!");
+				logger.LogError($"Resource metadata file at path '{_filePath}' is invalid or incomplete!");
 				goto abort;
 			}
 
@@ -287,7 +293,7 @@ namespace FragEngine3.Resources
 		{
 			if (_resourceHandle == null)
 			{
-				Console.WriteLine("Error! Cannot read data of null resource handle from file!");
+				Logger.LogError("Cannot read data of null resource handle from file!");
 				_outBytes = Array.Empty<byte>();
 				return false;
 			}
@@ -330,7 +336,7 @@ namespace FragEngine3.Resources
 			}
 			catch (Exception ex)
 			{
-				Console.WriteLine($"Error! Failed to read shader code from file!\nFile path: '{Key}'\nException type: '{ex.GetType()}'\nException message: '{ex.Message}'");
+				Logger.LogException($"Failed to read shader code from file!\nFile path: '{Key}'", ex);
 				_outBytes = Array.Empty<byte>();
 				return false;
 			}
@@ -357,17 +363,17 @@ namespace FragEngine3.Resources
 
 			if (fileType != ResourceFileType.Batch_Compressed)
 			{
-				Console.WriteLine("Error! File is not a contiguously compressed batch file!");
+				Logger.LogError("File is not a contiguously compressed batch file!");
 				return false;
 			}
 			if (string.IsNullOrEmpty(filePath))
 			{
-				Console.WriteLine("Error! File path may not be null or blank!");
+				Logger.LogError("File path may not be null or blank!");
 				return false;
 			}
 			if (!File.Exists(filePath))
 			{
-				Console.WriteLine($"Error! File at path '{filePath}' does not exist!");
+				Logger.LogError($"File at path '{filePath}' does not exist!");
 				return false;
 			}
 
@@ -384,7 +390,7 @@ namespace FragEngine3.Resources
 			}
 			catch (Exception ex)
 			{
-				Console.WriteLine($"Error! Failed to read and decompress batched resource file!\nException type: '{ex.GetType()}'\nException message: '{ex.Message}'");
+				Logger.LogException("Failed to read and decompress batched resource file!", ex);
 				return false;
 			}
 		}

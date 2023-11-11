@@ -1,4 +1,5 @@
 ﻿using System.Numerics;
+using FragEngine3.EngineCore;
 using FragEngine3.Graphics.Data;
 using FragEngine3.Graphics.Internal;
 using FragEngine3.Resources;
@@ -59,19 +60,19 @@ namespace FragEngine3.Graphics.Resources
 		{
 			if (IsDisposed)
 			{
-				Console.WriteLine("Error! Cannot set geometry on disposed static mesh!");
+				Logger.LogError("Cannot set geometry on disposed static mesh!");
 				return false;
 			}
 			if (_surfaceData == null || !_surfaceData.IsValid)
 			{
-				Console.WriteLine("Error! Cannot set geometry from null or invalid mesh surface data!");
+				Logger.LogError("Cannot set geometry from null or invalid mesh surface data!");
 				return false;
 			}
 
 			// Check if mesh definitions are complete; try to keep using current data if extended data is missing:
 			if (useFullSurfaceDef && !_surfaceData.HasExtendedVertexData && _surfaceData.VertexCount > VertexCount)
 			{
-				Console.WriteLine("Error! Mesh surface data is missing extended vertex data, and cannot be substituted with current data!");
+				Logger.LogError("Mesh surface data is missing extended vertex data, and cannot be substituted with current data!");
 				return false;
 			}
 
@@ -98,12 +99,12 @@ namespace FragEngine3.Graphics.Resources
 		{
 			if (IsDisposed)
 			{
-				Console.WriteLine("Error! Cannot set basic geometry on disposed static mesh!");
+				Logger.LogError("Cannot set basic geometry on disposed static mesh!");
 				return false;
 			}
 			if (_positions == null || _normals == null || _uvs == null)
 			{
-				Console.WriteLine("Error! Cannot set basic geometry from null data arrays!");
+				Logger.LogError("Cannot set basic geometry from null data arrays!");
 				return false;
 			}
 
@@ -140,12 +141,12 @@ namespace FragEngine3.Graphics.Resources
 		{
 			if (IsDisposed)
 			{
-				Console.WriteLine("Error! Cannot set basic geometry on disposed static mesh!");
+				Logger.LogError("Cannot set basic geometry on disposed static mesh!");
 				return false;
 			}
 			if (_verticesBasic == null)
 			{
-				Console.WriteLine("Error! Cannot set basic geometry from null data array!");
+				Logger.LogError("Cannot set basic geometry from null data array!");
 				return false;
 			}
 
@@ -172,17 +173,17 @@ namespace FragEngine3.Graphics.Resources
 		{
 			if (IsDisposed)
 			{
-				Console.WriteLine("Error! Cannot set extended geometry on disposed static mesh!");
+				Logger.LogError("Cannot set extended geometry on disposed static mesh!");
 				return false;
 			}
 			if (_tangents == null || _uv2 == null)
 			{
-				Console.WriteLine("Error! Cannot set extended geometry from null data arrays!");
+				Logger.LogError("Cannot set extended geometry from null data arrays!");
 				return false;
 			}
 			if (!useFullSurfaceDef)
 			{
-				Console.WriteLine($"Error! Static mesh '{resourceKey}' uses basic surface definition, extended geometry data is not supported!");
+				Logger.LogError($"Static mesh '{resourceKey}' uses basic surface definition, extended geometry data is not supported!");
 				return false;
 			}
 
@@ -227,17 +228,17 @@ namespace FragEngine3.Graphics.Resources
 		{
 			if (IsDisposed)
 			{
-				Console.WriteLine("Error! Cannot set extended geometry on disposed static mesh!");
+				Logger.LogError("Cannot set extended geometry on disposed static mesh!");
 				return false;
 			}
 			if (_verticesExt == null)
 			{
-				Console.WriteLine("Error! Cannot set extended geometry from null data array!");
+				Logger.LogError("Cannot set extended geometry from null data array!");
 				return false;
 			}
 			if (!useFullSurfaceDef)
 			{
-				Console.WriteLine($"Error! Static mesh '{resourceKey}' uses basic surface definition, extended geometry data is not supported!");
+				Logger.LogError($"Static mesh '{resourceKey}' uses basic surface definition, extended geometry data is not supported!");
 				return false;
 			}
 
@@ -271,12 +272,12 @@ namespace FragEngine3.Graphics.Resources
 		{
 			if (IsDisposed)
 			{
-				Console.WriteLine("Error! Cannot set index data on disposed mesh!");
+				Logger.LogError("Cannot set index data on disposed mesh!");
 				return false;
 			}
 			if (_indices == null)
 			{
-				Console.WriteLine("Error! Cannot set index data from null index array!");
+				Logger.LogError("Cannot set index data from null index array!");
 				return false;
 			}
 
@@ -292,12 +293,12 @@ namespace FragEngine3.Graphics.Resources
 		{
 			if (IsDisposed)
 			{
-				Console.WriteLine("Error! Cannot set index data on disposed mesh!");
+				Logger.LogError("Cannot set index data on disposed mesh!");
 				return false;
 			}
 			if (_indices == null)
 			{
-				Console.WriteLine("Error! Cannot set index data from null index array!");
+				Logger.LogError("Cannot set index data from null index array!");
 				return false;
 			}
 
@@ -355,12 +356,12 @@ namespace FragEngine3.Graphics.Resources
 		{
 			if (!IsInitialized)
 			{
-				Console.WriteLine("Error! Cannot download geometry data from uninitialized mesh!");
+				Logger.LogError("Cannot download geometry data from uninitialized mesh!");
 				return false;
 			}
 			if (_callbackDownloadDone == null)
 			{
-				Console.WriteLine("Error! Cannot schedule async download of mesh geometry data with null callback function!");
+				Logger.LogError("Cannot schedule async download of mesh geometry data with null callback function!");
 				return false;
 			}
 

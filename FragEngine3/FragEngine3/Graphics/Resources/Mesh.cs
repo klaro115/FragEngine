@@ -1,4 +1,5 @@
 ﻿using System.Numerics;
+using FragEngine3.EngineCore;
 using FragEngine3.Graphics.Internal;
 using FragEngine3.Resources;
 using Veldrid;
@@ -51,6 +52,8 @@ namespace FragEngine3.Graphics.Resources
 
 		public override ResourceType ResourceType => ResourceType.Model;
 
+		protected Logger Logger => core.graphicsSystem.engine.Logger ?? Logger.Instance!;
+
 		#endregion
 		#region Methods
 
@@ -94,14 +97,14 @@ namespace FragEngine3.Graphics.Resources
 		{
 			if (IsDisposed)
 			{
-				Console.WriteLine("Error! Cannot get geometry buffers of disposed mesh!");
+				Logger.LogError("Cannot get geometry buffers of disposed mesh!");
 				_outVertexBuffers = Array.Empty<DeviceBuffer>();
 				_outIndexBuffer = null!;
 				return false;
 			}
 			if (!IsInitialized || vertexBufferBasic == null || indexBuffer == null)
 			{
-				Console.WriteLine($"Error! Cannot get geometry buffers; mesh '{resourceKey}' has not been initialized!");
+				Logger.LogError($"Cannot get geometry buffers; mesh '{resourceKey}' has not been initialized!");
 				_outVertexBuffers = Array.Empty<DeviceBuffer>();
 				_outIndexBuffer = null!;
 				return false;
@@ -160,12 +163,12 @@ namespace FragEngine3.Graphics.Resources
 		{
 			if (!IsInitialized)
 			{
-				Console.WriteLine("Error! Cannot download geometry data from uninitialized mesh!");
+				Logger.LogError("Cannot download geometry data from uninitialized mesh!");
 				return false;
 			}
 			if (_callbackDownloadDone == null)
 			{
-				Console.WriteLine("Error! Cannot schedule download of mesh geometry data with null callback function!");
+				Logger.LogError("Cannot schedule download of mesh geometry data with null callback function!");
 				return false;
 			}
 

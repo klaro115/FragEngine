@@ -1,6 +1,6 @@
-﻿using FragEngine3.EngineCore.Config;
+﻿using FragEngine3.EngineCore;
+using FragEngine3.EngineCore.Config;
 using FragEngine3.Graphics.Internal;
-using FragEngine3.Graphics.Resources;
 using Veldrid;
 using Veldrid.Sdl2;
 
@@ -48,6 +48,8 @@ namespace FragEngine3.Graphics
 
 		public CommandList MainCommandList { get; protected set; } = null!;
 		public ResourceFactory MainFactory { get; protected set; } = null!;
+
+		private Logger Logger => graphicsSystem.engine.Logger ?? Logger.Instance!;
 
 		#endregion
 		#region Methods
@@ -109,7 +111,7 @@ namespace FragEngine3.Graphics
 			}
 			catch (Exception ex)
 			{
-				Console.WriteLine($"Error! An exception was caught while updating message loop!\nException type: '{ex.GetType()}'\nException message: '{ex.Message}'");
+				Logger.LogException("An exception was caught while updating message loop!", ex);
 				_outRequestExit = true;
 				return false;
 			}
@@ -135,7 +137,7 @@ namespace FragEngine3.Graphics
 		{
 			if (!IsInitialized)
 			{
-				Console.WriteLine("Error! Cannot create new command list using uninitialized graphics devices!");
+				Logger.LogError("Cannot create new command list using uninitialized graphics devices!");
 				_outCmdList = null;
 				return false;
 			}
@@ -149,7 +151,7 @@ namespace FragEngine3.Graphics
 			}
 			catch (Exception ex)
 			{
-				Console.WriteLine($"Error! Failed to create graphics command list!\nException type: '{ex.GetType()}\nException message: '{ex.Message}''");
+				Logger.LogException("Failed to create graphics command list!", ex);
 				_outCmdList = null;
 				return false;
 			}
@@ -159,12 +161,12 @@ namespace FragEngine3.Graphics
 		{
 			if (!IsInitialized)
 			{
-				Console.WriteLine("Error! Cannot commit command list to uninitialized graphics core!");
+				Logger.LogError("Cannot commit command list to uninitialized graphics core!");
 				return false;
 			}
 			if (_cmdList == null || _cmdList.IsDisposed)
 			{
-				Console.WriteLine("Error! Cannot commit null or disposed command list!");
+				Logger.LogError("Cannot commit null or disposed command list!");
 				return false;
 			}
 
@@ -179,7 +181,7 @@ namespace FragEngine3.Graphics
 		{
 			if (!IsInitialized)
 			{
-				Console.WriteLine("Error! Cannot begin frame on uninitialized graphics core!");
+				Logger.LogError("Cannot begin frame on uninitialized graphics core!");
 				return false;
 			}
 
@@ -197,7 +199,7 @@ namespace FragEngine3.Graphics
 		{
 			if (!IsInitialized)
 			{
-				Console.WriteLine("Error! Cannot execute draw calls using uninitialized graphics core!");
+				Logger.LogError("Cannot execute draw calls using uninitialized graphics core!");
 				return false;
 			}
 
@@ -269,17 +271,17 @@ namespace FragEngine3.Graphics
 		{
 			if (!IsInitialized)
 			{
-				Console.WriteLine("Error! Cannot schedule async geometry download on uninitialized graphics core!");
+				Logger.LogError("Cannot schedule async geometry download on uninitialized graphics core!");
 				return false;
 			}
 			if (_request == null || _request.IsValid)
 			{
-				Console.WriteLine("Error! Cannot schedule null or invalid async geometry download request!");
+				Logger.LogError("Cannot schedule null or invalid async geometry download request!");
 				return false;
 			}
 			if (_request.callbackReceiveDownloadedData == null)
 			{
-				Console.WriteLine("Error! Cannot schedule async geometry download request with null callback!");
+				Logger.LogError("Cannot schedule async geometry download request with null callback!");
 				return false;
 			}
 

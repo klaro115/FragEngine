@@ -1,4 +1,5 @@
-﻿using FragEngine3.Resources.Data;
+﻿using FragEngine3.EngineCore;
+using FragEngine3.Resources.Data;
 using FragEngine3.Utility;
 
 namespace FragEngine3.Resources.Management
@@ -90,7 +91,7 @@ namespace FragEngine3.Resources.Management
 			// For block-compressed batched files, we need a dedicated metadata file. Cannot generate one, abort and return failure:
 			else if (_dataFilePath.EndsWith(ResourceConstants.FILE_EXT_BATCH_BLOCK_COMPRESSED, StringComparison.InvariantCultureIgnoreCase))
 			{
-				Console.WriteLine("Error! Cannot generate metadata for undocumented block-compressed batched data file!");
+				Logger.Instance?.LogError("Cannot generate metadata for undocumented block-compressed batched data file!");
 				_outMetadata = ResourceFileMetadata.None;
 				return false;
 			}

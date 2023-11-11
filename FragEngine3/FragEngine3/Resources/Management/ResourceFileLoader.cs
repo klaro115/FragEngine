@@ -1,5 +1,6 @@
 ﻿using System.Diagnostics;
 using FragEngine3.Containers;
+using FragEngine3.EngineCore;
 using FragEngine3.Utility;
 
 namespace FragEngine3.Resources.Management
@@ -55,6 +56,8 @@ namespace FragEngine3.Resources.Management
 		/// </summary>
 		public int LibraryCount => resourceLibraries.Count;
 
+		private Logger Logger => resourceManager.engine.Logger ?? Logger.Instance!;
+
 		#endregion
 		#region Methods
 
@@ -90,38 +93,38 @@ namespace FragEngine3.Resources.Management
 		/// <returns>True if all libraries were detected, and files and resources therein were registered successfully. False otherwise.</returns>
 		public bool GatherAllResourceFiles(out Progress _outProgress, bool _updateExistingResources = false)
 		{
-			Console.WriteLine("\n# Gathering all resource files...");
+			Logger.LogMessage("# Gathering all resource files...");
 
 			_outProgress = new Progress("Gathering all resource files", 0);
 
 			Stopwatch timer = new();
 			timer.Start();
 
-			Console.WriteLine($"- Verifying resource paths...");
+			Logger.LogMessage("- Verifying resource paths...");
 			if (!VerifyResourcePaths(_outProgress))
 			{
 				_outProgress.Finish();
 				return false;
 			}
 
-			Console.WriteLine($"+ Gathering all libraries...");
+			Logger.LogMessage("+ Gathering all libraries...");
 			if (!GatherAllLibraries(_outProgress))
 			{
 				_outProgress.Finish();
 				return false;
 			}
 
-			Console.WriteLine($"- Updating mod load order...");
+			Logger.LogMessage("- Updating mod load order...");
 			if (!UpdateModLoadOrder(_outProgress))
 			{
 				_outProgress.Finish();
 				return false;
 			}
 
-			Console.WriteLine($"# Finished gathering all resource files. ({timer.ElapsedMilliseconds}ms)\n");
+			Logger.LogMessage($"# Finished gathering all resource files. ({timer.ElapsedMilliseconds}ms)\n");
 			timer.Restart();
 
-			Console.WriteLine("# Loading resource libraries...");
+			Logger.LogMessage("# Loading resource libraries...");
 
 			int taskCount = 3 + resourceLibraries.Count;
 			_outProgress.Update("Loading resource libraries", 3, taskCount);
@@ -193,12 +196,14 @@ namespace FragEngine3.Resources.Management
 						}
 					}
 					Console.WriteLine(" done.");
+					Logger.LogMessage($"- Importing resource library '{libDir.name}'... done.", true);
 					_outProgress.Increment();
 				}
 				catch (Exception ex)
 				{
 					_outProgress.errorCount++;
 					Console.WriteLine(" FAIL.");
+					Logger.LogMessage($"- Importing resource library '{libDir.name}'... FAIL.", true);
 					Console.WriteLine($"Error! Failed to gather resource files for resource library '{libDir.name}'!\nException type: '{ex.GetType()}'\nException message: '{ex.Message}'");
 					if (libDir.source == ResourceSource.Core)
 					{
@@ -216,7 +221,7 @@ namespace FragEngine3.Resources.Management
 			}
 
 			timer.Stop();
-			Console.WriteLine($"# Finished loading resource libraries. ({timer.ElapsedMilliseconds}ms)\n");
+			Logger.LogMessage($"# Finished loading resource libraries. ({timer.ElapsedMilliseconds}ms)\n");
 
 			_outProgress.Finish();
 			return true;
@@ -258,7 +263,7 @@ namespace FragEngine3.Resources.Management
 		{
 			if (string.IsNullOrEmpty(rootResourcePath))
 			{
-				Console.WriteLine("Error! Resource root path cannot not be null or blank!");
+				Logger.LogError("Resource root path cannot not be null or blank!");
 				if (_progress != null) _progress.errorCount++;
 				return false;
 			}
@@ -275,7 +280,7 @@ namespace FragEngine3.Resources.Management
 				}
 				catch (Exception ex)
 				{
-					Console.WriteLine($"Error! Failed to create resource root directory at path '{rootResourcePath}'!\nException type: '{ex.GetType()}'\nException message: '{ex.Message}'");
+					Logger.LogException($"Failed to create resource root directory at path '{rootResourcePath}'!", ex);
 					if (_progress != null) _progress.errorCount++;
 					return false;
 				}
@@ -304,7 +309,7 @@ namespace FragEngine3.Resources.Management
 			}
 			catch (Exception ex)
 			{
-				Console.WriteLine($"Error! Failed to create core resource library directories at path '{coreResourcePath}'!\nException type: '{ex.GetType()}'\nException message: '{ex.Message}'");
+				Logger.LogException($"Failed to create core resource library directories at path '{coreResourcePath}'!", ex);
 				if (_progress != null) _progress.errorCount++;
 				return false;
 			}
@@ -319,7 +324,7 @@ namespace FragEngine3.Resources.Management
 				}
 				catch (Exception ex)
 				{
-					Console.WriteLine($"Error! Failed to create modded content directory at path '{modsResourcePath}'!\nException type: '{ex.GetType()}'\nException message: '{ex.Message}'");
+					Logger.LogException($"Failed to create modded content directory at path '{modsResourcePath}'!", ex);
 					if (_progress != null) _progress.errorCount++;
 					return false;
 				}
@@ -361,7 +366,7 @@ namespace FragEngine3.Resources.Management
 					_progress?.Increment();
 					coreSubDirsLoaded++;
 				}
-				Console.WriteLine($"  - Core libraries: {coreSubDirsLoaded}");
+				Logger.LogMessage($" - Core libraries: {coreSubDirsLoaded}");
 
 				// 2. Find all custom libraries:
 				int appDirsLoaded = 0;
@@ -378,7 +383,7 @@ namespace FragEngine3.Resources.Management
 						appDirsLoaded++;
 					}
 				}
-				Console.WriteLine($"  - Application libraries: {appDirsLoaded}");
+				Logger.LogMessage($"  - Application libraries: {appDirsLoaded}");
 
 				// 3. Add all modded contents:
 				int modDirsLoaded = 0;
@@ -391,12 +396,12 @@ namespace FragEngine3.Resources.Management
 					_progress?.Increment();
 					modDirsLoaded++;
 				}
-				Console.WriteLine($"  - Mod libraries: {modDirsLoaded}");
+				Logger.LogMessage($"  - Mod libraries: {modDirsLoaded}");
 			}
 			catch (Exception ex)
 			{
 				if (_progress != null) _progress.errorCount++;
-				Console.WriteLine($"Error! Failed to gather resource library directories!\nException type: '{ex.GetType()}'\nException message: '{ex.Message}'");
+				Logger.LogException("Failed to gather resource library directories!", ex);
 				return false;
 			}
 

@@ -1,4 +1,6 @@
-﻿using FragEngine3.Scenes;
+﻿using FragEngine3.EngineCore;
+using FragEngine3.Scenes;
+using System.Diagnostics;
 using Veldrid;
 
 namespace FragEngine3.Graphics.Stack
@@ -54,6 +56,8 @@ namespace FragEngine3.Graphics.Stack
 		#region Properties
 
 		public bool IsDisposed { get; private set; } = false;
+
+		private Logger Logger => core.graphicsSystem.engine.Logger ?? Logger.Instance!;
 
 		#endregion
 		#region Methods
@@ -126,18 +130,21 @@ namespace FragEngine3.Graphics.Stack
 		{
 			if (IsDisposed)
 			{
-				Console.WriteLine("Error! Cannot rebuild disposed graphics stack!");
+				Logger.LogError("Cannot rebuild disposed graphics stack!");
 				return false;
 			}
 			if (_scene == null || _scene.IsDisposed)
 			{
-				Console.WriteLine("Error! Cannot rebuild graphics stack for null or disposed scene!");
+				Logger.LogError("Cannot rebuild graphics stack for null or disposed scene!");
 				return false;
 			}
 
 			bool success = true;
 
-			Console.WriteLine("+ Rebuilding graphics stack...");
+			Logger.LogMessage("+ Rebuilding graphics stack...");
+
+			Stopwatch timer = new();
+			timer.Start();
 
 			// Clean up expired layers and groups:
 			layers.RemoveAll(o => o == null || o.IsDisposed);
@@ -170,12 +177,13 @@ namespace FragEngine3.Graphics.Stack
 			}
 			if (!success)
 			{
-				Console.WriteLine("Error! Failed to rebuild all layers in graphics stack!");
+				timer.Stop();
+				Logger.LogError($"Failed to rebuild all layers in graphics stack! ({timer.ElapsedMilliseconds}ms)");
 				return false;
 			}
-			Console.WriteLine($"  - Rebuilt layers: {rebuildCount}");
-			Console.WriteLine($"  - Parallelizable: {parallelCount}");
-			Console.WriteLine($"  - Unassigned renderers: {allRenderers.Count}");
+			Logger.LogMessage($"  - Rebuilt layers: {rebuildCount}");
+			Logger.LogMessage($"  - Parallelizable: {parallelCount}");
+			Logger.LogMessage($" - Unassigned renderers: {allRenderers.Count}");
 
 			// Go through layers and group those that can be parallelized:
 			ParallelLayerGroup? curLayerGroup = null;
@@ -236,11 +244,14 @@ namespace FragEngine3.Graphics.Stack
 			}
 			if (!success)
 			{
-				Console.WriteLine("Error! Failed to group graphics stack layers for parallelization!");
+				timer.Stop();
+				Logger.LogError($"Failed to group graphics stack layers for parallelization! ({timer.ElapsedMilliseconds}ms)");
 				return false;
 			}
-			Console.WriteLine($"  - Layer groups: {parallelizedGroups.Count}");
-			Console.WriteLine($"  - Max. parallelized: {parallelizedGroups.Max(o => o.LayerCount)}");
+			Logger.LogMessage($"  - Layer groups: {parallelizedGroups.Count}");
+			Logger.LogMessage($"  - Max. parallelized: {parallelizedGroups.Max(o => o.LayerCount)}");
+
+			Logger.LogMessage($"+ Finished rebuilding graphics stack. ({timer.ElapsedMilliseconds}ms)");
 
 			return true;
 		}
@@ -249,7 +260,7 @@ namespace FragEngine3.Graphics.Stack
 		{
 			if (IsDisposed)
 			{
-				Console.WriteLine("Error! Cannot draw disposed graphics stack!");
+				Logger.LogError("Cannot draw disposed graphics stack!");
 				return false;
 			}
 
@@ -266,7 +277,7 @@ namespace FragEngine3.Graphics.Stack
 			// Rebuild stack just-in-time and on demand:
 			if (rebuildStack && !RebuildStack(_scene))
 			{
-				Console.WriteLine($"Error! Failed to rebuild graphics stack for scene '{_scene}'!");
+				Logger.LogError($"Failed to rebuild graphics stack for scene '{_scene}'!");
 				return false;
 			}
 
@@ -347,7 +358,7 @@ namespace FragEngine3.Graphics.Stack
 				// Abort the rendering process if any of the layers encountered a major error:
 				if (errorCounter != 0)
 				{
-					Console.WriteLine($"Error! Graphics stack layer group {i}/{parallelizedGroups.Count} failed to complete! Aborting...");
+					Logger.LogError($"Graphics stack layer group {i}/{parallelizedGroups.Count} failed to complete! Aborting...");
 					break;
 				}
 			}
@@ -385,7 +396,7 @@ namespace FragEngine3.Graphics.Stack
 			}
 
 			// This code should never be reached, as it means the GPU and graphics core are no longer operational. Good luck:
-			Console.WriteLine("Error! Failed to get or create command list; fatal exceptions may be imminent!");
+			Logger.LogError("Failed to get or create command list; fatal exceptions may be imminent!");
 			_outCmdList = null;
 			return false;
 		}
