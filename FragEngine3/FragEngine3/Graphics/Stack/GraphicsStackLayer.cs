@@ -18,6 +18,7 @@ namespace FragEngine3.Graphics.Stack
 		public bool IsVisible => IsValid && renderer.IsVisible;
 	}
 
+	[Obsolete($"Superseded by the {nameof(IGraphicsStack)} interface for more freeform modularity.")]
 	public abstract class GraphicsStackLayer : IDisposable
 	{
 		#region Constructors

@@ -3,6 +3,7 @@ using Veldrid;
 
 namespace FragEngine3.Graphics.Stack
 {
+	[Obsolete($"Superseded by the {nameof(IGraphicsStack)} interface for more freeform modularity.")]
 	public sealed class OpaqueGeometryLayer : GraphicsStackLayer
 	{
 		#region Constructors
