@@ -42,9 +42,7 @@ namespace FragEngine3.EngineCore.Test
 		protected override bool EndLoadingState()
 		{
 			// Create scene's graphics stack:
-			GraphicsStack stack = new(Engine.GraphicsSystem.graphicsCore);
-
-			//TODO: Add layers to graphics stack.
+			ForwardPlusLightsStack stack = new(Engine.GraphicsSystem.graphicsCore);
 
 			if (Engine.SceneManager.MainScene != null)
 			{

@@ -1,5 +1,4 @@
-﻿using System.Xml.Linq;
-using FragEngine3.EngineCore;
+﻿using FragEngine3.EngineCore;
 using FragEngine3.Graphics.Stack;
 using FragEngine3.Scenes.EventSystem;
 
@@ -43,7 +42,7 @@ namespace FragEngine3.Scenes
 		public readonly SceneNode rootNode;
 
 		private readonly List<SceneBehaviour> sceneBehaviours = new();
-		private GraphicsStack? graphicsStack = null;
+		private IGraphicsStack? graphicsStack = null;
 
 		private readonly UpdateStage[] updateStageDict = new UpdateStage[4]
 		{
@@ -81,7 +80,7 @@ namespace FragEngine3.Scenes
 		/// NOTE: If no stack is assigned when a call to '<see cref="DrawScene"/>' arrives, a default forward+light graphics stack without UI or post-processing pass
 		/// is created instead.
 		/// </summary>
-		public GraphicsStack? GraphicsStack
+		public IGraphicsStack? GraphicsStack
 		{
 			get => graphicsStack != null && !graphicsStack.IsDisposed ? graphicsStack : null;
 			set
@@ -163,17 +162,43 @@ namespace FragEngine3.Scenes
 		private void Dispose(bool _disposing)
 		{
 			IsDisposed = true;
+
+			if (graphicsStack != null)
+			{
+				// For for up to 100ms for current graphics operations to end:
+				if (_disposing)
+				{
+					int i = 0;
+					while(i++ < 100 && graphicsStack.IsDrawing)
+					{
+						Thread.Sleep(1);
+					}
+				}
+
+				// Shut down and dispose graphics stack:
+				graphicsStack.Shutdown();
+				graphicsStack.Dispose();
+			}
+			
+			// Clear out all update and drawing lists:
 			if (_disposing)
 			{
+				graphicsStack = null;
+
 				foreach (UpdateStage stage in updateStageDict)
 				{
 					stage.nodeList.Clear();
 				}
+				drawStage.nodeList.Clear();
 			}
+
+			// Dispose scene behaviours:
 			foreach (SceneBehaviour component in sceneBehaviours)
 			{
 				component.Dispose();
 			}
+
+			// Dispose scene contents recursively:
 			rootNode.Dispose();
 		}
 
@@ -272,6 +297,9 @@ namespace FragEngine3.Scenes
 			{
 				e.Current.Refresh();
 			}
+
+			// Reset/Reinitialize graphics stack last:
+			graphicsStack?.Reset();
 		}
 
 		/// <summary>
@@ -535,17 +563,26 @@ namespace FragEngine3.Scenes
 
 			if (drawStage == null)
 			{
-				Logger.LogError($"Invalid draw stage '{SceneEventType.OnDraw}'!");
+				Logger.LogError($"Draw stage of scene '{name}' was null!");
 				return false;
 			}
 
-			// Update all nodes and their components with listeners for this update event:
-			foreach (SceneNode node in drawStage.nodeList)
+			// If null, create and initialize default forward+light graphics stack:
+			if (graphicsStack == null || graphicsStack.IsDisposed)
 			{
-				node.SendEvent(SceneEventType.OnDraw, null);
+				Logger.LogWarning($"Graphics stack of scene '{name}' is unassigned, creating default stack instead...");
+				graphicsStack = new ForwardPlusLightsStack(engine.GraphicsSystem.graphicsCore);
 			}
 
-			return true;
+			// Ensure the graphics stack is initialized before use:
+			if (!graphicsStack.IsInitialized && !graphicsStack.Initialize(this))
+			{
+				Logger.LogError($"Failed to initialize graphics stack of scene '{name}'!");
+				return false;
+			}
+
+			// Draw the scene and its nodes through the stack:
+			return graphicsStack.DrawStack(this, drawStage.nodeList);
 		}
 
 		internal bool RegisterNodeForDrawStage(SceneNode _node)

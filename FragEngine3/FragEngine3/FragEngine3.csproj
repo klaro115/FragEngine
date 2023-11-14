@@ -33,7 +33,6 @@
     <Folder Include="Graphics\MacOS\" />
     <Folder Include="Graphics\Resources\" />
     <Folder Include="Graphics\Data\" />
-    <Folder Include="Graphics\Stack\" />
     <Folder Include="Graphics\Resources\Import\" />
     <Folder Include="EngineCore\Logging\" />
     <Folder Include="Utility\Unicode\" />

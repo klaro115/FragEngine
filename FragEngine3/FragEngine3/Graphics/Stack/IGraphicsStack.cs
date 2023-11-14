@@ -1,5 +1,4 @@
-﻿
-using FragEngine3.Scenes;
+﻿using FragEngine3.Scenes;
 using Veldrid;
 
 namespace FragEngine3.Graphics.Stack
@@ -13,14 +12,19 @@ namespace FragEngine3.Graphics.Stack
 		/// </summary>
 		bool IsDisposed { get; }
 		/// <summary>
-		/// Gets whether this graphics stack is in a valid and operational state that can be initialized
-		/// and used with the current settings.
+		/// Gets whether this graphics stack is in a valid and operational state that can be
+		/// initialized and used with the current settings.
 		/// </summary>
 		bool IsValid { get; }
 		/// <summary>
 		/// Gets whether the graphics stack is initialized and ready for immediate use.
 		/// </summary>
 		bool IsInitialized { get; }
+		/// <summary>
+		/// Gets whether the graphics stack is currently in the processing of generating and
+		/// pushing graphics commands.
+		/// </summary>
+		bool IsDrawing { get; }
 
 		#endregion
 		#region Methods
@@ -54,7 +58,15 @@ namespace FragEngine3.Graphics.Stack
 		/// otherwise.</returns>
 		public bool GetRenderTargets(out Framebuffer? _outRenderTargets);
 
-		bool DrawStack(Scene _scene);
+		/// <summary>
+		/// Draw all renderers within a scene.
+		/// </summary>
+		/// <param name="_scene">The scene which we want to render, may not be null.</param>
+		/// <param name="_drawnNodes">A list of all nodes within the given scene that have
+		/// drawable graphical components. May not be null.</param>
+		/// <returns>True if the scene and its nodes were rendered successfully, false
+		/// otherwise.</returns>
+		bool DrawStack(Scene _scene, List<SceneNode> _drawnNodes);
 
 		#endregion
 	}
