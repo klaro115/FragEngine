@@ -167,10 +167,10 @@ namespace FragEngine3.Graphics.Stack
 
 		public bool GetRenderTargets(out Framebuffer? _outRenderTargets)
 		{
-			throw new NotImplementedException();
+			throw new NotImplementedException();		//TODO
 		}
 
-		public bool DrawStack(Scene _scene, List<IRenderer> _sceneNodeRenderers)
+		public bool DrawStack(Scene _scene, List<SceneNodeRendererPair> _nodeRendererPairs)
 		{
 			if (!IsInitialized)
 			{
@@ -182,9 +182,9 @@ namespace FragEngine3.Graphics.Stack
 				Logger.LogError("Cannot draw graphics stack for null or mismatched scene!");
 				return false;
 			}
-			if (_sceneNodeRenderers == null)
+			if (_nodeRendererPairs == null)
 			{
-				Logger.LogError("Cannot draw graphics stack for null list of renderers!");
+				Logger.LogError("Cannot draw graphics stack for null list of node-renderers pairs!");
 				return false;
 			}
 
@@ -204,25 +204,25 @@ namespace FragEngine3.Graphics.Stack
 					SkippedRendererCount = 0;
 
 					// No nodes and no scene behaviours? Skip drawing altogether:
-					if (_sceneNodeRenderers.Count == 0 && _scene.SceneBehaviourCount == 0)
+					if (_nodeRendererPairs.Count == 0 && _scene.SceneBehaviourCount == 0)
 					{
 						return true;
 					}
 
 					// Assign each renderer to the most appropriate rendering list:
-					foreach (IRenderer renderer in _sceneNodeRenderers)
+					foreach (SceneNodeRendererPair pair in _nodeRendererPairs)
 					{
-						if (renderer.IsVisible)
+						if (pair.renderer.IsVisible)
 						{
 							// Skip any renderers that cannot be mapped to any of the supported modes:
-							if (GetRendererListForMode(renderer.RenderMode, out RendererList? rendererList))
+							if (GetRendererListForMode(pair.renderer.RenderMode, out RendererList? rendererList))
 							{
 								SkippedRendererCount++;
 								continue;
 							}
 
 							// Add the renderer to its mode's corresponding list:
-							rendererList!.renderers.Add(renderer);
+							rendererList!.renderers.Add(pair.renderer);
 
 							VisibleRendererCount++;
 						}
@@ -243,7 +243,7 @@ namespace FragEngine3.Graphics.Stack
 			}
 			catch (Exception ex)
 			{
-				Logger.LogException("", ex);
+				Logger.LogException($"An exception was caught while trying to draw scene using graphics stack of type '{nameof(ForwardPlusLightsStack)}'!", ex);
 				return false;
 			}
 			

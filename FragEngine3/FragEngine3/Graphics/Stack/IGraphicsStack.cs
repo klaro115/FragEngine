@@ -66,7 +66,7 @@ namespace FragEngine3.Graphics.Stack
 		/// be null.</param>
 		/// <returns>True if the scene and its nodes were rendered successfully, false
 		/// otherwise.</returns>
-		bool DrawStack(Scene _scene, List<IRenderer> _sceneNodeRenderers);
+		bool DrawStack(Scene _scene, List<SceneNodeRendererPair> _nodeRendererPairs);
 
 		#endregion
 	}

@@ -36,10 +36,6 @@ namespace FragEngine3.Scenes.EventSystem
 		/// Gets all update stages that this node has listeners for.
 		/// </summary>
 		public SceneUpdateStage UpdateStageFlags { get; private set; } = 0;
-		/// <summary>
-		/// Gets whether this node has listeners for draw commands.
-		/// </summary>
-		public bool HasDrawStage { get; private set; } = false;
 
 		#endregion
 		#region Methods
@@ -93,9 +89,7 @@ namespace FragEngine3.Scenes.EventSystem
 			}
 
 			SceneUpdateStage prevUpdateStageFlags = UpdateStageFlags;
-			bool prevHasDrawStage = HasDrawStage;
 			UpdateStageFlags = 0;
-			HasDrawStage = false;
 
 			// Count the number of event types that have active listeners:
 			EventTypeCount = 0;
@@ -111,10 +105,6 @@ namespace FragEngine3.Scenes.EventSystem
 						if (kvp.Key.IsUpdateStage())
 						{
 							UpdateStageFlags |= kvp.Key.GetUpdateStage();
-						}
-						else if (kvp.Key == SceneEventType.OnDraw)
-						{
-							HasDrawStage = true;
 						}
 					}
 					// Remove update stage flag if no listeners remain for an update event:
@@ -140,15 +130,6 @@ namespace FragEngine3.Scenes.EventSystem
 			{
 				node.scene.RegisterNodeForUpdateStages(node, UpdateStageFlags);
 			}
-
-			if (prevHasDrawStage && !HasDrawStage)
-			{
-				node.scene.UnregisterNodeFromDrawStage(node);
-			}
-			else if (!prevHasDrawStage && HasDrawStage)
-			{
-				node.scene.RegisterNodeForDrawStage(node);
-			}
 			return true;
 		}
 
@@ -169,7 +150,6 @@ namespace FragEngine3.Scenes.EventSystem
 			TotalListenerCount = 0;
 			EventTypeCount = 0;
 			SceneUpdateStage prevUpdateStageFlags = UpdateStageFlags;
-			bool prevHasDrawStage = HasDrawStage;
 
 			foreach (var kvp in eventListenerMap)
 			{
@@ -184,11 +164,6 @@ namespace FragEngine3.Scenes.EventSystem
 				{
 					UpdateStageFlags &= ~kvp.Key.GetUpdateStage();
 				}
-				// Remove draw stage flag if no listeners remain for a draw command:
-				else if (kvp.Key == SceneEventType.OnDraw)
-				{
-					HasDrawStage = false;
-				}
 			}
 
 			// If no listeners remain, free up some memory:
@@ -199,10 +174,6 @@ namespace FragEngine3.Scenes.EventSystem
 
 			// Update registration of node's update stage listeners:
 			node.scene.UpdateNodeUpdateStages(node, prevUpdateStageFlags, UpdateStageFlags);
-			if (prevHasDrawStage && !HasDrawStage)
-			{
-				node.scene.UnregisterNodeFromDrawStage(node);
-			}
 			return removed != 0;
 		}
 
@@ -216,7 +187,6 @@ namespace FragEngine3.Scenes.EventSystem
 
 			bool added = false;
 			SceneUpdateStage prevUpdateStageFlags = UpdateStageFlags;
-			bool prevHasDrawStage = HasDrawStage;
 
 			// Register listeners for all events, mapped by event type:
 			SceneEventType[] eventTypes = _component.GetSceneEventList();
@@ -242,10 +212,6 @@ namespace FragEngine3.Scenes.EventSystem
 					{
 						UpdateStageFlags |= eventType.GetUpdateStage();
 					}
-					else if (eventType == SceneEventType.OnDraw)
-					{
-						HasDrawStage = true;
-					}
 				}
 				TotalListenerCount++;
 				added = true;
@@ -253,10 +219,6 @@ namespace FragEngine3.Scenes.EventSystem
 
 			// Update registration of node's update stage listeners:
 			node.scene.UpdateNodeUpdateStages(node, prevUpdateStageFlags, UpdateStageFlags);
-			if (!prevHasDrawStage && HasDrawStage)
-			{
-				node.scene.RegisterNodeForDrawStage(node);
-			}
 			return added;
 		}
 

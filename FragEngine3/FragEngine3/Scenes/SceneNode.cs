@@ -1,5 +1,6 @@
 ﻿using System.Numerics;
 using FragEngine3.EngineCore;
+using FragEngine3.Graphics;
 using FragEngine3.Scenes.Data;
 using FragEngine3.Scenes.EventSystem;
 using FragEngine3.Scenes.Utility;
@@ -161,6 +162,10 @@ namespace FragEngine3.Scenes
 				eventManager.Destroy();
 				eventManager = null;
 			}
+			if (!IsDisposed && !scene.IsDisposed)
+			{
+				scene.UnregisterNodeRenderers(this);
+			}
 
 			IsDisposed = true;
 			isEnabled = false;
@@ -224,7 +229,14 @@ namespace FragEngine3.Scenes
 				// Refresh components next:
 				for (int i = 0; i < ComponentCount; ++i)
 				{
-					components![i].Refresh();
+					Component component = components![i];
+					component.Refresh();
+
+					if (component is IRenderer renderer)
+					{
+						scene.UnregisterNodeFromDrawStage(this, renderer);
+						scene.RegisterNodeForDrawStage(this, renderer);
+					}
 				}
 				// Update event listeners and update stage flags:
 				eventManager?.GetListenersFromComponents();
@@ -677,6 +689,12 @@ namespace FragEngine3.Scenes
 			bool removed = components != null && components.Remove(_component);
 			if (removed)
 			{
+				// Update renderer list:
+				if (_component is IRenderer renderer)
+				{
+					scene.UnregisterNodeFromDrawStage(this, renderer);
+				}
+
 				// Update event manager:
 				if (eventManager != null)
 				{
@@ -800,6 +818,12 @@ namespace FragEngine3.Scenes
 		{
 			if (_component == null || _component.IsDisposed) return false;
 
+			// Update renderer list:
+			if (_component is IRenderer renderer)
+			{
+				scene.RegisterNodeForDrawStage(this, renderer);
+			}
+
 			if (eventManager != null)
 			{
 				// Update event manager's listeners:
@@ -820,7 +844,6 @@ namespace FragEngine3.Scenes
 		/// <summary>
 		/// Gets an enumerator for iterating over all components on this node.
 		/// </summary>
-		/// <returns></returns>
 		public IEnumerator<Component> IterateComponents()
 		{
 			if (IsDisposed) yield break;
@@ -830,6 +853,22 @@ namespace FragEngine3.Scenes
 				if (!components![i].IsDisposed)
 				{
 					yield return components![i];
+				}
+			}
+		}
+
+		/// <summary>
+		/// Gets an enumerator for iterating over all renderer type components on this node.
+		/// </summary>
+		public IEnumerator<IRenderer> IterateRenderers()
+		{
+			if (IsDisposed) yield break;
+
+			for (int i = 0; i < ComponentCount; ++i)
+			{
+				if (!components![i].IsDisposed && components[i] is IRenderer renderer)
+				{
+					yield return renderer;
 				}
 			}
 		}

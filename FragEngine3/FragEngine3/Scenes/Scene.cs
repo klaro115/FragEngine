@@ -52,7 +52,7 @@ namespace FragEngine3.Scenes
 			new(SceneUpdateStage.Late),
 			new(SceneUpdateStage.Fixed),
 		};
-		private readonly List<IRenderer> sceneNodeRenderers = new(128);
+		private readonly List<SceneNodeRendererPair> sceneNodeRenderers = new(128);
 
 		private EngineState updatedInEngineStates = EngineState.Running;
 		private EngineState drawnInEngineStates = EngineState.Running;
@@ -586,6 +586,23 @@ namespace FragEngine3.Scenes
 			return graphicsStack.DrawStack(this, sceneNodeRenderers);
 		}
 
+		internal bool UnregisterNodeRenderers(SceneNode _node)
+		{
+			if (IsDisposed) return false;
+			if (_node == null || _node.IsDisposed)
+			{
+				Logger.LogError("Cannot unregister draw stage for null or disposed node");
+				return false;
+			}
+
+			bool removed = sceneNodeRenderers.RemoveAll(o => o.node == _node) != 0;
+			if (removed)
+			{
+				DrawStackState++;
+			}
+			return removed;
+		}
+
 		internal bool RegisterNodeForDrawStage(SceneNode _node, IRenderer _renderer)
 		{
 			if (IsDisposed) return false;
@@ -600,9 +617,11 @@ namespace FragEngine3.Scenes
 				return false;
 			}
 
-			if (!sceneNodeRenderers.Contains(_renderer))
+			SceneNodeRendererPair newPair = new(_node, _renderer);
+
+			if (!sceneNodeRenderers.Contains(newPair))
 			{
-				sceneNodeRenderers.Add(_renderer);
+				sceneNodeRenderers.Add(newPair);
 				DrawStackState++;
 			}
 			return true;
@@ -622,7 +641,9 @@ namespace FragEngine3.Scenes
 				return false;
 			}
 
-			bool removed = sceneNodeRenderers.Remove(_renderer);
+			SceneNodeRendererPair oldPair = new(_node, _renderer);
+
+			bool removed = sceneNodeRenderers.Remove(oldPair);
 			if (removed)
 			{
 				DrawStackState++;
