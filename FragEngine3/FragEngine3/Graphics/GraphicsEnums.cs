@@ -12,12 +12,12 @@ namespace FragEngine3.Graphics
 	/// <summary>
 	/// Enumeration of different main rendering modes according to which content may be drawn.
 	/// </summary>
-	public enum RenderMode
+	public enum RenderMode : int
 	{
 		/// <summary>
 		/// Pure computation task, may need to be completed before any geometry draw calls are processed.
 		/// </summary>
-		Compute,
+		Compute			= 0,
 		/// <summary>
 		/// Opaque geometry, with depth testing and writing enabled. This should be most of your scene geonetry.
 		/// </summary>

@@ -1,4 +1,5 @@
 ﻿using FragEngine3.EngineCore;
+using FragEngine3.Graphics;
 using FragEngine3.Graphics.Stack;
 using FragEngine3.Scenes.EventSystem;
 
@@ -51,7 +52,7 @@ namespace FragEngine3.Scenes
 			new(SceneUpdateStage.Late),
 			new(SceneUpdateStage.Fixed),
 		};
-		private readonly UpdateStage drawStage = new(SceneUpdateStage.None);
+		private readonly List<IRenderer> sceneNodeRenderers = new(128);
 
 		private EngineState updatedInEngineStates = EngineState.Running;
 		private EngineState drawnInEngineStates = EngineState.Running;
@@ -189,7 +190,7 @@ namespace FragEngine3.Scenes
 				{
 					stage.nodeList.Clear();
 				}
-				drawStage.nodeList.Clear();
+				sceneNodeRenderers.Clear();
 			}
 
 			// Dispose scene behaviours:
@@ -561,10 +562,10 @@ namespace FragEngine3.Scenes
 				}
 			}
 
-			if (drawStage == null)
+			// No renderers in scene? Skip any further processing and return:
+			if (sceneNodeRenderers.Count == 0)
 			{
-				Logger.LogError($"Draw stage of scene '{name}' was null!");
-				return false;
+				return true;
 			}
 
 			// If null, create and initialize default forward+light graphics stack:
@@ -582,10 +583,10 @@ namespace FragEngine3.Scenes
 			}
 
 			// Draw the scene and its nodes through the stack:
-			return graphicsStack.DrawStack(this, drawStage.nodeList);
+			return graphicsStack.DrawStack(this, sceneNodeRenderers);
 		}
 
-		internal bool RegisterNodeForDrawStage(SceneNode _node)
+		internal bool RegisterNodeForDrawStage(SceneNode _node, IRenderer _renderer)
 		{
 			if (IsDisposed) return false;
 			if (_node == null || _node.IsDisposed)
@@ -593,16 +594,21 @@ namespace FragEngine3.Scenes
 				Logger.LogError("Cannot register draw stage for null or disposed node");
 				return false;
 			}
-
-			if (!drawStage.nodeList.Contains(_node))
+			if (_renderer == null || _renderer.IsDisposed)
 			{
-				drawStage.nodeList.Add(_node);
+				Logger.LogError("Cannot unregister draw stage for null or disposed renderer");
+				return false;
+			}
+
+			if (!sceneNodeRenderers.Contains(_renderer))
+			{
+				sceneNodeRenderers.Add(_renderer);
 				DrawStackState++;
 			}
 			return true;
 		}
 		
-		internal bool UnregisterNodeFromDrawStage(SceneNode _node)
+		internal bool UnregisterNodeFromDrawStage(SceneNode _node, IRenderer _renderer)
 		{
 			if (IsDisposed) return false;
 			if (_node == null || _node.IsDisposed)
@@ -610,8 +616,13 @@ namespace FragEngine3.Scenes
 				Logger.LogError("Cannot unregister draw stage for null or disposed node");
 				return false;
 			}
+			if (_renderer == null || _renderer.IsDisposed)
+			{
+				Logger.LogError("Cannot unregister draw stage for null or disposed renderer");
+				return false;
+			}
 
-			bool removed = drawStage.nodeList.Remove(_node);
+			bool removed = sceneNodeRenderers.Remove(_renderer);
 			if (removed)
 			{
 				DrawStackState++;

@@ -1,4 +1,5 @@
-﻿using Veldrid;
+﻿using System.Numerics;
+using Veldrid;
 
 namespace FragEngine3.Graphics
 {
@@ -29,6 +30,16 @@ namespace FragEngine3.Graphics
 
 		#endregion
 		#region Methods
+
+		/// <summary>
+		/// Calculate a depth value that may be used for Z-sorting this renderer, for example when
+		/// drawing it using an alpha-blended shader and material. The value should increase with
+		/// distance from the viewport position.
+		/// </summary>
+		/// <param name="_viewportPosition">A viewport position in world space. Usually, this is the
+		/// position where the currently rendering camera is located.</param>
+		/// <returns></returns>
+		public float GetZSortingDepth(Vector3 _viewportPosition);
 
 		/// <summary>
 		/// Requests the renderer to generate draw calls by writing them into the given command list.

@@ -62,11 +62,11 @@ namespace FragEngine3.Graphics.Stack
 		/// Draw all renderers within a scene.
 		/// </summary>
 		/// <param name="_scene">The scene which we want to render, may not be null.</param>
-		/// <param name="_drawnNodes">A list of all nodes within the given scene that have
-		/// drawable graphical components. May not be null.</param>
+		/// <param name="_sceneNodeRenderers">A list of all renderers within the given scene. May not
+		/// be null.</param>
 		/// <returns>True if the scene and its nodes were rendered successfully, false
 		/// otherwise.</returns>
-		bool DrawStack(Scene _scene, List<SceneNode> _drawnNodes);
+		bool DrawStack(Scene _scene, List<IRenderer> _sceneNodeRenderers);
 
 		#endregion
 	}

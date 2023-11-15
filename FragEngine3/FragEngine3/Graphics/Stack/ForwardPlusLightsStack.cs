@@ -1,12 +1,30 @@
 ﻿using FragEngine3.EngineCore;
 using FragEngine3.Scenes;
-using FragEngine3.Scenes.EventSystem;
+using System.Numerics;
 using Veldrid;
 
 namespace FragEngine3.Graphics.Stack
 {
 	public sealed class ForwardPlusLightsStack : IGraphicsStack
 	{
+		#region Types
+
+		private sealed class RendererList
+		{
+			public RendererList(RenderMode _mode, int _initialCapacity)
+			{
+				mode = _mode;
+				renderers = new(_initialCapacity);
+			}
+
+			public readonly RenderMode mode;
+			public readonly List<IRenderer> renderers;
+			public CommandList? cmdList = null;
+
+			public void Clear() => renderers.Clear();
+		}
+
+		#endregion
 		#region Constructors
 
 		public ForwardPlusLightsStack(GraphicsCore _core)
@@ -26,6 +44,24 @@ namespace FragEngine3.Graphics.Stack
 		private bool isInitialized = false;
 		private bool isDrawing = false;
 
+		private readonly int[] rendererModeIndices = new int[]
+		{
+			0,		// RenderMode.Compute
+			1,		// RenderMode.Opaque
+			2,		// RenderMode.Transparent
+			-1,		// RenderMode.Volumetric
+			-1,		// RenderMode.PostProcessing
+			3,		// RenderMode.UI
+			-1,		// RenderMode.Custom
+		};
+		private readonly RendererList[] rendererLists = new RendererList[]
+		{
+			new RendererList(RenderMode.Compute, 4),
+			new RendererList(RenderMode.Opaque, 128),
+			new RendererList(RenderMode.Transparent, 32),
+			new RendererList(RenderMode.UI, 32),
+		};
+
 		private readonly object lockObj = new();
 
 		#endregion
@@ -37,6 +73,9 @@ namespace FragEngine3.Graphics.Stack
 		public bool IsDrawing => IsInitialized && isDrawing;
 
 		public Scene? Scene { get; private set; } = null;
+
+		public int VisibleRendererCount { get; private set; } = 0;
+		public int SkippedRendererCount { get; private set; } = 0;
 
 		private Logger Logger => core.graphicsSystem.engine.Logger ?? Logger.Instance!;
 
@@ -131,7 +170,7 @@ namespace FragEngine3.Graphics.Stack
 			throw new NotImplementedException();
 		}
 
-		public bool DrawStack(Scene _scene, List<SceneNode> _drawnNodes)
+		public bool DrawStack(Scene _scene, List<IRenderer> _sceneNodeRenderers)
 		{
 			if (!IsInitialized)
 			{
@@ -143,31 +182,187 @@ namespace FragEngine3.Graphics.Stack
 				Logger.LogError("Cannot draw graphics stack for null or mismatched scene!");
 				return false;
 			}
-			if (_drawnNodes == null)
+			if (_sceneNodeRenderers == null)
 			{
-				Logger.LogError("Cannot draw graphics stack for null list of scene nodes!");
+				Logger.LogError("Cannot draw graphics stack for null list of renderers!");
 				return false;
 			}
 
-			// No nodes and no scene behaviours? Skip drawing altogether:
-			if (_drawnNodes.Count == 0 && _scene.SceneBehaviourCount == 0)
+			bool success = true;
+			isDrawing = true;
+			
+			try
 			{
+				lock (lockObj)
+				{
+					// Clear out all renderer lists for the upcoming frame:
+					foreach (RendererList rendererList in rendererLists)
+					{
+						rendererList.Clear();
+					}
+					VisibleRendererCount = 0;
+					SkippedRendererCount = 0;
+
+					// No nodes and no scene behaviours? Skip drawing altogether:
+					if (_sceneNodeRenderers.Count == 0 && _scene.SceneBehaviourCount == 0)
+					{
+						return true;
+					}
+
+					// Assign each renderer to the most appropriate rendering list:
+					foreach (IRenderer renderer in _sceneNodeRenderers)
+					{
+						if (renderer.IsVisible)
+						{
+							// Skip any renderers that cannot be mapped to any of the supported modes:
+							if (GetRendererListForMode(renderer.RenderMode, out RendererList? rendererList))
+							{
+								SkippedRendererCount++;
+								continue;
+							}
+
+							// Add the renderer to its mode's corresponding list:
+							rendererList!.renderers.Add(renderer);
+
+							VisibleRendererCount++;
+						}
+					}
+
+					if (VisibleRendererCount != 0)
+					{
+						// Issue draw calls for each renderer list:
+						success &= DrawOpaqueRendererList();
+						success &= DrawZSortedRendererList();
+						success &= DrawUiRendererList();
+
+
+						//TODO: Composite end results?
+					
+					}
+				}
+			}
+			catch (Exception ex)
+			{
+				Logger.LogException("", ex);
+				return false;
+			}
+			
+			isDrawing = false;
+			return success;
+		}
+
+		private bool GetRendererListForMode(RenderMode _mode, out RendererList? _outRendererList)
+		{
+			int modeIdx = (int)_mode;
+			int rendererListIdx = rendererModeIndices[modeIdx];
+
+			if (rendererListIdx >= 0)
+			{
+				_outRendererList = rendererLists[rendererListIdx];
 				return true;
 			}
+			_outRendererList = null;
+			return false;
+		}
 
-			isDrawing = true;
-			lock(lockObj)
+		private bool DrawOpaqueRendererList()
+		{
+			if (!GetRendererListForMode(RenderMode.Opaque, out RendererList? opaqueList) || opaqueList == null)
 			{
-
-				// Update all nodes and their components with listeners for this update event:
-				foreach (SceneNode node in _drawnNodes)
-				{
-					node.SendEvent(SceneEventType.OnDraw, null);				// TODO: Change this to no longer use the event system for gernerating draw calls! Register renderers directly!
-				}
-
+				return false;
 			}
-			isDrawing = false;
-			return true;
+
+			if (opaqueList.renderers.Count == 0) return true;
+
+			// Ensure the command list is set:
+			if (opaqueList.cmdList == null || opaqueList.cmdList.IsDisposed)
+			{
+				if (!core.CreateCommandList(out opaqueList.cmdList) || opaqueList.cmdList == null)
+				{
+					Logger.LogError("Failed to create command list for opaque renderer list!");
+					opaqueList.cmdList?.Dispose();
+					opaqueList.cmdList = null;
+					return false;
+				}
+			}
+
+			bool success = true;
+
+			// Draw list of renderers as-is:
+			foreach (IRenderer renderer in opaqueList.renderers)
+			{
+				success &= renderer.Draw(opaqueList.cmdList);
+			}
+
+			return success;
+		}
+
+		private bool DrawZSortedRendererList()
+		{
+			if (!GetRendererListForMode(RenderMode.Transparent, out RendererList? zSortedList) || zSortedList == null)
+			{
+				return false;
+			}
+
+			if (zSortedList.renderers.Count == 0) return true;
+
+			// Ensure the command list is set:
+			if (zSortedList.cmdList == null || zSortedList.cmdList.IsDisposed)
+			{
+				if (!core.CreateCommandList(out zSortedList.cmdList) || zSortedList.cmdList == null)
+				{
+					Logger.LogError("Failed to create command list for Z-sorted renderer list!");
+					zSortedList.cmdList?.Dispose();
+					zSortedList.cmdList = null;
+					return false;
+				}
+			}
+
+			bool success = true;
+
+			// Sort all transparent renderers by their Z-depth: (aka distance to camera)
+			Vector3 viewportPosition = Vector3.Zero;		//TODO: Implement camera type, then use currently rendering camera's position for this!
+			zSortedList.renderers.Sort((a, b) => a.GetZSortingDepth(viewportPosition).CompareTo(b.GetZSortingDepth(viewportPosition)));
+
+			// Draw Z-sorted list of renderers:
+			foreach (IRenderer renderer in zSortedList.renderers)
+			{
+				success &= renderer.Draw(zSortedList.cmdList);
+			}
+
+			return success;
+		}
+
+		private bool DrawUiRendererList()
+		{
+			if (!GetRendererListForMode(RenderMode.Opaque, out RendererList? uiList) || uiList == null)
+			{
+				return false;
+			}
+
+			if (uiList.renderers.Count == 0) return true;
+
+			// Ensure the command list is set:
+			if (uiList.cmdList == null || uiList.cmdList.IsDisposed)
+			{
+				if (!core.CreateCommandList(out uiList.cmdList) || uiList.cmdList == null)
+				{
+					Logger.LogError("Failed to create command list for UI renderer list!");
+					uiList.cmdList?.Dispose();
+					uiList.cmdList = null;
+					return false;
+				}
+			}
+
+			bool success = true;
+
+			// Draw list of renderers in strictly hierarchical order:
+			foreach (IRenderer renderer in uiList.renderers)
+			{
+				success &= renderer.Draw(uiList.cmdList);
+			}
+
+			return success;
 		}
 
 		#endregion

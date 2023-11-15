@@ -97,7 +97,7 @@ namespace FragEngine3.Scenes
 		/// NOTE: The component will not be added to the node's component list, so this has to be done manually via '<see cref="SceneNode.AddComponent(Component)"/>'.</param>
 		/// <param name="_outComponent">Outputs the new component instance, or null, if the process fails.</param>
 		/// <param name="_params">[Optional] A list of parameters to pass to the constructor. The first parameter is always expected to be the node, so that should be skipped in this array.
-		/// Leave this null if no further parameters are required for this type.</param>
+		/// Leave this parameter null if no further parameters are required for this type.</param>
 		/// <returns>True if a new component was created successfully, false otherwise.</returns>
 		public static bool CreateComponent<T>(SceneNode _node, out T? _outComponent, params object[] _params) where T : Component
 		{
