@@ -149,6 +149,11 @@ namespace FragEngine3.Graphics.Components
 				_cmdList.SetVertexBuffer(i, vertexBuffers[i]);
 			}
 			_cmdList.SetIndexBuffer(indexBuffer, Mesh.IndexFormat);
+
+			//TODO: Bind material resources, such as textures and buffers!
+			//TODO: Update constant buffers, both for system variables and from material!
+
+			// Issue draw call:
 			_cmdList.DrawIndexed(Mesh.IndexCount);
 
 			return true;
@@ -156,11 +161,13 @@ namespace FragEngine3.Graphics.Components
 
 		public override bool LoadFromData(in ComponentData _componentData, in Dictionary<int, ISceneElementData> _idDataMap)
 		{
+			//TODO: Add data type for JSON-serializing material and mesh dependencies of this renderer, then load that from component data.
 			throw new NotImplementedException();
 		}
 
 		public override bool SaveToData(out ComponentData _componentData, in Dictionary<ISceneElement, int> _idDataMap)
 		{
+			//TODO: Add data type for JSON-serializing material and mesh dependencies of this renderer, then save that to component data.
 			throw new NotImplementedException();
 		}
 

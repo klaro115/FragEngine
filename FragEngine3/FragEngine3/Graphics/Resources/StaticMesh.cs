@@ -4,7 +4,6 @@ using FragEngine3.Graphics.Data;
 using FragEngine3.Graphics.Internal;
 using FragEngine3.Resources;
 using Veldrid;
-using static FragEngine3.Utility.Unicode.Utf16Iterator;
 
 namespace FragEngine3.Graphics.Resources
 {
