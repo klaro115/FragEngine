@@ -38,8 +38,10 @@ namespace FragEngine3.Graphics
 		/// </summary>
 		/// <param name="_viewportPosition">A viewport position in world space. Usually, this is the
 		/// position where the currently rendering camera is located.</param>
+		/// <param name="_cameraDirection">A vector indicating which direction the currently rendering
+		/// camera is pointing. This is a normalized vector.</param>
 		/// <returns></returns>
-		public float GetZSortingDepth(Vector3 _viewportPosition);
+		public float GetZSortingDepth(Vector3 _viewportPosition, Vector3 _cameraDirection);
 
 		/// <summary>
 		/// Requests the renderer to generate draw calls by writing them into the given command list.

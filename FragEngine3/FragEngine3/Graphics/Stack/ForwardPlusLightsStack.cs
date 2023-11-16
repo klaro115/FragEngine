@@ -44,7 +44,7 @@ namespace FragEngine3.Graphics.Stack
 		private bool isInitialized = false;
 		private bool isDrawing = false;
 
-		private readonly int[] rendererModeIndices = new int[]
+		private static readonly int[] rendererModeIndices = new int[]
 		{
 			0,		// RenderMode.Compute
 			1,		// RenderMode.Opaque
@@ -131,7 +131,13 @@ namespace FragEngine3.Graphics.Stack
 
 			lock(lockObj)
 			{
-				//...
+				foreach (RendererList rendererList in rendererLists)
+				{
+					rendererList.Clear();
+				}
+
+				VisibleRendererCount = 0;
+				SkippedRendererCount = 0;
 
 				Scene = null;
 
@@ -321,8 +327,10 @@ namespace FragEngine3.Graphics.Stack
 			bool success = true;
 
 			// Sort all transparent renderers by their Z-depth: (aka distance to camera)
-			Vector3 viewportPosition = Vector3.Zero;		//TODO: Implement camera type, then use currently rendering camera's position for this!
-			zSortedList.renderers.Sort((a, b) => a.GetZSortingDepth(viewportPosition).CompareTo(b.GetZSortingDepth(viewportPosition)));
+			Vector3 viewportPosition = Vector3.Zero;        //TODO: Implement camera type, then use currently rendering camera's position for this!
+			Vector3 cameraDirection = Vector3.UnitZ;		//TODO: Consider pre-calculating this for all renderers in list, to avoid recalculating for each comparison!
+
+			zSortedList.renderers.Sort((a, b) => a.GetZSortingDepth(viewportPosition, cameraDirection).CompareTo(b.GetZSortingDepth(viewportPosition, cameraDirection)));
 
 			// Draw Z-sorted list of renderers:
 			foreach (IRenderer renderer in zSortedList.renderers)

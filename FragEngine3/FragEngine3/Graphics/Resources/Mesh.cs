@@ -50,6 +50,8 @@ namespace FragEngine3.Graphics.Resources
 		public abstract uint IndexCount { get; }
 		public IndexFormat IndexFormat { get; protected set; } = IndexFormat.UInt16;
 
+		public abstract float BoundingRadius { get; protected set; }
+
 		public override ResourceType ResourceType => ResourceType.Model;
 
 		protected Logger Logger => core.graphicsSystem.engine.Logger ?? Logger.Instance!;
@@ -91,15 +93,17 @@ namespace FragEngine3.Graphics.Resources
 		/// 1. SurfaceExt: [Tan, Tex2]<para/>
 		/// 2. BlendShapes: [BlendIdx, BlendWeight]<para/>
 		/// 3. BoneAnim: [BoneIdx, BoneWeight]</param>
-		/// <param name="_outIndexBuffer">The index buffer describing which vertices form triangular polygon surfaces.</param>
+		/// <param name="_outIndexBuffer">Outputs the index buffer describing which vertices form triangular polygon surfaces.</param>
+		/// <param name="_outVertexDataFlags">Outputs flags for the vertex data exposed by this mesh's vertex buffers.</param>
 		/// <returns>True if buffers could be retrieved, false otherwise.</returns>
-		public virtual bool GetGeometryBuffers(out DeviceBuffer[] _outVertexBuffers, out DeviceBuffer _outIndexBuffer)
+		public virtual bool GetGeometryBuffers(out DeviceBuffer[] _outVertexBuffers, out DeviceBuffer _outIndexBuffer, out MeshVertexDataFlags _outVertexDataFlags)
 		{
 			if (IsDisposed)
 			{
 				Logger.LogError("Cannot get geometry buffers of disposed mesh!");
 				_outVertexBuffers = Array.Empty<DeviceBuffer>();
 				_outIndexBuffer = null!;
+				_outVertexDataFlags = 0;
 				return false;
 			}
 			if (!IsInitialized || vertexBufferBasic == null || indexBuffer == null)
@@ -107,6 +111,7 @@ namespace FragEngine3.Graphics.Resources
 				Logger.LogError($"Cannot get geometry buffers; mesh '{resourceKey}' has not been initialized!");
 				_outVertexBuffers = Array.Empty<DeviceBuffer>();
 				_outIndexBuffer = null!;
+				_outVertexDataFlags = 0;
 				return false;
 			}
 
@@ -123,6 +128,9 @@ namespace FragEngine3.Graphics.Resources
 
 			_outVertexBuffers = vertexBuffers;
 			_outIndexBuffer = indexBuffer;
+			_outVertexDataFlags = useFullSurfaceDef
+				? MeshVertexDataFlags.BasicSurfaceData | MeshVertexDataFlags.ExtendedSurfaceData
+				: MeshVertexDataFlags.BasicSurfaceData;
 			return true;
 		}
 

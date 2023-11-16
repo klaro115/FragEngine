@@ -184,8 +184,6 @@ namespace FragEngine3.Scenes
 			// Clear out all update and drawing lists:
 			if (_disposing)
 			{
-				graphicsStack = null;
-
 				foreach (UpdateStage stage in updateStageDict)
 				{
 					stage.nodeList.Clear();

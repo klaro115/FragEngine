@@ -31,6 +31,9 @@ namespace FragEngine3.Graphics.Data
 			public uint StencilReferenceValue { get; set; } = 0u;
 
 			public bool EnableCulling { get; set; } = true;
+
+			public RenderMode RenderMode { get; set; } = RenderMode.Opaque;
+			public float ZSortingBias { get; set; } = 0.0f;
 		}
 
 		[Serializable]
@@ -85,6 +88,11 @@ namespace FragEngine3.Graphics.Data
 				{
 					return false;
 				}
+			}
+			// Depth bias for Z-sorting may not be NaN:
+			if (float.IsNaN(States.ZSortingBias))
+			{
+				return false;
 			}
 
 			// For non-compute shaders:

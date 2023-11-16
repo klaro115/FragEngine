@@ -72,6 +72,9 @@ namespace FragEngine3.Graphics.Resources
 		private StencilBehaviourDesc stencilBehaviour;
 		private bool enableCulling = true;
 
+		private RenderMode renderMode = RenderMode.Opaque;
+		private float zSortingBias = 0.0f;
+
 		private DirtyFlags dirtyFlags = DirtyFlags.None;
 
 		#endregion
@@ -130,6 +133,19 @@ namespace FragEngine3.Graphics.Resources
 		{
 			get => enableCulling;
 			set { bool isChanged = enableCulling != value; enableCulling = value; if (isChanged) { MarkDirty(DirtyFlags.Rasterizer); } }
+		}
+
+		// RENDERING:
+
+		public RenderMode RenderMode
+		{
+			get => renderMode;
+			set => renderMode = value;
+		}
+		public float ZSortingBias
+		{
+			get => zSortingBias;
+			set { if (!float.IsNaN(value)) zSortingBias = value; }
 		}
 
 		private Logger Logger => graphicsCore.graphicsSystem.engine.Logger ?? Logger.Instance!;

@@ -4,6 +4,7 @@ using FragEngine3.Graphics.Data;
 using FragEngine3.Graphics.Internal;
 using FragEngine3.Resources;
 using Veldrid;
+using static FragEngine3.Utility.Unicode.Utf16Iterator;
 
 namespace FragEngine3.Graphics.Resources
 {
@@ -40,11 +41,24 @@ namespace FragEngine3.Graphics.Resources
 		#endregion
 		#region Properties
 
+		/// <summary>
+		/// Gets whether the mesh has been fully initialized, with vertex and index buffers allocated. The data in
+		/// those buffers may yet be out-of-date, however it will be updated at the latest by the time the mesh is
+		/// used in rendering.
+		/// </summary>
 		public override bool IsInitialized => !IsDisposed && vertexBufferBasic != null && (!useFullSurfaceDef || vertexBufferExt != null);
+		/// <summary>
+		/// Gets whether the geometry data in GPU-side vertex and index buffers is up-to-date. If they are, then the
+		/// latest version of the mesh's geometry data has already been copied from system memory to the buffers from
+		/// before some prior draw call. If the data is out-of-date, then a local temporary copy of the newest version
+		/// data may still be pending for upload.
+		/// </summary>
 		public override bool IsUpToDate => IsInitialized && tempBasicData == null && tempExtData == null && tempIndexBuffer16 == null && tempIndexBuffer32 == null;
 
 		public override uint VertexCount => vertexCount;
 		public override uint IndexCount => indexCount;
+
+		public override float BoundingRadius { get; protected set; } = 0.0f;
 
 		#endregion
 		#region Methods
@@ -125,14 +139,17 @@ namespace FragEngine3.Graphics.Resources
 
 			// Store data in temporary buffer for later upload just before issuing draw calls:
 			tempBasicData = new BasicVertex[vertexCount];
+			BoundingRadius = 0.0f;
 			for (int i = 0; i < vertexCount; ++i)
 			{
+				Vector3 position = _positions[i];
 				tempBasicData[i] = new BasicVertex()
 				{
-					position = _positions[i],
+					position = position,
 					normal = _normals[i],
 					uv = _uvs[i],
 				};
+				BoundingRadius = Math.Max(position.LengthSquared(), BoundingRadius);
 			}
 			return true;
 		}
@@ -166,6 +183,13 @@ namespace FragEngine3.Graphics.Resources
 
 			// Store data as temporary buffer for later upload just before issuing draw calls:
 			tempBasicData = _verticesBasic;
+
+			// Calculate mesh bounds:
+			BoundingRadius = 0.0f;
+			foreach (BasicVertex vertex in tempBasicData)
+			{
+				BoundingRadius = Math.Max(vertex.position.LengthSquared(), BoundingRadius);
+			}
 			return true;
 		}
 
@@ -321,10 +345,10 @@ namespace FragEngine3.Graphics.Resources
 			return true;
 		}
 
-		public override bool GetGeometryBuffers(out DeviceBuffer[] _outVertexBuffers, out DeviceBuffer _outIndexBuffer)
+		public override bool GetGeometryBuffers(out DeviceBuffer[] _outVertexBuffers, out DeviceBuffer _outIndexBuffer, out MeshVertexDataFlags _outVertexDataFlags)
 		{
 			// Gather static-only geometry buffers:
-			if (!base.GetGeometryBuffers(out _outVertexBuffers, out _outIndexBuffer)) return false;
+			if (!base.GetGeometryBuffers(out _outVertexBuffers, out _outIndexBuffer, out _outVertexDataFlags)) return false;
 
 			// Update buffer contents just-in-time now that they are about to be used:
 			if (tempBasicData != null)
