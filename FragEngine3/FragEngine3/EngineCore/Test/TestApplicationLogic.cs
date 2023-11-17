@@ -1,7 +1,9 @@
-﻿
+﻿using FragEngine3.Graphics.Components;
 using FragEngine3.Graphics.Stack;
 using FragEngine3.Resources;
 using FragEngine3.Scenes;
+using System.Numerics;
+using Veldrid.Sdl2;
 
 namespace FragEngine3.EngineCore.Test
 {
@@ -71,6 +73,27 @@ namespace FragEngine3.EngineCore.Test
 			if (Engine.ResourceManager.GetResource("Rabbit.obj", out handle))
 			{
 				handle.Load(true);
+			}
+
+			Scene scene = Engine.SceneManager.MainScene!;
+
+			// Create a camera:
+			SceneNode cameraNode = scene.rootNode.CreateChild("Camera");
+			if (cameraNode.CreateComponent(out Camera? camera) && camera != null)
+			{
+				Sdl2Window window = Engine.GraphicsSystem.graphicsCore.Window;
+				camera.ResolutionX = window.Width;
+				camera.ResolutionY = window.Height;
+			}
+
+			// Create a static mesh renderer displaying a default-shaded cube:
+			SceneNode cubeNode = scene.rootNode.CreateChild("Cube");
+			cubeNode.LocalPosition = new(0.4f, -0.5f, 5.0f);
+			cubeNode.LocalScale = Vector3.One;
+			if (cubeNode.CreateComponent(out StaticMeshRenderer? cubeRenderer) && cubeRenderer != null)
+			{
+				cubeRenderer.SetMesh("Cube.obj");
+				cubeRenderer.SetMaterial("Default.mtl");
 			}
 
 			return true;

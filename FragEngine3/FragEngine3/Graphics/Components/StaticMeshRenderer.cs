@@ -31,7 +31,7 @@ namespace FragEngine3.Graphics.Components
 
 		public RenderMode RenderMode => Material != null ? Material.RenderMode : RenderMode.Opaque;
 
-		public GraphicsCore GraphicsCore => throw new NotImplementedException();
+		public GraphicsCore GraphicsCore => core;
 
 		/// <summary>
 		/// Gets a handle to the material resource that is used to draw this renderer's mesh. A material provides shaders, texture, and lighting instructions.
@@ -65,9 +65,22 @@ namespace FragEngine3.Graphics.Components
 			}
 		}
 
+		public bool SetMesh(string _resourceKey, bool _loadImmediatelyIfNotReady = false)
+		{
+			if (string.IsNullOrEmpty(_resourceKey))
+			{
+				Logger.LogError("Cannot assign mesh to static mesh renderer using null or blank resource key!");
+				return false;
+			}
+
+			ResourceManager resourceManager = core.graphicsSystem.engine.ResourceManager;
+
+			return resourceManager.GetResource(_resourceKey, out ResourceHandle handle) && SetMesh(handle, _loadImmediatelyIfNotReady);
+		}
+
 		public bool SetMesh(ResourceHandle _meshHandle, bool _loadImmediatelyIfNotReady = false)
 		{
-			if (_meshHandle == null || _meshHandle.IsValid)
+			if (_meshHandle == null || !_meshHandle.IsValid)
 			{
 				Logger.LogError("Cannot assign null or disposed mesh handle to static mesh renderer!");
 				return false;
@@ -120,9 +133,22 @@ namespace FragEngine3.Graphics.Components
 			return true;
 		}
 
+		public bool SetMaterial(string _resourceKey, bool _loadImmediatelyIfNotReady = false)
+		{
+			if (string.IsNullOrEmpty(_resourceKey))
+			{
+				Logger.LogError("Cannot assign material to static mesh renderer using null or blank resource key!");
+				return false;
+			}
+
+			ResourceManager resourceManager = core.graphicsSystem.engine.ResourceManager;
+
+			return resourceManager.GetResource(_resourceKey, out ResourceHandle handle) && SetMaterial(handle, _loadImmediatelyIfNotReady);
+		}
+
 		public bool SetMaterial(ResourceHandle _materialHandle, bool _loadImmediatelyIfNotReady = false)
 		{
-			if (_materialHandle == null || _materialHandle.IsValid)
+			if (_materialHandle == null || !_materialHandle.IsValid)
 			{
 				Logger.LogError("Cannot assign null or disposed material handle to static mesh renderer!");
 				return false;
@@ -281,6 +307,8 @@ namespace FragEngine3.Graphics.Components
 			MeshHandle = null;
 			Mesh = null;
 
+			DontDrawUnlessFullyLoaded = data.DontDrawUnlessFullyLoaded;
+
 			// Load resource handles and queue up loading if they're not available yet:
 			if (!string.IsNullOrEmpty(data.Material))
 			{
@@ -311,6 +339,8 @@ namespace FragEngine3.Graphics.Components
 			{
 				Mesh = MeshHandle?.Key ?? Mesh?.resourceKey ?? string.Empty,
 				Material = MaterialHandle?.Key ?? Material?.resourceKey ?? string.Empty,
+
+				DontDrawUnlessFullyLoaded = DontDrawUnlessFullyLoaded,
 			};
 
 			if (!Serializer.SerializeToJson(data, out string dataJson))
