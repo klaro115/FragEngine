@@ -16,5 +16,10 @@ namespace FragEngine3.Scenes.Data
 		public string SerializedData { get; set; } = string.Empty;
 
 		#endregion
+		#region Properties
+
+		public static ComponentData Empty => new();
+
+		#endregion
 	}
 }

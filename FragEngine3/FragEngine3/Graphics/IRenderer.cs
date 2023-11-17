@@ -16,10 +16,19 @@ namespace FragEngine3.Graphics
 		/// will be asked to issue draw calls.
 		/// </summary>
 		bool IsVisible { get; }
+		/// <summary>
+		/// Gets or sets whether to only draw this renderer if all its resource dependencies have been
+		/// fully loaded. If false, all resource dependencies that are not yet loaded will be loaded
+		/// immediately right before first use.<para/>
+		/// HINT: Consider setting this to true for most background objects in a scene that are not
+		/// actuvely important to gameplay or that can't be interacted with by the player. This provides
+		/// a simple content streaming paradigm for load time performance optimization.
+		/// </summary>
+		bool DontDrawUnlessFullyLoaded { get; }
 
 		/// <summary>
-		/// Which render mode/queue this renderer can be classified as. This is used by the layers of
-		/// the graphcis stack to determine by when and in which order to draw renderers.
+		/// Which render mode/queue this renderer can be classified as. This is used by the graphics
+		/// stack to determine when and in which order to draw renderers.
 		/// </summary>
 		public RenderMode RenderMode { get; }
 
