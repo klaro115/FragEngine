@@ -82,8 +82,8 @@ namespace FragEngine3.EngineCore.Test
 			if (cameraNode.CreateComponent(out Camera? camera) && camera != null)
 			{
 				Sdl2Window window = Engine.GraphicsSystem.graphicsCore.Window;
-				camera.ResolutionX = window.Width;
-				camera.ResolutionY = window.Height;
+				camera.ResolutionX = (uint)window.Width;
+				camera.ResolutionY = (uint)window.Height;
 			}
 
 			// Create a static mesh renderer displaying a default-shaded cube:

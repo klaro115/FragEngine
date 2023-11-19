@@ -1,4 +1,6 @@
 ﻿using FragEngine3.Graphics.Components.Data;
+using FragEngine3.Graphics.Resources;
+using FragEngine3.Resources;
 using FragEngine3.Scenes;
 using FragEngine3.Scenes.Data;
 using FragEngine3.Utility.Serialization;
@@ -12,15 +14,30 @@ namespace FragEngine3.Graphics.Components
 
 		public Camera(SceneNode _node) : base(_node)
 		{
-			//TODO
+			core = node.scene.engine.GraphicsSystem.graphicsCore;
+
+			if (core.CreateStandardRenderTargets(
+				resolutionX,
+				resolutionY,
+				true,
+				out Texture texColor,
+				out Texture? texDepth,
+				out Framebuffer framebuffer))
+			{
+				TexColorTarget = texColor;
+				TexDepthStencilTarget = texDepth;
+				renderTargets = framebuffer;
+			}
 		}
 
 		#endregion
 		#region Fields
 
+		private readonly GraphicsCore core;
+
 		// Resolution:
-		private int resolutionX = 640;
-		private int resolutionY = 480;
+		private uint resolutionX = 640;
+		private uint resolutionY = 480;
 
 		// Projection:
 		private float nearClipPlane = 0.01f;
@@ -40,7 +57,7 @@ namespace FragEngine3.Graphics.Components
 		public byte clearStencil = 0x00;
 
 
-		//TODO: Create or assign output render targets in constructor.
+		//TODO: Resize or recreate output render targets when resolutions are changed.
 		//TODO: Register camera components in scene, then draw them automatically (sorted by 'cameraPriority' value) via the scene's graphics stack.
 		//TODO: Add material override (for shadow maps, etc.) or add shadow map override to materials.
 		//TODO: Consider adding a "useSimplifiedRendering" flag, which would prompt usage of simplified material overrides, if available.
@@ -67,7 +84,7 @@ namespace FragEngine3.Graphics.Components
 		/// NOTE: Some GPU architectures may support only a limited set of output resolutions, though most shouldn't
 		/// complain so long as the with is divisible by 8.
 		/// </summary>
-		public int ResolutionX
+		public uint ResolutionX
 		{
 			get => resolutionX;
 			set => resolutionX = Math.Clamp(value, 1, 8192);
@@ -75,7 +92,7 @@ namespace FragEngine3.Graphics.Components
 		/// <summary>
 		/// Gets or sets the height of the camera's output images in pixels. Must be a value between 1 and 8192.
 		/// </summary>
-		public int ResolutionY
+		public uint ResolutionY
 		{
 			get => resolutionY;
 			set => resolutionY = Math.Clamp(value, 1, 8192);
@@ -117,6 +134,12 @@ namespace FragEngine3.Graphics.Components
 			set => fieldOfViewRad = Math.Clamp(value, 0.001f * Deg2Rad, 179.0f * Deg2Rad);
 		}
 
+		public ResourceHandle? DefaultShadowMaterialHandle { get; private set; } = null;
+		public Material? DefaultShadowMaterial { get; private set; } = null;
+
+		public Texture TexColorTarget { get; private set; } = null!;
+		public Texture? TexDepthStencilTarget { get; private set; } = null!;
+
 		/// <summary>
 		/// Gets or sets whether this camera is the engine's main camera. This is a global property, so don't set
 		/// this if you have multiple scenes that each expect their own main camera.
@@ -138,6 +161,7 @@ namespace FragEngine3.Graphics.Components
 		/// Gets the engine's currently assigned main camera. This may be null if no camera has been marked as the
 		/// global main camera, or if the main camera has been disposed. Only rely on this property if your game
 		/// only ever has one dedicated main camera across all scenes that can concurrently be active and loaded.
+		/// Use '<see cref="IsMainCamera"/>' to mark a camera as main.
 		/// </summary>
 		public static Camera? MainCamera
 		{
@@ -151,7 +175,65 @@ namespace FragEngine3.Graphics.Components
 		{
 			IsMainCamera = false;
 
+			renderTargets?.Dispose();
+			TexColorTarget?.Dispose();
+			TexDepthStencilTarget?.Dispose();
+
+			if (_disposing)
+			{
+				renderTargets = null!;
+				overrideRenderTargets = null;
+				TexColorTarget = null!;
+				TexDepthStencilTarget = null;
+			}
+
 			base.Dispose(_disposing);
+		}
+
+		public bool SetDefaultShadowMaterial(string _resourceKey, bool _loadImmediatelyIfNotReady = false)
+		{
+			if (IsDisposed)
+			{
+				Logger.LogError("Cannot assign default shadow material to disposed camera!");
+				return false;
+			}
+			if (string.IsNullOrEmpty(_resourceKey))
+			{
+				Logger.LogError("Cannot assign default shadow material from null or blank resource key!");
+				return false;
+			}
+
+			ResourceManager resourceManager = core.graphicsSystem.engine.ResourceManager;
+			if (!resourceManager.GetResource(_resourceKey, out ResourceHandle handle))
+			{
+				Logger.LogError($"Camera's default shadow material for resource key '{_resourceKey}' could not be found!");
+				return false;
+			}
+
+			return SetDefaultShadowMaterial(handle, _loadImmediatelyIfNotReady);
+		}
+		public bool SetDefaultShadowMaterial(ResourceHandle? _materialHandle, bool _loadImmediatelyIfNotReady = false)
+		{
+			if (IsDisposed)
+			{
+				Logger.LogError("Cannot assign default shadow material to disposed camera!");
+				return false;
+			}
+			if (_materialHandle != null && !_materialHandle.IsValid)
+			{
+				Logger.LogError("Cannot assign invalid material as camera's default shadow material!");
+				return false;
+			}
+
+			// Assign (or clear) the material's handle:
+			DefaultShadowMaterialHandle = _materialHandle;
+
+			// If a shadow material was assigned, make sure it's loaded:
+			if (DefaultShadowMaterialHandle != null)
+			{
+				DefaultShadowMaterial = DefaultShadowMaterialHandle.GetResource(_loadImmediatelyIfNotReady, true) as Material;
+			}
+			return true;
 		}
 
 		public bool SetOverrideRenderTargets(Framebuffer? _newOverrideRenderTargets, bool _disposedPreviousOverride = false)
@@ -251,6 +333,24 @@ namespace FragEngine3.Graphics.Components
 				return false;
 			}
 
+			// If a default shadow material is loaded, make sure it's loaded:
+			if (DefaultShadowMaterial == null || DefaultShadowMaterial.IsDisposed)
+			{
+				if (DefaultShadowMaterialHandle != null)
+				{
+					DefaultShadowMaterial = DefaultShadowMaterialHandle.GetResource(true, true) as Material;
+				}
+				else
+				{
+					DefaultShadowMaterial = null;
+				}
+			}
+
+
+			//TODO: Update system constant buffer with camera and projection data.
+
+
+			// Fetch the currently active render targets that shall be drawn to:
 			if (!GetActiveRenderTargets(out Framebuffer? activeRenderTargets) || activeRenderTargets == null)
 			{
 				return false;

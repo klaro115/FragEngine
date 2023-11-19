@@ -299,6 +299,98 @@ namespace FragEngine3.Graphics
 			return true;
 		}
 
+		public virtual bool CreateStandardRenderTargets(
+			uint _width,
+			uint _height,
+			bool _createDepth,
+			out Texture _outTexColorTarget,
+			out Texture? _outDepthTarget,
+			out Framebuffer _outFramebuffer)
+		{
+			if (!IsInitialized)
+			{
+				_outTexColorTarget = null!;
+				_outDepthTarget = null;
+				_outFramebuffer = null!;
+				Logger.LogError("Cannot create standard render targets using uninitialized graphics core!");
+				return false;
+			}
+
+			PixelFormat colorPixelFormat = PixelFormat.R8_G8_B8_A8_UNorm;
+			PixelFormat depthPixelFormat = PixelFormat.D24_UNorm_S8_UInt;	//TODO: Determine platform-supported pixel formats!
+			TextureSampleCount msaaCount = TextureSampleCount.Count1;
+
+			// Try creating main color target:
+			TextureDescription texColorTargetDesc = new(
+				_width,
+				_height,
+				1, 0, 0,
+				colorPixelFormat,
+				TextureUsage.RenderTarget | TextureUsage.Sampled,
+				TextureType.Texture2D,
+				msaaCount);
+
+			try
+			{
+				_outTexColorTarget = MainFactory.CreateTexture(ref texColorTargetDesc);
+			}
+			catch (Exception ex)
+			{
+				Logger.LogException("Failed to create standard color render targets!", ex);
+				_outTexColorTarget = null!;
+				_outDepthTarget = null;
+				_outFramebuffer = null!;
+				return false;
+			}
+
+			// Try creating depth/stencil target:
+			if (_createDepth)
+			{
+				TextureDescription texDepthTargetDesc = new(
+					_width,
+					_height,
+					1, 0, 0,
+					depthPixelFormat,
+					TextureUsage.DepthStencil | TextureUsage.Sampled,
+					TextureType.Texture2D);
+
+				try
+				{
+					_outDepthTarget = MainFactory.CreateTexture(ref texDepthTargetDesc);
+				}
+				catch (Exception ex)
+				{
+					Logger.LogException("Failed to create standard depth render targets!", ex);
+					_outTexColorTarget?.Dispose();
+					_outTexColorTarget = null!;
+					_outDepthTarget = null;
+					_outFramebuffer = null!;
+					return false;
+				}
+			}
+			else
+			{
+				_outDepthTarget = null;
+			}
+
+			FramebufferDescription frameBufferDesc = new(_outDepthTarget, _outTexColorTarget);
+			try
+			{
+				_outFramebuffer = MainFactory.CreateFramebuffer(ref frameBufferDesc);
+				return true;
+			}
+			catch (Exception ex)
+			{
+				Logger.LogException("Failed to create framebuffer from standard render targets!", ex);
+				_outTexColorTarget?.Dispose();
+				_outDepthTarget?.Dispose();
+				_outTexColorTarget = null!;
+				_outDepthTarget = null;
+				_outFramebuffer = null!;
+				return false;
+			}
+		}
+
 		#endregion
 	}
 }

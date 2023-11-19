@@ -8,8 +8,8 @@ namespace FragEngine3.Graphics.Components.Data
 	{
 		#region Properties
 
-		public int ResolutionX { get; set; } = 640;
-		public int ResolutionY { get; set; } = 480;
+		public uint ResolutionX { get; set; } = 640u;
+		public uint ResolutionY { get; set; } = 480u;
 
 		public float NearClipPlane { get; set; } = 0.001f;
 		public float FarClipPlane { get; set; } = 1000.0f;
@@ -21,8 +21,8 @@ namespace FragEngine3.Graphics.Components.Data
 		public bool IsValid()
 		{
 			return
-				ResolutionX > 0 && ResolutionX < 8192 &&
-				ResolutionY > 0 && ResolutionY < 8192 &&
+				ResolutionX < 8192 &&
+				ResolutionY < 8192 &&
 				NearClipPlane > 0 &&
 				NearClipPlane < FarClipPlane &&
 				FarClipPlane < 100000.0f &&
