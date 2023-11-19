@@ -2,6 +2,7 @@
 using FragEngine3.Scenes;
 using FragEngine3.Scenes.Data;
 using FragEngine3.Utility.Serialization;
+using Veldrid;
 
 namespace FragEngine3.Graphics.Components
 {
@@ -11,7 +12,7 @@ namespace FragEngine3.Graphics.Components
 
 		public Camera(SceneNode _node) : base(_node)
 		{
-			//...
+			//TODO
 		}
 
 		#endregion
@@ -26,9 +27,31 @@ namespace FragEngine3.Graphics.Components
 		private float farClipPlane = 1000.0f;
 		private float fieldOfViewRad = 60.0f * Deg2Rad;
 
+		// Content:
+		public uint cameraPriority = 1000;
+		public uint layerMask = 0xFFFFFFFFu;
+
+		// Clearing:
+		public bool clearBackground = true;
+		private bool allowClearDepth = true;
+		private bool allowClearStencil = false;
+		public Color32 clearColor = Color32.Cornflower;
+		public float clearDepth = 1.0e+8f;
+		public byte clearStencil = 0x00;
+
+
+		//TODO: Create or assign output render targets in constructor.
+		//TODO: Register camera components in scene, then draw them automatically (sorted by 'cameraPriority' value) via the scene's graphics stack.
+		//TODO: Add material override (for shadow maps, etc.) or add shadow map override to materials.
+		//TODO: Consider adding a "useSimplifiedRendering" flag, which would prompt usage of simplified material overrides, if available.
+
+		// Output:
+		private Framebuffer renderTargets = null!;
+		private Framebuffer? overrideRenderTargets = null;
+
 		private static Camera? mainCamera = null;
 
-		private static object lockObj = new();
+		private static readonly object mainCameraLockObj = new();
 
 		#endregion
 		#region Constants
@@ -104,7 +127,7 @@ namespace FragEngine3.Graphics.Components
 			set
 			{
 				if (IsMainCamera == value) return;
-				lock(lockObj)
+				lock(mainCameraLockObj)
 				{
 					mainCamera = value ? this : null;
 				}
@@ -118,7 +141,7 @@ namespace FragEngine3.Graphics.Components
 		/// </summary>
 		public static Camera? MainCamera
 		{
-			get { lock (lockObj) { return mainCamera != null && mainCamera.IsMainCamera ? mainCamera : null; }; }
+			get { lock (mainCameraLockObj) { return mainCamera != null && mainCamera.IsMainCamera ? mainCamera : null; }; }
 		}
 
 		#endregion
@@ -129,6 +152,146 @@ namespace FragEngine3.Graphics.Components
 			IsMainCamera = false;
 
 			base.Dispose(_disposing);
+		}
+
+		public bool SetOverrideRenderTargets(Framebuffer? _newOverrideRenderTargets, bool _disposedPreviousOverride = false)
+		{
+			if (IsDisposed)
+			{
+				Logger.LogError("Cannot assign render target override on disposed camera!");
+				return false;
+			}
+			if (_newOverrideRenderTargets != null && _newOverrideRenderTargets.IsDisposed)
+			{
+				Logger.LogError("Cannot assign disposed render targets as override to camera!");
+				return false;
+			}
+
+			// Validate new overrides, if non-null:
+			if (_newOverrideRenderTargets != null)
+			{
+				// Only allow correctly dimensioned render targets to be assigned to a camers:
+				if (_newOverrideRenderTargets.Width != resolutionX || _newOverrideRenderTargets.Height != resolutionY)
+				{
+					Logger.LogError("Resolution mismatch between override render targets and camera!");
+					return false;
+				}
+			}
+
+			// If requested, purge any previously assigned overrides:
+			if (_disposedPreviousOverride && overrideRenderTargets != null)
+			{
+				overrideRenderTargets.Dispose();
+			}
+
+			// Assign (or clear) overrides:
+			overrideRenderTargets = _newOverrideRenderTargets;
+
+			UpdateStatesFromActiveRenderTarget();
+			return true;
+		}
+
+		private void UpdateStatesFromActiveRenderTarget()
+		{
+			if (!GetActiveRenderTargets(out Framebuffer? activeRenderTargets) || activeRenderTargets == null)
+			{
+				return;
+			}
+
+			// Check whether depth and stencil buffers are present and require clearing:
+			allowClearDepth = activeRenderTargets.OutputDescription.DepthAttachment.HasValue;
+			if (allowClearDepth)
+			{
+				PixelFormat depthFormat = activeRenderTargets.OutputDescription.DepthAttachment!.Value.Format;
+				allowClearStencil = depthFormat == PixelFormat.D24_UNorm_S8_UInt || depthFormat == PixelFormat.D32_Float_S8_UInt;
+			}
+			else
+			{
+				allowClearStencil = false;
+			}
+		}
+
+		/// <summary>
+		/// Gets this camera's currently active render targets (aka the framebuffer it will be rendering to).
+		/// </summary>
+		/// <param name="_outActiveRenderTargets">Outputs a currently framebuffer that the camera will be rendering to.
+		/// If an override render target was assigned, that will be prioritized. In all other cases, the camera's own
+		/// render target will be used instead.</param>
+		/// <returns>True if any valid render target exists and is assigned to this camera, false otherwise.</returns>
+		public bool GetActiveRenderTargets(out Framebuffer? _outActiveRenderTargets)
+		{
+			if (IsDisposed)
+			{
+				_outActiveRenderTargets = null;
+				return false;
+			}
+
+			if (overrideRenderTargets != null && !overrideRenderTargets.IsDisposed)
+			{
+				_outActiveRenderTargets = overrideRenderTargets;
+				return true;
+			}
+			else
+			{
+				_outActiveRenderTargets = renderTargets;
+				return !renderTargets.IsDisposed;
+			}
+		}
+
+		public bool BeginFrame(CommandList _cmdList)
+		{
+			if (IsDisposed)
+			{
+				Logger.LogError("Cannot bind disposed camera for rendering!");
+				return false;
+			}
+			if (_cmdList == null || _cmdList.IsDisposed)
+			{
+				Logger.LogError("Cannot bind camera using null or disposed command list!");
+				return false;
+			}
+
+			if (!GetActiveRenderTargets(out Framebuffer? activeRenderTargets) || activeRenderTargets == null)
+			{
+				return false;
+			}
+
+			// Bind current render targets as output to command list:
+			_cmdList.SetFramebuffer(activeRenderTargets);
+
+			// Clear the framebuffer before any new content is drawn to it:
+			if (clearBackground)
+			{
+				_cmdList.ClearColorTarget(0, clearColor.ToRgbaFloat());
+
+				// Clear depth and stencil buffer, as required:
+				if (allowClearDepth)
+				{
+					if (allowClearStencil)
+					{
+						_cmdList.ClearDepthStencil(clearDepth, clearStencil);
+					}
+					else
+					{
+						_cmdList.ClearDepthStencil(clearDepth);
+					}
+				}
+			}
+
+			return true;
+		}
+
+		public bool EndFrame()
+		{
+			if (IsDisposed)
+			{
+				Logger.LogError("Cannot unbind disposed camera from rendering!");
+				return false;
+			}
+
+			//...
+
+			return true;
 		}
 
 		public override bool LoadFromData(in ComponentData _componentData, in Dictionary<int, ISceneElementData> _idDataMap)

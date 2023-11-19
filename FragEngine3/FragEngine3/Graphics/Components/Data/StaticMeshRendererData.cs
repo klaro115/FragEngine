@@ -12,6 +12,7 @@ namespace FragEngine3.Graphics.Components.Data
 		public string Material { get; set; } = string.Empty;
 
 		public bool DontDrawUnlessFullyLoaded { get; set; } = false;
+		public uint LayerFlags { get; set; } = 1;
 
 		#endregion
 		#region Methods

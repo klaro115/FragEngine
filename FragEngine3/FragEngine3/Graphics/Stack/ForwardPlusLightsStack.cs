@@ -201,6 +201,10 @@ namespace FragEngine3.Graphics.Stack
 			{
 				lock (lockObj)
 				{
+					//TODO: Get camera from scene!
+					//TODO: Repeat this process for each active camera!
+					uint cameraRenderFlags = 0xFFFFFFFFu;
+
 					// Clear out all renderer lists for the upcoming frame:
 					foreach (RendererList rendererList in rendererLists)
 					{
@@ -218,7 +222,7 @@ namespace FragEngine3.Graphics.Stack
 					// Assign each renderer to the most appropriate rendering list:
 					foreach (SceneNodeRendererPair pair in _nodeRendererPairs)
 					{
-						if (pair.renderer.IsVisible)
+						if (pair.renderer.IsVisible && (pair.renderer.LayerFlags & cameraRenderFlags) != 0)
 						{
 							// Skip any renderers that cannot be mapped to any of the supported modes:
 							if (GetRendererListForMode(pair.renderer.RenderMode, out RendererList? rendererList))

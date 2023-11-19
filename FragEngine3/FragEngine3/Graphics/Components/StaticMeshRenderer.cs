@@ -30,6 +30,7 @@ namespace FragEngine3.Graphics.Components
 		public bool DontDrawUnlessFullyLoaded { get; set; } = false;
 
 		public RenderMode RenderMode => Material != null ? Material.RenderMode : RenderMode.Opaque;
+		public uint LayerFlags { get; set; } = 1;
 
 		public GraphicsCore GraphicsCore => core;
 
@@ -308,6 +309,7 @@ namespace FragEngine3.Graphics.Components
 			Mesh = null;
 
 			DontDrawUnlessFullyLoaded = data.DontDrawUnlessFullyLoaded;
+			LayerFlags = data.LayerFlags;
 
 			// Load resource handles and queue up loading if they're not available yet:
 			if (!string.IsNullOrEmpty(data.Material))
@@ -341,6 +343,7 @@ namespace FragEngine3.Graphics.Components
 				Material = MaterialHandle?.Key ?? Material?.resourceKey ?? string.Empty,
 
 				DontDrawUnlessFullyLoaded = DontDrawUnlessFullyLoaded,
+				LayerFlags = LayerFlags,
 			};
 
 			if (!Serializer.SerializeToJson(data, out string dataJson))

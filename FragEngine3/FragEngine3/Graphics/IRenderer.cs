@@ -31,6 +31,12 @@ namespace FragEngine3.Graphics
 		/// stack to determine when and in which order to draw renderers.
 		/// </summary>
 		public RenderMode RenderMode { get; }
+		/// <summary>
+		/// Gets a bit flag representing a graphics layer that this renderer belongs to. Most objects
+		/// in a scene should return 1, as that is the default layer for scene contents, though up to
+		/// 31 additional layers may be used to mark content that should not be drawn by certain cameras.
+		/// </summary>
+		public uint LayerFlags { get; }
 
 		/// <summary>
 		/// Gets the graphics core this renderer was created with.
