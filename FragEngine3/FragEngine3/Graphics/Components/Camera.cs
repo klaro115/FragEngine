@@ -1,4 +1,5 @@
-﻿using FragEngine3.Graphics.Components.Data;
+﻿using System.Numerics;
+using FragEngine3.Graphics.Components.Data;
 using FragEngine3.Graphics.Resources;
 using FragEngine3.Resources;
 using FragEngine3.Scenes;
@@ -10,6 +11,19 @@ namespace FragEngine3.Graphics.Components
 {
 	public sealed class Camera : Component
 	{
+		#region Types
+
+		[Flags]
+		private enum DirtyFlags
+		{
+			Resolution		= 1,
+			RenderTarget	= 2,
+			Projection		= 4,
+
+			All				= Resolution | RenderTarget | Projection
+		}
+
+		#endregion
 		#region Constructors
 
 		public Camera(SceneNode _node) : base(_node)
@@ -28,12 +42,18 @@ namespace FragEngine3.Graphics.Components
 				TexDepthStencilTarget = texDepth;
 				renderTargets = framebuffer;
 			}
+
+			UpdateStatesFromActiveRenderTarget();
+
+			MarkDirty(DirtyFlags.Resolution | DirtyFlags.Projection);
 		}
 
 		#endregion
 		#region Fields
 
 		private readonly GraphicsCore core;
+
+		private DirtyFlags dirtyFlags = 0;
 
 		// Resolution:
 		private uint resolutionX = 640;
@@ -75,9 +95,11 @@ namespace FragEngine3.Graphics.Components
 
 		private const float Rad2Deg = 180.0f / MathF.PI;
 		private const float Deg2Rad = MathF.PI / 180.0f;
-		
+
 		#endregion
 		#region Properties
+
+		public bool IsDirty => dirtyFlags != 0;
 
 		/// <summary>
 		/// Gets or sets the width of the camera's output images in pixels. Must be a value between 1 and 8192.<para/>
@@ -87,7 +109,12 @@ namespace FragEngine3.Graphics.Components
 		public uint ResolutionX
 		{
 			get => resolutionX;
-			set => resolutionX = Math.Clamp(value, 1, 8192);
+			set
+			{
+				resolutionX = Math.Clamp(value, 1, 8192);
+				AspectRatio = resolutionX / resolutionY;
+				MarkDirty(DirtyFlags.Resolution);
+			}
 		}
 		/// <summary>
 		/// Gets or sets the height of the camera's output images in pixels. Must be a value between 1 and 8192.
@@ -95,8 +122,15 @@ namespace FragEngine3.Graphics.Components
 		public uint ResolutionY
 		{
 			get => resolutionY;
-			set => resolutionY = Math.Clamp(value, 1, 8192);
+			set
+			{
+				resolutionY = Math.Clamp(value, 1, 8192);
+				AspectRatio = resolutionX / resolutionY;
+				MarkDirty(DirtyFlags.Resolution);
+			}
 		}
+
+		public float AspectRatio { get; private set; } = 1.33333f;
 
 		/// <summary>
 		/// Gets or sets the nearest clipping distance of the camera; geometry closer than this can't be rendered
@@ -105,7 +139,7 @@ namespace FragEngine3.Graphics.Components
 		public float NearClipPlane
 		{
 			get => nearClipPlane;
-			set => nearClipPlane = Math.Clamp(value, 0.001f, Math.Min(farClipPlane, 99999.9f));
+			set { nearClipPlane = Math.Clamp(value, 0.001f, Math.Min(farClipPlane, 99999.9f)); MarkDirty(DirtyFlags.Projection); }
 		}
 		/// <summary>
 		/// Gets or sets the far clipping distance of the camera; geometry further away than this can't be rendered
@@ -114,7 +148,7 @@ namespace FragEngine3.Graphics.Components
 		public float FarClipPlane
 		{
 			get => farClipPlane;
-			set => farClipPlane = Math.Clamp(value, Math.Min(nearClipPlane, 0.002f), 100000.0f);
+			set { farClipPlane = Math.Clamp(value, Math.Min(nearClipPlane, 0.002f), 100000.0f); MarkDirty(DirtyFlags.Projection); }
 		}
 
 		/// <summary>
@@ -123,7 +157,7 @@ namespace FragEngine3.Graphics.Components
 		public float FieldOfViewDegrees
 		{
 			get => fieldOfViewRad * Rad2Deg;
-			set => fieldOfViewRad = Math.Clamp(value, 0.001f, 179.0f) * Deg2Rad;
+			set { fieldOfViewRad = Math.Clamp(value, 0.001f, 179.0f) * Deg2Rad; MarkDirty(DirtyFlags.Projection); }
 		}
 		/// <summary>
 		/// Gets or sets the field of view angle in radians.
@@ -131,7 +165,7 @@ namespace FragEngine3.Graphics.Components
 		public float FieldOfViewRadians
 		{
 			get => fieldOfViewRad;
-			set => fieldOfViewRad = Math.Clamp(value, 0.001f * Deg2Rad, 179.0f * Deg2Rad);
+			set { fieldOfViewRad = Math.Clamp(value, 0.001f * Deg2Rad, 179.0f * Deg2Rad); MarkDirty(DirtyFlags.Projection); }
 		}
 
 		public ResourceHandle? DefaultShadowMaterialHandle { get; private set; } = null;
@@ -139,6 +173,10 @@ namespace FragEngine3.Graphics.Components
 
 		public Texture TexColorTarget { get; private set; } = null!;
 		public Texture? TexDepthStencilTarget { get; private set; } = null!;
+
+		public Matrix4x4 MtxWorld => node.WorldTransformation.Matrix;
+		public Matrix4x4 MtxViewport => ;
+		public Matrix4x4 NtxProjection { get; private set; } = Matrix4x4.Identity;
 
 		/// <summary>
 		/// Gets or sets whether this camera is the engine's main camera. This is a global property, so don't set
@@ -174,6 +212,7 @@ namespace FragEngine3.Graphics.Components
 		protected override void Dispose(bool _disposing)
 		{
 			IsMainCamera = false;
+			dirtyFlags = 0;
 
 			renderTargets?.Dispose();
 			TexColorTarget?.Dispose();
@@ -188,6 +227,15 @@ namespace FragEngine3.Graphics.Components
 			}
 
 			base.Dispose(_disposing);
+		}
+
+		public void MarkDirty()
+		{
+			dirtyFlags |= DirtyFlags.All;
+		}
+		private void MarkDirty(DirtyFlags _changeFlags)
+		{
+			dirtyFlags |= _changeFlags;
 		}
 
 		public bool SetDefaultShadowMaterial(string _resourceKey, bool _loadImmediatelyIfNotReady = false)
@@ -270,6 +318,8 @@ namespace FragEngine3.Graphics.Components
 			overrideRenderTargets = _newOverrideRenderTargets;
 
 			UpdateStatesFromActiveRenderTarget();
+
+			MarkDirty(DirtyFlags.RenderTarget);
 			return true;
 		}
 
@@ -346,6 +396,32 @@ namespace FragEngine3.Graphics.Components
 				}
 			}
 
+			// Respond to changed resolution:
+			if (dirtyFlags.HasFlag(DirtyFlags.Resolution))
+			{
+				renderTargets?.Dispose();
+				TexColorTarget?.Dispose();
+				TexDepthStencilTarget?.Dispose();
+
+				if (core.CreateStandardRenderTargets(
+					resolutionX,
+					resolutionY,
+					true,
+					out Texture texColor,
+					out Texture? texDepth,
+					out Framebuffer framebuffer))
+				{
+					TexColorTarget = texColor;
+					TexDepthStencilTarget = texDepth;
+					renderTargets = framebuffer;
+				}
+
+				UpdateStatesFromActiveRenderTarget();
+			}
+
+			// Respond to changed projection or viewport:
+			if ()
+				Matrix4x4.CreatePerspectiveFieldOfView(fieldOfViewRad, AspectRatio, nearClipPlane, farClipPlane);
 
 			//TODO: Update system constant buffer with camera and projection data.
 
@@ -378,6 +454,7 @@ namespace FragEngine3.Graphics.Components
 				}
 			}
 
+			dirtyFlags = 0;
 			return true;
 		}
 
