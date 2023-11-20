@@ -43,9 +43,10 @@ namespace FragEngine3.Graphics.Components
 				renderTargets = framebuffer;
 			}
 
-			UpdateStatesFromActiveRenderTarget();
-
 			MarkDirty(DirtyFlags.Resolution | DirtyFlags.Projection);
+
+			UpdateProjection();
+			UpdateStatesFromActiveRenderTarget();
 		}
 
 		#endregion
@@ -63,6 +64,10 @@ namespace FragEngine3.Graphics.Components
 		private float nearClipPlane = 0.01f;
 		private float farClipPlane = 1000.0f;
 		private float fieldOfViewRad = 60.0f * Deg2Rad;
+		private Matrix4x4 mtxProjection = Matrix4x4.Identity;
+		private Matrix4x4 mtxViewport = Matrix4x4.Identity;
+		private Matrix4x4 mtxCamera = Matrix4x4.Identity;
+		private Matrix4x4 mtxInvCamera = Matrix4x4.Identity;
 
 		// Content:
 		public uint cameraPriority = 1000;
@@ -174,9 +179,70 @@ namespace FragEngine3.Graphics.Components
 		public Texture TexColorTarget { get; private set; } = null!;
 		public Texture? TexDepthStencilTarget { get; private set; } = null!;
 
+		/// <summary>
+		/// Gets matrix containing the camera's world space transformation.
+		/// </summary>
 		public Matrix4x4 MtxWorld => node.WorldTransformation.Matrix;
-		public Matrix4x4 MtxViewport => ;
-		public Matrix4x4 NtxProjection { get; private set; } = Matrix4x4.Identity;
+		/// <summary>
+		/// Gets just the projection matrix for transforming a point from the camera's local space into clip space
+		/// coordinates. If out-of-date, all projection matrices are recalculated by calling this.
+		/// </summary>
+		public Matrix4x4 MtxProjection
+		{
+			get { if (dirtyFlags.HasFlag(DirtyFlags.Projection)) { UpdateProjection(); } return mtxProjection; }
+		}
+		/// <summary>
+		/// Gets just the viewport matrix for transforming a point from the clip space into viewport pixel space
+		/// coordinates. If out-of-date, all projection matrices are recalculated by calling this.
+		/// </summary>
+		public Matrix4x4 MtxViewport
+		{
+			get { if (dirtyFlags.HasFlag(DirtyFlags.Projection)) { UpdateProjection(); } return mtxViewport; }
+		}
+		/// <summary>
+		/// Gets the final projection matrix for the current frame. This matrix may be used to transforms a point
+		/// from world space into screen pixel coordinates. If out-of-date, all projection matrices are recalculated
+		/// by calling this.<para/>
+		/// NOTE: This is the result of multiplying the inverse world matrix, the projection matrix, and the viewport
+		/// matrix. This matrix is recalculated each frame, as well as each time '<see cref="UpdateProjection"/>'
+		/// is called.
+		/// </summary>
+		public Matrix4x4 MtxCamera
+		{
+			get
+			{
+				if (dirtyFlags.HasFlag(DirtyFlags.Projection))
+				{
+					UpdateProjection();
+				}
+				else
+				{
+					UpdateFinalCameraMatrix();
+				}
+				return mtxCamera;
+			}
+		}
+		/// <summary>
+		/// Gets the inverse of the final projection matrix for the current frame. This matrix may be used to transforms
+		/// a pixel coordinate from viewport space into a position in world space. If out-of-date, all projection matrices
+		/// are recalculated by calling this.<para/>
+		/// NOTE: This is the inverse matrix of '<see cref="MtxCamera"/>'.
+		/// </summary>
+		public Matrix4x4 MtxInvCamera
+		{
+			get
+			{
+				if (dirtyFlags.HasFlag(DirtyFlags.Projection))
+				{
+					UpdateProjection();
+				}
+				else
+				{
+					UpdateFinalCameraMatrix();
+				}
+				return mtxCamera;
+			}
+		}
 
 		/// <summary>
 		/// Gets or sets whether this camera is the engine's main camera. This is a global property, so don't set
@@ -323,6 +389,40 @@ namespace FragEngine3.Graphics.Components
 			return true;
 		}
 
+		public void UpdateProjection()
+		{
+			//NOTE: We are using a left-handed coordinate system, where X=right, Y=up, and Z=forward.
+
+			// Calculate projection from camera's local space to clip space:
+			mtxProjection = Matrix4x4.CreatePerspectiveFieldOfViewLeftHanded(fieldOfViewRad, AspectRatio, nearClipPlane, farClipPlane);
+
+			// Calculate viewport matrix:
+			RecalculateViewportMatrix();
+
+			// Recalculate the final camera matrix by combining the above matrices with the camera node's inverse world matrix:
+			UpdateFinalCameraMatrix();
+
+			// Reset the projection's dirty flag:
+			dirtyFlags &= ~DirtyFlags.Projection;
+		}
+		private void RecalculateViewportMatrix()
+		{
+			mtxViewport = Matrix4x4.CreateViewportLeftHanded(0, 0, resolutionX, resolutionY, nearClipPlane, farClipPlane);
+		}
+		private void UpdateFinalCameraMatrix()
+		{
+			// Use the inverted world matrix of the camera node to transform from world space to the camera's local space:
+			if (Matrix4x4.Invert(MtxWorld, out Matrix4x4 mtxWorld2Camera))
+			{
+				// World space => Camera's local space => Clip space => Viewport/pixel space
+
+				// Calculate combined matrix or transforming from world space to clip space:
+				mtxCamera = Matrix4x4.Multiply(mtxViewport, Matrix4x4.Multiply(mtxProjection, mtxWorld2Camera));
+
+				Matrix4x4.Invert(mtxCamera, out mtxInvCamera);
+			}
+		}
+
 		private void UpdateStatesFromActiveRenderTarget()
 		{
 			if (!GetActiveRenderTargets(out Framebuffer? activeRenderTargets) || activeRenderTargets == null)
@@ -417,11 +517,34 @@ namespace FragEngine3.Graphics.Components
 				}
 
 				UpdateStatesFromActiveRenderTarget();
+
+				// Check if any render target override that is currently assigned matches the camera's resolution:
+				if (overrideRenderTargets != null && !overrideRenderTargets.IsDisposed)
+				{
+					if (overrideRenderTargets.Width != resolutionX || overrideRenderTargets.Height != resolutionY)
+					{
+						Logger.LogError("Resolution mismatch between camera output and override render targets!");
+						return false;
+					}
+				}
+
+				// Update viewport matrix now that output resolution has changed:
+				if (dirtyFlags.HasFlag(DirtyFlags.Projection) && !dirtyFlags.HasFlag(DirtyFlags.Projection))
+				{
+					RecalculateViewportMatrix();
+				}
 			}
 
 			// Respond to changed projection or viewport:
-			if ()
-				Matrix4x4.CreatePerspectiveFieldOfView(fieldOfViewRad, AspectRatio, nearClipPlane, farClipPlane);
+			if (dirtyFlags.HasFlag(DirtyFlags.Projection))
+			{
+				UpdateProjection();
+			}
+			else
+			{
+				UpdateFinalCameraMatrix();
+			}
+
 
 			//TODO: Update system constant buffer with camera and projection data.
 
@@ -469,6 +592,46 @@ namespace FragEngine3.Graphics.Components
 			//...
 
 			return true;
+		}
+
+		public Vector3 TransformWorldPointToPixelCoord(Vector3 _worldPoint, bool _allowUpdateProjection = true)
+		{
+			// If requested, rebuild all projection matrices, or at least all those that have changed:
+			if (_allowUpdateProjection)
+			{
+				if (dirtyFlags.HasFlag(DirtyFlags.Projection))
+				{
+					UpdateProjection();
+				}
+				else
+				{
+					// Even if the rest are up-to-date, the final camera matrix should be recalculated once a frame, before first use:
+					UpdateFinalCameraMatrix();
+				}
+			}
+
+			// Transform world space position to viewport pixel space:
+			return Vector3.Transform(_worldPoint, mtxCamera);
+		}
+
+		public Vector3 TransformPixelCoordToWorldPoint(Vector3 _pixelCoord, bool _allowUpdateProjection = true)
+		{
+			// If requested, rebuild all projection matrices, or at least all those that have changed:
+			if (_allowUpdateProjection)
+			{
+				if (dirtyFlags.HasFlag(DirtyFlags.Projection))
+				{
+					UpdateProjection();
+				}
+				else
+				{
+					// Even if the rest are up-to-date, the final camera matrix should be recalculated once a frame, before first use:
+					UpdateFinalCameraMatrix();
+				}
+			}
+
+			// Transform world space position to viewport pixel space:
+			return Vector3.Transform(_pixelCoord, mtxInvCamera);
 		}
 
 		public override bool LoadFromData(in ComponentData _componentData, in Dictionary<int, ISceneElementData> _idDataMap)

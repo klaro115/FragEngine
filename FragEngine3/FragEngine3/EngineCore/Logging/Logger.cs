@@ -142,12 +142,12 @@ namespace FragEngine3.EngineCore
 
 		public void LogException(string _message, Exception _exception)
 		{
-			LogEntry entry = new(LogEntryType.Error, _message, -1, LogEntrySeverity.Major, _exception);
+			LogEntry entry = new(LogEntryType.Exception, _message, -1, LogEntrySeverity.Major, _exception);
 			LogNewEntry(entry);
 		}
 		public void LogException(string _message, Exception _exception, LogEntrySeverity _severity = LogEntrySeverity.Normal)
 		{
-			LogEntry entry = new(LogEntryType.Error, _message, -1, _severity, _exception);
+			LogEntry entry = new(LogEntryType.Exception, _message, -1, _severity, _exception);
 			LogNewEntry(entry);
 		}
 

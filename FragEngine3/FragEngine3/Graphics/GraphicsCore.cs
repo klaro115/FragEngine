@@ -324,7 +324,7 @@ namespace FragEngine3.Graphics
 			TextureDescription texColorTargetDesc = new(
 				_width,
 				_height,
-				1, 0, 0,
+				1, 1, 1,
 				colorPixelFormat,
 				TextureUsage.RenderTarget | TextureUsage.Sampled,
 				TextureType.Texture2D,
@@ -349,10 +349,11 @@ namespace FragEngine3.Graphics
 				TextureDescription texDepthTargetDesc = new(
 					_width,
 					_height,
-					1, 0, 0,
+					1, 1, 1,
 					depthPixelFormat,
 					TextureUsage.DepthStencil | TextureUsage.Sampled,
-					TextureType.Texture2D);
+					TextureType.Texture2D,
+					msaaCount);
 
 				try
 				{
@@ -373,9 +374,10 @@ namespace FragEngine3.Graphics
 				_outDepthTarget = null;
 			}
 
-			FramebufferDescription frameBufferDesc = new(_outDepthTarget, _outTexColorTarget);
 			try
 			{
+				FramebufferDescription frameBufferDesc = new(_outDepthTarget, _outTexColorTarget);
+
 				_outFramebuffer = MainFactory.CreateFramebuffer(ref frameBufferDesc);
 				return true;
 			}
