@@ -189,7 +189,14 @@ namespace FragEngine3.Graphics.Components
 		/// </summary>
 		public Matrix4x4 MtxProjection
 		{
-			get { if (dirtyFlags.HasFlag(DirtyFlags.Projection)) { UpdateProjection(); } return mtxProjection; }
+			get
+			{
+				if (dirtyFlags.HasFlag(DirtyFlags.Projection))
+				{
+					UpdateProjection();
+				}
+				return mtxProjection;
+			}
 		}
 		/// <summary>
 		/// Gets just the viewport matrix for transforming a point from the clip space into viewport pixel space
@@ -197,7 +204,14 @@ namespace FragEngine3.Graphics.Components
 		/// </summary>
 		public Matrix4x4 MtxViewport
 		{
-			get { if (dirtyFlags.HasFlag(DirtyFlags.Projection)) { UpdateProjection(); } return mtxViewport; }
+			get
+			{
+				if (dirtyFlags.HasFlag(DirtyFlags.Projection) || dirtyFlags.HasFlag(DirtyFlags.Resolution))
+				{
+					UpdateProjection();
+				}
+				return mtxViewport;
+			}
 		}
 		/// <summary>
 		/// Gets the final projection matrix for the current frame. This matrix may be used to transforms a point
@@ -240,7 +254,7 @@ namespace FragEngine3.Graphics.Components
 				{
 					UpdateFinalCameraMatrix();
 				}
-				return mtxCamera;
+				return mtxInvCamera;
 			}
 		}
 
