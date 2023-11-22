@@ -56,15 +56,15 @@ namespace FragEngine3.Graphics.Resources
 
 		public readonly GraphicsCore graphicsCore;
 
-		private MaterialVariant?[] variants = Array.Empty<MaterialVariant?>();
+		private MaterialVariant?[] variants = [];
 
 		private ResourceHandle vertexShader = null!;
 		private ResourceHandle? geometryShader = null;
 		private ResourceHandle? tesselationShader = null;
 		private ResourceHandle pixelShader = null!;
 
-		private ResourceLayout[] resLayouts = Array.Empty<ResourceLayout>();
-		private ResourceLayoutDescription[] resLayoutDescs = Array.Empty<ResourceLayoutDescription>();
+		private ResourceLayout[] resLayouts = [];
+		private ResourceLayoutDescription[] resLayoutDescs = [];
 
 		private bool enableDepthRead = true;
 		private bool enableDepthWrite = true;
@@ -106,6 +106,25 @@ namespace FragEngine3.Graphics.Resources
 			get => pixelShader;
 			set { bool isChanged = pixelShader.Key != value?.Key; pixelShader = value!; if (isChanged) { MarkDirty(DirtyFlags.ShaderSet); } }
 		}
+
+		/// <summary>
+		/// Gets whether this material has a valid simplified replacement material assigned.
+		/// </summary>
+		public bool HasSimplifiedMaterialVersion => SimplifiedMaterialVersion != null && SimplifiedMaterialVersion.IsValid;
+		/// <summary>
+		/// Gets or sets a replacement material that may be used when simplified or low-detail rendering is required. This may be used for reflections
+		/// or distant LODs, or when rendering your game at exceptionally low graphics settings.
+		/// </summary>
+		public ResourceHandle? SimplifiedMaterialVersion { get; set; } = null;
+
+		/// <summary>
+		/// Gets whether this material has a valid shadow map rendering material assigned.
+		/// </summary>
+		public bool HasShadowMapMaterialVersion => ShadowMapMaterialVersion != null && ShadowMapMaterialVersion.IsValid;
+		/// <summary>
+		/// Gets or sets a replacement material that may be used when rendering shadow maps for geometry that would otherwise use this material.
+		/// </summary>
+		public ResourceHandle? ShadowMapMaterialVersion { get; set; } = null;
 
 		// STATES:
 
@@ -181,8 +200,8 @@ namespace FragEngine3.Graphics.Resources
 
 			if (_disposing)
 			{
-				variants = Array.Empty<MaterialVariant>();
-				resLayouts = Array.Empty<ResourceLayout>();
+				variants = [];
+				resLayouts = [];
 			}
 		}
 

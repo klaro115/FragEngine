@@ -82,7 +82,6 @@ namespace FragEngine3.Graphics.Components
 		public byte clearStencil = 0x00;
 
 
-		//TODO: Resize or recreate output render targets when resolutions are changed.
 		//TODO: Register camera components in scene, then draw them automatically (sorted by 'cameraPriority' value) via the scene's graphics stack.
 		//TODO: Add material override (for shadow maps, etc.) or add shadow map override to materials.
 		//TODO: Consider adding a "useSimplifiedRendering" flag, which would prompt usage of simplified material overrides, if available.
@@ -664,7 +663,7 @@ namespace FragEngine3.Graphics.Components
 			}
 			if (!data.IsValid())
 			{
-				Logger.LogError("Deserialize camera component data is invalid!");
+				Logger.LogError("Deserialized camera component data is invalid!");
 				return false;
 			}
 

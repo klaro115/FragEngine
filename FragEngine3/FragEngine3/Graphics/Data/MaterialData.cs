@@ -51,6 +51,13 @@ namespace FragEngine3.Graphics.Data
 		}
 
 		[Serializable]
+		public sealed class ReplacementData
+		{
+			public string SimplifiedVersion { get; set; } = string.Empty;
+			public string ShadowMap { get; set; } = string.Empty;
+		}
+
+		[Serializable]
 		public sealed class ResourceData
 		{
 			//TODO: Implement bound resources logic on material, then add references here.
@@ -63,6 +70,7 @@ namespace FragEngine3.Graphics.Data
 
 		public StateData States { get; set; } = new();
 		public ShaderData Shaders { get; set; } = new();
+		public ReplacementData Replacements { get; set; } = new();
 		public ResourceData Resources { get; set; } = new();
 
 		#endregion

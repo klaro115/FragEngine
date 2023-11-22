@@ -1,5 +1,6 @@
 ﻿using FragEngine3.EngineCore;
 using FragEngine3.Graphics;
+using FragEngine3.Graphics.Components;
 using FragEngine3.Graphics.Stack;
 using FragEngine3.Scenes.EventSystem;
 
@@ -9,14 +10,9 @@ namespace FragEngine3.Scenes
 	{
 		#region Types
 
-		private sealed class UpdateStage
+		private sealed class UpdateStage(SceneUpdateStage _stage)
 		{
-			public UpdateStage(SceneUpdateStage _stage)
-			{
-				stage = _stage;
-			}
-
-			public readonly SceneUpdateStage stage;
+			public readonly SceneUpdateStage stage = _stage;
 			public readonly List<SceneNode> nodeList = new(64);
 		}
 
@@ -42,17 +38,20 @@ namespace FragEngine3.Scenes
 		public readonly Engine engine;
 		public readonly SceneNode rootNode;
 
-		private readonly List<SceneBehaviour> sceneBehaviours = new();
+		private readonly List<SceneBehaviour> sceneBehaviours = [];
 		private IGraphicsStack? graphicsStack = null;
 
-		private readonly UpdateStage[] updateStageDict = new UpdateStage[4]
-		{
+		private readonly UpdateStage[] updateStageDict =
+		[
 			new(SceneUpdateStage.Early),
 			new(SceneUpdateStage.Main),
 			new(SceneUpdateStage.Late),
 			new(SceneUpdateStage.Fixed),
-		};
+		];
 		private readonly List<SceneNodeRendererPair> sceneNodeRenderers = new(128);
+
+		private readonly List<Camera> cameras = new(4);
+		private readonly List<Light> lights = new(64);
 
 		private EngineState updatedInEngineStates = EngineState.Running;
 		private EngineState drawnInEngineStates = EngineState.Running;
