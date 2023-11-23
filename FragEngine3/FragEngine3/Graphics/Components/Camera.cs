@@ -4,6 +4,7 @@ using FragEngine3.Graphics.Resources;
 using FragEngine3.Resources;
 using FragEngine3.Scenes;
 using FragEngine3.Scenes.Data;
+using FragEngine3.Scenes.EventSystem;
 using FragEngine3.Utility.Serialization;
 using Veldrid;
 
@@ -47,6 +48,8 @@ namespace FragEngine3.Graphics.Components
 
 			UpdateProjection();
 			UpdateStatesFromActiveRenderTarget();
+
+			node.scene.RegisterCamera(this);
 		}
 
 		#endregion
@@ -55,6 +58,7 @@ namespace FragEngine3.Graphics.Components
 		private readonly GraphicsCore core;
 
 		private DirtyFlags dirtyFlags = 0;
+		private bool isDrawing = false;
 
 		// Resolution:
 		private uint resolutionX = 640;
@@ -92,6 +96,7 @@ namespace FragEngine3.Graphics.Components
 
 		private static Camera? mainCamera = null;
 
+		private readonly object cameraStateLockObj = new();
 		private static readonly object mainCameraLockObj = new();
 
 		#endregion
@@ -100,10 +105,20 @@ namespace FragEngine3.Graphics.Components
 		private const float Rad2Deg = 180.0f / MathF.PI;
 		private const float Deg2Rad = MathF.PI / 180.0f;
 
+		private static readonly SceneEventType[] sceneEventTypes =
+		{
+			SceneEventType.OnNodeDestroyed,
+			SceneEventType.OnDestroyComponent,
+		};
+
 		#endregion
 		#region Properties
 
 		public bool IsDirty => dirtyFlags != 0;
+
+		public override SceneEventType[] GetSceneEventList() => sceneEventTypes;
+
+		public bool IsDrawing => !IsDisposed && isDrawing;
 
 		/// <summary>
 		/// Gets or sets the width of the camera's output images in pixels. Must be a value between 1 and 8192.<para/>
@@ -317,6 +332,15 @@ namespace FragEngine3.Graphics.Components
 			dirtyFlags |= _changeFlags;
 		}
 
+		public override void ReceiveSceneEvent(SceneEventType _eventType, object? _eventData)
+		{
+			if (_eventType == SceneEventType.OnNodeDestroyed ||
+				_eventType == SceneEventType.OnDestroyComponent)
+			{
+				node.scene.UnregisterCamera(this);
+			}
+		}
+
 		public bool SetDefaultShadowMaterial(string _resourceKey, bool _loadImmediatelyIfNotReady = false)
 		{
 			if (IsDisposed)
@@ -496,101 +520,106 @@ namespace FragEngine3.Graphics.Components
 				return false;
 			}
 
-			// If a default shadow material is loaded, make sure it's loaded:
-			if (DefaultShadowMaterial == null || DefaultShadowMaterial.IsDisposed)
+			lock(cameraStateLockObj)
 			{
-				if (DefaultShadowMaterialHandle != null)
-				{
-					DefaultShadowMaterial = DefaultShadowMaterialHandle.GetResource(true, true) as Material;
-				}
-				else
-				{
-					DefaultShadowMaterial = null;
-				}
-			}
+				isDrawing = true;
 
-			// Respond to changed resolution:
-			if (dirtyFlags.HasFlag(DirtyFlags.Resolution))
-			{
-				renderTargets?.Dispose();
-				TexColorTarget?.Dispose();
-				TexDepthStencilTarget?.Dispose();
-
-				if (core.CreateStandardRenderTargets(
-					resolutionX,
-					resolutionY,
-					true,
-					out Texture texColor,
-					out Texture? texDepth,
-					out Framebuffer framebuffer))
+				// If a default shadow material is loaded, make sure it's loaded:
+				if (DefaultShadowMaterial == null || DefaultShadowMaterial.IsDisposed)
 				{
-					TexColorTarget = texColor;
-					TexDepthStencilTarget = texDepth;
-					renderTargets = framebuffer;
-				}
-
-				UpdateStatesFromActiveRenderTarget();
-
-				// Check if any render target override that is currently assigned matches the camera's resolution:
-				if (overrideRenderTargets != null && !overrideRenderTargets.IsDisposed)
-				{
-					if (overrideRenderTargets.Width != resolutionX || overrideRenderTargets.Height != resolutionY)
+					if (DefaultShadowMaterialHandle != null)
 					{
-						Logger.LogError("Resolution mismatch between camera output and override render targets!");
-						return false;
-					}
-				}
-
-				// Update viewport matrix now that output resolution has changed:
-				if (dirtyFlags.HasFlag(DirtyFlags.Projection) && !dirtyFlags.HasFlag(DirtyFlags.Projection))
-				{
-					RecalculateViewportMatrix();
-				}
-			}
-
-			// Respond to changed projection or viewport:
-			if (dirtyFlags.HasFlag(DirtyFlags.Projection))
-			{
-				UpdateProjection();
-			}
-			else
-			{
-				UpdateFinalCameraMatrix();
-			}
-
-
-			//TODO: Update system constant buffer with camera and projection data.
-
-
-			// Fetch the currently active render targets that shall be drawn to:
-			if (!GetActiveRenderTargets(out Framebuffer? activeRenderTargets) || activeRenderTargets == null)
-			{
-				return false;
-			}
-
-			// Bind current render targets as output to command list:
-			_cmdList.SetFramebuffer(activeRenderTargets);
-
-			// Clear the framebuffer before any new content is drawn to it:
-			if (clearBackground)
-			{
-				_cmdList.ClearColorTarget(0, clearColor.ToRgbaFloat());
-
-				// Clear depth and stencil buffer, as required:
-				if (allowClearDepth)
-				{
-					if (allowClearStencil)
-					{
-						_cmdList.ClearDepthStencil(clearDepth, clearStencil);
+						DefaultShadowMaterial = DefaultShadowMaterialHandle.GetResource(true, true) as Material;
 					}
 					else
 					{
-						_cmdList.ClearDepthStencil(clearDepth);
+						DefaultShadowMaterial = null;
 					}
 				}
-			}
 
-			dirtyFlags = 0;
+				// Respond to changed resolution:
+				if (dirtyFlags.HasFlag(DirtyFlags.Resolution))
+				{
+					renderTargets?.Dispose();
+					TexColorTarget?.Dispose();
+					TexDepthStencilTarget?.Dispose();
+
+					if (core.CreateStandardRenderTargets(
+						resolutionX,
+						resolutionY,
+						true,
+						out Texture texColor,
+						out Texture? texDepth,
+						out Framebuffer framebuffer))
+					{
+						TexColorTarget = texColor;
+						TexDepthStencilTarget = texDepth;
+						renderTargets = framebuffer;
+					}
+
+					UpdateStatesFromActiveRenderTarget();
+
+					// Check if any render target override that is currently assigned matches the camera's resolution:
+					if (overrideRenderTargets != null && !overrideRenderTargets.IsDisposed)
+					{
+						if (overrideRenderTargets.Width != resolutionX || overrideRenderTargets.Height != resolutionY)
+						{
+							Logger.LogError("Resolution mismatch between camera output and override render targets!");
+							return false;
+						}
+					}
+
+					// Update viewport matrix now that output resolution has changed:
+					if (dirtyFlags.HasFlag(DirtyFlags.Projection) && !dirtyFlags.HasFlag(DirtyFlags.Projection))
+					{
+						RecalculateViewportMatrix();
+					}
+				}
+
+				// Respond to changed projection or viewport:
+				if (dirtyFlags.HasFlag(DirtyFlags.Projection))
+				{
+					UpdateProjection();
+				}
+				else
+				{
+					UpdateFinalCameraMatrix();
+				}
+
+
+				//TODO: Update system constant buffer with camera and projection data.
+
+
+				// Fetch the currently active render targets that shall be drawn to:
+				if (!GetActiveRenderTargets(out Framebuffer? activeRenderTargets) || activeRenderTargets == null)
+				{
+					return false;
+				}
+
+				// Bind current render targets as output to command list:
+				_cmdList.SetFramebuffer(activeRenderTargets);
+
+				// Clear the framebuffer before any new content is drawn to it:
+				if (clearBackground)
+				{
+					_cmdList.ClearColorTarget(0, clearColor.ToRgbaFloat());
+
+					// Clear depth and stencil buffer, as required:
+					if (allowClearDepth)
+					{
+						if (allowClearStencil)
+						{
+							_cmdList.ClearDepthStencil(clearDepth, clearStencil);
+						}
+						else
+						{
+							_cmdList.ClearDepthStencil(clearDepth);
+						}
+					}
+				}
+
+				dirtyFlags = 0;
+			}
 			return true;
 		}
 
@@ -602,8 +631,12 @@ namespace FragEngine3.Graphics.Components
 				return false;
 			}
 
-			//...
+			lock(cameraStateLockObj)
+			{
+				//...
 
+				isDrawing = false;
+			}
 			return true;
 		}
 
@@ -667,27 +700,37 @@ namespace FragEngine3.Graphics.Components
 				return false;
 			}
 
-			resolutionX = data.ResolutionX;
-			resolutionY = data.ResolutionY;
+			lock (cameraStateLockObj)
+			{
+				resolutionX = data.ResolutionX;
+				resolutionY = data.ResolutionY;
 
-			nearClipPlane = data.NearClipPlane;
-			farClipPlane = data.FarClipPlane;
-			FieldOfViewDegrees = data.FieldOfViewDegrees;
+				nearClipPlane = data.NearClipPlane;
+				farClipPlane = data.FarClipPlane;
+				FieldOfViewDegrees = data.FieldOfViewDegrees;
+			}
 
-			return true;
+			// Re-register camera with the scene:
+			node.scene.UnregisterCamera(this);
+			return node.scene.RegisterCamera(this);
 		}
 
 		public override bool SaveToData(out ComponentData _componentData, in Dictionary<ISceneElement, int> _idDataMap)
 		{
-			CameraData data = new()
-			{
-				ResolutionX = resolutionX,
-				ResolutionY = resolutionY,
+			CameraData data;
 
-				NearClipPlane = nearClipPlane,
-				FarClipPlane = farClipPlane,
-				FieldOfViewDegrees = FieldOfViewDegrees,
-			};
+			lock (cameraStateLockObj)
+			{
+				data = new()
+				{
+					ResolutionX = resolutionX,
+					ResolutionY = resolutionY,
+
+					NearClipPlane = nearClipPlane,
+					FarClipPlane = farClipPlane,
+					FieldOfViewDegrees = FieldOfViewDegrees,
+				};
+			}
 
 			if (!Serializer.SerializeToJson(data, out string dataJson))
 			{

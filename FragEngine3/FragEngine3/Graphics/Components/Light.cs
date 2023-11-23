@@ -55,6 +55,7 @@ namespace FragEngine3.Graphics.Components
 		public RgbaFloat lightColor = RgbaFloat.White;
 		private float lightIntensity = 1.0f;
 		private float maxLightRange = 1.0e+8f;
+		private float maxLightRangeSq = 1.0e+8f;
 		private float spotAngleRad = 30.0f * DEG2RAD;
 
 		#endregion
@@ -78,6 +79,7 @@ namespace FragEngine3.Graphics.Components
 			{
 				type = value;
 				maxLightRange = type != LightType.Directional ? MathF.Sqrt(lightIntensity / MIN_LIGHT_INTENSITY) : 1.0e+8f;
+				maxLightRangeSq = maxLightRange * maxLightRange;
 			}
 		}
 		
@@ -91,12 +93,17 @@ namespace FragEngine3.Graphics.Components
 			{
 				lightIntensity = Math.Max(value, 0.0f);
 				maxLightRange = type != LightType.Directional ? MathF.Sqrt(lightIntensity / MIN_LIGHT_INTENSITY) : 1.0e+8f;
+				maxLightRangeSq = maxLightRange * maxLightRange;
 			}
 		}
 		/// <summary>
 		/// Gets the maximum range out to which this light source produces any noticeable brightness. 
 		/// </summary>
 		public float MaxLightRange => maxLightRange;
+		/// <summary>
+		/// Gets the squared maximum range out to which this light source produces any noticeable brightness. 
+		/// </summary>
+		public float MaxLightRangeSquared => maxLightRangeSq;
 
 		/// <summary>
 		/// Gets or sets the angle in which spot lights cast their light, in radians.

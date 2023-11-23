@@ -3,10 +3,12 @@ using FragEngine3.Graphics;
 using FragEngine3.Graphics.Components;
 using FragEngine3.Graphics.Stack;
 using FragEngine3.Scenes.EventSystem;
+using System.Linq;
+using System.Xml.Linq;
 
 namespace FragEngine3.Scenes
 {
-    public sealed class Scene : IDisposable
+	public sealed class Scene : IDisposable
 	{
 		#region Types
 
@@ -312,11 +314,11 @@ namespace FragEngine3.Scenes
 			if (IsDisposed) return;
 
 			IEnumerator<SceneNode> e = rootNode.IterateHierarchy(_enabledOnly);
-            while (e.MoveNext())
-            {
+			while (e.MoveNext())
+			{
 				_targetList.Add(e.Current);
-            }
-        }
+			}
+		}
 
 		/// <summary>
 		/// Try to find a node by name, using a depth-first recursive search.
@@ -565,6 +567,10 @@ namespace FragEngine3.Scenes
 				return true;
 			}
 
+			// Sort cameras and lights by priority. High-priority cameras will be drawn first, low-priority lights may be ignored:
+			cameras.Sort((a, b) => a.cameraPriority.CompareTo(b.cameraPriority));
+			lights.Sort((a, b) => a.lightPriority.CompareTo(b.lightPriority));
+
 			// If null, create and initialize default forward+light graphics stack:
 			if (graphicsStack == null || graphicsStack.IsDisposed)
 			{
@@ -580,7 +586,7 @@ namespace FragEngine3.Scenes
 			}
 
 			// Draw the scene and its nodes through the stack:
-			return graphicsStack.DrawStack(this, sceneNodeRenderers);
+			return graphicsStack.DrawStack(this, sceneNodeRenderers, cameras, lights);
 		}
 
 		internal bool UnregisterNodeRenderers(SceneNode _node)
@@ -646,6 +652,62 @@ namespace FragEngine3.Scenes
 				DrawStackState++;
 			}
 			return removed;
+		}
+
+		internal bool RegisterCamera(Camera _camera)
+		{
+			if (IsDisposed) return false;
+			if (_camera == null || _camera.IsDisposed)
+			{
+				Logger.LogError("Cannot register null or disposed camera!");
+				return false;
+			}
+			
+			if (!cameras.Contains(_camera))
+			{
+				cameras.Add(_camera);
+			}
+			return true;
+		}
+
+		internal bool UnregisterCamera(Camera _camera)
+		{
+			if (IsDisposed) return false;
+			if (_camera == null)
+			{
+				Logger.LogError("Cannot unregister null camera!");
+				return false;
+			}
+
+			return cameras.Remove(_camera);
+		}
+
+		internal bool RegisterLight(Light _light)
+		{
+			if (IsDisposed) return false;
+			if (_light == null || _light.IsDisposed)
+			{
+				Logger.LogError("Cannot register null or disposed light source!");
+				return false;
+			}
+
+			if (!lights.Contains(_light))
+			{
+				lights.Add(_light);
+			}
+			return true;
+		}
+
+		internal bool UnregisterLight(Light _light)
+		{
+			if (IsDisposed) return false;
+			if (_light == null)
+			{
+				Logger.LogError("Cannot unregister null light source!");
+				return false;
+			}
+
+			return lights.Remove(_light);
 		}
 
 		#endregion

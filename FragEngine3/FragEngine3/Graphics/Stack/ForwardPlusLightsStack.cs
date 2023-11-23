@@ -1,4 +1,5 @@
 ﻿using FragEngine3.EngineCore;
+using FragEngine3.Graphics.Components;
 using FragEngine3.Scenes;
 using System.Numerics;
 using Veldrid;
@@ -176,7 +177,7 @@ namespace FragEngine3.Graphics.Stack
 			throw new NotImplementedException();		//TODO
 		}
 
-		public bool DrawStack(Scene _scene, List<SceneNodeRendererPair> _nodeRendererPairs)
+		public bool DrawStack(Scene _scene, List<SceneNodeRendererPair> _nodeRendererPairs, in IList<Camera> _cameras, in IList<Light> _lights)
 		{
 			if (!IsInitialized)
 			{
@@ -193,68 +194,90 @@ namespace FragEngine3.Graphics.Stack
 				Logger.LogError("Cannot draw graphics stack for null list of node-renderers pairs!");
 				return false;
 			}
+			if (_cameras == null)
+			{
+				Logger.LogError("Cannot draw graphics stack using null camera list!");
+				return false;
+			}
+
+			// Skip rendering if there are no cameras in the scene:
+			if (_cameras.Count == 0)
+			{
+				VisibleRendererCount = 0;
+				SkippedRendererCount = 0;
+				isDrawing = false;
+				return true;
+			}
 
 			bool success = true;
 			isDrawing = true;
-			
-			try
+
+			// Draw scene for each of the scene's active cameras:
+			foreach (Camera camera in _cameras)
 			{
-				lock (lockObj)
+				// Skip any cameras that are expired or disabled:
+				if (camera == null || camera.IsDisposed || !camera.node.IsEnabledInHierarchy() || camera.layerMask == 0u)
 				{
-					//TODO: Get camera from scene!
-					//TODO: Repeat this process for each active camera!
-					uint cameraRenderFlags = 0xFFFFFFFFu;
+					continue;
+				}
 
-					// Clear out all renderer lists for the upcoming frame:
-					foreach (RendererList rendererList in rendererLists)
-					{
-						rendererList.Clear();
-					}
-					VisibleRendererCount = 0;
-					SkippedRendererCount = 0;
+				//TODO: Identify all relevant lights for this camera's viewport, then upload light data to GPU buffer for rendering!
 
-					// No nodes and no scene behaviours? Skip drawing altogether:
-					if (_nodeRendererPairs.Count == 0 && _scene.SceneBehaviourCount == 0)
+				try
+				{
+					lock (lockObj)
 					{
-						return true;
-					}
-
-					// Assign each renderer to the most appropriate rendering list:
-					foreach (SceneNodeRendererPair pair in _nodeRendererPairs)
-					{
-						if (pair.renderer.IsVisible && (pair.renderer.LayerFlags & cameraRenderFlags) != 0)
+						// Clear out all renderer lists for the upcoming frame:
+						foreach (RendererList rendererList in rendererLists)
 						{
-							// Skip any renderers that cannot be mapped to any of the supported modes:
-							if (GetRendererListForMode(pair.renderer.RenderMode, out RendererList? rendererList))
+							rendererList.Clear();
+						}
+						VisibleRendererCount = 0;
+						SkippedRendererCount = 0;
+
+						// No nodes and no scene behaviours? Skip drawing altogether:
+						if (_nodeRendererPairs.Count == 0 && _scene.SceneBehaviourCount == 0)
+						{
+							return true;
+						}
+
+						// Assign each renderer to the most appropriate rendering list:
+						foreach (SceneNodeRendererPair pair in _nodeRendererPairs)
+						{
+							if (pair.renderer.IsVisible && (pair.renderer.LayerFlags & camera.layerMask) != 0)
 							{
-								SkippedRendererCount++;
-								continue;
+								// Skip any renderers that cannot be mapped to any of the supported modes:
+								if (!GetRendererListForMode(pair.renderer.RenderMode, out RendererList? rendererList))
+								{
+									SkippedRendererCount++;
+									continue;
+								}
+
+								// Add the renderer to its mode's corresponding list:
+								rendererList!.renderers.Add(pair.renderer);
+
+								VisibleRendererCount++;
 							}
+						}
 
-							// Add the renderer to its mode's corresponding list:
-							rendererList!.renderers.Add(pair.renderer);
+						if (VisibleRendererCount != 0)
+						{
+							// Issue draw calls for each renderer list:
+							success &= DrawOpaqueRendererList(camera, in _lights);
+							success &= DrawZSortedRendererList(camera, in _lights);
+							success &= DrawUiRendererList();
 
-							VisibleRendererCount++;
+
+							//TODO: Composite end results?
+
 						}
 					}
-
-					if (VisibleRendererCount != 0)
-					{
-						// Issue draw calls for each renderer list:
-						success &= DrawOpaqueRendererList();
-						success &= DrawZSortedRendererList();
-						success &= DrawUiRendererList();
-
-
-						//TODO: Composite end results?
-					
-					}
 				}
-			}
-			catch (Exception ex)
-			{
-				Logger.LogException($"An exception was caught while trying to draw scene using graphics stack of type '{nameof(ForwardPlusLightsStack)}'!", ex);
-				return false;
+				catch (Exception ex)
+				{
+					Logger.LogException($"An exception was caught while trying to draw scene using graphics stack of type '{nameof(ForwardPlusLightsStack)}'!", ex);
+					return false;
+				}
 			}
 			
 			isDrawing = false;
@@ -275,14 +298,17 @@ namespace FragEngine3.Graphics.Stack
 			return false;
 		}
 
-		private bool DrawOpaqueRendererList()
+		private bool DrawOpaqueRendererList(Camera _camera, in IList<Light> _lights)
 		{
 			if (!GetRendererListForMode(RenderMode.Opaque, out RendererList? opaqueList) || opaqueList == null)
 			{
 				return false;
 			}
 
-			if (opaqueList.renderers.Count == 0) return true;
+			if (opaqueList.renderers.Count == 0)
+			{
+				return true;
+			}
 
 			// Ensure the command list is set:
 			if (opaqueList.cmdList == null || opaqueList.cmdList.IsDisposed)
@@ -298,16 +324,20 @@ namespace FragEngine3.Graphics.Stack
 
 			bool success = true;
 
+			success &= _camera.BeginFrame(opaqueList.cmdList);
+
 			// Draw list of renderers as-is:
 			foreach (IRenderer renderer in opaqueList.renderers)
 			{
 				success &= renderer.Draw(opaqueList.cmdList);
 			}
 
+			success &= _camera.EndFrame();
+
 			return success;
 		}
 
-		private bool DrawZSortedRendererList()
+		private bool DrawZSortedRendererList(Camera _camera, in IList<Light> _lights)
 		{
 			if (!GetRendererListForMode(RenderMode.Transparent, out RendererList? zSortedList) || zSortedList == null)
 			{
@@ -331,16 +361,20 @@ namespace FragEngine3.Graphics.Stack
 			bool success = true;
 
 			// Sort all transparent renderers by their Z-depth: (aka distance to camera)
-			Vector3 viewportPosition = Vector3.Zero;        //TODO: Implement camera type, then use currently rendering camera's position for this!
-			Vector3 cameraDirection = Vector3.UnitZ;		//TODO: Consider pre-calculating this for all renderers in list, to avoid recalculating for each comparison!
+			Vector3 viewportPosition = _camera.node.WorldPosition;
+			Vector3 cameraDirection = Vector3.Transform(Vector3.UnitZ, _camera.node.WorldRotation);
 
 			zSortedList.renderers.Sort((a, b) => a.GetZSortingDepth(viewportPosition, cameraDirection).CompareTo(b.GetZSortingDepth(viewportPosition, cameraDirection)));
+			
+			success &= _camera.BeginFrame(zSortedList.cmdList);
 
 			// Draw Z-sorted list of renderers:
 			foreach (IRenderer renderer in zSortedList.renderers)
 			{
 				success &= renderer.Draw(zSortedList.cmdList);
 			}
+			
+			success &= _camera.EndFrame();
 
 			return success;
 		}

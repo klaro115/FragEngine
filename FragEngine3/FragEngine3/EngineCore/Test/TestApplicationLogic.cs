@@ -84,6 +84,23 @@ namespace FragEngine3.EngineCore.Test
 				Sdl2Window window = Engine.GraphicsSystem.graphicsCore.Window;
 				camera.ResolutionX = (uint)window.Width;
 				camera.ResolutionY = (uint)window.Height;
+
+				camera.FieldOfViewDegrees = 60.0f;
+				camera.NearClipPlane = 0.1f;
+				camera.FarClipPlane = 1000.0f;
+
+				camera.clearBackground = true;
+				camera.clearColor = Graphics.Color32.Cornflower;
+				camera.clearDepth = 1.0e+8f;
+			}
+
+			// Create a directional light:
+			SceneNode lightNode = scene.rootNode.CreateChild("Directional Light");
+			if (lightNode.CreateComponent(out Light? light) && light != null)
+			{
+				light.Type = Light.LightType.Directional;
+				light.node.WorldPosition = new Vector3(0, 5, 0);
+				light.node.WorldRotation = Quaternion.CreateFromYawPitchRoll(45, 45, 0);
 			}
 
 			// Create a static mesh renderer displaying a default-shaded cube:
