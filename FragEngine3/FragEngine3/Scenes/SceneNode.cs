@@ -51,6 +51,11 @@ namespace FragEngine3.Scenes
 		private SceneNodeEventManager? eventManager = null;
 
 		#endregion
+		#region Constants
+
+		const float DEG2RAD = MathF.PI / 180.0f;
+
+		#endregion
 		#region Properties
 
 		/// <summary>
@@ -875,6 +880,61 @@ namespace FragEngine3.Scenes
 
 		#endregion
 		#region Methods Transformations
+
+		/// <summary>
+		/// Sets the orientation of this node from yaw, pitch, and roll angles.
+		/// </summary>
+		/// <param name="_yaw">Yaw angle (left-right), in radians or degrees.</param>
+		/// <param name="_pitch">Pitch angle (up-down), in radians or degrees.</param>
+		/// <param name="_roll">Roll angle (side-to-side), in radians or degrees.</param>
+		/// <param name="_setWorldSpaceRotation">Whether the new rotation should be set in world space. If false, it will be set in local space instead.</param>
+		/// <param name="_valuesAreDegrees">Whether the given pitch/roll/yaw angles are in degrees. If false, they must be in radians.</param>
+		public void SetRotationFromYawPitchRoll(float _yaw, float _pitch, float _roll, bool _setWorldSpaceRotation, bool _valuesAreDegrees)
+		{
+			if (_valuesAreDegrees)
+			{
+				_yaw *= DEG2RAD;
+				_pitch *= DEG2RAD;
+				_roll *= DEG2RAD;
+			}
+
+			Quaternion newRotation = Quaternion.CreateFromYawPitchRoll(_yaw, _pitch, _roll);
+
+			if (_setWorldSpaceRotation)
+			{
+				WorldRotation = newRotation;
+			}
+			else
+			{
+				LocalRotation = newRotation;
+			}
+		}
+
+		/// <summary>
+		/// Sets the orientation of this node from a rotation around an axis.
+		/// </summary>
+		/// <param name="_axis">A vector describing the axis of rotation. Must be a normalized vector.</param>
+		/// <param name="_angle">The angle by which to rotate around the given axis, in radians or degrees.</param>
+		/// <param name="_setWorldSpaceRotation">Whether the new rotation should be set in world space. If false, it will be set in local space instead.</param>
+		/// <param name="_angleInDegrees">Whether the given angle is in degrees. If false, it must be in radians.</param>
+		public void SetRotationFromAxisAngle(Vector3 _axis, float _angle, bool _setWorldSpaceRotation, bool _angleInDegrees)
+		{
+			if (_angleInDegrees)
+			{
+				_angle *= DEG2RAD;
+			}
+
+			Quaternion newRotation = Quaternion.CreateFromAxisAngle(_axis, _angle);
+
+			if (_setWorldSpaceRotation)
+			{
+				WorldRotation = newRotation;
+			}
+			else
+			{
+				LocalRotation = newRotation;
+			}
+		}
 
 		public Pose TransformWorldToLocal(Pose _worldPose)
 		{

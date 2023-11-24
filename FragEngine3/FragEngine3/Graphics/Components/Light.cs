@@ -1,6 +1,7 @@
 ﻿using FragEngine3.Graphics.Components.Data;
 using FragEngine3.Scenes;
 using FragEngine3.Scenes.Data;
+using FragEngine3.Scenes.EventSystem;
 using FragEngine3.Utility.Serialization;
 using System.Numerics;
 using System.Runtime.InteropServices;
@@ -38,7 +39,7 @@ namespace FragEngine3.Graphics.Components
 
 		public Light(SceneNode _node) : base(_node)
 		{
-			//...
+			node.scene.RegisterLight(this);
 		}
 
 		#endregion
@@ -66,8 +67,16 @@ namespace FragEngine3.Graphics.Components
 		private const float DEG2RAD = MathF.PI / 180.0f;
 		private const float RAD2DEG = 180.0f / MathF.PI;
 
+		private static readonly SceneEventType[] sceneEventTypes =
+		[
+			SceneEventType.OnNodeDestroyed,
+			SceneEventType.OnDestroyComponent,
+		];
+
 		#endregion
 		#region Properties
+
+		public override SceneEventType[] GetSceneEventList() => sceneEventTypes;
 
 		/// <summary>
 		/// Gets or sets the emission shape of this light source.
@@ -134,6 +143,15 @@ namespace FragEngine3.Graphics.Components
 		#endregion
 		#region Methods
 
+		public override void ReceiveSceneEvent(SceneEventType _eventType, object? _eventData)
+		{
+			if (_eventType == SceneEventType.OnNodeDestroyed ||
+				_eventType == SceneEventType.OnDestroyComponent)
+			{
+				node.scene.UnregisterLight(this);
+			}
+		}
+
 		/// <summary>
 		/// Get a nicely packed structure containing all information about this light source for upload to a GPU buffer.
 		/// </summary>
@@ -177,7 +195,9 @@ namespace FragEngine3.Graphics.Components
 			lightIntensity = data.LightIntensity;
 			SpotAngleDegrees = data.SpotAngleDegrees;
 
-			return true;
+			// Re-register camera with the scene:
+			node.scene.UnregisterLight(this);
+			return node.scene.RegisterLight(this);
 		}
 
 		public override bool SaveToData(out ComponentData _componentData, in Dictionary<ISceneElement, int> _idDataMap)

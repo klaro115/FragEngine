@@ -5,16 +5,10 @@
 	{
 		#region Types
 
-		public readonly struct Range
+		public readonly struct Range(int _min, int _max)
 		{
-			public Range(int _min, int _max)
-			{
-				min = _min;
-				max = _max;
-			}
-
-			public readonly int min;
-			public readonly int max;
+			public readonly int min = _min;
+			public readonly int max = _max;
 
 			public int Size => max - min;
 		}
@@ -68,8 +62,8 @@
 			textureAlignmentY = _textureAlignmentY;
 			kernelPixelAlignment = _kernelPixelAlignment;
 
-			depthStencilFormats = _depthStencilMaps ?? Array.Empty<DepthStencilFormat>();
-			outputChannelBitDepths = _outputChannelBitDepths ?? Array.Empty<int>();
+			depthStencilFormats = _depthStencilMaps ?? [];
+			outputChannelBitDepths = _outputChannelBitDepths ?? [];
 		}
 
 		#endregion
@@ -94,8 +88,8 @@
 		public readonly int textureAlignmentY = 8;
 		public readonly int kernelPixelAlignment = 8;
 
-		public readonly DepthStencilFormat[] depthStencilFormats = new DepthStencilFormat[]
-		{
+		public readonly DepthStencilFormat[] depthStencilFormats =
+		[
 			// Depth only:
 			new DepthStencilFormat(16, 0),
 			new DepthStencilFormat(32, 0),
@@ -107,11 +101,11 @@
 
 			// Stencil only:
 			new DepthStencilFormat(0, 8),
-		};
-		public readonly int[] outputChannelBitDepths = new int[]
-		{
+		];
+		public readonly int[] outputChannelBitDepths =
+		[
 			8, 10, 16
-		};
+		];
 
 		public bool computeShaders = true;
 		public bool geometryShaders = false;

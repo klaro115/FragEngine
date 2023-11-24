@@ -67,7 +67,7 @@ namespace FragEngine3.Graphics.Components
 		// Projection:
 		private float nearClipPlane = 0.01f;
 		private float farClipPlane = 1000.0f;
-		private float fieldOfViewRad = 60.0f * Deg2Rad;
+		private float fieldOfViewRad = 60.0f * DEG2RAD;
 		private Matrix4x4 mtxProjection = Matrix4x4.Identity;
 		private Matrix4x4 mtxViewport = Matrix4x4.Identity;
 		private Matrix4x4 mtxCamera = Matrix4x4.Identity;
@@ -85,9 +85,10 @@ namespace FragEngine3.Graphics.Components
 		public float clearDepth = 1.0e+8f;
 		public byte clearStencil = 0x00;
 
+		//Lighting:
+		private DeviceBuffer? lightDataBuffer = null;
+		private int lightDataBufferCapacity = 0;
 
-		//TODO: Register camera components in scene, then draw them automatically (sorted by 'cameraPriority' value) via the scene's graphics stack.
-		//TODO: Add material override (for shadow maps, etc.) or add shadow map override to materials.
 		//TODO: Consider adding a "useSimplifiedRendering" flag, which would prompt usage of simplified material overrides, if available.
 
 		// Output:
@@ -102,14 +103,14 @@ namespace FragEngine3.Graphics.Components
 		#endregion
 		#region Constants
 
-		private const float Rad2Deg = 180.0f / MathF.PI;
-		private const float Deg2Rad = MathF.PI / 180.0f;
+		private const float RAD2DEG = 180.0f / MathF.PI;
+		private const float DEG2RAD = MathF.PI / 180.0f;
 
 		private static readonly SceneEventType[] sceneEventTypes =
-		{
+		[
 			SceneEventType.OnNodeDestroyed,
 			SceneEventType.OnDestroyComponent,
-		};
+		];
 
 		#endregion
 		#region Properties
@@ -175,8 +176,8 @@ namespace FragEngine3.Graphics.Components
 		/// </summary>
 		public float FieldOfViewDegrees
 		{
-			get => fieldOfViewRad * Rad2Deg;
-			set { fieldOfViewRad = Math.Clamp(value, 0.001f, 179.0f) * Deg2Rad; MarkDirty(DirtyFlags.Projection); }
+			get => fieldOfViewRad * RAD2DEG;
+			set { fieldOfViewRad = Math.Clamp(value, 0.001f, 179.0f) * DEG2RAD; MarkDirty(DirtyFlags.Projection); }
 		}
 		/// <summary>
 		/// Gets or sets the field of view angle in radians.
@@ -184,7 +185,7 @@ namespace FragEngine3.Graphics.Components
 		public float FieldOfViewRadians
 		{
 			get => fieldOfViewRad;
-			set { fieldOfViewRad = Math.Clamp(value, 0.001f * Deg2Rad, 179.0f * Deg2Rad); MarkDirty(DirtyFlags.Projection); }
+			set { fieldOfViewRad = Math.Clamp(value, 0.001f * DEG2RAD, 179.0f * DEG2RAD); MarkDirty(DirtyFlags.Projection); }
 		}
 
 		public ResourceHandle? DefaultShadowMaterialHandle { get; private set; } = null;
@@ -308,6 +309,7 @@ namespace FragEngine3.Graphics.Components
 			IsMainCamera = false;
 			dirtyFlags = 0;
 
+			lightDataBuffer?.Dispose();
 			renderTargets?.Dispose();
 			TexColorTarget?.Dispose();
 			TexDepthStencilTarget?.Dispose();
@@ -423,6 +425,57 @@ namespace FragEngine3.Graphics.Components
 			UpdateStatesFromActiveRenderTarget();
 
 			MarkDirty(DirtyFlags.RenderTarget);
+			return true;
+		}
+
+		/// <summary>
+		/// Gets or (re)allocates a GPU-side buffer for all data about that light sources that may influence this geometry visible to this camera.
+		/// </summary>
+		/// <param name="_expectedCapacity">The expected or projected worst-case number of light sources that may affect geometry rendered by this
+		/// camera. If zero or negative, the buffer will still be allocated with capacity for just 1 light source's data.</param>
+		/// <param name="_outLightDataBuffer">Outputs a structured buffer with capacity for at least one piece of light source data of type
+		/// '<see cref="Light.LightSourceData"/>'. If the previously allocated buffer was large enough, no new allocation will be made. Null if
+		/// the camera has been disposed or if buffer creation failed.</param>
+		/// <returns>True if the light data buffer was of sufficient size, or if it was reallocated to the requested capacity, false otherwise.</returns>
+		internal bool GetLightDataBuffer(int _expectedCapacity, out DeviceBuffer? _outLightDataBuffer)
+		{
+			if (IsDisposed)
+			{
+				Logger.LogError("Cannot get light data buffer for disposed camera!");
+				_outLightDataBuffer = null;
+				return false;
+			}
+
+			_expectedCapacity = Math.Max(_expectedCapacity, 1);
+
+			// (Re)allocate the light data buffer according to new capacity requirements:
+			if (lightDataBuffer == null || lightDataBuffer.IsDisposed || lightDataBufferCapacity < _expectedCapacity)
+			{
+				// Purge any previously created buffer:
+				lightDataBuffer?.Dispose();
+
+				// Allocate a new structured buffer for light source data:
+				try
+				{
+					uint byteSize = Light.LightSourceData.byteSize * (uint)_expectedCapacity;
+					const BufferUsage usage = BufferUsage.Dynamic | BufferUsage.StructuredBufferReadOnly;
+					const uint byteStride = Light.LightSourceData.byteSize;
+
+					BufferDescription lightDataBufferDesc = new(byteSize, usage, byteStride);
+
+					lightDataBuffer = core.MainFactory.CreateBuffer(ref lightDataBufferDesc);
+					lightDataBufferCapacity = _expectedCapacity;
+				}
+				catch (Exception ex)
+				{
+					Logger.LogException("Failed to create or resize camera's buffer for light source data!", ex);
+					_outLightDataBuffer = null;
+					return false;
+				}
+			}
+			
+			// Output buffer and return success:
+			_outLightDataBuffer = lightDataBuffer;
 			return true;
 		}
 

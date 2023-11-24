@@ -64,11 +64,12 @@ namespace FragEngine3.Graphics.MacOS
 				capabilities.GetBestOutputBitDepth(config.Graphics.OutputBitDepth, out int outputBitDepth);
 				bool vsync = graphicsSystem.Settings.Vsync;
 				bool useSrgb = config.Graphics.OutputIsSRGB;
-				PixelFormat outputPixelFormat = GetOutputPixelFormat(outputBitDepth, useSrgb);
+				DefaultColorTargetPixelFormat = GetOutputPixelFormat(outputBitDepth, useSrgb);
+				DefaultDepthTargetPixelFormat = GetOutputDepthFormat(outputBitDepth);
 
 				GraphicsDeviceOptions deviceOptions = new(
 					false,
-					outputPixelFormat,
+					DefaultDepthTargetPixelFormat,
 					vsync,
 					ResourceBindingModel.Improved,
 					false,
@@ -139,6 +140,18 @@ namespace FragEngine3.Graphics.MacOS
 			isInitialized = Device != null;
 			quitMessageReceived = false;
 			return isInitialized;
+		}
+
+		private static PixelFormat GetOutputDepthFormat(int _bitDepth)
+		{
+			GraphicsCapabilities.DepthStencilFormat format = capabilities.depthStencilFormats.MinBy(o => Math.Abs(o.depthMapDepth - _bitDepth));
+
+			return format.depthMapDepth switch
+			{
+				24 => PixelFormat.D24_UNorm_S8_UInt,
+				32 => PixelFormat.D32_Float_S8_UInt,
+				_ => PixelFormat.D24_UNorm_S8_UInt,
+			};
 		}
 
 		private static PixelFormat GetOutputPixelFormat(int _bitDepth, bool _useSrgb)

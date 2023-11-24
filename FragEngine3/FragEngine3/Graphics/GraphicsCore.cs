@@ -29,10 +29,13 @@ namespace FragEngine3.Graphics
 		public readonly GraphicsSystem graphicsSystem;
 		protected readonly EngineConfig config;
 
+		public PixelFormat DefaultColorTargetPixelFormat { get; protected set; }= PixelFormat.R8_G8_B8_A8_UNorm;
+		public PixelFormat DefaultDepthTargetPixelFormat { get; protected set; } = PixelFormat.D24_UNorm_S8_UInt;
+
 		protected readonly List<CommandList> cmdListQueue = new(1);
 
 		protected CommandList? blittingCmdList = null;
-		protected readonly List<AsyncGeometryDownloadRequest> asyncDownloadsRequests = new();
+		protected readonly List<AsyncGeometryDownloadRequest> asyncDownloadsRequests = [];
 
 		protected readonly object cmdLockObj = new();
 		protected readonly object downloadLockObj = new();
@@ -316,16 +319,14 @@ namespace FragEngine3.Graphics
 				return false;
 			}
 
-			PixelFormat colorPixelFormat = PixelFormat.R8_G8_B8_A8_UNorm;
-			PixelFormat depthPixelFormat = PixelFormat.D24_UNorm_S8_UInt;	//TODO: Determine platform-supported pixel formats!
-			TextureSampleCount msaaCount = TextureSampleCount.Count1;
+			TextureSampleCount msaaCount = graphicsSystem.Settings.GetTextureSampleCount();
 
 			// Try creating main color target:
 			TextureDescription texColorTargetDesc = new(
 				_width,
 				_height,
 				1, 1, 1,
-				colorPixelFormat,
+				DefaultColorTargetPixelFormat,
 				TextureUsage.RenderTarget | TextureUsage.Sampled,
 				TextureType.Texture2D,
 				msaaCount);
@@ -350,7 +351,7 @@ namespace FragEngine3.Graphics
 					_width,
 					_height,
 					1, 1, 1,
-					depthPixelFormat,
+					DefaultDepthTargetPixelFormat,
 					TextureUsage.DepthStencil | TextureUsage.Sampled,
 					TextureType.Texture2D,
 					msaaCount);

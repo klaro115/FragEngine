@@ -11,6 +11,7 @@ namespace FragEngine3.Graphics.Resources
 	/// NOTE: The index 0 is reserved for "unassigned" blend shapes or bones, meaning the first entry
 	/// in the corresponding data arrays must be zero or an identity transformation.
 	/// </summary>
+	[Serializable]
 	[StructLayout(LayoutKind.Sequential, Pack = 4, Size = (int)byteSize)]
 	public struct VertexWeightIndices
 	{
@@ -58,6 +59,7 @@ namespace FragEngine3.Graphics.Resources
 	/// <summary>
 	/// Vertex data definition for basic surface geometry. This is what one element in the primary vertex buffer looks like.
 	/// </summary>
+	[Serializable]
 	[StructLayout(LayoutKind.Sequential, Pack = 4, Size = (int)byteSize)]
 	public struct BasicVertex
 	{
@@ -92,6 +94,7 @@ namespace FragEngine3.Graphics.Resources
 	/// <summary>
 	/// Vertex data definition for extended surface geometry. This is what one element in a secondary vertex buffer may look like.
 	/// </summary>
+	[Serializable]
 	[StructLayout(LayoutKind.Sequential, Pack = 4, Size = (int)byteSize)]
 	public struct ExtendedVertex
 	{
@@ -124,6 +127,7 @@ namespace FragEngine3.Graphics.Resources
 	/// <summary>
 	/// Vertex data definition for indexed and weighted surface data, such as for blend shapes or bone animations.
 	/// </summary>
+	[Serializable]
 	[StructLayout(LayoutKind.Sequential, Pack = 4, Size = (int)byteSize)]
 	public struct IndexedWeightedVertex
 	{

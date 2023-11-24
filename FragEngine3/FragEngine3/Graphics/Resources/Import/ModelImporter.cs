@@ -1,10 +1,10 @@
 ﻿using FragEngine3.Resources;
-using FragEngine3.Graphics.Data;
 using FragEngine3.EngineCore;
+using FragEngine3.Graphics.Resources.Data;
 
 namespace FragEngine3.Graphics.Resources.Import
 {
-	public static class ModelImporter
+    public static class ModelImporter
 	{
 		#region Methods
 

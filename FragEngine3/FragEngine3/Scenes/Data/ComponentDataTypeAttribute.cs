@@ -2,19 +2,11 @@
 namespace FragEngine3.Scenes.Data
 {
 	[AttributeUsage(AttributeTargets.Class | AttributeTargets.Struct)]
-	public sealed class ComponentDataTypeAttribute : Attribute
+	public sealed class ComponentDataTypeAttribute(Type _sceneElementType) : Attribute
 	{
-		#region Constructors
-
-		public ComponentDataTypeAttribute(Type _sceneElementType)
-		{
-			sceneElementType = _sceneElementType ?? typeof(object);
-		}
-
-		#endregion
 		#region Fields
 
-		public readonly Type sceneElementType;
+		public readonly Type sceneElementType = _sceneElementType ?? typeof(object);
 
 		#endregion
 	}

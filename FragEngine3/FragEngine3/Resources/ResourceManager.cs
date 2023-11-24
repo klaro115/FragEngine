@@ -1,5 +1,6 @@
 ﻿using FragEngine3.EngineCore;
 using FragEngine3.Graphics.Resources;
+using FragEngine3.Graphics.Resources.Data;
 using FragEngine3.Graphics.Resources.Import;
 using FragEngine3.Resources.Management;
 using System.Collections.Concurrent;
@@ -7,7 +8,7 @@ using System.Diagnostics;
 
 namespace FragEngine3.Resources
 {
-	public sealed class ResourceManager : IDisposable
+    public sealed class ResourceManager : IDisposable
 	{
 		#region Types
 
@@ -674,7 +675,7 @@ namespace FragEngine3.Resources
 					}
 					break;
 				case ResourceType.Model:
-					if ((success = ModelImporter.ImportModelData(_handle, out Graphics.Data.MeshSurfaceData? surfaceData) && surfaceData != null) &&
+					if ((success = ModelImporter.ImportModelData(_handle, out MeshSurfaceData? surfaceData) && surfaceData != null) &&
 						(success = ModelImporter.CreateMesh(_handle, engine.GraphicsSystem.graphicsCore, surfaceData!, out Mesh? mesh)))
 					{
 						_assignResourceCallback(mesh);

@@ -10,16 +10,10 @@ namespace FragEngine3.Graphics.Stack
 	{
 		#region Types
 
-		private sealed class RendererList
+		private sealed class RendererList(RenderMode _mode, int _initialCapacity)
 		{
-			public RendererList(RenderMode _mode, int _initialCapacity)
-			{
-				mode = _mode;
-				renderers = new(_initialCapacity);
-			}
-
-			public readonly RenderMode mode;
-			public readonly List<IRenderer> renderers;
+			public readonly RenderMode mode = _mode;
+			public readonly List<IRenderer> renderers = new(_initialCapacity);
 			public CommandList? cmdList = null;
 
 			public void Clear() => renderers.Clear();
@@ -45,7 +39,7 @@ namespace FragEngine3.Graphics.Stack
 		private bool isInitialized = false;
 		private bool isDrawing = false;
 
-		private static readonly int[] rendererModeIndices = new int[]
+		private static readonly int[] rendererModeIndices =
 		{
 			0,		// RenderMode.Compute
 			1,		// RenderMode.Opaque
@@ -55,13 +49,16 @@ namespace FragEngine3.Graphics.Stack
 			3,		// RenderMode.UI
 			-1,		// RenderMode.Custom
 		};
-		private readonly RendererList[] rendererLists = new RendererList[]
+		private readonly RendererList[] rendererLists =
 		{
-			new RendererList(RenderMode.Compute, 4),
-			new RendererList(RenderMode.Opaque, 128),
-			new RendererList(RenderMode.Transparent, 32),
-			new RendererList(RenderMode.UI, 32),
+			new(RenderMode.Compute, 4),
+			new(RenderMode.Opaque, 128),
+			new(RenderMode.Transparent, 32),
+			new(RenderMode.UI, 32),
 		};
+
+		private readonly List<Light> cameraLightBuffer = new(64);
+		private Light.LightSourceData[] lightSourceDataBuffer = new Light.LightSourceData[32];
 
 		private readonly object lockObj = new();
 
@@ -132,6 +129,8 @@ namespace FragEngine3.Graphics.Stack
 
 			lock(lockObj)
 			{
+				cameraLightBuffer.Clear();
+
 				foreach (RendererList rendererList in rendererLists)
 				{
 					rendererList.Clear();
@@ -200,6 +199,8 @@ namespace FragEngine3.Graphics.Stack
 				return false;
 			}
 
+			cameraLightBuffer.Clear();
+
 			// Skip rendering if there are no cameras in the scene:
 			if (_cameras.Count == 0)
 			{
@@ -221,12 +222,47 @@ namespace FragEngine3.Graphics.Stack
 					continue;
 				}
 
-				//TODO: Identify all relevant lights for this camera's viewport, then upload light data to GPU buffer for rendering!
+				// Identify all relevant lights for this camera's viewport:
+				foreach (Light light in _lights)
+				{
+					if (!light.IsDisposed &&
+						light.node.IsEnabledInHierarchy() &&
+						(light.layerMask & camera.layerMask) != 0)
+					{
+						if (light.Type != Light.LightType.Directional)
+						{
+							// TODO: Determine if light's maximum range overlaps viewport frustum!
+							cameraLightBuffer.Add(light);
+						}
+						else
+						{
+							cameraLightBuffer.Add(light);
+						}
+					}
+				}
 
 				try
 				{
 					lock (lockObj)
 					{
+						// Get or create CPU and CPU-side buffers for assembling and binding light data:
+						if (!camera.GetLightDataBuffer(cameraLightBuffer.Count, out DeviceBuffer? lightDataBuffer) || lightDataBuffer == null)
+						{
+							success = false;
+							continue;
+						}
+						if (lightSourceDataBuffer.Length < cameraLightBuffer.Count)
+						{
+							lightSourceDataBuffer = new Light.LightSourceData[cameraLightBuffer.Count];
+						}
+						// Upload light data to GPU buffer:
+						for (int i = 0; i < cameraLightBuffer.Count; i++)
+						{
+							lightSourceDataBuffer[i] = cameraLightBuffer[i].GetLightSourceData();
+						}
+						ReadOnlySpan<Light.LightSourceData> lightSourceDataSpan = new(lightSourceDataBuffer, 0, cameraLightBuffer.Count);
+						core.Device.UpdateBuffer(lightDataBuffer, 0, lightSourceDataSpan);
+
 						// Clear out all renderer lists for the upcoming frame:
 						foreach (RendererList rendererList in rendererLists)
 						{
@@ -272,6 +308,8 @@ namespace FragEngine3.Graphics.Stack
 
 						}
 					}
+
+					cameraLightBuffer.Clear();
 				}
 				catch (Exception ex)
 				{

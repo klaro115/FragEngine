@@ -1,13 +1,13 @@
 ﻿using System.Numerics;
 using FragEngine3.EngineCore;
-using FragEngine3.Graphics.Data;
 using FragEngine3.Graphics.Internal;
+using FragEngine3.Graphics.Resources.Data;
 using FragEngine3.Resources;
 using Veldrid;
 
 namespace FragEngine3.Graphics.Resources
 {
-	public class StaticMesh : Mesh
+    public class StaticMesh : Mesh
 	{
 		#region Constructors
 

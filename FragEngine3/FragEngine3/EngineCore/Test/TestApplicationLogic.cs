@@ -92,6 +92,8 @@ namespace FragEngine3.EngineCore.Test
 				camera.clearBackground = true;
 				camera.clearColor = Graphics.Color32.Cornflower;
 				camera.clearDepth = 1.0e+8f;
+
+				camera.IsMainCamera = true;
 			}
 
 			// Create a directional light:
@@ -100,7 +102,7 @@ namespace FragEngine3.EngineCore.Test
 			{
 				light.Type = Light.LightType.Directional;
 				light.node.WorldPosition = new Vector3(0, 5, 0);
-				light.node.WorldRotation = Quaternion.CreateFromYawPitchRoll(45, 45, 0);
+				light.node.SetRotationFromYawPitchRoll(45, 45, 0, true, true);
 			}
 
 			// Create a static mesh renderer displaying a default-shaded cube:

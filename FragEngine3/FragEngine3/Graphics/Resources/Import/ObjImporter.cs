@@ -1,11 +1,11 @@
 ﻿using FragEngine3.EngineCore;
-using FragEngine3.Graphics.Data;
+using FragEngine3.Graphics.Resources.Data;
 using System.Numerics;
 using System.Text;
 
 namespace FragEngine3.Graphics.Resources.Import
 {
-	public static class ObjImporter
+    public static class ObjImporter
 	{
 		#region Types
 
