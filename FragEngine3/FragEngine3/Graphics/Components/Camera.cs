@@ -1,4 +1,5 @@
 ﻿using System.Numerics;
+using FragEngine3.Graphics.Components.ConstantBuffers;
 using FragEngine3.Graphics.Components.Data;
 using FragEngine3.Graphics.Resources;
 using FragEngine3.Resources;
@@ -49,6 +50,8 @@ namespace FragEngine3.Graphics.Components
 			UpdateProjection();
 			UpdateStatesFromActiveRenderTarget();
 
+			GetGlobalConstantBuffer(0, false, out _);
+
 			node.scene.RegisterCamera(this);
 		}
 
@@ -85,9 +88,10 @@ namespace FragEngine3.Graphics.Components
 		public float clearDepth = 1.0e+8f;
 		public byte clearStencil = 0x00;
 
-		//Lighting:
+		// Lighting & Scene:
 		private DeviceBuffer? lightDataBuffer = null;
-		private int lightDataBufferCapacity = 0;
+		private uint lightDataBufferCapacity = 0;
+		private DeviceBuffer? globalConstantBuffer = null;
 
 		//TODO: Consider adding a "useSimplifiedRendering" flag, which would prompt usage of simplified material overrides, if available.
 
@@ -310,13 +314,18 @@ namespace FragEngine3.Graphics.Components
 			dirtyFlags = 0;
 
 			lightDataBuffer?.Dispose();
+			if (_disposing)
+			{
+				lightDataBuffer = null;
+				lightDataBufferCapacity = 0;
+			}
+
 			renderTargets?.Dispose();
 			TexColorTarget?.Dispose();
 			TexDepthStencilTarget?.Dispose();
 
 			if (_disposing)
 			{
-				lightDataBuffer = null;
 				renderTargets = null!;
 				overrideRenderTargets = null;
 				TexColorTarget = null!;
@@ -324,6 +333,57 @@ namespace FragEngine3.Graphics.Components
 			}
 
 			base.Dispose(_disposing);
+		}
+
+		public override void Refresh()
+		{
+			// Temporarily remove main camera, to prevent undesirable access during reset:
+			bool wasMainCamera = IsMainCamera;
+			IsMainCamera = false;
+
+			lock(cameraStateLockObj)
+			{
+				// Purge light data buffer:
+				lightDataBuffer?.Dispose();
+				lightDataBuffer = null;
+				lightDataBufferCapacity = 0;
+
+				// Purge render targets and framebuffer:
+				renderTargets?.Dispose();
+				TexColorTarget?.Dispose();
+				TexDepthStencilTarget?.Dispose();
+
+				renderTargets = null!;
+				overrideRenderTargets = null;
+				TexColorTarget = null!;
+				TexDepthStencilTarget = null;
+
+				// Recreate render targets and framebuffer:
+				if (core.CreateStandardRenderTargets(
+					resolutionX,
+					resolutionY,
+					true,
+					out Texture texColor,
+					out Texture? texDepth,
+					out Framebuffer framebuffer))
+				{
+					TexColorTarget = texColor;
+					TexDepthStencilTarget = texDepth;
+					renderTargets = framebuffer;
+				}
+
+				// Mark dirty and rebuild matrices:
+				MarkDirty(DirtyFlags.Resolution | DirtyFlags.Projection);
+
+				UpdateProjection();
+				UpdateStatesFromActiveRenderTarget();
+
+				// Reregister camera:
+				node.scene.UnregisterCamera(this);
+				node.scene.RegisterCamera(this);
+			}
+
+			IsMainCamera = wasMainCamera;
 		}
 
 		public void MarkDirty()
@@ -438,7 +498,7 @@ namespace FragEngine3.Graphics.Components
 		/// '<see cref="Light.LightSourceData"/>'. If the previously allocated buffer was large enough, no new allocation will be made. Null if
 		/// the camera has been disposed or if buffer creation failed.</param>
 		/// <returns>True if the light data buffer was of sufficient size, or if it was reallocated to the requested capacity, false otherwise.</returns>
-		internal bool GetLightDataBuffer(int _expectedCapacity, out DeviceBuffer? _outLightDataBuffer)
+		internal bool GetLightDataBuffer(uint _expectedCapacity, out DeviceBuffer? _outLightDataBuffer)
 		{
 			if (IsDisposed)
 			{
@@ -477,6 +537,73 @@ namespace FragEngine3.Graphics.Components
 			
 			// Output buffer and return success:
 			_outLightDataBuffer = lightDataBuffer;
+			return true;
+		}
+
+		/// <summary>
+		/// Gets and updates a constant buffer containing all global scene information that the camera might rely on.
+		/// </summary>
+		/// <param name="_activeLightCount">The number of visible lights that might influence geometry within the camera's viewport frustum.
+		/// This must not exceed the number of light source data entries in the camera's light data buffer.</param>
+		/// <param name="_updateProjection">Whether to update projection matrices before updating the constant buffer's contents. Usually,
+		/// the projection should already have been updated shortly before this method is called, by the scene's graphics stack.</param>
+		/// <param name="_outGlobalConstantBuffer">Outputs a constant buffer with up-to-date data about the scene and the camera's projection.
+		/// The data layout in this buffer matches the type '<see cref="GlobalConstantBuffer"/>'. Null if the camera has been disposed or if
+		/// buffer creation failed.</param>
+		/// <returns>True if the constant buffer could be retrieved/created, and updated with fresh data, false otherwise.</returns>
+		internal bool GetGlobalConstantBuffer(uint _activeLightCount, bool _updateProjection, out DeviceBuffer? _outGlobalConstantBuffer)
+		{
+			if (IsDisposed)
+			{
+				Logger.LogError("Cannot get global constant buffer for disposed camera!");
+				_outGlobalConstantBuffer = null;
+				return false;
+			}
+
+			if (globalConstantBuffer == null || globalConstantBuffer.IsDisposed)
+			{
+				globalConstantBuffer?.Dispose();
+
+				BufferDescription globalConstantBufferDesc = new(GlobalConstantBuffer.packedByteSize, BufferUsage.Dynamic | BufferUsage.UniformBuffer);
+
+				globalConstantBuffer = core.MainFactory.CreateBuffer(ref globalConstantBufferDesc);
+			}
+
+			// If necessary, rebuilt projection matrices, since their values will be uploaded to the constant buffer:
+			if (_updateProjection)
+			{
+				if (dirtyFlags.HasFlag(DirtyFlags.Resolution) || dirtyFlags.HasFlag(DirtyFlags.Projection))
+				{
+					UpdateProjection();
+				}
+				else
+				{
+					UpdateFinalCameraMatrix();
+				}
+			}
+
+			// Assemble global constant buffer contents:
+			GlobalConstantBuffer globalConstantBufferData = new()
+			{
+				// Camera parameters:
+				resolutionX = resolutionX,
+				resolutionY = resolutionY,
+				nearClipPlane = nearClipPlane,
+				farClipPlane = farClipPlane,
+
+				// Camera vectors & matrices:
+				cameraPosition = node.WorldPosition,
+				cameraDirection = node.WorldForward,
+				mtxCamera = mtxCamera,
+
+				// Lighting:
+				lightCount = _activeLightCount,
+			};
+
+			// Upload to GPU:
+			core.Device.UpdateBuffer(globalConstantBuffer, 0, globalConstantBufferData);
+
+			_outGlobalConstantBuffer = globalConstantBuffer;
 			return true;
 		}
 
@@ -624,7 +751,7 @@ namespace FragEngine3.Graphics.Components
 					}
 
 					// Update viewport matrix now that output resolution has changed:
-					if (dirtyFlags.HasFlag(DirtyFlags.Projection) && !dirtyFlags.HasFlag(DirtyFlags.Projection))
+					if (!dirtyFlags.HasFlag(DirtyFlags.Projection))
 					{
 						RecalculateViewportMatrix();
 					}

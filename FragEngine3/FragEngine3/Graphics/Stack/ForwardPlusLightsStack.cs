@@ -74,6 +74,7 @@ namespace FragEngine3.Graphics.Stack
 
 		public int VisibleRendererCount { get; private set; } = 0;
 		public int SkippedRendererCount { get; private set; } = 0;
+		public int FailedRendererCount { get; private set; } = 0;
 
 		private Logger Logger => core.graphicsSystem.engine.Logger ?? Logger.Instance!;
 
@@ -114,6 +115,10 @@ namespace FragEngine3.Graphics.Stack
 
 				Scene = _scene;
 
+				VisibleRendererCount = 0;
+				SkippedRendererCount = 0;
+				FailedRendererCount = 0;
+
 				//...
 
 				Logger.LogMessage($"Initialized graphics stack of type '{nameof(ForwardPlusLightsStack)}' for scene '{Scene.Name}'.");
@@ -138,6 +143,7 @@ namespace FragEngine3.Graphics.Stack
 
 				VisibleRendererCount = 0;
 				SkippedRendererCount = 0;
+				FailedRendererCount = 0;
 
 				Scene = null;
 
@@ -213,6 +219,8 @@ namespace FragEngine3.Graphics.Stack
 			bool success = true;
 			isDrawing = true;
 
+			uint maxActiveLightCount = Math.Max(core.graphicsSystem.Settings.MaxActiveLightCount, 1);
+
 			// Draw scene for each of the scene's active cameras:
 			foreach (Camera camera in _cameras)
 			{
@@ -246,22 +254,32 @@ namespace FragEngine3.Graphics.Stack
 					lock (lockObj)
 					{
 						// Get or create CPU and CPU-side buffers for assembling and binding light data:
-						if (!camera.GetLightDataBuffer(cameraLightBuffer.Count, out DeviceBuffer? lightDataBuffer) || lightDataBuffer == null)
+						uint activeLightCount = Math.Clamp((uint)cameraLightBuffer.Count, 0, maxActiveLightCount);
+						if (!camera.GetLightDataBuffer(activeLightCount, out DeviceBuffer? lightDataBuffer) || lightDataBuffer == null)
 						{
+							Logger.LogError("Failed to get or create camera's light source data buffer!");
 							success = false;
 							continue;
 						}
-						if (lightSourceDataBuffer.Length < cameraLightBuffer.Count)
+						if (lightSourceDataBuffer.Length < activeLightCount)
 						{
-							lightSourceDataBuffer = new Light.LightSourceData[cameraLightBuffer.Count];
+							lightSourceDataBuffer = new Light.LightSourceData[activeLightCount];
 						}
 						// Upload light data to GPU buffer:
-						for (int i = 0; i < cameraLightBuffer.Count; i++)
+						for (int i = 0; i < activeLightCount; i++)
 						{
 							lightSourceDataBuffer[i] = cameraLightBuffer[i].GetLightSourceData();
 						}
-						ReadOnlySpan<Light.LightSourceData> lightSourceDataSpan = new(lightSourceDataBuffer, 0, cameraLightBuffer.Count);
+						ReadOnlySpan<Light.LightSourceData> lightSourceDataSpan = new(lightSourceDataBuffer, 0, (int)activeLightCount);
 						core.Device.UpdateBuffer(lightDataBuffer, 0, lightSourceDataSpan);
+
+						// Get and update a constant buffer containing the camera's global scene data:
+						if (!camera.GetGlobalConstantBuffer(activeLightCount, false, out DeviceBuffer? globalConstantBuffer) || globalConstantBuffer == null)
+						{
+							Logger.LogError("Failed to get or create camera's global constant buffer!");
+							success = false;
+							continue;
+						}
 
 						// Clear out all renderer lists for the upcoming frame:
 						foreach (RendererList rendererList in rendererLists)
@@ -367,7 +385,7 @@ namespace FragEngine3.Graphics.Stack
 			// Draw list of renderers as-is:
 			foreach (IRenderer renderer in opaqueList.renderers)
 			{
-				success &= renderer.Draw(opaqueList.cmdList);
+				FailedRendererCount += renderer.Draw(opaqueList.cmdList) ? 0 : 1;
 			}
 
 			success &= _camera.EndFrame();
@@ -409,9 +427,9 @@ namespace FragEngine3.Graphics.Stack
 			// Draw Z-sorted list of renderers:
 			foreach (IRenderer renderer in zSortedList.renderers)
 			{
-				success &= renderer.Draw(zSortedList.cmdList);
+				FailedRendererCount += renderer.Draw(zSortedList.cmdList) ? 0 : 1;
 			}
-			
+
 			success &= _camera.EndFrame();
 
 			return success;
@@ -419,7 +437,7 @@ namespace FragEngine3.Graphics.Stack
 
 		private bool DrawUiRendererList()
 		{
-			if (!GetRendererListForMode(RenderMode.Opaque, out RendererList? uiList) || uiList == null)
+			if (!GetRendererListForMode(RenderMode.UI, out RendererList? uiList) || uiList == null)
 			{
 				return false;
 			}
@@ -443,7 +461,7 @@ namespace FragEngine3.Graphics.Stack
 			// Draw list of renderers in strictly hierarchical order:
 			foreach (IRenderer renderer in uiList.renderers)
 			{
-				success &= renderer.Draw(uiList.cmdList);
+				FailedRendererCount += renderer.Draw(uiList.cmdList) ? 0 : 1;
 			}
 
 			return success;

@@ -31,7 +31,7 @@ namespace FragEngine3.Graphics.Components
 			public Vector3 direction;
 			public float halfSpotAngleRad;
 
-			public const int byteSize = 3 * 4 * sizeof(float);
+			public const int byteSize = 3 * 3 * sizeof(float) + 2 * sizeof(float) + sizeof(uint);	// 48 bytes
 		}
 
 		#endregion
@@ -47,9 +47,13 @@ namespace FragEngine3.Graphics.Components
 
 		private LightType type = LightType.Point;
 
+		/// <summary>
+		/// Priority rating to indicate which light sources are more important. Higher priority lights will
+		/// be drawn first, lower priority light may be ignored as their impact on a mesh may be negligable.
+		/// </summary>
 		public int lightPriority = 1;
 		/// <summary>
-		/// Gets or sets the bit flags for all layers that can be affected by this light source.
+		/// Bit mask for all layers that can be affected by this light source.
 		/// </summary>
 		public uint layerMask = 0xFFu;
 

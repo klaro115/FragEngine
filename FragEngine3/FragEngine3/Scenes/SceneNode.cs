@@ -127,6 +127,10 @@ namespace FragEngine3.Scenes
 			set => localPose.scale = value;
 		}
 
+		public Vector3 LocalRight => Vector3.Transform(Vector3.UnitX, LocalRotation);
+		public Vector3 LocalUp => Vector3.Transform(Vector3.UnitY, LocalRotation);
+		public Vector3 LocalForward => Vector3.Transform(Vector3.UnitZ, LocalRotation);
+
 		public Pose WorldTransformation
 		{
 			get => GetWorldPose();
@@ -147,6 +151,10 @@ namespace FragEngine3.Scenes
 			get => GetWorldPose().scale;
 			set => localPose.scale = parentNode != null ? parentNode.TransformWorldToLocalDirection(value) : value;
 		}
+
+		public Vector3 WorldRight => Vector3.Transform(Vector3.UnitX, WorldRotation);
+		public Vector3 WorldUp => Vector3.Transform(Vector3.UnitY, WorldRotation);
+		public Vector3 WorldForward => Vector3.Transform(Vector3.UnitZ, WorldRotation);
 
 		#endregion
 		#region Methods

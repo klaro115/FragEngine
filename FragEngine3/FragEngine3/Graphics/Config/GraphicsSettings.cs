@@ -8,10 +8,13 @@ namespace FragEngine3.Graphics.Config
 	{
 		#region Properties
 
+		// Output:
 		public bool Vsync { get; set; } = false;
 		public Vector2 Resolution { get; set; } = new Vector2(640, 480);
 		public int MsaaCount { get; set; } = 1;
-		//...
+
+		// Lighting:
+		public uint MaxActiveLightCount { get; set; } = 128;
 
 		#endregion
 		#region Methods
@@ -20,9 +23,13 @@ namespace FragEngine3.Graphics.Config
 		{
 			return new()
 			{
+				// Output:
 				Vsync = Vsync,
 				Resolution = Resolution,
-				//...
+				MsaaCount = MsaaCount,
+
+				// Lighting:
+				MaxActiveLightCount = MaxActiveLightCount,
 			};
 		}
 
