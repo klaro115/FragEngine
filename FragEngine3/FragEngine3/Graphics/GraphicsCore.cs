@@ -302,6 +302,16 @@ namespace FragEngine3.Graphics
 			return true;
 		}
 
+		/// <summary>
+		/// Create the render targets according to standard/default parameters for this platform and device.
+		/// </summary>
+		/// <param name="_width">Horizontal resolution of output image, in pixels. Depending on platform, this should be a multiple of 8.</param>
+		/// <param name="_height">Vertical resolution of output image, in pixels.</param>
+		/// <param name="_createDepth">Whether to create a depth and stencil buffer for Z-testing while drawing to the render targets.</param>
+		/// <param name="_outTexColorTarget">Outputs an RGBA render target for lit and colored render results. This is the stuff you want to display on screen.</param>
+		/// <param name="_outDepthTarget">Outputs a depth texture, with an optional stencil channel. Null if no depth buffer was requested.</param>
+		/// <param name="_outFramebuffer">Outputs a framebuffer using the created color and depth textures as render targets.</param>
+		/// <returns>True if frame buffer and texture creation succeeded, false otherwise. All outputs will be disposed on failure.</returns>
 		public virtual bool CreateStandardRenderTargets(
 			uint _width,
 			uint _height,

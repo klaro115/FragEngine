@@ -316,6 +316,7 @@ namespace FragEngine3.Graphics.Components
 
 			if (_disposing)
 			{
+				lightDataBuffer = null;
 				renderTargets = null!;
 				overrideRenderTargets = null;
 				TexColorTarget = null!;

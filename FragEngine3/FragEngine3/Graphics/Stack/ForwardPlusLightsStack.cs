@@ -299,12 +299,12 @@ namespace FragEngine3.Graphics.Stack
 						if (VisibleRendererCount != 0)
 						{
 							// Issue draw calls for each renderer list:
-							success &= DrawOpaqueRendererList(camera, in _lights);
-							success &= DrawZSortedRendererList(camera, in _lights);
+							success &= DrawOpaqueRendererList(camera);
+							success &= DrawZSortedRendererList(camera);
 							success &= DrawUiRendererList();
 
 
-							//TODO: Composite end results?
+							//TODO: Composite end results!
 
 						}
 					}
@@ -336,7 +336,7 @@ namespace FragEngine3.Graphics.Stack
 			return false;
 		}
 
-		private bool DrawOpaqueRendererList(Camera _camera, in IList<Light> _lights)
+		private bool DrawOpaqueRendererList(Camera _camera)
 		{
 			if (!GetRendererListForMode(RenderMode.Opaque, out RendererList? opaqueList) || opaqueList == null)
 			{
@@ -375,7 +375,7 @@ namespace FragEngine3.Graphics.Stack
 			return success;
 		}
 
-		private bool DrawZSortedRendererList(Camera _camera, in IList<Light> _lights)
+		private bool DrawZSortedRendererList(Camera _camera)
 		{
 			if (!GetRendererListForMode(RenderMode.Transparent, out RendererList? zSortedList) || zSortedList == null)
 			{
