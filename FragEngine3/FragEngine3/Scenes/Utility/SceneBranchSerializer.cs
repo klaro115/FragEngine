@@ -278,7 +278,7 @@ namespace FragEngine3.Scenes.Utility
 			}
 
 			// First, try to recreate the ID mapping of all elements in the scene:
-			if (!ReconstructBranchIdMap(in _data, out Dictionary<int, ISceneElementData> idMap, out int totalComponentCount))
+			if (!ReconstructBranchIdMap(in _data, out _, out int totalComponentCount))
 			{
 				Logger.Instance?.LogError("Failed to reconstruct ID map from scene data!");
 				_outNode = null;
@@ -291,17 +291,46 @@ namespace FragEngine3.Scenes.Utility
 
 			_outNode = _parentNode.CreateChild(_data.PrefabName);
 
+			// RECREATE:
+
+			Dictionary<int, ISceneElement> idElementMap = [];
+
 			// Create all nodes:
-			if (!LoadBranchNodes(in _data, in idMap, _outNode, _outProgress, out Dictionary<int, SceneNode> nodeIdMap))
+			if (!CreateBranchNodes(
+				in _data,
+				_outNode,
+				idElementMap,
+				out Dictionary<int, SceneNode> nodeIdMap,
+				_outProgress))
 			{
 				Logger.Instance?.LogError("Failed to load and recreate scene hierarchy!");
 				goto abort;
 			}
 
-			// Create and all components and reattach them to nodes:
-			if (!LoadComponents(in _data, in idMap, in nodeIdMap, _outProgress, totalComponentCount))
+			// Create all components and reattach them to nodes:
+			if (!CreateComponents(
+				in _data,
+				in nodeIdMap,
+				idElementMap,
+				totalComponentCount,
+				out List<Component> allComponents,
+				out List<ComponentData> allComponentData,
+				_outProgress))
 			{
-				Logger.Instance?.LogError("Failed to load and recreate components!");
+				Logger.Instance?.LogError("Failed to recreate components!");
+				goto abort;
+			}
+
+			// RELOAD:
+
+			// Load all components' states from data:
+			if (!LoadComponents(
+				in allComponents,
+				in allComponentData,
+				in idElementMap,
+				_outProgress))
+			{
+				Logger.Instance?.LogError("Failed to load component states!");
 				goto abort;
 			}
 
@@ -364,14 +393,14 @@ namespace FragEngine3.Scenes.Utility
 			return true;
 		}
 
-		internal static bool LoadBranchNodes(
+		internal static bool CreateBranchNodes(
 			in SceneBranchData _data,
-			in Dictionary<int, ISceneElementData> _idMap,
 			SceneNode _prefabNode,
-			Progress _progress,
-			out Dictionary<int, SceneNode> _outNodeIdMap)
+			Dictionary<int, ISceneElement> _idElementMap,
+			out Dictionary<int, SceneNode> _outNodeIdMap,
+			Progress _progress)
 		{
-			_outNodeIdMap = new();
+			_outNodeIdMap = [];
 
 			_progress.UpdateTitle("Reading scene hierarchy");
 
@@ -403,6 +432,7 @@ namespace FragEngine3.Scenes.Utility
 						Logger.Instance?.LogError($"Failed to load node '{data.Name ?? string.Empty}' from data!");
 						return false;
 					}
+					_idElementMap.Add(data.ID, node);
 
 					_progress.Increment();
 				}
@@ -411,22 +441,25 @@ namespace FragEngine3.Scenes.Utility
 			return true;
 		}
 
-		internal static bool LoadComponents(
+		internal static bool CreateComponents(
 			in SceneBranchData _data,
-			in Dictionary<int, ISceneElementData> _idMap,
 			in Dictionary<int, SceneNode> _nodeIdMap,
-			Progress _progress,
-			int _totalComponentCount)
+			Dictionary<int, ISceneElement> _idElementMap,
+			int _totalComponentCount,
+			out List<Component> _outAllComponents,
+			out List<ComponentData> _outAllComponentData,
+			Progress _progress)
 		{
 			_progress.UpdateTitle("Creating components");
 
+			_outAllComponents = new(_totalComponentCount);
+			_outAllComponentData = new(_totalComponentCount);
+			
 			if (_data.Hierarchy?.NodeData == null || _totalComponentCount == 0) return true;
 
 			int nodeCount = Math.Min(_data.Hierarchy.NodeData.Length, _data.Hierarchy.TotalNodeCount);
 			if (nodeCount == 0) return false;
 
-			List<Component> allComponents = new(_totalComponentCount);
-			List<ComponentData> allComponentData = new(_totalComponentCount);
 
 			// Create all components on their nodes first, but don't initialize and interconnect them yet:
 			for (int i = 0; i < nodeCount; ++i)
@@ -442,27 +475,36 @@ namespace FragEngine3.Scenes.Utility
 					ComponentData cData = nData.ComponentData![j];
 					if (cData.ID < 0 || string.IsNullOrEmpty(cData.Type)) continue;
 
-					if (!Component.CreateComponent(node, cData.Type, out Component? component) || component == null)
+					if (!ComponentFactory.CreateComponent(node, cData.Type, out Component? component) || component == null)
 					{
 						Logger.Instance?.LogError($"Failed to create component of type '{cData.Type}' for node '{node}'!");
 						return false;
 					}
 					node.AddComponent(component);
 
-					allComponents.Add(component);
-					allComponentData.Add(cData);
+					_outAllComponents.Add(component);
+					_outAllComponentData.Add(cData);
+					_idElementMap.Add(cData.ID, component);
 
 					_progress.Increment();
 				}
 			}
+			return true;
+		}
 
+		internal static bool LoadComponents(
+			in List<Component> _allComponents,
+			in List<ComponentData> _allComponentData,
+			in Dictionary<int, ISceneElement> _idMap,
+			Progress _progress)
+		{
 			_progress.UpdateTitle("Initializing components");
 
 			// Initialize components and load their states from data:
-			for (int i = 0; i < allComponents.Count; ++i)
+			for (int i = 0; i < _allComponents.Count; ++i)
 			{
-				Component component = allComponents[i];
-				ComponentData data = allComponentData[i];
+				Component component = _allComponents[i];
+				ComponentData data = _allComponentData[i];
 
 				if (!component.LoadFromData(in data, _idMap))
 				{

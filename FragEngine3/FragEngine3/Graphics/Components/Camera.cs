@@ -861,7 +861,7 @@ namespace FragEngine3.Graphics.Components
 			return Vector3.Transform(_pixelCoord, mtxInvCamera);
 		}
 
-		public override bool LoadFromData(in ComponentData _componentData, in Dictionary<int, ISceneElementData> _idDataMap)
+		public override bool LoadFromData(in ComponentData _componentData, in Dictionary<int, ISceneElement> _idDataMap)
 		{
 			if (string.IsNullOrEmpty(_componentData.SerializedData))
 			{

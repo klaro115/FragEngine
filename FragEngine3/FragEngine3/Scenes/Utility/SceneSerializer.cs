@@ -3,6 +3,7 @@ using FragEngine3.EngineCore;
 using FragEngine3.Scenes.Data;
 using FragEngine3.Scenes.EventSystem;
 using FragEngine3.Utility.Serialization;
+using Vortice.Direct3D11;
 
 namespace FragEngine3.Scenes.Utility
 {
@@ -247,7 +248,7 @@ namespace FragEngine3.Scenes.Utility
 			return LoadSceneFromData(_engine, data, out _outScene, out _outProgress);
 		}
 
-		public static bool LoadSceneFromData(Engine _engine, SceneData _data, out Scene? _outScene, out Progress _outProgress)
+		public static bool LoadSceneFromData(Engine _engine, SceneData _sceneData, out Scene? _outScene, out Progress _outProgress)
 		{
 			_outProgress = new("Preparing to load scene", 1);
 
@@ -257,52 +258,95 @@ namespace FragEngine3.Scenes.Utility
 				_outScene = null;
 				return false;
 			}
-			if (_data == null)
+			if (_sceneData == null)
 			{
 				Logger.Instance?.LogError("Cannot load scene from null scene data!");
 				_outScene = null;
 				return false;
 			}
 
-			_outScene = new Scene(_engine, _data.Name)
+			_outScene = new Scene(_engine, _sceneData.Name)
 			{
-				UpdatedInEngineStates = _data.UpdatedInEngineStates,
+				UpdatedInEngineStates = _sceneData.UpdatedInEngineStates,
 			};
 
 
 			// First, try to recreate the ID mapping of all elements in the scene:
-			if (!ReconstructSceneIdMap(in _data, _outProgress, out Dictionary<int, ISceneElementData> idMap, out int totalComponentCount))
+			if (!ReconstructSceneIdMap(
+				in _sceneData,
+				_outProgress,
+				out _,
+				out int totalComponentCount))
 			{
 				Logger.Instance?.LogError("Failed to reconstruct ID map from scene data!");
 				goto abort;
 			}
 
-			_outProgress.Update(null, 0, _data.GetTotalSceneElementCount());
+			_outProgress.Update(null, 0, _sceneData.GetTotalSceneElementCount());
 
-			// Recreate and reattach scene-wide behaviours to the scene:
-			if (!LoadSceneBehaviours(in _data, in idMap, _outScene, _outProgress))
+			// RECREATE:
+
+			Dictionary<int, ISceneElement> idElementMap = [];
+
+			// Recreate and reattach scene-wide behaviours to the scene: (loading happens after all elements have been spawned.)
+			if (!CreateSceneBehaviours(in _sceneData, idElementMap, _outScene, _outProgress))
 			{
-				Logger.Instance?.LogError("Failed to load and recreate scene-wide behaviours!");
+				Logger.Instance?.LogError("Failed to recreate scene-wide behaviours!");
 				goto abort;
 			}
 
-			// Create all nodes:
+			// Create all nodes: (those can be create and loaded in one go)
 			SceneBranchData branchData = new()
 			{
-				PrefabName = _data.Name,
+				PrefabName = _sceneData.Name,
 				ID = -1,
-				Hierarchy = _data.Hierarchy,
+				Hierarchy = _sceneData.Hierarchy,
 			};
-			if (!SceneBranchSerializer.LoadBranchNodes(in branchData, in idMap, _outScene.rootNode, _outProgress, out Dictionary<int, SceneNode> nodeIdMap))
+			if (!SceneBranchSerializer.CreateBranchNodes(
+				in branchData,
+				_outScene.rootNode,
+				idElementMap,
+				out Dictionary<int, SceneNode> nodeIdMap,
+				_outProgress))
 			{
-				Logger.Instance?.LogError("Failed to load and recreate scene hierarchy!");
+				Logger.Instance?.LogError("Failed to recreate and load scene hierarchy!");
 				goto abort;
 			}
 
-			// Create and all components and reattach them to nodes:
-			if (!SceneBranchSerializer.LoadComponents(in branchData, in idMap, in nodeIdMap, _outProgress, totalComponentCount))
+			// RELOAD:
+
+			// Create all components and reattach them to nodes:
+			if (!SceneBranchSerializer.CreateComponents(
+				in branchData,
+				in nodeIdMap,
+				idElementMap,
+				totalComponentCount,
+				out List<Component> allComponents,
+				out List<ComponentData> allComponentData, _outProgress))
 			{
-				Logger.Instance?.LogError("Failed to load and recreate components!");
+				Logger.Instance?.LogError("Failed to recreate components!");
+				goto abort;
+			}
+
+			// Load all scene-wide behaviour states:
+			if (!LoadSceneBehaviours(
+				in _sceneData,
+				in idElementMap,
+				in _outScene,
+				_outProgress))
+			{
+				Logger.Instance?.LogError("Failed to load scene-wide behaviours!");
+				goto abort;
+			}
+
+			// Load all component states:
+			if (!SceneBranchSerializer.LoadComponents(
+				in allComponents,
+				in allComponentData,
+				in idElementMap,
+				_outProgress))
+			{
+				Logger.Instance?.LogError("Failed to load component states!");
 				goto abort;
 			}
 
@@ -385,11 +429,11 @@ namespace FragEngine3.Scenes.Utility
 			return true;
 		}
 
-		private static bool LoadSceneBehaviours(in SceneData _data, in Dictionary<int, ISceneElementData> _idMap, Scene _scene, Progress _progress)
+		private static bool CreateSceneBehaviours(in SceneData _data, Dictionary<int, ISceneElement> _idMap, Scene _scene, Progress _progress)
 		{
-			_progress.UpdateTitle("Loading scene behaviours");
-
 			if (_data.Behaviours?.BehavioursData == null) return true;
+
+			_progress.UpdateTitle("Creating scene behaviours");
 
 			int behaviourCount = Math.Min(_data.Behaviours.BehavioursData.Length, _data.Behaviours.BehaviourCount);
 
@@ -401,14 +445,43 @@ namespace FragEngine3.Scenes.Utility
 					if (!SceneBehaviour.CreateBehaviour(_scene, data.Type, out SceneBehaviour? behaviour) || behaviour == null)
 					{
 						Logger.Instance?.LogError($"Failed to create scene-wide behaviour of type '{data.Type}' for scene '{_scene.Name}'!");
+						behaviour?.Dispose();
 						return false;
 					}
 					_scene.AddSceneBehaviour(behaviour);
+					_idMap.Add(data.ID, behaviour);
 
 					_progress.Increment();
 				}
 			}
 
+			return true;
+		}
+
+		private static bool LoadSceneBehaviours(in SceneData _data, in Dictionary<int, ISceneElement> _idMap, in Scene _scene, Progress _progress)
+		{
+			if (_data.Behaviours?.BehavioursData == null) return true;
+
+			_progress.UpdateTitle("Loading scene behaviours");
+
+			int behaviourCount = Math.Min(_data.Behaviours.BehavioursData.Length, _data.Behaviours.BehaviourCount);
+
+			for (int i = 0; i < behaviourCount; i++)
+			{
+				SceneBehaviourData data = _data.Behaviours.BehavioursData[i];
+				if (data != null && data.ID >= 0 && _idMap.TryGetValue(data.ID, out ISceneElement? behaviourElement) && behaviourElement is SceneBehaviour behaviour)
+				{
+					if (!behaviour.LoadFromData(in data))
+					{
+						Logger.Instance?.LogError($"Failed to load scene-wide behaviour of type '{data.Type}' for scene '{_scene.Name}'!");
+						return false;
+					}
+
+					_progress.Increment();
+				}
+			}
+
+			//...
 			return true;
 		}
 

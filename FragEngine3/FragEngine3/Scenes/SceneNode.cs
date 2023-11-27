@@ -746,7 +746,7 @@ namespace FragEngine3.Scenes
 				_outNewComponent = null;
 				return false;
 			}
-			if (!Component.CreateComponent(this, out _outNewComponent, _params) || _outNewComponent == null)
+			if (!ComponentFactory.CreateComponent(this, out _outNewComponent, _params) || _outNewComponent == null)
 			{
 				Logger.LogError($"Failed to create new component on node '{Name}'!");
 				_outNewComponent?.Dispose();
