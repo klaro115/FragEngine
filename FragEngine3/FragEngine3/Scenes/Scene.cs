@@ -1,24 +1,11 @@
 ﻿using FragEngine3.EngineCore;
-using FragEngine3.Graphics;
-using FragEngine3.Graphics.Components;
 using FragEngine3.Graphics.Stack;
 using FragEngine3.Scenes.EventSystem;
-using System.Linq;
-using System.Xml.Linq;
 
 namespace FragEngine3.Scenes
 {
 	public sealed class Scene : IDisposable
 	{
-		#region Types
-
-		private sealed class UpdateStage(SceneUpdateStage _stage)
-		{
-			public readonly SceneUpdateStage stage = _stage;
-			public readonly List<SceneNode> nodeList = new(64);
-		}
-
-		#endregion
 		#region Constructors
 
 		public Scene(Engine _engine, string? _name = null)
@@ -26,6 +13,9 @@ namespace FragEngine3.Scenes
 			engine = _engine ?? throw new ArgumentNullException(nameof(_engine), "Engine may not be null!");
 			rootNode = new SceneNode(this);
 			if (_name != null) Name = _name;
+
+			updateManager = new(this);
+			drawManager = new(this);
 		}
 		~Scene()
 		{
@@ -43,17 +33,8 @@ namespace FragEngine3.Scenes
 		private readonly List<SceneBehaviour> sceneBehaviours = [];
 		private IGraphicsStack? graphicsStack = null;
 
-		private readonly UpdateStage[] updateStageDict =
-		[
-			new(SceneUpdateStage.Early),
-			new(SceneUpdateStage.Main),
-			new(SceneUpdateStage.Late),
-			new(SceneUpdateStage.Fixed),
-		];
-		private readonly List<SceneNodeRendererPair> sceneNodeRenderers = new(128);
-
-		private readonly List<Camera> cameras = new(4);
-		private readonly List<Light> lights = new(64);
+		internal readonly SceneUpdateManager updateManager;
+		internal readonly SceneDrawManager drawManager;
 
 		private EngineState updatedInEngineStates = EngineState.Running;
 		private EngineState drawnInEngineStates = EngineState.Running;
@@ -181,16 +162,10 @@ namespace FragEngine3.Scenes
 				graphicsStack.Shutdown();
 				graphicsStack.Dispose();
 			}
-			
+
 			// Clear out all update and drawing lists:
-			if (_disposing)
-			{
-				foreach (UpdateStage stage in updateStageDict)
-				{
-					stage.nodeList.Clear();
-				}
-				sceneNodeRenderers.Clear();
-			}
+			drawManager.Dispose();
+			updateManager.Dispose();
 
 			// Dispose scene behaviours:
 			foreach (SceneBehaviour component in sceneBehaviours)
@@ -239,7 +214,7 @@ namespace FragEngine3.Scenes
 				return false;
 			}
 
-			if (!SceneBehaviour.CreateBehaviour(this, out _outNewBehaviour, _params) || _outNewBehaviour == null)
+			if (!SceneBehaviourFactory.CreateBehaviour(this, out _outNewBehaviour, _params) || _outNewBehaviour == null)
 			{
 				Logger.LogError($"Failed to create new scene behaviour of type '{typeof(T)}' for scene '{name}'!");
 				_outNewBehaviour = null;
@@ -427,121 +402,7 @@ namespace FragEngine3.Scenes
 				return false;
 			}
 
-			// Update scene-wide behaviours via event:
-			SceneEventType eventType = _stageFlag.GetEventType();
-			foreach (SceneBehaviour behaviour in sceneBehaviours)
-			{
-				if (!behaviour.IsDisposed)
-				{
-					behaviour.ReceiveSceneEvent(eventType, null);
-				}
-			}
-
-			UpdateStage? updateStage = null;
-			for (int i = 0; i < 4; ++i)
-			{
-				if (_stageFlag == (SceneUpdateStage)(1 << i))
-				{
-					updateStage = updateStageDict[i];
-					break;
-				}
-			}
-
-			if (updateStage == null)
-			{
-				Logger.LogError("Invalid update stage '{_stageFlag}'!");
-				return false;
-			}
-
-			// Update all nodes and their components with listeners for this update event:
-			foreach (SceneNode node in updateStage.nodeList)
-			{
-				node.SendEvent(eventType, null);
-			}
-
-			return true;
-		}
-
-		internal bool RegisterNodeForUpdateStages(SceneNode _node, SceneUpdateStage _stageFlags)
-		{
-			if (IsDisposed) return false;
-			if (_node == null || _node.IsDisposed)
-			{
-				Logger.LogError("Cannot register update stages for null or disposed node");
-				return false;
-			}
-
-			if (_stageFlags == 0)
-			{
-				return UnregisterNodeFromUpdateStages(_node);
-			}
-
-			for (int i = 0; i < 4; ++i)
-			{
-				SceneUpdateStage stage = (SceneUpdateStage)(i << i);
-
-				if (_stageFlags.HasFlag(stage))
-				{
-					UpdateStage updateStage = updateStageDict[i];
-					if (!updateStage.nodeList.Contains(_node))
-					{
-						updateStage.nodeList.Add(_node);
-					}
-				}
-			}
-			return true;
-		}
-
-		internal bool UpdateNodeUpdateStages(SceneNode _node, SceneUpdateStage _prevStageFlags, SceneUpdateStage _newStageFlags)
-		{
-			if (IsDisposed) return false;
-			if (_node == null || _node.IsDisposed)
-			{
-				Logger.LogError("Cannot update registration of update stages for null or disposed node");
-				return false;
-			}
-
-			if (_newStageFlags == 0)
-			{
-				return UnregisterNodeFromUpdateStages(_node);
-			}
-
-			for (int i = 0; i < 4; ++i)
-			{
-				SceneUpdateStage stage = (SceneUpdateStage)(i << i);
-				bool isPrev = _prevStageFlags.HasFlag(stage);
-				bool isNew = _newStageFlags.HasFlag(stage);
-
-				if (isPrev && !isNew)
-				{
-					updateStageDict[i].nodeList.Remove(_node);
-				}
-				else if (!isPrev && isNew)
-				{
-					UpdateStage updateStage = updateStageDict[i];
-					if (!updateStage.nodeList.Contains(_node))
-					{
-						updateStage.nodeList.Add(_node);
-					}
-				}
-			}
-			return true;
-		}
-
-		internal bool UnregisterNodeFromUpdateStages(SceneNode _node)
-		{
-			if (IsDisposed) return false;
-			if (_node == null || _node.IsDisposed)
-			{
-				Logger.LogError("Cannot unregister update stages for null or disposed node");
-				return false;
-			}
-
-			for (int i = 0; i < 4; ++i)
-			{
-				updateStageDict[i].nodeList.Remove(_node);
-			}
-			return true;
+			return updateManager.RunUpdateStage(_stageFlag);
 		}
 
 		public bool DrawScene()
@@ -557,157 +418,11 @@ namespace FragEngine3.Scenes
 			{
 				if (!behaviour.IsDisposed)
 				{
-					behaviour.ReceiveSceneEvent(SceneEventType.OnDraw, null);
+					behaviour.Draw();
 				}
 			}
 
-			// No renderers in scene? Skip any further processing and return:
-			if (sceneNodeRenderers.Count == 0)
-			{
-				return true;
-			}
-
-			// Sort cameras and lights by priority. High-priority cameras will be drawn first, low-priority lights may be ignored:
-			cameras.Sort((a, b) => a.cameraPriority.CompareTo(b.cameraPriority));
-			lights.Sort((a, b) => a.lightPriority.CompareTo(b.lightPriority));
-
-			// If null, create and initialize default forward+light graphics stack:
-			if (graphicsStack == null || graphicsStack.IsDisposed)
-			{
-				Logger.LogWarning($"Graphics stack of scene '{name}' is unassigned, creating default stack instead...");
-				graphicsStack = new ForwardPlusLightsStack(engine.GraphicsSystem.graphicsCore);
-			}
-
-			// Ensure the graphics stack is initialized before use:
-			if (!graphicsStack.IsInitialized && !graphicsStack.Initialize(this))
-			{
-				Logger.LogError($"Failed to initialize graphics stack of scene '{name}'!");
-				return false;
-			}
-
-			// Draw the scene and its nodes through the stack:
-			return graphicsStack.DrawStack(this, sceneNodeRenderers, cameras, lights);
-		}
-
-		internal bool UnregisterNodeRenderers(SceneNode _node)
-		{
-			if (IsDisposed) return false;
-			if (_node == null || _node.IsDisposed)
-			{
-				Logger.LogError("Cannot unregister draw stage for null or disposed node");
-				return false;
-			}
-
-			bool removed = sceneNodeRenderers.RemoveAll(o => o.node == _node) != 0;
-			if (removed)
-			{
-				DrawStackState++;
-			}
-			return removed;
-		}
-
-		internal bool RegisterNodeForDrawStage(SceneNode _node, IRenderer _renderer)
-		{
-			if (IsDisposed) return false;
-			if (_node == null || _node.IsDisposed)
-			{
-				Logger.LogError("Cannot register draw stage for null or disposed node");
-				return false;
-			}
-			if (_renderer == null || _renderer.IsDisposed)
-			{
-				Logger.LogError("Cannot unregister draw stage for null or disposed renderer");
-				return false;
-			}
-
-			SceneNodeRendererPair newPair = new(_node, _renderer);
-
-			if (!sceneNodeRenderers.Contains(newPair))
-			{
-				sceneNodeRenderers.Add(newPair);
-				DrawStackState++;
-			}
-			return true;
-		}
-		
-		internal bool UnregisterNodeFromDrawStage(SceneNode _node, IRenderer _renderer)
-		{
-			if (IsDisposed) return false;
-			if (_node == null || _node.IsDisposed)
-			{
-				Logger.LogError("Cannot unregister draw stage for null or disposed node");
-				return false;
-			}
-			if (_renderer == null || _renderer.IsDisposed)
-			{
-				Logger.LogError("Cannot unregister draw stage for null or disposed renderer");
-				return false;
-			}
-
-			SceneNodeRendererPair oldPair = new(_node, _renderer);
-
-			bool removed = sceneNodeRenderers.Remove(oldPair);
-			if (removed)
-			{
-				DrawStackState++;
-			}
-			return removed;
-		}
-
-		internal bool RegisterCamera(Camera _camera)
-		{
-			if (IsDisposed) return false;
-			if (_camera == null || _camera.IsDisposed)
-			{
-				Logger.LogError("Cannot register null or disposed camera!");
-				return false;
-			}
-			
-			if (!cameras.Contains(_camera))
-			{
-				cameras.Add(_camera);
-			}
-			return true;
-		}
-
-		internal bool UnregisterCamera(Camera _camera)
-		{
-			if (IsDisposed) return false;
-			if (_camera == null)
-			{
-				Logger.LogError("Cannot unregister null camera!");
-				return false;
-			}
-
-			return cameras.Remove(_camera);
-		}
-
-		internal bool RegisterLight(Light _light)
-		{
-			if (IsDisposed) return false;
-			if (_light == null || _light.IsDisposed)
-			{
-				Logger.LogError("Cannot register null or disposed light source!");
-				return false;
-			}
-
-			if (!lights.Contains(_light))
-			{
-				lights.Add(_light);
-			}
-			return true;
-		}
-
-		internal bool UnregisterLight(Light _light)
-		{
-			if (IsDisposed) return false;
-			if (_light == null)
-			{
-				Logger.LogError("Cannot unregister null light source!");
-				return false;
-			}
-
-			return lights.Remove(_light);
+			return drawManager.RunDrawStage();
 		}
 
 		#endregion

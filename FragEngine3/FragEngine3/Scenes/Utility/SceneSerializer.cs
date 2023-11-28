@@ -442,7 +442,7 @@ namespace FragEngine3.Scenes.Utility
 				SceneBehaviourData data = _data.Behaviours.BehavioursData[i];
 				if (data != null && data.ID >= 0 && !string.IsNullOrEmpty(data.Type))
 				{
-					if (!SceneBehaviour.CreateBehaviour(_scene, data.Type, out SceneBehaviour? behaviour) || behaviour == null)
+					if (!SceneBehaviourFactory.CreateBehaviour(_scene, data.Type, out SceneBehaviour? behaviour) || behaviour == null)
 					{
 						Logger.Instance?.LogError($"Failed to create scene-wide behaviour of type '{data.Type}' for scene '{_scene.Name}'!");
 						behaviour?.Dispose();

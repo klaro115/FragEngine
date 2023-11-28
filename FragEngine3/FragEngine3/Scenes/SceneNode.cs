@@ -44,7 +44,7 @@ namespace FragEngine3.Scenes
 
 		// Hierarchy:
 		private SceneNode parentNode;
-		private readonly List<SceneNode> children = new();
+		private readonly List<SceneNode> children = [];
 
 		// Components:
 		private List<Component>? components = null;
@@ -177,7 +177,7 @@ namespace FragEngine3.Scenes
 			}
 			if (!IsDisposed && !scene.IsDisposed)
 			{
-				scene.UnregisterNodeRenderers(this);
+				//scene.UnregisterNodeRenderers(this);			//TODO: Find a better way to replicate this through the new SceneDrawManager!
 			}
 
 			IsDisposed = true;
@@ -247,8 +247,8 @@ namespace FragEngine3.Scenes
 
 					if (component is IRenderer renderer)
 					{
-						scene.UnregisterNodeFromDrawStage(this, renderer);
-						scene.RegisterNodeForDrawStage(this, renderer);
+						scene.drawManager.UnregisterRenderer(renderer);
+						scene.drawManager.RegisterRenderer(renderer);
 					}
 				}
 				// Update event listeners and update stage flags:
@@ -412,7 +412,7 @@ namespace FragEngine3.Scenes
 		{
 			if (IsDisposed) throw new ObjectDisposedException(name, "Cannot add child to disposed node!");
 
-			SceneNode newChild = new SceneNode(this, _name);
+			SceneNode newChild = new(this, _name);
 			newChild.SetParent(this);
 
 			return newChild;
@@ -705,7 +705,13 @@ namespace FragEngine3.Scenes
 				// Update renderer list:
 				if (_component is IRenderer renderer)
 				{
-					scene.UnregisterNodeFromDrawStage(this, renderer);
+					scene.drawManager.UnregisterRenderer(renderer);
+				}
+
+				// Update update stage lists:
+				if (_component is IUpdatableSceneElement updatable)
+				{
+					scene.updateManager.UnregisterSceneElements(updatable);
 				}
 
 				// Update event manager:
@@ -806,7 +812,7 @@ namespace FragEngine3.Scenes
 			// Make sure components are initialized, then register component:
 			if (components == null)
 			{
-				components = new() { _newComponent };
+				components = [ _newComponent ];
 			}
 			else
 			{
@@ -831,10 +837,16 @@ namespace FragEngine3.Scenes
 		{
 			if (_component == null || _component.IsDisposed) return false;
 
+			// Update update stage lists:
+			if (_component is IUpdatableSceneElement updatable)
+			{
+				scene.updateManager.RegisterSceneElement(updatable);
+			}
+
 			// Update renderer list:
 			if (_component is IRenderer renderer)
 			{
-				scene.RegisterNodeForDrawStage(this, renderer);
+				scene.drawManager.RegisterRenderer(renderer);
 			}
 
 			if (eventManager != null)

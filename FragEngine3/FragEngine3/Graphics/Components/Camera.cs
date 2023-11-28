@@ -52,7 +52,7 @@ namespace FragEngine3.Graphics.Components
 
 			GetGlobalConstantBuffer(0, false, out _);
 
-			node.scene.RegisterCamera(this);
+			node.scene.drawManager.RegisterCamera(this);
 		}
 
 		#endregion
@@ -379,8 +379,8 @@ namespace FragEngine3.Graphics.Components
 				UpdateStatesFromActiveRenderTarget();
 
 				// Reregister camera:
-				node.scene.UnregisterCamera(this);
-				node.scene.RegisterCamera(this);
+				node.scene.drawManager.UnregisterCamera(this);
+				node.scene.drawManager.RegisterCamera(this);
 			}
 
 			IsMainCamera = wasMainCamera;
@@ -400,7 +400,7 @@ namespace FragEngine3.Graphics.Components
 			if (_eventType == SceneEventType.OnNodeDestroyed ||
 				_eventType == SceneEventType.OnDestroyComponent)
 			{
-				node.scene.UnregisterCamera(this);
+				node.scene.drawManager.UnregisterCamera(this);
 			}
 		}
 
@@ -892,8 +892,8 @@ namespace FragEngine3.Graphics.Components
 			}
 
 			// Re-register camera with the scene:
-			node.scene.UnregisterCamera(this);
-			return node.scene.RegisterCamera(this);
+			node.scene.drawManager.UnregisterCamera(this);
+			return node.scene.drawManager.RegisterCamera(this);
 		}
 
 		public override bool SaveToData(out ComponentData _componentData, in Dictionary<ISceneElement, int> _idDataMap)

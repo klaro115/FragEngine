@@ -3,14 +3,10 @@ using FragEngine3.Scenes.EventSystem;
 
 namespace FragEngine3.Scenes
 {
-	public sealed class SceneManager : IDisposable
+	public sealed class SceneManager(Engine _engine) : IDisposable
 	{
 		#region Constructors
 
-		public SceneManager(Engine _engine)
-		{
-			engine = _engine ?? throw new ArgumentNullException(nameof(_engine), "Engine may not be null!");
-		}
 		~SceneManager()
 		{
 			if (!IsDisposed) Dispose(false);
@@ -19,7 +15,7 @@ namespace FragEngine3.Scenes
 		#endregion
 		#region Fields
 
-		public readonly Engine engine;
+		public readonly Engine engine = _engine ?? throw new ArgumentNullException(nameof(_engine), "Engine may not be null!");
 
 		private readonly List<Scene> scenes = new(1);
 
@@ -50,7 +46,7 @@ namespace FragEngine3.Scenes
 			GC.SuppressFinalize(this);
 			Dispose(true);
 		}
-		private void Dispose(bool _disposing)
+		private void Dispose(bool _)
 		{
 			IsDisposed = true;
 			for (int i = 0; i < scenes.Count; i++)
@@ -120,16 +116,6 @@ namespace FragEngine3.Scenes
 			{
 				engine.Logger.LogError("Cannot broadcast event through disposed scene manager!");
 				return false;
-			}
-
-			// Handle special event types: (Update & Draw)
-			if (_eventType.IsUpdateStage())
-			{
-				return UpdateAllScenes(_eventType.GetUpdateStage(), engine.State);
-			}
-			if (_eventType == SceneEventType.OnDraw)
-			{
-				return DrawAllScenes(engine.State);
 			}
 
 			// Regular events are propagated across node hierarchy via recursion:

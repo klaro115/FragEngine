@@ -214,7 +214,7 @@ namespace FragEngine3.Scenes.Utility
 						}
 					}
 					nData.ComponentCount = componentData.Count;
-					nData.ComponentData = componentData.Count != 0 ? componentData.ToArray() : null;
+					nData.ComponentData = componentData.Count != 0 ? [.. componentData] : null;
 
 					_sceneData.Hierarchy.NodeData![index++] = nData;
 

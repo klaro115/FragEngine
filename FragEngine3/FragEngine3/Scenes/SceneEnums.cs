@@ -55,44 +55,4 @@ namespace FragEngine3.Scenes
 		SceneBranch,
 		//...
 	}
-
-	/// <summary>
-	/// Helper class with extension methods for dealing with the '<see cref="SceneUpdateStage"/>' enum.
-	/// </summary>
-	public static class SceneUpdateStageExt
-	{
-		#region Fields
-
-		private static readonly Tuple<SceneUpdateStage, SceneEventType>[] eventTypeMap = new Tuple<SceneUpdateStage, SceneEventType>[]
-		{
-			new Tuple<SceneUpdateStage, SceneEventType>(SceneUpdateStage.Early, SceneEventType.OnEarlyUpdate),
-			new Tuple<SceneUpdateStage, SceneEventType>(SceneUpdateStage.Main, SceneEventType.OnUpdate),
-			new Tuple<SceneUpdateStage, SceneEventType>(SceneUpdateStage.Late, SceneEventType.OnLateUpdate),
-
-			new Tuple<SceneUpdateStage, SceneEventType>(SceneUpdateStage.Fixed, SceneEventType.OnFixedUpdate),
-
-			new Tuple<SceneUpdateStage, SceneEventType>(SceneUpdateStage.None, SceneEventType.None),
-		};
-
-		#endregion
-		#region Methods
-
-		/// <summary>
-		/// Try to find an event type correspondingb to a given update stage.<para/>
-		/// NOTE: This event will be fired and broadcast internally by the scene's update logic, and neither of these update events should be sent
-		/// by user-side code, unless you know exactly what you're doing and what side effects may occur.
-		/// </summary>
-		/// <param name="_stage">The update stage for which we seek a corresponding event type.</param>
-		/// <returns></returns>
-		public static SceneEventType GetEventType(this SceneUpdateStage _stage)
-		{
-			foreach (var mapping in eventTypeMap)
-			{
-				if (mapping.Item1 == _stage) return mapping.Item2;
-			}
-			return SceneEventType.None;
-		}
-
-		#endregion
-	}
 }

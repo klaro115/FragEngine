@@ -6,7 +6,7 @@ using Veldrid;
 
 namespace FragEngine3.Graphics.Stack
 {
-	public sealed class ForwardPlusLightsStack : IGraphicsStack
+	public sealed class ForwardPlusLightsStack(GraphicsCore _core) : IGraphicsStack
 	{
 		#region Types
 
@@ -21,11 +21,6 @@ namespace FragEngine3.Graphics.Stack
 
 		#endregion
 		#region Constructors
-
-		public ForwardPlusLightsStack(GraphicsCore _core)
-		{
-			core = _core ?? throw new ArgumentNullException(nameof(core), "Graphics core may not be null!");
-		}
 		~ForwardPlusLightsStack()
 		{
 			if (!IsDisposed) Dispose(false);
@@ -34,13 +29,13 @@ namespace FragEngine3.Graphics.Stack
 		#endregion
 		#region Fields
 
-		public readonly GraphicsCore core;
+		public readonly GraphicsCore core = _core ?? throw new ArgumentNullException(nameof(_core), "Graphics core may not be null!");
 
 		private bool isInitialized = false;
 		private bool isDrawing = false;
 
 		private static readonly int[] rendererModeIndices =
-		{
+		[
 			0,		// RenderMode.Compute
 			1,		// RenderMode.Opaque
 			2,		// RenderMode.Transparent
@@ -48,14 +43,14 @@ namespace FragEngine3.Graphics.Stack
 			-1,		// RenderMode.PostProcessing
 			3,		// RenderMode.UI
 			-1,		// RenderMode.Custom
-		};
+		];
 		private readonly RendererList[] rendererLists =
-		{
+		[
 			new(RenderMode.Compute, 4),
 			new(RenderMode.Opaque, 128),
 			new(RenderMode.Transparent, 32),
 			new(RenderMode.UI, 32),
-		};
+		];
 
 		private readonly List<Light> cameraLightBuffer = new(64);
 		private Light.LightSourceData[] lightSourceDataBuffer = new Light.LightSourceData[32];
@@ -86,7 +81,7 @@ namespace FragEngine3.Graphics.Stack
 			GC.SuppressFinalize(this);
 			Dispose(true);
 		}
-		private void Dispose(bool _disposing)
+		private void Dispose(bool _)
 		{
 			if (isInitialized)
 			{
@@ -182,7 +177,7 @@ namespace FragEngine3.Graphics.Stack
 			throw new NotImplementedException();		//TODO
 		}
 
-		public bool DrawStack(Scene _scene, List<SceneNodeRendererPair> _nodeRendererPairs, in IList<Camera> _cameras, in IList<Light> _lights)
+		public bool DrawStack(Scene _scene, List<IRenderer> _renderers, in IList<Camera> _cameras, in IList<Light> _lights)
 		{
 			if (!IsInitialized)
 			{
@@ -194,7 +189,7 @@ namespace FragEngine3.Graphics.Stack
 				Logger.LogError("Cannot draw graphics stack for null or mismatched scene!");
 				return false;
 			}
-			if (_nodeRendererPairs == null)
+			if (_renderers == null)
 			{
 				Logger.LogError("Cannot draw graphics stack for null list of node-renderers pairs!");
 				return false;
@@ -290,25 +285,25 @@ namespace FragEngine3.Graphics.Stack
 						SkippedRendererCount = 0;
 
 						// No nodes and no scene behaviours? Skip drawing altogether:
-						if (_nodeRendererPairs.Count == 0 && _scene.SceneBehaviourCount == 0)
+						if (_renderers.Count == 0 && _scene.SceneBehaviourCount == 0)
 						{
 							return true;
 						}
 
 						// Assign each renderer to the most appropriate rendering list:
-						foreach (SceneNodeRendererPair pair in _nodeRendererPairs)
+						foreach (IRenderer renderer in _renderers)
 						{
-							if (pair.renderer.IsVisible && (pair.renderer.LayerFlags & camera.layerMask) != 0)
+							if (renderer.IsVisible && (renderer.LayerFlags & camera.layerMask) != 0)
 							{
 								// Skip any renderers that cannot be mapped to any of the supported modes:
-								if (!GetRendererListForMode(pair.renderer.RenderMode, out RendererList? rendererList))
+								if (!GetRendererListForMode(renderer.RenderMode, out RendererList? rendererList))
 								{
 									SkippedRendererCount++;
 									continue;
 								}
 
 								// Add the renderer to its mode's corresponding list:
-								rendererList!.renderers.Add(pair.renderer);
+								rendererList!.renderers.Add(renderer);
 
 								VisibleRendererCount++;
 							}

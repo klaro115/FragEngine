@@ -1,6 +1,4 @@
 ﻿
-using System.ComponentModel;
-
 namespace FragEngine3.Scenes.EventSystem
 {
 	public sealed class SceneNodeEventManager
@@ -18,7 +16,7 @@ namespace FragEngine3.Scenes.EventSystem
 
 		public readonly SceneNode node;
 
-		public readonly Dictionary<SceneEventType, List<ComponentEventListener>> eventListenerMap = new();
+		public readonly Dictionary<SceneEventType, List<ComponentEventListener>> eventListenerMap = [];
 
 		#endregion
 		#region Properties
@@ -32,20 +30,12 @@ namespace FragEngine3.Scenes.EventSystem
 		/// </summary>
 		public int TotalListenerCount { get; private set; } = 0;
 
-		/// <summary>
-		/// Gets all update stages that this node has listeners for.
-		/// </summary>
-		public SceneUpdateStage UpdateStageFlags { get; private set; } = 0;
-
 		#endregion
 		#region Methods
 
 		public void Destroy()
 		{
-			if (UpdateStageFlags != 0 && !node.scene.IsDisposed)
-			{
-				node.scene.UnregisterNodeFromUpdateStages(node);
-			}
+			//...
 		}
 
 		/// <summary>
@@ -79,7 +69,7 @@ namespace FragEngine3.Scenes.EventSystem
 					{
 						if (!eventListenerMap.TryGetValue(eventType, out List<ComponentEventListener>? listeners))
 						{
-							listeners = new();
+							listeners = [];
 							eventListenerMap.Add(eventType, listeners);
 						}
 						listeners.Add(new(component, component.ReceiveSceneEvent));
@@ -87,9 +77,6 @@ namespace FragEngine3.Scenes.EventSystem
 					}
 				}
 			}
-
-			SceneUpdateStage prevUpdateStageFlags = UpdateStageFlags;
-			UpdateStageFlags = 0;
 
 			// Count the number of event types that have active listeners:
 			EventTypeCount = 0;
@@ -100,17 +87,6 @@ namespace FragEngine3.Scenes.EventSystem
 					if (kvp.Value.Count != 0)
 					{
 						EventTypeCount++;
-
-						// Raise update stage flag if listeners were found for an update event:
-						if (kvp.Key.IsUpdateStage())
-						{
-							UpdateStageFlags |= kvp.Key.GetUpdateStage();
-						}
-					}
-					// Remove update stage flag if no listeners remain for an update event:
-					else if (kvp.Key.IsUpdateStage())
-					{
-						UpdateStageFlags &= ~kvp.Key.GetUpdateStage();
 					}
 				}
 			}
@@ -119,16 +95,6 @@ namespace FragEngine3.Scenes.EventSystem
 			if (TotalListenerCount == 0)
 			{
 				eventListenerMap.Clear();
-			}
-
-			// Do a clean re-registration of all update stages this node listens to:
-			if (prevUpdateStageFlags != 0)
-			{
-				node.scene.UnregisterNodeFromUpdateStages(node);
-			}
-			if (UpdateStageFlags != 0)
-			{
-				node.scene.RegisterNodeForUpdateStages(node, UpdateStageFlags);
 			}
 			return true;
 		}
@@ -149,7 +115,6 @@ namespace FragEngine3.Scenes.EventSystem
 			int removed = 0;
 			TotalListenerCount = 0;
 			EventTypeCount = 0;
-			SceneUpdateStage prevUpdateStageFlags = UpdateStageFlags;
 
 			foreach (var kvp in eventListenerMap)
 			{
@@ -159,11 +124,6 @@ namespace FragEngine3.Scenes.EventSystem
 				{
 					EventTypeCount++;
 				}
-				// Remove update stage flag if no listeners remain for an update event:
-				else if (kvp.Key.IsUpdateStage())
-				{
-					UpdateStageFlags &= ~kvp.Key.GetUpdateStage();
-				}
 			}
 
 			// If no listeners remain, free up some memory:
@@ -172,8 +132,6 @@ namespace FragEngine3.Scenes.EventSystem
 				eventListenerMap.Clear();
 			}
 
-			// Update registration of node's update stage listeners:
-			node.scene.UpdateNodeUpdateStages(node, prevUpdateStageFlags, UpdateStageFlags);
 			return removed != 0;
 		}
 
@@ -186,7 +144,6 @@ namespace FragEngine3.Scenes.EventSystem
 			}
 
 			bool added = false;
-			SceneUpdateStage prevUpdateStageFlags = UpdateStageFlags;
 
 			// Register listeners for all events, mapped by event type:
 			SceneEventType[] eventTypes = _component.GetSceneEventList();
@@ -194,7 +151,7 @@ namespace FragEngine3.Scenes.EventSystem
 			{
 				if (!eventListenerMap.TryGetValue(eventType, out List<ComponentEventListener>? listeners))
 				{
-					listeners = new();
+					listeners = [];
 					eventListenerMap.Add(eventType, listeners);
 				}
 				else if (listeners.Any(o => o.target == _component))
@@ -206,45 +163,12 @@ namespace FragEngine3.Scenes.EventSystem
 				if (listeners.Count == 1)
 				{
 					EventTypeCount++;
-
-					// Raise update stage flag if an update event gained first listener:
-					if (eventType.IsUpdateStage())
-					{
-						UpdateStageFlags |= eventType.GetUpdateStage();
-					}
 				}
 				TotalListenerCount++;
 				added = true;
 			}
 
-			// Update registration of node's update stage listeners:
-			node.scene.UpdateNodeUpdateStages(node, prevUpdateStageFlags, UpdateStageFlags);
 			return added;
-		}
-
-		public void RefreshUpdateStageListeners()
-		{
-			SceneUpdateStage prevUpdateStageFlags = UpdateStageFlags;
-			UpdateStageFlags = 0;
-
-			for (int i = 0; i < 4; ++i)
-			{
-				SceneEventType updateEventType = (SceneEventType)((int)SceneEventType.OnEarlyUpdate + i);
-				if (eventListenerMap.TryGetValue(updateEventType, out List<ComponentEventListener>? listeners) && listeners.Count != 0)
-				{
-					UpdateStageFlags |= updateEventType.GetUpdateStage();
-				}
-			}
-
-			// Do a clean re-registration of all update stages this node listens to:
-			if (prevUpdateStageFlags != 0)
-			{
-				node.scene.UnregisterNodeFromUpdateStages(node);
-			}
-			if (UpdateStageFlags != 0)
-			{
-				node.scene.RegisterNodeForUpdateStages(node, UpdateStageFlags);
-			}
 		}
 
 		/// <summary>

@@ -35,14 +35,6 @@ namespace FragEngine3.Scenes.EventSystem
         OnCreateComponent,  // New component was created or added to this node. data = new component (Component)
         OnDestroyComponent, // Component was removed from this node. data = disposed component (Component)
 
-        // UPDATE EVENTS:
-
-        OnEarlyUpdate,
-        OnUpdate,
-        OnLateUpdate,
-        OnFixedUpdate,
-        OnDraw,
-
         //...
 
         CUSTOM_EVENT        = 1000,
@@ -54,25 +46,6 @@ namespace FragEngine3.Scenes.EventSystem
     public static class SceneEventTypeExt
     {
 		#region Methods
-
-		/// <summary>
-		/// Determine whether this event corresponds to one of the engine's update stages.<para/>
-		/// NOTE: Will return true only for OnEarlyUpdate, OnUpdate, OnLateUpdate and OnFixedUpdate.
-		/// </summary>
-		/// <param name="_type">The type of event.</param>
-		/// <returns>True if the event is an update stage event, false otherwise.</returns>
-		public static bool IsUpdateStage(this SceneEventType _type)
-        {
-            return _type >= SceneEventType.OnEarlyUpdate && _type < SceneEventType.OnDraw;
-		}
-
-        public static SceneUpdateStage GetUpdateStage(this SceneEventType _type)
-        {
-            int index = _type - SceneEventType.OnEarlyUpdate;
-            return index >= 0 && index < 4
-                ? (SceneUpdateStage)(1 << index)
-                : 0;
-		}
 
         /// <summary>
         /// Check whether the event type is a custom event type, i.e. one that was defined through use-side code.<para/>

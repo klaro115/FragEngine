@@ -22,8 +22,7 @@ namespace FragEngine3.Scenes
 
 		public readonly SceneNode node;
 
-		private static readonly SceneEventType[] emptyEventArray = Array.Empty<SceneEventType>();
-		//private static readonly Dictionary<string, Type> componentTypeRegistry = new(32);
+		private static readonly SceneEventType[] emptyEventArray = [];
 
 		#endregion
 		#region Properties
@@ -34,7 +33,7 @@ namespace FragEngine3.Scenes
 		/// <summary>
 		/// Gets the engine's logging module for error and debug output.
 		/// </summary>
-		public Logger Logger => node.Logger ?? Logger.Instance!;
+		public Logger Logger => node.scene.engine.Logger ?? Logger.Instance!;
 
 		#endregion
 		#region Methods

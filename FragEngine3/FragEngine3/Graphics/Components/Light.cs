@@ -39,7 +39,7 @@ namespace FragEngine3.Graphics.Components
 
 		public Light(SceneNode _node) : base(_node)
 		{
-			node.scene.RegisterLight(this);
+			node.scene.drawManager.RegisterLight(this);
 		}
 
 		#endregion
@@ -152,7 +152,7 @@ namespace FragEngine3.Graphics.Components
 			if (_eventType == SceneEventType.OnNodeDestroyed ||
 				_eventType == SceneEventType.OnDestroyComponent)
 			{
-				node.scene.UnregisterLight(this);
+				node.scene.drawManager.UnregisterLight(this);
 			}
 		}
 
@@ -200,8 +200,8 @@ namespace FragEngine3.Graphics.Components
 			SpotAngleDegrees = data.SpotAngleDegrees;
 
 			// Re-register camera with the scene:
-			node.scene.UnregisterLight(this);
-			return node.scene.RegisterLight(this);
+			node.scene.drawManager.UnregisterLight(this);
+			return node.scene.drawManager.RegisterLight(this);
 		}
 
 		public override bool SaveToData(out ComponentData _componentData, in Dictionary<ISceneElement, int> _idDataMap)
