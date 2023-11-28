@@ -372,6 +372,30 @@ namespace FragEngine3.Scenes
 		}
 
 		/// <summary>
+		/// Find all instances of a specific component type within the scene.
+		/// </summary>
+		/// <typeparam name="T">The type of the component we're looking for.</typeparam>
+		/// <param name="_targetList">A list in which to store all nodes. Must be non-null, and will be cleared before any nodes are added.</param>
+		/// <param name="_enabledOnly">Whether to only consider nodes that are currently enabled.</param>
+		/// <returns>True if any components were found, false otherwise.</returns>
+		public bool FindAllComponentsOfType<T>(List<Component> _targetList, bool _enabledOnly) where T : Component
+		{
+			_targetList.Clear();
+			if (IsDisposed) return false;
+
+			IEnumerator<SceneNode> e = rootNode.IterateHierarchy(_enabledOnly);
+			while (e.MoveNext())
+			{
+				T? component = e.Current.GetComponent<T>();
+				if (component != null && !component.IsDisposed)
+				{
+					_targetList.Add(component);
+				}
+			}
+			return _targetList.Count != 0;
+		}
+
+		/// <summary>
 		/// Sends a scene event to all nodes within the scene, starting from the root node.
 		/// </summary>
 		/// <param name="_eventType">The type of event that is being sent.</param>

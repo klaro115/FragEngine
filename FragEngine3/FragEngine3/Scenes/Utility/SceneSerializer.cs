@@ -3,7 +3,6 @@ using FragEngine3.EngineCore;
 using FragEngine3.Scenes.Data;
 using FragEngine3.Scenes.EventSystem;
 using FragEngine3.Utility.Serialization;
-using Vortice.Direct3D11;
 
 namespace FragEngine3.Scenes.Utility
 {
@@ -54,7 +53,8 @@ namespace FragEngine3.Scenes.Utility
 				out List<SceneNode> allNodes,
 				out Dictionary<ISceneElement, int> idMap,
 				out int maxComponentCount,
-				out int totalComponentCount))
+				out int totalComponentCount,
+				out int totalProgressTaskCount))
 			{
 				Logger.Instance?.LogError("Failed to generate ID mapping for scene!");
 				goto abort;
@@ -89,7 +89,7 @@ namespace FragEngine3.Scenes.Utility
 				Array.Fill(_outData.Hierarchy.NodeData, null);
 			}
 
-			_outProgress.Update(null, 0, _outData.GetTotalSceneElementCount());
+			_outProgress.Update(null, 0, totalProgressTaskCount);
 
 			// Save all scene-wide behaviours data first:
 			if (!SaveSceneBehaviours(in _scene, in idMap, _outData, _outProgress))
@@ -136,7 +136,8 @@ namespace FragEngine3.Scenes.Utility
 			out List<SceneNode> _outAllNodes,
 			out Dictionary<ISceneElement, int> _outIdMap,
 			out int _outMaxComponentCount,
-			out int _outTotalComponentCount)
+			out int _outTotalComponentCount,
+			out int _outTotalProgressTaskCount)
 		{
 			_progress.Update("Generating scene ID map", 0, 3);
 
@@ -145,6 +146,7 @@ namespace FragEngine3.Scenes.Utility
 			_outIdMap = new Dictionary<ISceneElement, int>(1024);
 			_outMaxComponentCount = 0;
 			_outTotalComponentCount = 0;
+			_outTotalProgressTaskCount = 0;
 
 			int idCounter = 0;
 
@@ -156,6 +158,7 @@ namespace FragEngine3.Scenes.Utility
 					_outSceneBehaviours.Add(component);
 				}
 			}
+			_outTotalProgressTaskCount += _outSceneBehaviours.Count * 2;
 			_progress.Increment();
 
 			Queue<SceneNode> nodeQueue = new(1024);
@@ -173,6 +176,7 @@ namespace FragEngine3.Scenes.Utility
 					}
 				}
 			}
+			_outTotalProgressTaskCount += _outAllNodes.Count;
 			_progress.Increment();
 
 			foreach (SceneNode node in _outAllNodes)
@@ -189,6 +193,7 @@ namespace FragEngine3.Scenes.Utility
 					_outTotalComponentCount += liveComponentCount;
 				}
 			}
+			_outTotalProgressTaskCount += _outTotalComponentCount * 2;
 			_progress.CompleteAllTasks();
 
 			return true;
@@ -276,13 +281,14 @@ namespace FragEngine3.Scenes.Utility
 				in _sceneData,
 				_outProgress,
 				out _,
-				out int totalComponentCount))
+				out int totalComponentCount,
+				out int totalProgressTaskCount))
 			{
 				Logger.Instance?.LogError("Failed to reconstruct ID map from scene data!");
 				goto abort;
 			}
 
-			_outProgress.Update(null, 0, _sceneData.GetTotalSceneElementCount());
+			_outProgress.Update(null, 0, totalProgressTaskCount);
 
 			// RECREATE:
 
@@ -369,7 +375,12 @@ namespace FragEngine3.Scenes.Utility
 			return false;
 		}
 
-		private static bool ReconstructSceneIdMap(in SceneData _data, Progress _progress, out Dictionary<int, ISceneElementData> _outIdMap, out int _outTotalComponentCount)
+		private static bool ReconstructSceneIdMap(
+			in SceneData _data,
+			Progress _progress,
+			out Dictionary<int, ISceneElementData> _outIdMap,
+			out int _outTotalComponentCount,
+			out int _outTotalProgressTaskCount)
 		{
 			int expectedElementCount = _data.GetTotalSceneElementCount();
 
@@ -377,10 +388,12 @@ namespace FragEngine3.Scenes.Utility
 
 			_outIdMap = new Dictionary<int, ISceneElementData>(expectedElementCount);
 			_outTotalComponentCount = 0;
+			_outTotalProgressTaskCount = 0;
 
 			if (_data.Behaviours?.BehavioursData != null)
 			{
 				int behaviourCount = Math.Min(_data.Behaviours.BehavioursData.Length, _data.Behaviours.BehaviourCount);
+				int actualBehaviourCount = 0;
 
 				for (int i = 0; i < behaviourCount; i++)
 				{
@@ -389,14 +402,17 @@ namespace FragEngine3.Scenes.Utility
 					{
 						_outIdMap.Add(bData.ID, bData);
 
+						actualBehaviourCount++;
 						_progress.Increment();
 					}
 				}
+				_outTotalProgressTaskCount += actualBehaviourCount * 2;
 			}
 
 			if (_data.Hierarchy?.NodeData != null)
 			{
 				int nodeCount = Math.Min(_data.Hierarchy.NodeData.Length, _data.Hierarchy.TotalNodeCount);
+				int actualNodeCount = 0;
 
 				for (int i = 0; i < nodeCount; ++i)
 				{
@@ -408,6 +424,7 @@ namespace FragEngine3.Scenes.Utility
 						int componentCount = nData.ComponentData != null ? nData.ComponentData.Length : 0;
 						componentCount = Math.Min(componentCount, nData.ComponentCount);
 
+						actualNodeCount++;
 						_progress.Increment();
 
 						for (int j = 0; j < componentCount;  ++j)
@@ -423,6 +440,8 @@ namespace FragEngine3.Scenes.Utility
 						}
 					}
 				}
+				_outTotalProgressTaskCount += actualNodeCount;
+				_outTotalProgressTaskCount += _outTotalComponentCount * 2;
 			}
 
 			_progress.CompleteAllTasks();

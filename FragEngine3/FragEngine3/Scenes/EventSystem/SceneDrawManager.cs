@@ -4,6 +4,11 @@ using FragEngine3.Graphics.Stack;
 
 namespace FragEngine3.Scenes.EventSystem
 {
+	/// <summary>
+	/// Module of a <see cref="Scene"/> that manages registration of drawable scene elements, cameras, and light sources.
+	/// This type also handles the scene's highest-level rendering logic via the scene's graphics stack (see '<see cref="Scene.GraphicsStack"/>').
+	/// </summary>
+	/// <param name="_scene">The scene this manager instance is attached to.</param>
 	internal sealed class SceneDrawManager(Scene _scene) : IDisposable
 	{
 		#region Fields

@@ -1,6 +1,11 @@
 ﻿
 namespace FragEngine3.Scenes.EventSystem
 {
+	/// <summary>
+	/// Module of a <see cref="Scene"/> that manages registration of updatable scene elements, though mainly components.
+	/// The different update stages (Fixed, Early, Main, Late) are executed through this type's '<see cref="RunUpdateStage"/>' method.
+	/// </summary>
+	/// <param name="_scene">The scene this manager instance is attached to.</param>
 	internal sealed class SceneUpdateManager(Scene _scene) : IDisposable
 	{
 		#region Constructors
