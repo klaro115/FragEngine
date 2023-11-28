@@ -69,41 +69,41 @@ namespace FragEngine3.Graphics
 		#endregion
 		#region Constants Pipelines
 
-		public static readonly ResourceLayoutElementDescription[] DEFAULT_SURFACE_RESOURCE_LAYOUT_DESC = new ResourceLayoutElementDescription[]
-		{
+		public static readonly ResourceLayoutElementDescription[] DEFAULT_SURFACE_RESOURCE_LAYOUT_DESC =
+		[
 			new ResourceLayoutElementDescription("TexMain", ResourceKind.TextureReadOnly, ShaderStages.Fragment)
-		};
+		];
 
 		/// <summary>
 		/// Vertex layut description with basic static geometry data.<para/>
 		/// [Pos, Norm, Tex]
 		/// </summary>
-		public static readonly VertexLayoutDescription[] SURFACE_VERTEX_LAYOUT_BASIC = new VertexLayoutDescription[]
-		{
+		public static readonly VertexLayoutDescription[] SURFACE_VERTEX_LAYOUT_BASIC =
+		[
 			BasicVertex.vertexLayoutDesc,			// [Pos, Norm, Tex]
-		};
+		];
 
 		/// <summary>
 		/// Vertex layut description with full static geometry data.<para/>
 		/// [Pos, Norm, Tex] + [Tan, Tex2]
 		/// </summary>
-		public static readonly VertexLayoutDescription[] SURFACE_VERTEX_LAYOUT_EXTENDED = new VertexLayoutDescription[]
-		{
+		public static readonly VertexLayoutDescription[] SURFACE_VERTEX_LAYOUT_EXTENDED =
+		[
 			BasicVertex.vertexLayoutDesc,			// [Pos, Norm, Tex]
 			ExtendedVertex.vertexLayoutDesc,		// [Tan, Tex2]
-		};
+		];
 
 		/// <summary>
 		/// Vertex layut description for characters with extended surface geometry data, blend shapes, and bone animations.<para/>
 		/// [Pos, Norm, Tex] + [Tan, Tex2] + [BlendIndices, BlendWeight] + [BoneIndices, BoneWeights]
 		/// </summary>
-		public static readonly VertexLayoutDescription[] SURFACE_VERTEX_LAYOUT_CHARACTER = new VertexLayoutDescription[]
-		{
+		public static readonly VertexLayoutDescription[] SURFACE_VERTEX_LAYOUT_CHARACTER =
+		[
 			BasicVertex.vertexLayoutDesc,			// [Pos, Norm, Tex]
 			ExtendedVertex.vertexLayoutDesc,		// [Tan, Tex2]
 			IndexedWeightedVertex.vertexLayoutDesc,	// [BlendIndices, BlendWeight]
 			IndexedWeightedVertex.vertexLayoutDesc,	// [BoneIndices, BoneWeights]
-		};
+		];
 
 		#endregion
 	}

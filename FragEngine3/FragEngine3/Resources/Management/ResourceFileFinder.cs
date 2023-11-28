@@ -105,17 +105,17 @@ namespace FragEngine3.Resources.Management
 			ResourceHandleMetadata singleResMetadata = new()
 			{
 				ResourceName = resourceKey,
-				ResourceType = ResourceConstants.GetResourceTypeFromFilePath(_dataFilePath),
+				ResourceType = ResourceFileConstants.GetResourceTypeFromFilePath(_dataFilePath),
 				ResourceOffset = 0,
 				ResourceSize = 0,
-				Dependencies = Array.Empty<string>(),
+				Dependencies = [],
 			};
 
 			_outMetadata = new()
 			{
 				DataFilePath = _dataFilePath,
 				FileType = fileType,
-				Resources = new ResourceHandleMetadata[] { singleResMetadata }
+				Resources = [ singleResMetadata ],
 			};
 			return _outMetadata.IsValid();
 		}

@@ -11,6 +11,10 @@ namespace FragEngine3.Resources
 		/// Unknown or unspecified data type. This should not happen, and is a placeholder value reserved to signify something went wrong.
 		/// </summary>
 		Unknown,
+		/// <summary>
+		/// Internal and auto-generated files that should be ignored and skipped. This is a placeholder to indicate that a resource/file should not be processed by resource management.
+		/// </summary>
+		Ignored,
 
 		/// <summary>
 		/// A texture resource, can be 1D, 2D, 3D, a cubemap, or an array of textures. Basically any kind of regularly organized data of discrete datapoints.

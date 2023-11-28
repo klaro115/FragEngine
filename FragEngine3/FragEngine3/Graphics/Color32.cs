@@ -23,6 +23,7 @@ namespace FragEngine3.Graphics
 		{
 			packedValue = _packedRgba;
 		}
+
 		/// <summary>
 		/// Creates a new color structure.
 		/// </summary>
@@ -34,6 +35,7 @@ namespace FragEngine3.Graphics
 		{
 			packedValue = ((uint)_r << 24) | ((uint)_g << 16) | ((uint)_b << 8) | ((uint)_a << 0);
 		}
+
 		/// <summary>
 		/// Creates a new color structure.
 		/// </summary>
@@ -42,9 +44,23 @@ namespace FragEngine3.Graphics
 		public Color32(Vector4 _vectorRgba)
 		{
 			uint r = (uint)Math.Clamp(_vectorRgba.X * 255, 0, 0xFF);
-			uint g = (uint)Math.Clamp(_vectorRgba.X * 255, 0, 0xFF);
-			uint b = (uint)Math.Clamp(_vectorRgba.X * 255, 0, 0xFF);
-			uint a = (uint)Math.Clamp(_vectorRgba.X * 255, 0, 0xFF);
+			uint g = (uint)Math.Clamp(_vectorRgba.Y * 255, 0, 0xFF);
+			uint b = (uint)Math.Clamp(_vectorRgba.Z * 255, 0, 0xFF);
+			uint a = (uint)Math.Clamp(_vectorRgba.W * 255, 0, 0xFF);
+			packedValue = (r << 24) | (g << 16) | (b << 8) | (a << 0);
+		}
+
+		public Color32(RgbaByte _color)
+		{
+			packedValue = ((uint)_color.R << 24) | ((uint)_color.G << 16) | ((uint)_color.B << 8) | ((uint)_color.A << 0);
+		}
+
+		public Color32(RgbaFloat _color)
+		{
+			uint r = (uint)Math.Clamp(_color.R * 255, 0, 0xFF);
+			uint g = (uint)Math.Clamp(_color.G * 255, 0, 0xFF);
+			uint b = (uint)Math.Clamp(_color.B * 255, 0, 0xFF);
+			uint a = (uint)Math.Clamp(_color.A * 255, 0, 0xFF);
 			packedValue = (r << 24) | (g << 16) | (b << 8) | (a << 0);
 		}
 

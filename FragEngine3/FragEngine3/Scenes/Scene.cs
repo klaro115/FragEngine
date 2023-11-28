@@ -1,10 +1,11 @@
 ﻿using FragEngine3.EngineCore;
 using FragEngine3.Graphics.Stack;
 using FragEngine3.Scenes.EventSystem;
+using FragEngine3.Scenes.SceneManagers;
 
 namespace FragEngine3.Scenes
 {
-	public sealed class Scene : IDisposable
+    public sealed class Scene : IDisposable
 	{
 		#region Constructors
 
