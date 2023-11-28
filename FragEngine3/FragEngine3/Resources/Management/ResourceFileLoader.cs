@@ -36,7 +36,7 @@ namespace FragEngine3.Resources.Management
 
 		private Thread? fileLoaderThread = null;
 		private CancellationTokenSource? fileLoaderThreadCancellationSrc = new();
-		private Containers.Progress? fileLoaderProgress = null;
+		private Progress? fileLoaderProgress = null;
 
 		public readonly string applicationPath = string.Empty;
 		public readonly string rootResourcePath = string.Empty;
@@ -99,7 +99,7 @@ namespace FragEngine3.Resources.Management
 			fileLoaderProgress = null;
 		}
 
-		public bool GatherAllResourceFiles(bool _immediately, out Containers.Progress _outProgress)
+		public bool GatherAllResourceFiles(bool _immediately, out Progress _outProgress)
 		{
 			if (fileLoaderThread != null && fileLoaderThread.IsAlive)
 			{
