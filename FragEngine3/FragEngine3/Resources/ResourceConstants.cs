@@ -7,7 +7,7 @@ namespace FragEngine3.Resources
 		#region Constants
 
 		/// <summary>
-		/// File extension for all resource metadata files. The extension must be lower-case. The contents must be a JSON-serialized object of type '<see cref="ResourceFileMetadata"/>'.
+		/// File extension for all resource metadata files. The extension must be lower-case. The contents must be a JSON-serialized object of type '<see cref="ResourceFileMetadataOld"/>'.
 		/// </summary>
 		public const string FILE_EXT_METADATA = ".res";
 		public const string FILE_EXT_BATCH_NORMAL_COMPRESSED = ".cpkg";

@@ -70,29 +70,29 @@ namespace FragEngine3.Resources.Management
 		/// <param name="_outMetadata">Outputs the metadata for the resource file. This is either deserialized from file, or generated in case a single-resource
 		/// data file does not have an accompanying metadata file.</param>
 		/// <returns>True if metadata could be loaded or generated successfully, false otherwise.</returns>
-		public static bool GetMetadataFromDataFilePath(string _dataFilePath, out ResourceFileMetadata _outMetadata)
+		public static bool GetMetadataFromDataFilePath(string _dataFilePath, out ResourceFileMetadataOld _outMetadata)
 		{
 			if (string.IsNullOrEmpty(_dataFilePath))
 			{
-				_outMetadata = ResourceFileMetadata.None;
+				_outMetadata = ResourceFileMetadataOld.None;
 				return false;
 			}
 			if (!File.Exists(_dataFilePath))
 			{
-				_outMetadata = ResourceFileMetadata.None;
+				_outMetadata = ResourceFileMetadataOld.None;
 				return false;
 			}
 
 			// Wait a second, this is not a data file! Parse it as a metadata file, you moron:
 			if (_dataFilePath.EndsWith(ResourceConstants.FILE_EXT_METADATA, StringComparison.InvariantCultureIgnoreCase))
 			{
-				return ResourceFileMetadata.DeserializeFromFile(_dataFilePath, out _outMetadata);
+				return ResourceFileMetadataOld.DeserializeFromFile(_dataFilePath, out _outMetadata);
 			}
 			// For block-compressed batched files, we need a dedicated metadata file. Cannot generate one, abort and return failure:
 			else if (_dataFilePath.EndsWith(ResourceConstants.FILE_EXT_BATCH_BLOCK_COMPRESSED, StringComparison.InvariantCultureIgnoreCase))
 			{
 				Logger.Instance?.LogError("Cannot generate metadata for undocumented block-compressed batched data file!");
-				_outMetadata = ResourceFileMetadata.None;
+				_outMetadata = ResourceFileMetadataOld.None;
 				return false;
 			}
 
@@ -102,7 +102,7 @@ namespace FragEngine3.Resources.Management
 				? ResourceFileType.Batch_Compressed
 				: ResourceFileType.Single;
 
-			ResourceHandleMetadata singleResMetadata = new()
+			ResourceHandleMetadataOld singleResMetadata = new()
 			{
 				ResourceName = resourceKey,
 				ResourceType = ResourceFileConstants.GetResourceTypeFromFilePath(_dataFilePath),

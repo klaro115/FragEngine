@@ -156,16 +156,16 @@ namespace FragEngine3.Resources
 				engine.Logger.LogError("Cannot register invalid or incomplete resource!");
 				return false;
 			}
-			if (HasFile(_handle.Key))
+			if (HasFile(_handle.dataFilePath))
 			{
-				engine.Logger.LogError($"A resource file with key '{_handle.Key}' already exists!");
+				engine.Logger.LogError($"A resource file with key '{_handle.dataFilePath}' already exists!");
 				return false;
 			}
 
 			// Register new file handle:
 			lock(resourceLockObj)
 			{
-				allFiles.TryAdd(_handle.Key, _handle);
+				allFiles.TryAdd(_handle.dataFilePath, _handle);
 			}
 
 			// NOTE: Resource handles created from this file handle must be added seperately after registering the file.
@@ -203,7 +203,7 @@ namespace FragEngine3.Resources
 				return false;
 			}
 
-			var fileHandles = from f in allFiles from r in f.Value.resourceInfos where r.resourceKey == _resourceKey select f.Value;
+			var fileHandles = from f in allFiles from r in f.Value.resources where string.CompareOrdinal(r, _resourceKey) == 0 select f.Value;
 
 			_outFileHandle = fileHandles.FirstOrDefault();
 			return _outFileHandle != null;
@@ -272,9 +272,9 @@ namespace FragEngine3.Resources
 				engine.Logger.LogError("Cannot register invalid or incomplete resource!");
 				return false;
 			}
-			if (HasResource(_handle.Key))
+			if (HasResource(_handle.resourceKey))
 			{
-				engine.Logger.LogError($"A resource with key '{_handle.Key}' already exists!");
+				engine.Logger.LogError($"A resource with key '{_handle.resourceKey}' already exists!");
 				return false;
 			}
 
@@ -282,7 +282,7 @@ namespace FragEngine3.Resources
 			lock(resourceLockObj)
 			{
 				// Add to pool of all resources:
-				allResources.TryAdd(_handle.Key, _handle);
+				allResources.TryAdd(_handle.resourceKey, _handle);
 
 				// Add to pool of typed resources:
 				if (!resourceTypeDict.TryGetValue(_handle.resourceType, out ConcurrentDictionary<string, ResourceHandle>? typeDict))
@@ -290,7 +290,7 @@ namespace FragEngine3.Resources
 					typeDict = new ConcurrentDictionary<string, ResourceHandle>();
 					resourceTypeDict.TryAdd(_handle.resourceType, typeDict);
 				}
-				typeDict.TryAdd(_handle.Key, _handle);
+				typeDict.TryAdd(_handle.resourceKey, _handle);
 			}
 			return true;
 		}
@@ -306,21 +306,21 @@ namespace FragEngine3.Resources
 			// Abort/Reset the resource's loading process:
 			if (GetResource(_resourceKey, out ResourceHandle? handle))
 			{
-				if (handle.loadState != ResourceLoadState.NotLoaded)
+				if (handle.LoadState != ResourceLoadState.NotLoaded)
 				{
 					// Dequeue handle to prevent it from loading:
-					if (handle.loadState == ResourceLoadState.Queued)
+					if (handle.LoadState == ResourceLoadState.Queued)
 					{
 						importer.RemoveResource(handle);
 					}
 					// If it's already being loaded, wait for completion, block thread until done:
-					else if (handle.loadState == ResourceLoadState.Loading)
+					else if (handle.LoadState == ResourceLoadState.Loading)
 					{
 						const int timeoutMs = 5000;
 						for (int i = 0; i < timeoutMs; ++i)
 						{
 							Thread.Sleep(1);
-							if (handle.loadState != ResourceLoadState.Loading)
+							if (handle.LoadState != ResourceLoadState.Loading)
 							{
 								break;
 							}
@@ -354,12 +354,12 @@ namespace FragEngine3.Resources
 			}
 		}
 
-		public bool LoadResource(string _resourceKey, bool _loadImmediately, ResourceHandle.FuncAssignResourceCallback _assignResourceCallback)
+		internal bool LoadResource(string _resourceKey, bool _loadImmediately, ResourceHandle.FuncAssignResourceCallback _assignResourceCallback)
 		{
 			return GetResource(_resourceKey, out ResourceHandle handle) && LoadResource(handle, _loadImmediately, _assignResourceCallback);
 		}
 
-		public bool LoadResource(ResourceHandle _handle, bool _loadImmediately, ResourceHandle.FuncAssignResourceCallback _assignResourceCallback)
+		internal bool LoadResource(ResourceHandle _handle, bool _loadImmediately, ResourceHandle.FuncAssignResourceCallback _assignResourceCallback)
 		{
 			if (_handle == null)
 			{
@@ -369,7 +369,7 @@ namespace FragEngine3.Resources
 			if (!_handle.IsValid)
 			{
 				engine.Logger.LogError($"Cannot load invalid or incomplete resource handle '{_handle}'!");
-				_handle.loadState = ResourceLoadState.NotLoaded;
+				_handle.LoadState = ResourceLoadState.NotLoaded;
 				return false;
 			}
 			if (_handle.IsLoaded)
@@ -408,25 +408,25 @@ namespace FragEngine3.Resources
 			if (_loadImmediately)
 			{
 				// If resource is queued up already, dequeue it first:
-				if (_handle.loadState == ResourceLoadState.Queued)
+				if (_handle.LoadState == ResourceLoadState.Queued)
 				{
 					importer.RemoveResource(_handle);
 				}
 				// If resource is currently in the process of being imported, block and wait for it to conclude:
-				if (_handle.loadState == ResourceLoadState.Loading)
+				if (_handle.LoadState == ResourceLoadState.Loading)
 				{
 					const int timeoutMs = 5000;
 					for (int i = 0; i < timeoutMs; ++i)
 					{
 						Thread.Sleep(1);
-						if (_handle.loadState != ResourceLoadState.Loading)
+						if (_handle.LoadState != ResourceLoadState.Loading)
 						{
 							break;
 						}
 					}
 				}
 				// Execute immediate loading:
-				if (_handle.loadState == ResourceLoadState.NotLoaded)
+				if (_handle.LoadState == ResourceLoadState.NotLoaded)
 				{
 					result &= LoadImmediately(_handle, _assignResourceCallback);
 				}
@@ -460,12 +460,12 @@ namespace FragEngine3.Resources
 			}
 			
 			// Flag the resource as being processed, to prevent access from other threads before completion:
-			_handle.loadState = ResourceLoadState.Loading;
+			_handle.LoadState = ResourceLoadState.Loading;
 
 			if (_assignResourceCallback == null)
 			{
 				engine.Logger.LogError("Resource assignment callback may not be null!");
-				_handle.loadState = ResourceLoadState.NotLoaded;
+				_handle.LoadState = ResourceLoadState.NotLoaded;
 				return false;
 			}
 
@@ -506,7 +506,7 @@ namespace FragEngine3.Resources
 				engine.Logger.LogError($"Failed to load resource '{_handle}'!");
 				lock (resourceLockObj)
 				{
-					_handle.loadState = ResourceLoadState.NotLoaded;
+					_handle.LoadState = ResourceLoadState.NotLoaded;
 				}
 				return false;
 			}
@@ -517,7 +517,7 @@ namespace FragEngine3.Resources
 			// On success, mark as loaded and return:
 			lock (resourceLockObj)
 			{
-				_handle.loadState = ResourceLoadState.Loaded;
+				_handle.LoadState = ResourceLoadState.Loaded;
 			}
 
 			engine.Logger.LogMessage($" * Loaded resource: '{_handle}' ({loadDurationMs}ms)");
@@ -532,7 +532,7 @@ namespace FragEngine3.Resources
 		/// <param name="_assignResourceCallback">Callback method for safely assigning the resource object. This is a callback, to allow assignment through private members
 		/// or heavily abstracted channels. The returned resource may be null if not loaded yet, and no loading will be triggered by this method. May not be null.</param>
 		/// <returns>True if the resource could be found, false otherwise.</returns>
-		public bool GetResourceObject(string _resourceKey, ResourceHandle.FuncAssignResourceCallback _assignResourceCallback)
+		internal bool GetResourceObject(string _resourceKey, ResourceHandle.FuncAssignResourceCallback _assignResourceCallback)
 		{
 			if (_assignResourceCallback == null)
 			{
@@ -566,7 +566,7 @@ namespace FragEngine3.Resources
 			if (resourceObj != null && !resourceObj.IsDisposed)
 			{
 				resourceObj.Dispose();
-				handle.loadState = ResourceLoadState.NotLoaded;
+				handle.LoadState = ResourceLoadState.NotLoaded;
 			}
 			return true;
 		}
