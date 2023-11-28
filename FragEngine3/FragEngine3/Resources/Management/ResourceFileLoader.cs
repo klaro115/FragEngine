@@ -5,22 +5,15 @@ using FragEngine3.Utility;
 
 namespace FragEngine3.Resources.Management
 {
-	public sealed class ResourceFileLoader
+	public sealed class ResourceFileLoader : IDisposable
 	{
 		#region Types
 
-		private sealed class LibraryDir
+		private sealed class LibraryDir(string _path, string _name, ResourceSource _source)
 		{
-			public LibraryDir(string _path, string _name, ResourceSource _source)
-			{
-				path = _path;
-				name = _name;
-				source = _source;
-			}
-
-			public readonly string path;
-			public readonly string name;
-			public readonly ResourceSource source;
+			public readonly string path = _path;
+			public readonly string name = _name;
+			public readonly ResourceSource source = _source;
 		}
 
 		#endregion
@@ -41,6 +34,10 @@ namespace FragEngine3.Resources.Management
 
 		private readonly ResourceManager resourceManager;
 
+		private Thread? fileLoaderThread = null;
+		private CancellationTokenSource? fileLoaderThreadCancellationSrc = new();
+		private Containers.Progress? fileLoaderProgress = null;
+
 		public readonly string applicationPath = string.Empty;
 		public readonly string rootResourcePath = string.Empty;
 		private readonly string coreResourcePath = string.Empty;
@@ -51,6 +48,8 @@ namespace FragEngine3.Resources.Management
 		#endregion
 		#region Properties
 
+		public bool IsDisposed {  get; private set; } = false;
+
 		/// <summary>
 		/// Gets the total number of library directories that resources may be loaded from.
 		/// </summary>
@@ -60,6 +59,103 @@ namespace FragEngine3.Resources.Management
 
 		#endregion
 		#region Methods
+
+		public void Dispose()
+		{
+			GC.SuppressFinalize(this);
+			Dispose(true);
+		}
+		private void Dispose(bool _disposing)
+		{
+			IsDisposed = true;
+
+			fileLoaderThreadCancellationSrc?.Cancel();
+
+			while (_disposing && fileLoaderThread != null && fileLoaderThread.IsAlive)
+			{
+				Thread.Sleep(1);
+			}
+
+			AbortAllImports();
+
+			if (_disposing)
+			{
+				fileLoaderProgress?.Finish();
+			}
+		}
+
+		public void AbortAllImports()
+		{
+			// Abort and discard file loader processes:
+			fileLoaderThreadCancellationSrc?.Cancel();
+			while (fileLoaderThread != null && fileLoaderThread.IsAlive)
+			{
+				Thread.Sleep(1);
+			}
+			fileLoaderProgress?.CompleteAllTasks();
+
+			fileLoaderThreadCancellationSrc = null;
+			fileLoaderThread = null;
+			fileLoaderProgress = null;
+		}
+
+		public bool GatherAllResourceFiles(bool _immediately, out Containers.Progress _outProgress)
+		{
+			if (fileLoaderThread != null && fileLoaderThread.IsAlive)
+			{
+				resourceManager.engine.Logger.LogError("Another file loader operation is currently running! Wait for that to conclude before issueing further calls.");
+				_outProgress = new(string.Empty, 0);
+				return false;
+			}
+			fileLoaderThreadCancellationSrc?.Cancel();
+			fileLoaderThreadCancellationSrc = new();
+
+			fileLoaderProgress?.CompleteAllTasks();
+			fileLoaderProgress = null;
+
+			if (_immediately)
+			{
+				return GatherAllResourceFiles(out _outProgress);
+			}
+			else
+			{
+				try
+				{
+					fileLoaderThread = new Thread(RunAsyncFileLoaderThread);
+					fileLoaderThread.Start();
+
+					do
+					{
+						Thread.Sleep(2);
+					}
+					while (fileLoaderProgress == null);
+
+					_outProgress = fileLoaderProgress;
+					return true;
+				}
+				catch (Exception ex)
+				{
+					resourceManager.engine.Logger.LogException("Failed to create and start file loader thread!", ex);
+					fileLoaderThreadCancellationSrc?.Cancel();
+					fileLoaderThreadCancellationSrc = null;
+					fileLoaderThread = null;
+					_outProgress = new(string.Empty, 0);
+					return false;
+				}
+			}
+		}
+
+		private void RunAsyncFileLoaderThread()
+		{
+			if (GatherAllResourceFiles(out fileLoaderProgress, false))
+			{
+				fileLoaderProgress.CompleteAllTasks();
+			}
+
+			fileLoaderThreadCancellationSrc?.Cancel();
+			fileLoaderThreadCancellationSrc = null;
+			fileLoaderThread = null;
+		}
 
 		/// <summary>
 		/// Retrieve the path and type of a specific resource library.

@@ -12,39 +12,19 @@ namespace FragEngine3.Resources
 	{
 		#region Types
 
-		private sealed class QueueHandle
-		{
-			public QueueHandle(ResourceHandle _resourceHandle, ResourceHandle.FuncAssignResourceCallback _assignResourceCallback)
-			{
-				resourceHandle = _resourceHandle;
-				assignResourceCallback = _assignResourceCallback;
-			}
-
-			public readonly ResourceHandle resourceHandle;
-			public readonly ResourceHandle.FuncAssignResourceCallback assignResourceCallback;
-		}
+		internal delegate bool FuncLoadImmediately(ResourceHandle _handle, ResourceHandle.FuncAssignResourceCallback _assignResourceCallback);
 
 		#endregion
 		#region Constructors
 
 		public ResourceManager(Engine _engine)
 		{
-			engine = _engine ?? throw new ArgumentNullException(nameof(engine), "Engine may not be null!");
+			engine = _engine ?? throw new ArgumentNullException(nameof(_engine), "Engine may not be null!");
 			fileLoader = new(this);
+			importer = new(this, LoadImmediately);
 
 			stopwatch = new();
 			stopwatch.Start();
-
-			try
-			{
-				importThread = new Thread(RunAsyncImportThread);
-				importThread.Start();
-			}
-			catch (Exception ex)
-			{
-				engine.Logger.LogException("Failed to create and start resource import thread!", ex);
-				importThread = null!;
-			}
 		}
 		~ResourceManager()
 		{
@@ -56,23 +36,15 @@ namespace FragEngine3.Resources
 
 		public readonly Engine engine;
 		public readonly ResourceFileLoader fileLoader;
-		private readonly Stopwatch stopwatch;
+		private readonly ResourceImporter importer;
 
-		private Thread? fileLoaderThread = null;
-		private CancellationTokenSource? fileLoaderThreadCancellationSrc = new();
-		private Containers.Progress? fileLoaderProgress = null;
+		private readonly Stopwatch stopwatch;
 
 		private readonly ConcurrentDictionary<string, ResourceHandle> allResources = new();
 		private readonly ConcurrentDictionary<string, ResourceFileHandle> allFiles = new();
 
 		private readonly ConcurrentDictionary<ResourceType, ConcurrentDictionary<string, ResourceHandle>> resourceTypeDict = new();
-		private readonly List<QueueHandle> loadQueue = new(32);
 
-		private readonly Thread importThread;
-		private readonly CancellationTokenSource importThreadCancellationSrc = new();
-		private readonly Containers.Progress importThreadProgress = new("Async resource import", 1);
-
-		private readonly object queueLockObj = new();
 		private readonly object resourceLockObj = new();
 
 		#endregion
@@ -91,11 +63,11 @@ namespace FragEngine3.Resources
 		/// <summary>
 		/// Gets the total number of resources that are currently queued up for loading.
 		/// </summary>
-		public int QueuedResourceCount { get { lock (queueLockObj) { return loadQueue.Count; } } }
+		public int QueuedResourceCount => importer.QueuedResourceCount;
 		/// <summary>
 		/// Gets a progress object for tracking or visualizing the workload of asynchronous background loading.
 		/// </summary>
-		public Containers.Progress CurrentQueueProgress => importThreadProgress;
+		public Containers.Progress CurrentQueueProgress => importer.importThreadProgress;
 
 		/// <summary>
 		/// Gets a singleton instance of a resource manager, if available. The first resource manager instance that was created is generally assigned as singleton instance.
@@ -110,35 +82,23 @@ namespace FragEngine3.Resources
 			GC.SuppressFinalize(this);
 			Dispose(true);
 		}
-		private void Dispose(bool _disposing)
+		private void Dispose(bool _)
 		{
 			IsDisposed = true;
 
-			importThreadCancellationSrc?.Cancel();
-			fileLoaderThreadCancellationSrc?.Cancel();
-
-			while (_disposing && importThread.IsAlive || (fileLoaderThread != null && fileLoaderThread.IsAlive))
-			{
-				Thread.Sleep(1);
-			}
-
 			AbortAllImports();
-			DisposeAllResources();
+			
+			importer.Dispose();
+			fileLoader.Dispose();
 
-			if (_disposing)
-			{
-				importThreadProgress?.Finish();
-			}
+			DisposeAllResources();
 
 			stopwatch.Stop();
 		}
 
 		public void DisposeAllResources()
 		{
-			lock (queueLockObj)
-			{
-				loadQueue.Clear();
-			}
+			importer.AbortAllImports();
 
 			lock(resourceLockObj)
 			{
@@ -158,140 +118,8 @@ namespace FragEngine3.Resources
 
 		public void AbortAllImports()
 		{
-			// Abort and discard file loader processes:
-			fileLoaderThreadCancellationSrc?.Cancel();
-			while (fileLoaderThread != null && fileLoaderThread.IsAlive)
-			{
-				Thread.Sleep(1);
-			}
-			fileLoaderProgress?.CompleteAllTasks();
-
-			fileLoaderThreadCancellationSrc = null;
-			fileLoaderThread = null;
-			fileLoaderProgress = null;
-
-			// Purge and reset import queue contents:
-			lock (queueLockObj)
-			{
-				QueueHandle[] queueElements = loadQueue.ToArray();
-				loadQueue.Clear();
-
-				foreach (QueueHandle handle in queueElements)
-				{
-					if (handle.resourceHandle.loadState == ResourceLoadState.Queued)
-					{
-						handle.resourceHandle.loadState = ResourceLoadState.NotLoaded;
-					}
-				}
-			}
-			importThreadProgress.Update(null, 0, 0);
-		}
-
-		public bool GatherAllResourceFiles(bool _immediately, out Containers.Progress _outProgress)
-		{
-			if (fileLoaderThread != null && fileLoaderThread.IsAlive)
-			{
-				engine.Logger.LogError("Another file loader operation is currently running! Wait for that to conclude before issueing further calls.");
-				_outProgress = new(string.Empty, 0);
-				return false;
-			}
-			fileLoaderThreadCancellationSrc?.Cancel();
-			fileLoaderThreadCancellationSrc = new();
-
-			fileLoaderProgress?.CompleteAllTasks();
-			fileLoaderProgress = null;
-
-			if (_immediately)
-			{
-				return fileLoader.GatherAllResourceFiles(out _outProgress);
-			}
-			else
-			{
-				try
-				{
-					fileLoaderThread = new Thread(RunAsyncFileLoaderThread);
-					fileLoaderThread.Start();
-
-					do
-					{
-						Thread.Sleep(2);
-					}
-					while (fileLoaderProgress == null);
-
-					_outProgress = fileLoaderProgress;
-					return true;
-				}
-				catch (Exception ex)
-				{
-					engine.Logger.LogException("Failed to create and start file loader thread!", ex);
-					fileLoaderThreadCancellationSrc?.Cancel();
-					fileLoaderThreadCancellationSrc = null;
-					fileLoaderThread = null;
-					_outProgress = new(string.Empty, 0);
-					return false;
-				}
-			}
-		}
-
-		private void RunAsyncFileLoaderThread()
-		{
-			if (fileLoader.GatherAllResourceFiles(out fileLoaderProgress, false))
-			{
-				fileLoaderProgress.CompleteAllTasks();
-			}
-
-			fileLoaderThreadCancellationSrc?.Cancel();
-			fileLoaderThreadCancellationSrc = null;
-			fileLoaderThread = null;
-		}
-
-		/// <summary>
-		/// Thread function for asynchronous resource loading. Resource handles are dequeued from the load queue and passed on to the appropriate importers.
-		/// </summary>
-		private void RunAsyncImportThread()
-		{
-			while (!IsDisposed && !importThreadCancellationSrc.IsCancellationRequested)
-			{
-				bool queueIsEmpty;
-				QueueHandle? queueElement = null;
-
-				// Dequeue first element in the queue:
-				lock (queueLockObj)
-				{
-					queueIsEmpty = loadQueue.Count == 0;
-					if (importThreadProgress.taskCount != loadQueue.Count)
-					{
-						importThreadProgress.Update(null, importThreadProgress.tasksDone, loadQueue.Count);
-					}
-					if (!queueIsEmpty)
-					{
-						queueElement = loadQueue.First();
-						queueElement.resourceHandle.loadState = ResourceLoadState.Loading;
-						loadQueue.RemoveAt(0);
-					}
-				}
-
-				// If queue was empty, idle until more work shows up:
-				if (queueIsEmpty)
-				{
-					if (importThreadProgress.tasksDone != 0) importThreadProgress.Update(null, 0, 0);
-					Thread.Sleep(1);
-				}
-				// If a resource could be dequeued, load it immediately within this thread:
-				else if (queueElement != null)
-				{
-					if (LoadImmediately(queueElement.resourceHandle, queueElement.assignResourceCallback))
-					{
-						importThreadProgress.Increment();
-					}
-					else
-					{
-						importThreadProgress.errorCount++;
-					}
-				}
-			}
-
-			importThreadCancellationSrc.Cancel();
+			fileLoader.AbortAllImports();
+			importer.AbortAllImports();
 		}
 
 		public bool HasFile(string _fileKey)
@@ -483,11 +311,7 @@ namespace FragEngine3.Resources
 					// Dequeue handle to prevent it from loading:
 					if (handle.loadState == ResourceLoadState.Queued)
 					{
-						lock (queueLockObj)
-						{
-							loadQueue.RemoveAll(o => o.resourceHandle == handle);
-						}
-						handle.loadState = ResourceLoadState.NotLoaded;
+						importer.RemoveResource(handle);
 					}
 					// If it's already being loaded, wait for completion, block thread until done:
 					else if (handle.loadState == ResourceLoadState.Loading)
@@ -553,47 +377,40 @@ namespace FragEngine3.Resources
 				return true;
 			}
 
-			// If the resource has no dependencies, load it as-is:
-			if (_handle.DependencyCount == 0)
-			{
-				return LoadResource_internal(_handle, _loadImmediately, _assignResourceCallback);
-			}
+			// DEPENDENCIES:
 
-			// Recursively load all dependencies first, if those hasn't been loaded yet:
-			int failureCount = 0;
-			foreach (string dependencyKey in _handle.dependencies!)
+			// If the resource has dependencies, queue those up first:
+			if (_handle.DependencyCount != 0)
 			{
-				if (GetResource(dependencyKey, out ResourceHandle dependencyHandle) && dependencyHandle.IsValid && !dependencyHandle.IsLoaded)
+				// Recursively load all dependencies, if those haven't been loaded yet:
+				int failureCount = 0;
+				foreach (string dependencyKey in _handle.dependencies!)
 				{
-					if (!dependencyHandle.Load(_loadImmediately))
+					if (GetResource(dependencyKey, out ResourceHandle dependencyHandle) && dependencyHandle.IsValid && !dependencyHandle.IsLoaded)
 					{
-						failureCount++;
+						if (!dependencyHandle.Load(_loadImmediately))
+						{
+							failureCount++;
+						}
 					}
 				}
-			}
-			if (failureCount != 0)
-			{
-				engine.Logger.LogError($"Failed to load {failureCount}/{_handle.DependencyCount} dependencies for resource '{_handle}'!");
+				if (failureCount != 0)
+				{
+					engine.Logger.LogError($"Failed to load {failureCount}/{_handle.DependencyCount} dependencies for resource '{_handle}'!");
+				}
 			}
 
-			return failureCount != 0;
-		}
+			// LOAD PROCESS:
 
-		private bool LoadResource_internal(ResourceHandle _handle, bool _loadImmediately, ResourceHandle.FuncAssignResourceCallback _assignResourceCallback)
-		{
 			bool result = true;
 
-			// Load resource immediately on the main thread:
+			// If requested, load resource immediately on the main thread:
 			if (_loadImmediately)
 			{
 				// If resource is queued up already, dequeue it first:
 				if (_handle.loadState == ResourceLoadState.Queued)
 				{
-					lock (queueLockObj)
-					{
-						loadQueue.RemoveAll(o => o.resourceHandle == _handle);
-						_handle.loadState = ResourceLoadState.NotLoaded;
-					}
+					importer.RemoveResource(_handle);
 				}
 				// If resource is currently in the process of being imported, block and wait for it to conclude:
 				if (_handle.loadState == ResourceLoadState.Loading)
@@ -617,11 +434,7 @@ namespace FragEngine3.Resources
 			// Queue resource up for asynchronous loading by the import thread:
 			else
 			{
-				lock (queueLockObj)
-				{
-					_handle.loadState = ResourceLoadState.Queued;
-					loadQueue.Add(new QueueHandle(_handle, _assignResourceCallback));
-				}
+				result &= importer.EnqueueResource(_handle, _assignResourceCallback);
 			}
 			return result;
 		}
