@@ -150,7 +150,7 @@ namespace FragEngine3.Resources
 					// This is undesirable and unlikely, but can happen through either user meddling, hot-reloading of
 					// resources, or obscure bugs. This way, we can be sure that we're getting the most up-to-date instance
 					// of the resource object straight from the source.
-					//return resourceManager.GetResourceObject(Key, CallbackAssignResourceObject);
+					return resourceManager.GetResourceObject(Key, CallbackAssignResourceObject);
 				}
 			}
 			return false;
@@ -175,7 +175,7 @@ namespace FragEngine3.Resources
 			if (resourceManager != null && !resourceManager.IsDisposed)
 			{
 				// Update the resource object's value straight from the resource manager:
-				//return resourceManager.GetResourceObject(Key, CallbackAssignResourceObject);
+				return resourceManager.GetResourceObject(Key, CallbackAssignResourceObject);
 			}
 			return false;
 		}

@@ -157,8 +157,8 @@ namespace FragEngine3.Resources
 		public override bool Equals(object? obj) => obj is ResourceHandle other && Equals(other);
 		public override int GetHashCode() => base.GetHashCode();
 
-		public static bool operator ==(ResourceHandle left, ResourceHandle right) => ReferenceEquals(left, right) || string.CompareOrdinal(left?.resourceKey, right?.resourceKey) == 0;
-		public static bool operator !=(ResourceHandle left, ResourceHandle right) => !ReferenceEquals(left, right) && string.CompareOrdinal(left?.resourceKey, right?.resourceKey) != 0;
+		public static bool operator ==(ResourceHandle? left, ResourceHandle? right) => ReferenceEquals(left, right) || (left is not null && left.Equals(right));
+		public static bool operator !=(ResourceHandle? left, ResourceHandle? right) => !ReferenceEquals(left, right) || (left is not null && !left.Equals(right));
 
 		public override string ToString()
 		{

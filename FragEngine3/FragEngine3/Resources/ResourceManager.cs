@@ -192,20 +192,20 @@ namespace FragEngine3.Resources
 		/// downloaded from a network source will not yield any results.
 		/// </summary>
 		/// <param name="_resourceKey">The key used to identify the resource. Case-sentive, must be non-null.</param>
-		/// <param name="_outFileHandle">Outputs a handle to the file containing the resource, or null, if no file was found.</param>
+		/// <param name="_outFileHandle">Outputs a handle to the file containing the resource, or '<see cref="ResourceFileHandle.None"/>', if no file was found.</param>
 		/// <returns></returns>
-		public bool GetFileWithResource(string _resourceKey, out ResourceFileHandle? _outFileHandle)
+		public bool GetFileWithResource(string _resourceKey, out ResourceFileHandle _outFileHandle)
 		{
 			if (string.IsNullOrEmpty(_resourceKey))
 			{
 				engine.Logger.LogError("Resource key may not be null or blank!");
-				_outFileHandle = null;
+				_outFileHandle = ResourceFileHandle.None;
 				return false;
 			}
 
 			var fileHandles = from f in allFiles from r in f.Value.resources where string.CompareOrdinal(r, _resourceKey) == 0 select f.Value;
 
-			_outFileHandle = fileHandles.FirstOrDefault();
+			_outFileHandle = fileHandles.FirstOrDefault() ?? ResourceFileHandle.None;
 			return _outFileHandle != null;
 		}
 
@@ -476,7 +476,7 @@ namespace FragEngine3.Resources
 			switch (_handle.resourceType)
 			{
 				case ResourceType.Shader:
-					if (success = ShaderResource.CreateShader(_handle, engine.GraphicsSystem.graphicsCore, out ShaderResource? shaderRes))
+					if (success = ShaderResourceFactory.CreateShader(_handle, engine.GraphicsSystem.graphicsCore, out ShaderResource? shaderRes))
 					{
 						_assignResourceCallback(shaderRes);
 					}

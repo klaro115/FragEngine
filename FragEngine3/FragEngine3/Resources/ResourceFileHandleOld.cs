@@ -231,7 +231,7 @@ namespace FragEngine3.Resources
 		/// <param name="_dataSize">Size of the data that needs to be read using this stream. This size is measured in bytes of uncompressed data. Full file size is used if set to 0.</param>
 		/// <param name="_outStream">Outputs a read-only stream of uncompressed raw data that resources can be imported/loaded/deserialized from. Null only if reading or decompression fails.</param>
 		/// <returns>True if the stream could be opened and data can be read for loading, false otherwise.</returns>
-		/// <exception cref="NotImplementedException"></exception>
+		/// <exception cref="NotImplementedException">Block compression is not yet supported.</exception>
 		public bool TryOpenDataStream(ulong _dataOffset, ulong _dataSize, out Stream _outStream)
 		{
 			if (loadState == ResourceLoadState.Loaded && dataBuffer != null)
@@ -295,8 +295,8 @@ namespace FragEngine3.Resources
 			ulong fileSize = 0;
 			if (fileType != ResourceFileType.Single)
 			{
-				fileOffset = _resourceHandle.fileOffset;
-				fileSize = _resourceHandle.fileSize;
+				fileOffset = _resourceHandle.dataOffset;
+				fileSize = _resourceHandle.dataSize;
 			}
 
 			// Try reading byte data from file:

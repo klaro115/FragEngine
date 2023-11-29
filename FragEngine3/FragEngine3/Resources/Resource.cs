@@ -11,7 +11,7 @@ namespace FragEngine3.Resources
 
 		protected Resource(ResourceHandle _handle)
 		{
-			resourceKey = _handle?.Key ?? throw new ArgumentNullException(nameof(_handle), "Resource handle and key may not be null!");
+			resourceKey = _handle?.resourceKey ?? throw new ArgumentNullException(nameof(_handle), "Resource handle and key may not be null!");
 			resourceManager = _handle.resourceManager ?? throw new NullReferenceException("Resource manager may not be null!");
 		}
 		~Resource()

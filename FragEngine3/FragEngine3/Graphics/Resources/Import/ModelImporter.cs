@@ -29,18 +29,31 @@ namespace FragEngine3.Graphics.Resources.Import
 			Logger logger = _handle.resourceManager.engine.Logger ?? Logger.Instance!;
 
 			// Retrieve the file that this resource is loaded from:
-			if (!_handle.resourceManager.GetFileWithResource(_handle.Key, out ResourceFileHandle? fileHandle) || fileHandle == null)
+			ResourceFileHandle fileHandle;
+			if (string.IsNullOrEmpty(_handle.dataFilePath))
 			{
-				logger.LogError("Could not find source file for resource handle '{_handle}'!");
-				_outSurfaceData = null;
-				return false;
+				if (!_handle.resourceManager.GetFileWithResource(_handle.dataFilePath, out fileHandle))
+				{
+					logger.LogError($"Could not find any resource data file containing resource handle '{_handle}'!");
+					_outSurfaceData = null;
+					return false;
+				}
+			}
+			else
+			{
+				if (!_handle.resourceManager.GetFile(_handle.dataFilePath, out fileHandle))
+				{
+					logger.LogError($"Resource data file for resource handle '{_handle}' does not exist!");
+					_outSurfaceData = null;
+					return false;
+				}
 			}
 
 			Stream stream = null!;
 			try
 			{
 				// Open file stream:
-				if (!fileHandle.TryOpenDataStream(_handle.fileOffset, _handle.fileSize, out stream))
+				if (!fileHandle.TryOpenDataStream(_handle.dataOffset, _handle.dataSize, out stream))
 				{
 					logger.LogError("Failed to open file stream for resource handle '{_handle}'!");
 					_outSurfaceData = null;
@@ -48,7 +61,7 @@ namespace FragEngine3.Graphics.Resources.Import
 				}
 
 				// Import from stream, identifying file format from extension:
-				string formatExt = Path.GetExtension(_handle.Key);
+				string formatExt = Path.GetExtension(_handle.dataFilePath);
 
 				return ImportModelData(stream, formatExt, out _outSurfaceData);
 			}

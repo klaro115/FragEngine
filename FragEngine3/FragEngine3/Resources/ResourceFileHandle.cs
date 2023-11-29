@@ -1,4 +1,6 @@
-﻿using FragEngine3.Resources.Data;
+﻿using FragEngine3.EngineCore;
+using FragEngine3.Resources.Data;
+using System.IO.Compression;
 
 namespace FragEngine3.Resources
 {
@@ -65,6 +67,7 @@ namespace FragEngine3.Resources
 
 		// Content details:
 		public string[] resources;
+		private byte[]? dataBuffer = null;
 
 		private static readonly ResourceFileHandle none = new();
 
@@ -82,6 +85,123 @@ namespace FragEngine3.Resources
 
 		#endregion
 		#region Methods
+
+		public void Unload()
+		{
+			LoadState = ResourceLoadState.NotLoaded;
+			dataBuffer = null;
+		}
+
+		public bool TryOpenDataStream(ulong _dataOffset, ulong _dataSize, out Stream _outStream)
+		{
+			if (LoadState == ResourceLoadState.Loaded && dataBuffer != null)
+			{
+				_outStream = new MemoryStream(dataBuffer);
+				return true;
+			}
+
+			if (!File.Exists(dataFilePath))
+			{
+				Logger.Instance?.LogError($"Resource data file '{dataFilePath}' does not exist!");
+				_outStream = null!;
+				return false;
+			}
+
+			switch (dataFileType)
+			{
+				case ResourceFileType.Single:
+					{
+						_outStream = File.OpenRead(dataFilePath);
+						return true;
+					}
+				case ResourceFileType.Batch_Compressed:
+					{
+						using FileStream compressedStream = File.OpenRead(dataFilePath);
+						using DeflateStream decompressedStream = new(compressedStream, CompressionMode.Decompress);
+						using MemoryStream resultStream = new();
+
+						decompressedStream.CopyTo(resultStream);
+						dataBuffer = resultStream.ToArray();
+
+						LoadState = ResourceLoadState.Loaded;
+
+						_outStream = new MemoryStream(dataBuffer, (int)_dataOffset, (int)_dataSize);
+						return true;
+					}
+				case ResourceFileType.Batch_BlockCompressed:
+					{
+						throw new NotImplementedException("Resource block compression is not supported at this time.");
+					}
+				default:
+					break;
+			}
+
+			_outStream = null!;
+			return false;
+		}
+
+		public bool TryReadResourceBytes(ResourceHandle _handle, out byte[] _outBytes, out int _outByteCount)
+		{
+			if (_handle == null)
+			{
+				Logger.Instance?.LogError("Cannot read data bytes for null resource handle!");
+				_outBytes = [];
+				_outByteCount = 0;
+				return false;
+			}
+
+			// For batched data files, check if the resource handle's source position is valid:
+			if (dataFileType == ResourceFileType.Batch_Compressed ||
+				dataFileType == ResourceFileType.Batch_BlockCompressed)
+			{
+				ulong totalDataSize = LoadState == ResourceLoadState.Loaded && dataBuffer != null ? (ulong)dataBuffer.Length : uncompressedFileSize;
+				if (_handle.dataOffset + _handle.dataSize > totalDataSize)
+				{
+					Logger.Instance?.LogError($"Data bytes offset and size for resource handle '{_handle}' are out-of-bounds!");
+					_outBytes = [];
+				_outByteCount = 0;
+					return false;
+				}
+			}
+
+			// If uncompressed file data is already loaded and ready to go, copy from there:
+			if (LoadState == ResourceLoadState.Loaded && dataBuffer != null)
+			{
+				_outBytes = new byte[_handle.dataSize];
+				dataBuffer.CopyTo(_outBytes, (int)_handle.dataOffset);
+			}
+
+			// Try reading all resource data via a stream:
+			Stream? stream = null;
+			try
+			{
+				if (!TryOpenDataStream(_handle.dataOffset, _handle.dataSize, out stream))
+				{
+					Logger.Instance?.LogError($"Failed to open data stream of file handle '{dataFilePath}' at data offset {_handle.dataOffset} and data size {_handle.dataSize}!");
+					_outBytes = [];
+					_outByteCount = 0;
+					return false;
+				}
+
+				// Write stream output to byte buffer:
+				int expectedDataSize = dataFileType == ResourceFileType.Single && dataFileSize != 0 ? (int)dataFileSize : (int)_handle.dataSize;
+
+				_outBytes = new byte[expectedDataSize];
+				_outByteCount = stream.Read(_outBytes, 0, expectedDataSize);
+				return true;
+			}
+			catch (Exception ex)
+			{
+				Logger.Instance?.LogException($"Failed to open data stream of file handle '{dataFilePath}' and read bytes for resource handle '{_handle}'!", ex);
+				_outBytes = [];
+				_outByteCount = 0;
+				return false;
+			}
+			finally
+			{
+				stream?.Close();
+			}
+		}
 
 		public bool GetResourceFileData(ResourceManager _resourceManager, out ResourceFileData? _outData)
 		{

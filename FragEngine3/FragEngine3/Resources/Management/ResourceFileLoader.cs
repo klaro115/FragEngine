@@ -278,18 +278,18 @@ namespace FragEngine3.Resources.Management
 					foreach (string metadataFilePath in metadataFiles)
 					{
 						resourceHandleBuffer.Clear();
-						if (ResourceFileHandle.CreateFileHandle(resourceManager, metadataFilePath, libDir.source, out ResourceFileHandle fileHandle, ref resourceHandleBuffer))
-						{
-							TryRegisterFileHandle(fileHandle, resourceHandleBuffer, _updateExistingResources);
-						}
+						//if (ResourceFileHandle.CreateFileHandle(resourceManager, metadataFilePath, libDir.source, out ResourceFileHandle fileHandle, ref resourceHandleBuffer))
+						//{
+						//	TryRegisterFileHandle(fileHandle, resourceHandleBuffer, _updateExistingResources);
+						//}
 					}
 					foreach (string looseDataFile in looseDataFiles)
 					{
 						resourceHandleBuffer.Clear();
-						if (ResourceFileHandle.CreateFileHandle(resourceManager, looseDataFile, libDir.source, out ResourceFileHandle fileHandle, ref resourceHandleBuffer))
-						{
-							TryRegisterFileHandle(fileHandle, resourceHandleBuffer, _updateExistingResources);
-						}
+						//if (ResourceFileHandle.CreateFileHandle(resourceManager, looseDataFile, libDir.source, out ResourceFileHandle fileHandle, ref resourceHandleBuffer))
+						//{
+						//	TryRegisterFileHandle(fileHandle, resourceHandleBuffer, _updateExistingResources);
+						//}
 					}
 					Console.WriteLine(" done.");
 					Logger.LogMessage($"- Importing resource library '{libDir.name}'... done.", true);
@@ -323,6 +323,7 @@ namespace FragEngine3.Resources.Management
 			return true;
 		}
 
+		[Obsolete("Consider deleting this")]
 		private bool TryRegisterFileHandle(ResourceFileHandle _fileHandle, List<ResourceHandle> _resourceHandles, bool _updateExistingResources)
 		{
 			if (_fileHandle == null) return false;
@@ -330,20 +331,20 @@ namespace FragEngine3.Resources.Management
 			bool success = true;
 
 			// Register or replace file handle:
-			if (resourceManager.HasFile(_fileHandle.Key))
+			if (resourceManager.HasFile(_fileHandle.dataFilePath))
 			{
 				if (!_updateExistingResources) return false;
-				success &= resourceManager.RemoveFile(_fileHandle.Key);
+				success &= resourceManager.RemoveFile(_fileHandle.dataFilePath);
 			}
 			success &= resourceManager.AddFile(_fileHandle);
 
 			// Register or replace resource handles:
 			foreach (ResourceHandle resHandle in _resourceHandles)
 			{
-				if (resourceManager.HasResource(resHandle.Key))
+				if (resourceManager.HasResource(resHandle.resourceKey))
 				{
 					if (_updateExistingResources) continue;
-					success &= resourceManager.RemoveResource(resHandle.Key);
+					success &= resourceManager.RemoveResource(resHandle.resourceKey);
 				}
 				success &= resourceManager.AddResource(resHandle);
 			}

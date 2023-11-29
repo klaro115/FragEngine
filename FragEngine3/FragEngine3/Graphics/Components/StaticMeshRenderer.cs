@@ -9,19 +9,11 @@ using Veldrid;
 
 namespace FragEngine3.Graphics.Components
 {
-	public sealed class StaticMeshRenderer : Component, IRenderer
+	public sealed class StaticMeshRenderer(SceneNode _node) : Component(_node), IRenderer
 	{
-		#region Constructors
-
-		public StaticMeshRenderer(SceneNode _node) : base(_node)
-		{
-			core = _node.scene.engine.GraphicsSystem.graphicsCore ?? throw new NullReferenceException("Could not find graphics core for static mesh renderer!");
-		}
-
-		#endregion
 		#region Fields
 
-		public readonly GraphicsCore core;
+		public readonly GraphicsCore core = _node.scene.engine.GraphicsSystem.graphicsCore ?? throw new NullReferenceException("Could not find graphics core for static mesh renderer!");
 
 		#endregion
 		#region Properties
@@ -220,7 +212,7 @@ namespace FragEngine3.Graphics.Components
 				// Abort drawing until mesh is ready, queue it up for background loading:
 				if (DontDrawUnlessFullyLoaded && !MeshHandle.IsLoaded)
 				{
-					if (MeshHandle.loadState == ResourceLoadState.NotLoaded) MeshHandle.Load(false);
+					if (MeshHandle.LoadState == ResourceLoadState.NotLoaded) MeshHandle.Load(false);
 					return true;
 				}
 
@@ -242,7 +234,7 @@ namespace FragEngine3.Graphics.Components
 				// Abort drawing until material is ready, queue it up for background loading:
 				if (DontDrawUnlessFullyLoaded && !MaterialHandle.IsLoaded)
 				{
-					if (MaterialHandle.loadState == ResourceLoadState.NotLoaded) MaterialHandle.Load(false);
+					if (MaterialHandle.LoadState == ResourceLoadState.NotLoaded) MaterialHandle.Load(false);
 					return true;
 				}
 
@@ -339,8 +331,8 @@ namespace FragEngine3.Graphics.Components
 		{
 			StaticMeshRendererData data = new()
 			{
-				Mesh = MeshHandle?.Key ?? Mesh?.resourceKey ?? string.Empty,
-				Material = MaterialHandle?.Key ?? Material?.resourceKey ?? string.Empty,
+				Mesh = MeshHandle?.resourceKey ?? Mesh?.resourceKey ?? string.Empty,
+				Material = MaterialHandle?.resourceKey ?? Material?.resourceKey ?? string.Empty,
 
 				DontDrawUnlessFullyLoaded = DontDrawUnlessFullyLoaded,
 				LayerFlags = LayerFlags,

@@ -94,9 +94,9 @@ namespace FragEngine3.Resources.Management
 
 				foreach (QueueHandle handle in queueElements)
 				{
-					if (handle.resourceHandle.loadState == ResourceLoadState.Queued)
+					if (handle.resourceHandle.LoadState == ResourceLoadState.Queued)
 					{
-						handle.resourceHandle.loadState = ResourceLoadState.NotLoaded;
+						handle.resourceHandle.LoadState = ResourceLoadState.NotLoaded;
 					}
 				}
 			}
@@ -113,22 +113,22 @@ namespace FragEngine3.Resources.Management
 				loadQueue.RemoveAll(o => o.resourceHandle == _handle);
 			}
 
-			if (_handle.loadState != ResourceLoadState.Loaded)
+			if (_handle.LoadState != ResourceLoadState.Loaded)
 			{
-				_handle.loadState = ResourceLoadState.NotLoaded;
+				_handle.LoadState = ResourceLoadState.NotLoaded;
 			}
 			return true;
 		}
 
-		public bool EnqueueResource(ResourceHandle _handle, ResourceHandle.FuncAssignResourceCallback _assignResourceCallback)
+		internal bool EnqueueResource(ResourceHandle _handle, ResourceHandle.FuncAssignResourceCallback _assignResourceCallback)
 		{
 			if (_handle == null || _assignResourceCallback == null) return false;
 
-			if (_handle.loadState == ResourceLoadState.Loaded) return true;
+			if (_handle.LoadState == ResourceLoadState.Loaded) return true;
 
 			lock (queueLockObj)
 			{
-				_handle.loadState = ResourceLoadState.Queued;
+				_handle.LoadState = ResourceLoadState.Queued;
 				loadQueue.Add(new QueueHandle(_handle, _assignResourceCallback));
 			}
 			return true;
@@ -155,7 +155,7 @@ namespace FragEngine3.Resources.Management
 					if (!queueIsEmpty)
 					{
 						queueElement = loadQueue.First();
-						queueElement.resourceHandle.loadState = ResourceLoadState.Loading;
+						queueElement.resourceHandle.LoadState = ResourceLoadState.Loading;
 						loadQueue.RemoveAt(0);
 					}
 				}

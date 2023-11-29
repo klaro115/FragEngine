@@ -16,7 +16,7 @@ namespace FragEngine3.Graphics.Resources
     /// by the material will remain loaded unless they are explicitly disposed themselves - multiple materials and assets may
     /// be referencing a same resource instance as a shared dependency.
     /// </summary>
-    public sealed class Material : Resource
+    public sealed class Material(ResourceHandle _handle, GraphicsCore _graphicsCore) : Resource(_handle)
 	{
 		#region Types
 
@@ -44,17 +44,9 @@ namespace FragEngine3.Graphics.Resources
 		}
 
 		#endregion
-		#region Constructors
-
-		public Material(ResourceHandle _handle, GraphicsCore _graphicsCore) : base(_handle)
-		{
-			graphicsCore = _graphicsCore ?? throw new ArgumentNullException(nameof(_graphicsCore), "Material's graphics core may not be null!");
-		}
-
-		#endregion
 		#region Fields
 
-		public readonly GraphicsCore graphicsCore;
+		public readonly GraphicsCore graphicsCore = _graphicsCore ?? throw new ArgumentNullException(nameof(_graphicsCore), "Material's graphics core may not be null!");
 
 		private MaterialVariant?[] variants = [];
 
@@ -89,22 +81,22 @@ namespace FragEngine3.Graphics.Resources
 		public ResourceHandle VertexShader
 		{
 			get => vertexShader;
-			set { bool isChanged = vertexShader.Key != value?.Key; vertexShader = value!; if (isChanged) { MarkDirty(DirtyFlags.ShaderSet); } }
+			set { bool isChanged = vertexShader.resourceKey != value?.resourceKey; vertexShader = value!; if (isChanged) { MarkDirty(DirtyFlags.ShaderSet); } }
 		}
 		public ResourceHandle? GeometryShader
 		{
 			get => geometryShader;
-			set { bool isChanged = geometryShader?.Key != value?.Key; geometryShader = value!; if (isChanged) { MarkDirty(DirtyFlags.ShaderSet); } }
+			set { bool isChanged = geometryShader?.resourceKey != value?.resourceKey; geometryShader = value!; if (isChanged) { MarkDirty(DirtyFlags.ShaderSet); } }
 		}
 		public ResourceHandle? TesselationShader
 		{
 			get => tesselationShader;
-			set { bool isChanged = tesselationShader?.Key != value?.Key; tesselationShader = value!; if (isChanged) { MarkDirty(DirtyFlags.ShaderSet); } }
+			set { bool isChanged = tesselationShader?.resourceKey != value?.resourceKey; tesselationShader = value!; if (isChanged) { MarkDirty(DirtyFlags.ShaderSet); } }
 		}
 		public ResourceHandle PixelShader
 		{
 			get => pixelShader;
-			set { bool isChanged = pixelShader.Key != value?.Key; pixelShader = value!; if (isChanged) { MarkDirty(DirtyFlags.ShaderSet); } }
+			set { bool isChanged = pixelShader.resourceKey != value?.resourceKey; pixelShader = value!; if (isChanged) { MarkDirty(DirtyFlags.ShaderSet); } }
 		}
 
 		/// <summary>
@@ -380,7 +372,7 @@ namespace FragEngine3.Graphics.Resources
 			Logger logger = _graphicsCore.graphicsSystem.engine.Logger ?? Logger.Instance!;
 
 			// Retrieve the file that this resource is loaded from:
-			if (!_handle.resourceManager.GetFileWithResource(_handle.Key, out ResourceFileHandle? fileHandle) || fileHandle == null)
+			if (!_handle.resourceManager.GetFileWithResource(_handle.resourceKey, out ResourceFileHandle? fileHandle) || fileHandle == null)
 			{
 				logger.LogError($"Could not find source file for resource handle '{_handle}'!");
 				_outMaterial = null;
@@ -388,7 +380,7 @@ namespace FragEngine3.Graphics.Resources
 			}
 
 			// Try reading raw byte data from file:
-			if (!fileHandle.TryReadResourceBytes(_handle, out byte[] bytes))
+			if (!fileHandle.TryReadResourceBytes(_handle, out byte[] bytes, out int byteCount))
 			{
 				logger.LogError($"Failed to read material JSON for resource '{_handle}'!");
 				_outMaterial = null;
@@ -399,7 +391,7 @@ namespace FragEngine3.Graphics.Resources
 			string jsonTxt;
 			try
 			{
-				jsonTxt = System.Text.Encoding.UTF8.GetString(bytes);
+				jsonTxt = System.Text.Encoding.UTF8.GetString(bytes, 0, byteCount);
 			}
 			catch (Exception ex)
 			{

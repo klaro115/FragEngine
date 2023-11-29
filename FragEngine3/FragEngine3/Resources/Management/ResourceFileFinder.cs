@@ -70,6 +70,7 @@ namespace FragEngine3.Resources.Management
 		/// <param name="_outMetadata">Outputs the metadata for the resource file. This is either deserialized from file, or generated in case a single-resource
 		/// data file does not have an accompanying metadata file.</param>
 		/// <returns>True if metadata could be loaded or generated successfully, false otherwise.</returns>
+		[Obsolete("Rewrite this")]
 		public static bool GetMetadataFromDataFilePath(string _dataFilePath, out ResourceFileMetadataOld _outMetadata)
 		{
 			if (string.IsNullOrEmpty(_dataFilePath))

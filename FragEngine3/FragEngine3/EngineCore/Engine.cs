@@ -274,7 +274,7 @@ namespace FragEngine3.EngineCore
 						IEnumerator<ResourceHandle> e = ResourceManager.IterateResources(false);
 						while (e.MoveNext() && unloadsThisUpdate++ < maxUnloadsPerUpdate)
 						{
-							ResourceManager.RemoveResource(e.Current.Key);
+							ResourceManager.RemoveResource(e.Current.resourceKey);
 						}
 					}
 
@@ -284,7 +284,7 @@ namespace FragEngine3.EngineCore
 						IEnumerator<ResourceFileHandle> e = ResourceManager.IterateFiles(false);
 						while (e.MoveNext() && unloadsThisUpdate++ < maxUnloadsPerUpdate)
 						{
-							ResourceManager.RemoveFile(e.Current.Key);
+							ResourceManager.RemoveFile(e.Current.dataFilePath);
 						}
 					}
 
