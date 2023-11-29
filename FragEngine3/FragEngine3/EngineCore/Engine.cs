@@ -209,7 +209,7 @@ namespace FragEngine3.EngineCore
 			// Start gathering resources and load data asynchronously:
 			SetState(EngineState.Loading);
 
-			if (!ResourceManager.fileLoader.GatherAllResourceFiles(false, out Containers.Progress fileGatherProgress))
+			if (!ResourceManager.fileGatherer.GatherAllResources(false, out Containers.Progress fileGatherProgress))
 			{
 				Logger.LogError("Error! Failed to start up resource manager!", _severity: LogEntrySeverity.Critical);
 				return false;

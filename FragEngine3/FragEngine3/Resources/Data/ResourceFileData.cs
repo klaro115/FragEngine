@@ -22,6 +22,13 @@ namespace FragEngine3.Resources.Data
 		public int ResourceCount { get; set; } = 0;
 		public ResourceHandleData[]? Resources { get; set; } = null;
 
+		private static readonly ResourceFileData none = new();
+
+		#endregion
+		#region Properties
+
+		public static ResourceFileData None => none;
+
 		#endregion
 		#region Methods
 
@@ -75,7 +82,7 @@ namespace FragEngine3.Resources.Data
 			}
 
 			// If file size is missing, retrieve it from file:
-			if (DataFileSize <= 0 && !string.IsNullOrEmpty(DataFilePath) && File.Exists(DataFilePath))
+			if (DataFileSize == 0 && !string.IsNullOrEmpty(DataFilePath) && File.Exists(DataFilePath))
 			{
 				try
 				{
@@ -87,6 +94,12 @@ namespace FragEngine3.Resources.Data
 					Logger.Instance?.LogException($"Failed to read file info of resource data file at path '{DataFilePath}'!", ex);
 					return false;
 				}
+			}
+
+			// For uncompressed single-resource data files, set uncompressed size to match file size: (not important, but more complete this way)
+			if (DataFileSize != 0 && UncompressedFileSize != DataFileSize && DataFileType == ResourceFileType.Single)
+			{
+				UncompressedFileSize = DataFileSize;
 			}
 
 			return IsComplete();

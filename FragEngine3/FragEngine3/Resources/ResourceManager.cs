@@ -20,7 +20,7 @@ namespace FragEngine3.Resources
 		public ResourceManager(Engine _engine)
 		{
 			engine = _engine ?? throw new ArgumentNullException(nameof(_engine), "Engine may not be null!");
-			fileLoader = new(this);
+			fileGatherer = new(this);
 			importer = new(this, LoadImmediately);
 
 			stopwatch = new();
@@ -35,7 +35,7 @@ namespace FragEngine3.Resources
 		#region Fields
 
 		public readonly Engine engine;
-		public readonly ResourceFileLoader fileLoader;
+		public readonly ResourceFileGatherer fileGatherer;
 		private readonly ResourceImporter importer;
 
 		private readonly Stopwatch stopwatch;
@@ -89,7 +89,7 @@ namespace FragEngine3.Resources
 			AbortAllImports();
 			
 			importer.Dispose();
-			fileLoader.Dispose();
+			fileGatherer.Dispose();
 
 			DisposeAllResources();
 
@@ -118,7 +118,7 @@ namespace FragEngine3.Resources
 
 		public void AbortAllImports()
 		{
-			fileLoader.AbortAllImports();
+			fileGatherer.AbortGathering();
 			importer.AbortAllImports();
 		}
 

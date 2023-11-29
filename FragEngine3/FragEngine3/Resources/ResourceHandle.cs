@@ -24,6 +24,24 @@ namespace FragEngine3.Resources
 			dataOffset = _data.DataOffset;
 			dataSize = _data.DataSize;
 
+			if (_data.Dependencies != null && _data.DependencyCount > 0)
+			{
+				if (_data.Dependencies.Length == _data.DependencyCount)
+				{
+					dependencies = _data.Dependencies;
+				}
+				else
+				{
+					int actualDependencyCount = Math.Min((int)_data.DependencyCount, _data.Dependencies.Length);
+					dependencies = new string[actualDependencyCount];
+					Array.Copy(_data.Dependencies, dependencies, actualDependencyCount);
+				}
+			}
+			else
+			{
+				dependencies = null;
+			}
+
 			resource = null;
 			LoadState = ResourceLoadState.NotLoaded;
 		}

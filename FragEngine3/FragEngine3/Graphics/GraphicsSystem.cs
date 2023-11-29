@@ -111,7 +111,7 @@ namespace FragEngine3.Graphics
 				_outSettings = null;
 				return false;
 			}
-			if (engine.ResourceManager?.fileLoader == null ||
+			if (engine.ResourceManager?.fileGatherer == null ||
 				engine.ResourceManager.IsDisposed)
 			{
 				Logger.LogError("Cannot determine settings path using null or disposed resource manager!");
@@ -119,7 +119,7 @@ namespace FragEngine3.Graphics
 				return false;
 			}
 
-			string applicationPath = engine.ResourceManager.fileLoader.applicationPath;
+			string applicationPath = engine.ResourceManager.fileGatherer.applicationPath;
 			string settingsDirPath = Path.Combine(applicationPath, GraphicsContants.SETTINGS_ROOT_DIR_REL_PATH);
 			string filePath = Path.GetFullPath(Path.Combine(settingsDirPath, GraphicsContants.SETTINGS_FILE_NAME));
 
@@ -148,14 +148,14 @@ namespace FragEngine3.Graphics
 				Logger.LogError("Cannot save settings of disposed graphics system!");
 				return false;
 			}
-			if (engine.ResourceManager?.fileLoader == null ||
+			if (engine.ResourceManager?.fileGatherer == null ||
 				engine.ResourceManager.IsDisposed)
 			{
 				Logger.LogError("Cannot determine settings path using null or disposed resource manager!");
 				return false;
 			}
 
-			string applicationPath = engine.ResourceManager.fileLoader.applicationPath;
+			string applicationPath = engine.ResourceManager.fileGatherer.applicationPath;
 			string settingsDirPath = Path.Combine(applicationPath, GraphicsContants.SETTINGS_ROOT_DIR_REL_PATH);
 			string filePath = Path.GetFullPath(Path.Combine(settingsDirPath, GraphicsContants.SETTINGS_FILE_NAME));
 

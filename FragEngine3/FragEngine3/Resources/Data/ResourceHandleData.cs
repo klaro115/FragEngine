@@ -12,6 +12,9 @@ namespace FragEngine3.Resources.Data
 		public ulong DataOffset { get; set; } = 0;
 		public ulong DataSize { get; set; } = 0;
 
+		public uint DependencyCount { get; set; } = 0;
+		public string[]? Dependencies { get; set; } = null;
+
 		#endregion
 		#region Methods
 

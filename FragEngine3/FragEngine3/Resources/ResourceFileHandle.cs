@@ -8,13 +8,14 @@ namespace FragEngine3.Resources
 	{
 		#region Constructors
 
-		public ResourceFileHandle(ResourceFileData _data, string _resourceFilePath)
+		public ResourceFileHandle(ResourceFileData _data, ResourceSource _dataFileSource, string _resourceFilePath)
 		{
 			if (_data == null) throw new ArgumentNullException(nameof(_data), "Resource file handle data may not be null!");
 
 			resourceFilePath = _resourceFilePath ?? throw new ArgumentNullException(nameof(_resourceFilePath), "Resource file path may not be null!");
 			dataFilePath = _data.DataFilePath;
 			dataFileType = _data.DataFileType;
+			dataFileSource = _dataFileSource;
 			dataFileSize = _data.DataFileSize;
 
 			uncompressedFileSize = _data.UncompressedFileSize;
@@ -42,6 +43,7 @@ namespace FragEngine3.Resources
 			resourceFilePath = string.Empty;
 			dataFilePath = string.Empty;
 			dataFileType = ResourceFileType.None;
+			dataFileSource = ResourceSource.Runtime;
 			dataFileSize = 0;
 
 			uncompressedFileSize = 0;
@@ -58,6 +60,7 @@ namespace FragEngine3.Resources
 		public readonly string resourceFilePath = string.Empty;
 		public readonly string dataFilePath = string.Empty;
 		public readonly ResourceFileType dataFileType = ResourceFileType.Single;
+		public readonly ResourceSource dataFileSource;
 		public readonly ulong dataFileSize;
 
 		// Compression details:
