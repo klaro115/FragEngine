@@ -61,7 +61,7 @@ namespace FragEngine3.Graphics.Resources
 
 		#endregion
 		#region Methods
-
+		
 		public override VertexLayoutDescription[] GetVertexLayoutDesc()
 		{
 			return useFullSurfaceDef

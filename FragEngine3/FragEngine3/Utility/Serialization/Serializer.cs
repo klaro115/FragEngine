@@ -116,7 +116,7 @@ namespace FragEngine3.Utility.Serialization
 				return false;
 			}
 
-			return DeserializeFromJson(_filePath, out _outData);
+			return DeserializeFromJson(jsonTxt, out _outData);
 		}
 
 		#endregion

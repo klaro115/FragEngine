@@ -53,6 +53,10 @@ namespace FragEngine3.Resources
 		/// </summary>
 		Prefab,
 		/// <summary>
+		/// A font style, for displaying text contents in UI or in the scene.
+		/// </summary>
+		Font,
+		/// <summary>
 		/// Any kind of raw or serialized data for use by miscellaneous systems.
 		/// </summary>
 		Data,

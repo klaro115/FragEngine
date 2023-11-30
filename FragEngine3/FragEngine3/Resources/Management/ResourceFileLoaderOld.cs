@@ -278,7 +278,7 @@ namespace FragEngine3.Resources.Management
 					foreach (string metadataFilePath in metadataFiles)
 					{
 						resourceHandleBuffer.Clear();
-						//if (ResourceFileHandle.CreateFileHandle(resourceManager, metadataFilePath, libDir.source, out ResourceFileHandle fileHandle, ref resourceHandleBuffer))
+						//if (ResourceFileHandle.CreateFileHandle(resourceManager, metadataFilePath, libDir.source, out ResourceFileHandle fileHandle, ref resourceHandleBuffer))			//TODO: Rework this!!!
 						//{
 						//	TryRegisterFileHandle(fileHandle, resourceHandleBuffer, _updateExistingResources);
 						//}
@@ -331,10 +331,10 @@ namespace FragEngine3.Resources.Management
 			bool success = true;
 
 			// Register or replace file handle:
-			if (resourceManager.HasFile(_fileHandle.dataFilePath))
+			if (resourceManager.HasFile(_fileHandle.Key))
 			{
 				if (!_updateExistingResources) return false;
-				success &= resourceManager.RemoveFile(_fileHandle.dataFilePath);
+				success &= resourceManager.RemoveFile(_fileHandle.Key);
 			}
 			success &= resourceManager.AddFile(_fileHandle);
 

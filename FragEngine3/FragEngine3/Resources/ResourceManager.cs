@@ -156,16 +156,16 @@ namespace FragEngine3.Resources
 				engine.Logger.LogError("Cannot register invalid or incomplete resource!");
 				return false;
 			}
-			if (HasFile(_handle.dataFilePath))
+			if (HasFile(_handle.resourceFilePath))
 			{
-				engine.Logger.LogError($"A resource file with key '{_handle.dataFilePath}' already exists!");
+				engine.Logger.LogError($"A resource file with key '{_handle.resourceFilePath}' already exists!");
 				return false;
 			}
 
 			// Register new file handle:
 			lock(resourceLockObj)
 			{
-				allFiles.TryAdd(_handle.dataFilePath, _handle);
+				allFiles.TryAdd(_handle.resourceFilePath, _handle);
 			}
 
 			// NOTE: Resource handles created from this file handle must be added seperately after registering the file.

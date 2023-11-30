@@ -30,9 +30,9 @@ namespace FragEngine3.Graphics.Resources.Import
 
 			// Retrieve the file that this resource is loaded from:
 			ResourceFileHandle fileHandle;
-			if (string.IsNullOrEmpty(_handle.dataFilePath))
+			if (string.IsNullOrEmpty(_handle.fileKey))
 			{
-				if (!_handle.resourceManager.GetFileWithResource(_handle.dataFilePath, out fileHandle))
+				if (!_handle.resourceManager.GetFileWithResource(_handle.fileKey, out fileHandle))
 				{
 					logger.LogError($"Could not find any resource data file containing resource handle '{_handle}'!");
 					_outSurfaceData = null;
@@ -41,7 +41,7 @@ namespace FragEngine3.Graphics.Resources.Import
 			}
 			else
 			{
-				if (!_handle.resourceManager.GetFile(_handle.dataFilePath, out fileHandle))
+				if (!_handle.resourceManager.GetFile(_handle.fileKey, out fileHandle))
 				{
 					logger.LogError($"Resource data file for resource handle '{_handle}' does not exist!");
 					_outSurfaceData = null;
@@ -61,7 +61,7 @@ namespace FragEngine3.Graphics.Resources.Import
 				}
 
 				// Import from stream, identifying file format from extension:
-				string formatExt = Path.GetExtension(_handle.dataFilePath);
+				string formatExt = Path.GetExtension(fileHandle.dataFilePath);
 
 				return ImportModelData(stream, formatExt, out _outSurfaceData);
 			}

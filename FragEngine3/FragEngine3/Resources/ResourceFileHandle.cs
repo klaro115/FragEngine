@@ -84,6 +84,8 @@ namespace FragEngine3.Resources
 
 		public ResourceLoadState LoadState { get; internal set; } = ResourceLoadState.NotLoaded;
 
+		public string Key => resourceFilePath;
+
 		public static ResourceFileHandle None => none;
 
 		#endregion
@@ -180,7 +182,7 @@ namespace FragEngine3.Resources
 			{
 				if (!TryOpenDataStream(_handle.dataOffset, _handle.dataSize, out stream))
 				{
-					Logger.Instance?.LogError($"Failed to open data stream of file handle '{dataFilePath}' at data offset {_handle.dataOffset} and data size {_handle.dataSize}!");
+					Logger.Instance?.LogError($"Failed to open data stream of file handle '{Key}' at data offset {_handle.dataOffset} and data size {_handle.dataSize}!");
 					_outBytes = [];
 					_outByteCount = 0;
 					return false;
@@ -195,7 +197,7 @@ namespace FragEngine3.Resources
 			}
 			catch (Exception ex)
 			{
-				Logger.Instance?.LogException($"Failed to open data stream of file handle '{dataFilePath}' and read bytes for resource handle '{_handle}'!", ex);
+				Logger.Instance?.LogException($"Failed to open data stream of file handle '{Key}' and read bytes for resource handle '{_handle}'!", ex);
 				_outBytes = [];
 				_outByteCount = 0;
 				return false;
@@ -240,7 +242,7 @@ namespace FragEngine3.Resources
 			return true;
 		}
 
-		public bool Equals(ResourceFileHandle? other) => ReferenceEquals(this, other) || string.CompareOrdinal(other?.dataFilePath, dataFilePath) == 0;
+		public bool Equals(ResourceFileHandle? other) => ReferenceEquals(this, other) || string.CompareOrdinal(other?.Key, Key) == 0;
 		public override bool Equals(object? obj) => obj is ResourceFileHandle other && Equals(other);
 		public override int GetHashCode() => base.GetHashCode();
 

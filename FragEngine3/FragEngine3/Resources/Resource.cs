@@ -39,7 +39,7 @@ namespace FragEngine3.Resources
 		/// Whether this resource object is fully loaded and ready for use. Resource objects may in rare cases exist in an incomplete, or not fully loaded state
 		/// during their loading process. Using a resource handle to track their load state should however prevent any such premature usage of a resource.
 		/// </summary>
-		public bool IsLoaded => !IsDisposed && GetResourceHandle(out ResourceHandle handle) && handle.IsLoaded;
+		public virtual bool IsLoaded => !IsDisposed;
 
 		/// <summary>
 		/// The general type of resources this belongs to.

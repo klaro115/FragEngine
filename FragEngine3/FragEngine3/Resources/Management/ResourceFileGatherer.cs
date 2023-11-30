@@ -331,28 +331,85 @@ namespace FragEngine3.Resources.Management
 
 			resourceManager.engine.Logger.LogMessage("+ Gathering all resource files...");
 
+			Dictionary<string, ResourceHandle> allResourceHandles = new(256);
+
+			// FILES:
+
 			int totalFileCount = 0;
+			int totalResourceCount = 0;
+			int totalResourcesReplaced = 0;
+			int modLibCount = 0;
 			IEnumerator<ResourceLibrary> libraryEnumerator = libraries.GetEnumerator();
 			while (!IsCancelRequested && libraryEnumerator.MoveNext())
 			{
 				ResourceLibrary lib = libraryEnumerator.Current;
 				int libFileCount = 0;
 				int libFileFailed = 0;
+				int libResourceCount = 0;
+				int libResourcesReplaced = 0;
+
+				if (lib.source == ResourceSource.Mod)
+				{
+					modLibCount++;
+				}
 
 				try
 				{
 					// Get all resource descriptor files in this library and create file handles for them:
 					IEnumerable<string> resFilePaths = Directory.EnumerateFiles(lib.path, RES_FILE_SEARCH_PATTERN, SearchOption.AllDirectories);
-					IEnumerator<string> resourceEnumerator = resFilePaths.GetEnumerator();
-					while (!IsCancelRequested && resourceEnumerator.MoveNext())
+					IEnumerator<string> fileEnumerator = resFilePaths.GetEnumerator();
+					while (!IsCancelRequested && fileEnumerator.MoveNext())
 					{
-						if (ResourceFileData.DeserializeFromFile(resourceEnumerator.Current, out ResourceFileData fileData) && resourceManager.AddFile(new(fileData, lib.source, resourceEnumerator.Current)))
-						{
-							libFileCount++;
-						}
-						else
+						if (!ResourceFileData.DeserializeFromFile(fileEnumerator.Current, out ResourceFileData fileData) || !fileData.IsValid())
 						{
 							libFileFailed++;
+							continue;
+						}
+
+						// If data is somehow incomplete or slightly incorrect, try fixing it:
+						if (!fileData.IsComplete() && !fileData.TryToCompleteData())
+						{
+							libFileFailed++;
+							continue;
+						}
+
+						// Skip all resource files that do not point to any resources:
+						if (fileData.ResourceCount == 0 || fileData.Resources == null)
+						{
+							libFileFailed++;
+							continue;
+						}
+
+						// Make the data file's path absolute. If it ain't, it is expected to be relative to the resource file's location:
+						if (!Path.IsPathFullyQualified(fileData.DataFilePath))
+						{
+							string descFileDirectoryPath = Path.GetDirectoryName(fileEnumerator.Current) ?? string.Empty;
+							fileData.DataFilePath = Path.Combine(descFileDirectoryPath, fileData.DataFilePath);
+						}
+
+						// Register the file:
+						ResourceFileHandle fileHandle = new(fileData, lib.source, fileEnumerator.Current);
+						if (!resourceManager.AddFile(fileHandle))
+						{
+							libFileFailed++;
+							continue;
+						}
+						libFileCount++;
+
+						// Create resource handles for all resources in the data file:
+						for (int i = 0; i < fileHandle.ResourceCount; i++)
+						{
+							ResourceHandleData resData = fileData.Resources[i];
+							ResourceHandle resHandle = new(resourceManager, resData, fileHandle.Key);
+
+							// Overwrite any resource handles with duplicate keys by the newest redefinition: (this allows mods to be replace application data)
+							if (lib.source != ResourceSource.Core)
+							{
+								allResourceHandles.Remove(resHandle.resourceKey);
+								libResourcesReplaced++;
+							}
+							allResourceHandles.Add(resHandle.resourceKey, resHandle);
+							libResourceCount++;
 						}
 					}
 				}
@@ -361,14 +418,46 @@ namespace FragEngine3.Resources.Management
 					resourceManager.engine.Logger.LogException($"Failed to gather resource files from library '{lib.path}'!", ex);
 					return false;
 				}
-				
-				resourceManager.engine.Logger.LogMessage($"  - Loaded library '{lib.name}' - Resources: {libFileCount}, Failed: {libFileFailed}");
+
+				totalFileCount += libFileCount;
+				totalResourceCount += libResourceCount;
+				totalResourcesReplaced += libResourcesReplaced;
+
+				if (libFileCount != 0 || libFileFailed != 0)
+				{
+					resourceManager.engine.Logger.LogMessage($"  - Loaded library '{lib.name}' - Resources: {libResourceCount}, Files: {libFileCount}, Errors: {libFileFailed}");
+				}
 				gatherProgress?.Increment();
+			}
+
+			// Log some numbers for the nerds:
+			resourceManager.engine.Logger.LogMessage($"  - Found {totalResourceCount} resources in {totalFileCount} files across {libraries.Count} libraries.");
+			if (totalResourcesReplaced > 0)
+			{
+				float replacedPercentage = (100.0f * totalResourcesReplaced) / totalResourceCount;
+				resourceManager.engine.Logger.LogMessage($"  - Mods detected: {totalResourcesReplaced}/{totalResourceCount} ({replacedPercentage:00.#}%) resources were replaced across {modLibCount} mod libraries.");
 			}
 
 			long endTimeMs = stopwatch.ElapsedMilliseconds;
 			long durationMs = endTimeMs - startTimeMs;
-			resourceManager.engine.Logger.LogMessage($"+ All resource files gathered. ({totalFileCount} files in {libraries.Count} libraries) ({durationMs} ms)");
+			resourceManager.engine.Logger.LogMessage($"+ All resource files gathered. ({durationMs} ms)");
+
+			// RESOURCES:
+
+			// Register resource handles after file registration and overwrites have concluded:
+			startTimeMs = stopwatch.ElapsedMilliseconds;
+			gatherProgress?.Update("+ Registering all resource handles", 0, allResourceHandles.Count);
+
+			IEnumerator<KeyValuePair<string, ResourceHandle>> resourceEnumerator = allResourceHandles.GetEnumerator();
+			while (!IsCancelRequested && resourceEnumerator.MoveNext())
+			{
+				resourceManager.AddResource(resourceEnumerator.Current.Value);
+			}
+
+			endTimeMs = stopwatch.ElapsedMilliseconds;
+			durationMs = endTimeMs - startTimeMs;
+			resourceManager.engine.Logger.LogMessage($"+ All resource handles registered. ({durationMs} ms)");
+
 			return true;
 		}
 

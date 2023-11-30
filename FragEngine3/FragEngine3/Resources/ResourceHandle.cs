@@ -11,7 +11,7 @@ namespace FragEngine3.Resources
 		#endregion
 		#region Constructors
 
-		public ResourceHandle(ResourceManager _resourceManager, ResourceHandleData _data, string _dataFilePath)
+		public ResourceHandle(ResourceManager _resourceManager, ResourceHandleData _data, string _resourceFileKey)
 		{
 			if (_data == null) throw new ArgumentNullException(nameof(_data), "Resource handle data may not be null!");
 
@@ -20,7 +20,7 @@ namespace FragEngine3.Resources
 			resourceKey = _data.ResourceKey ?? throw new ArgumentNullException(nameof(_data), "Resource key may not be null!");
 			resourceType = _data.ResourceType;
 
-			dataFilePath = _dataFilePath ?? string.Empty;
+			fileKey = _resourceFileKey ?? string.Empty;
 			dataOffset = _data.DataOffset;
 			dataSize = _data.DataSize;
 
@@ -55,7 +55,7 @@ namespace FragEngine3.Resources
 			resourceKey = _resource.resourceKey;
 			resourceType = _resource.ResourceType;
 
-			dataFilePath = string.Empty;
+			fileKey = string.Empty;
 			dataOffset = 0;
 			dataSize = 0;
 
@@ -70,7 +70,7 @@ namespace FragEngine3.Resources
 			resourceKey = string.Empty;
 			resourceType = ResourceType.Unknown;
 
-			dataFilePath = string.Empty;
+			fileKey = string.Empty;
 			dataOffset = 0;
 			dataSize = 0;
 
@@ -86,7 +86,7 @@ namespace FragEngine3.Resources
 		public readonly string resourceKey;
 		public readonly ResourceType resourceType;
 
-		public readonly string dataFilePath;
+		public readonly string fileKey;
 		public readonly ulong dataOffset;
 		public readonly ulong dataSize;
 
@@ -144,7 +144,7 @@ namespace FragEngine3.Resources
 		{
 			if (_resourceObject == null || _resourceObject.IsDisposed || !_resourceObject.IsLoaded)
 			{
-				resourceManager.engine.Logger.LogError($"Cannot assign null or disposed resource to resource handle; loading of resource '{resourceKey}' failed!");
+				resourceManager.engine.Logger.LogError($"Cannot assign null or disposed resource to resource handle; loading of resource file '{fileKey}' failed!");
 				return false;
 			}
 
@@ -180,7 +180,7 @@ namespace FragEngine3.Resources
 
 		public override string ToString()
 		{
-			return $"{resourceKey} ({resourceType}, {LoadState}) [@{dataFilePath ?? "NULL"},{dataOffset},{dataSize}]";
+			return $"{resourceKey} ({resourceType}, {LoadState}) [@{fileKey ?? "NULL"},{dataOffset},{dataSize}]";
 		}
 
 		#endregion
