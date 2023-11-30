@@ -23,14 +23,15 @@ namespace FragEngine3.Graphics.Resources
 		[Flags]
 		public enum DirtyFlags : byte
 		{
-			None = 0x00,
+			None			= 0x00,
 
-			DepthStencil = 1,
-			Rasterizer = 2,
-			ShaderSet = 4,
-			ResourceLayouts = 8,
+			DepthStencil	= 1,
+			Rasterizer		= 2,
+			ShaderSet		= 4,
+			ResourceLayouts	= 8,
+			Output			= 16,
 
-			All = DepthStencil | Rasterizer | ShaderSet | ResourceLayouts
+			All				= DepthStencil | Rasterizer | ShaderSet | ResourceLayouts | Output
 		}
 
 		public struct StencilBehaviourDesc
@@ -223,13 +224,24 @@ namespace FragEngine3.Graphics.Resources
 		/// <param name="_vertexDataFlags">Flags for which vertex data must be bound to the pipeline.<para/>
 		/// NOTE: At least '<see cref="MeshVertexDataFlags.BasicSurfaceData"/>' must be set, all others are optional.</param>
 		/// <returns>True if the pipeline could be retrieved or updated successfully, false otherwise.</returns>
-		public bool GetOrUpdatePipeline(out Pipeline _outPipeline, MeshVertexDataFlags _vertexDataFlags = MeshVertexDataFlags.BasicSurfaceData)
+		public bool GetOrUpdatePipeline(GraphicsDrawContext _ctx, out Pipeline _outPipeline, MeshVertexDataFlags _vertexDataFlags = MeshVertexDataFlags.BasicSurfaceData)
 		{
+			if (_ctx == null)
+			{
+				Logger.LogError($"Cannot get or create pipeline for material variant using null draw context!");
+				_outPipeline = null!;
+				return false;
+			}
 			if (!_vertexDataFlags.HasFlag(MeshVertexDataFlags.BasicSurfaceData))
 			{
 				Logger.LogError($"Material's vertex data flags must include at least '{MeshVertexDataFlags.BasicSurfaceData}'!");
 				_outPipeline = null!;
 				return false;
+			}
+
+			if (_ctx.outputDescChanged)
+			{
+				dirtyFlags |= DirtyFlags.Output;
 			}
 
 			// Variants are stored in an array, with as many elements as there are vertex flag permutations:
@@ -249,7 +261,7 @@ namespace FragEngine3.Graphics.Resources
 				variant = new MaterialVariant(this, _vertexDataFlags);
 				variants[variantIdx] = variant;
 			}
-			if (IsDirty && !variant.UpdatePipeline(dirtyFlags))
+			if (IsDirty && !variant.UpdatePipeline(_ctx, dirtyFlags))
 			{
 				_outPipeline = null!;
 				return false;

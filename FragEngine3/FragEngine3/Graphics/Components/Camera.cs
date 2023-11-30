@@ -688,20 +688,24 @@ namespace FragEngine3.Graphics.Components
 			}
 		}
 
-		public bool BeginFrame(CommandList _cmdList)
+		public bool BeginFrame(CommandList _cmdList, out GraphicsDrawContext _outDrawCtx)
 		{
 			if (IsDisposed)
 			{
 				Logger.LogError("Cannot bind disposed camera for rendering!");
+				_outDrawCtx = null!;
 				return false;
 			}
 			if (_cmdList == null || _cmdList.IsDisposed)
 			{
 				Logger.LogError("Cannot bind camera using null or disposed command list!");
+				_outDrawCtx = null!;
 				return false;
 			}
 
-			lock(cameraStateLockObj)
+			bool outputHasChanged = dirtyFlags.HasFlag(DirtyFlags.Resolution) || dirtyFlags.HasFlag(DirtyFlags.RenderTarget);
+
+			lock (cameraStateLockObj)
 			{
 				isDrawing = true;
 
@@ -746,6 +750,7 @@ namespace FragEngine3.Graphics.Components
 						if (overrideRenderTargets.Width != resolutionX || overrideRenderTargets.Height != resolutionY)
 						{
 							Logger.LogError("Resolution mismatch between camera output and override render targets!");
+							_outDrawCtx = null!;
 							return false;
 						}
 					}
@@ -774,8 +779,14 @@ namespace FragEngine3.Graphics.Components
 				// Fetch the currently active render targets that shall be drawn to:
 				if (!GetActiveRenderTargets(out Framebuffer? activeRenderTargets) || activeRenderTargets == null)
 				{
+					_outDrawCtx = null!;
 					return false;
 				}
+
+				_outDrawCtx = new(core, _cmdList, activeRenderTargets.OutputDescription)
+				{
+					outputDescChanged = outputHasChanged
+				};
 
 				// Bind current render targets as output to command list:
 				_cmdList.SetFramebuffer(activeRenderTargets);

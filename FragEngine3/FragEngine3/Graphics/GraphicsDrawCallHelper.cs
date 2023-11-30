@@ -7,19 +7,12 @@ namespace FragEngine3.Graphics
 	/// Helper class for issuing common draw call types in a standardized way.<para/>
 	/// Note: Methods in this class will be called through the engine's graphics system by the renderers.
 	/// </summary>
-	public sealed class GraphicsDrawCallHelper
+	[Obsolete("no really used and unnecessary")]
+	public sealed class GraphicsDrawCallHelper(GraphicsSystem _graphicsSystem)
 	{
-		#region Constructors
-
-		public GraphicsDrawCallHelper(GraphicsSystem _graphicsSystem)
-		{
-			graphicsSystem = _graphicsSystem ?? throw new ArgumentNullException(nameof(_graphicsSystem), "Graphics system may not be null!");
-		}
-
-		#endregion
 		#region Fields
 
-		public readonly GraphicsSystem graphicsSystem;
+		public readonly GraphicsSystem graphicsSystem = _graphicsSystem ?? throw new ArgumentNullException(nameof(_graphicsSystem), "Graphics system may not be null!");
 
 		#endregion
 		#region Properties
@@ -51,24 +44,13 @@ namespace FragEngine3.Graphics
 		/// not be null, must be created from the same graphics device as the command list.</param>
 		/// <returns>True if the draw calls could be successfully written, false otherwise.</returns>
 		public bool DrawStaticGeometry(
-			CommandList _cmdList,
+			GraphicsDrawContext _ctx,
 			IList<DeviceBuffer> _vertexBuffers,
 			DeviceBuffer _indexBuffer,
 			uint _indexCount,
 			IndexFormat _indexFormat,
 			Material _material)
 		{
-			// Get command list:
-			if (_cmdList == null)
-			{
-				GraphicsCore core = _material.graphicsCore ?? graphicsSystem.graphicsCore;
-				_cmdList = core.MainCommandList;
-			}
-			if (_cmdList == null || _cmdList.IsDisposed)
-			{
-				return false;
-			}
-
 			// Get pipeline for this surface definition:
 			MeshVertexDataFlags vertexDataFlags = MeshVertexDataFlags.BasicSurfaceData;
 			bool hasExtendedVertexData = _vertexBuffers.Count > 1;
@@ -77,22 +59,22 @@ namespace FragEngine3.Graphics
 				vertexDataFlags |= MeshVertexDataFlags.ExtendedSurfaceData;
 			}
 
-			if (!_material.GetOrUpdatePipeline(out Pipeline pipeline, vertexDataFlags))
+			if (!_material.GetOrUpdatePipeline(_ctx, out Pipeline pipeline, vertexDataFlags))
 			{
 				return false;
 			}
 
 			// Bind resources:
-			_cmdList.SetPipeline(pipeline);
-			_cmdList.SetVertexBuffer(0, _vertexBuffers[0]);
+			_ctx.cmdList.SetPipeline(pipeline);
+			_ctx.cmdList.SetVertexBuffer(0, _vertexBuffers[0]);
 			if (hasExtendedVertexData)
 			{
-				_cmdList.SetVertexBuffer(1, _vertexBuffers[1]);
+				_ctx.cmdList.SetVertexBuffer(1, _vertexBuffers[1]);
 			}
-			_cmdList.SetIndexBuffer(_indexBuffer, _indexFormat);
+			_ctx.cmdList.SetIndexBuffer(_indexBuffer, _indexFormat);
 
 			// Issue draw call:
-			_cmdList.DrawIndexed(_indexCount);
+			_ctx.cmdList.DrawIndexed(_indexCount);
 			return true;
 		}
 

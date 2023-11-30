@@ -64,7 +64,7 @@ namespace FragEngine3.Graphics.Resources
 			}
 		}
 
-		public bool UpdatePipeline(Material.DirtyFlags _dirtyFlags)
+		public bool UpdatePipeline(GraphicsDrawContext _ctx, Material.DirtyFlags _dirtyFlags)
 		{
 			if (IsDisposed || material.IsDisposed)
 			{
@@ -87,9 +87,6 @@ namespace FragEngine3.Graphics.Resources
 						pipeline.Dispose();
 					}
 
-					// Update outputs:
-					OutputDescription outputs = new();			//TODO [IMPORTANT]: Actually define outputs here!!!
-
 					// Recreate full description:
 					if (_dirtyFlags.HasFlag(Material.DirtyFlags.All))
 					{
@@ -100,7 +97,7 @@ namespace FragEngine3.Graphics.Resources
 							PrimitiveTopology.TriangleList,
 							GetShaderSet(in vertexLayoutDescs, vertexDataFlags),
 							material.GetResourceLayouts(),
-							outputs,
+							_ctx.outputDesc,
 							ResourceBindingModel.Improved);
 					}
 					// Update current description:
@@ -121,6 +118,10 @@ namespace FragEngine3.Graphics.Resources
 						if (_dirtyFlags.HasFlag(Material.DirtyFlags.ResourceLayouts))
 						{
 							pipelineDesc.ResourceLayouts = material.GetResourceLayouts();
+						}
+						if (_dirtyFlags.HasFlag(Material.DirtyFlags.Output))
+						{
+							pipelineDesc.Outputs = _ctx.outputDesc;
 						}
 					}
 

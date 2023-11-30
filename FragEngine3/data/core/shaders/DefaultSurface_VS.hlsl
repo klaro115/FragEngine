@@ -1,6 +1,6 @@
 /****************** CONSTANTS: *****************/
 
-cbuffer Global : register(c0)
+cbuffer Global : register(b0)
 {
 	// Camera parameters:
     uint resolutionX;           // Render target width, in pixels.
@@ -17,7 +17,7 @@ cbuffer Global : register(c0)
     uint lightCount;
 };
 
-cbuffer Object : register(c1)
+cbuffer Object : register(b1)
 {
     float4x4 mtxInvWorld;       // Inverse world matrix, transforming vertices from model space to world space.
 };
@@ -82,7 +82,7 @@ void Main_Vertex_Ext(in VertexInput_Basic inputBasic, in VertexInput_Extended in
 {
     float4x4 mtxModel2Camera = mul(mtxCamera, mtxInvWorld);
 
-    outputBasic.position = mul(mtxModel2Camera, float4(inputBasic.position, 1)).xyz;
+    outputBasic.position = mul(mtxModel2Camera, float4(inputBasic.position, 1));
     outputBasic.worldPosition = mul(mtxInvWorld, float4(inputBasic.position, 1)).xyz;
     outputBasic.normal = mul(mtxModel2Camera, float4(inputBasic.position, 0)).xyz;
     outputBasic.uv = inputBasic.uv;

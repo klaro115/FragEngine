@@ -200,7 +200,7 @@ namespace FragEngine3.Graphics.Components
 			return Vector3.DistanceSquared(posFront, _viewportPosition);
 		}
 
-		public bool Draw(CommandList _cmdList)
+		public bool Draw(GraphicsDrawContext _ctx)
 		{
 			// Check mesh and load it now if necessary:
 			if (Mesh == null || Mesh.IsDisposed)
@@ -254,25 +254,25 @@ namespace FragEngine3.Graphics.Components
 			}
 
 			// Fetch (or create) pipeline description for rendering this material and vertex data combo:
-			if (!Material.GetOrUpdatePipeline(out Pipeline pipeline, vertexDataFlags))
+			if (!Material.GetOrUpdatePipeline(_ctx, out Pipeline pipeline, vertexDataFlags))
 			{
 				Logger.LogError($"Failed to retrieve pipeline description for material '{Material}'!");
 				return false;
 			}
 
 			// Throw pipeline and geometry buffers at the command list:
-			_cmdList.SetPipeline(pipeline);
+			_ctx.cmdList.SetPipeline(pipeline);
 			for (uint i = 0; i < vertexBuffers.Length; ++i)
 			{
-				_cmdList.SetVertexBuffer(i, vertexBuffers[i]);
+				_ctx.cmdList.SetVertexBuffer(i, vertexBuffers[i]);
 			}
-			_cmdList.SetIndexBuffer(indexBuffer, Mesh.IndexFormat);
+			_ctx.cmdList.SetIndexBuffer(indexBuffer, Mesh.IndexFormat);
 
 			//TODO: Bind material resources, such as textures and buffers!
 			//TODO: Update constant buffers, both for system variables and from material!
 
 			// Issue draw call:
-			_cmdList.DrawIndexed(Mesh.IndexCount);
+			_ctx.cmdList.DrawIndexed(Mesh.IndexCount);
 
 			return true;
 		}
