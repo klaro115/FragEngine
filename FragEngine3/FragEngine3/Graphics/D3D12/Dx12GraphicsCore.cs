@@ -1,6 +1,7 @@
 ﻿using FragEngine3.EngineCore;
 using FragEngine3.EngineCore.Config;
 using FragEngine3.Graphics.Internal;
+using System.Diagnostics;
 using Veldrid;
 using Veldrid.Sdl2;
 using Veldrid.StartupUtilities;
@@ -38,6 +39,9 @@ namespace FragEngine3.Graphics.D3D12
 				Logger.LogError("D3D graphics devices are already initialized!");
 				return true;
 			}
+
+			Stopwatch stopwatch = new();
+			stopwatch.Start();
 
 			Console.Write("# Initializing D3D graphics device... ");
 
@@ -97,6 +101,7 @@ namespace FragEngine3.Graphics.D3D12
 				Logger.LogMessage("# Initializing D3D graphics device... FAIL.", true);
 				Logger.LogException("Failed to create system default D3D graphics device!", ex);
 				Shutdown();
+				stopwatch.Stop();
 				return false;
 			}
 
@@ -140,8 +145,10 @@ namespace FragEngine3.Graphics.D3D12
 			isInitialized = Device != null && Window != null;
 			if (isInitialized)
 			{
-				Logger.LogMessage($"# Finished initializing D3D graphics device.\n");
+				Logger.LogMessage($"# Finished initializing D3D graphics device. ({stopwatch.ElapsedMilliseconds} ms)\n");
 			}
+
+			stopwatch.Stop();
 
 			quitMessageReceived = false;
 			return isInitialized;

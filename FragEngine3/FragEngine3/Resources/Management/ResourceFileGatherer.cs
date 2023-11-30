@@ -149,8 +149,9 @@ namespace FragEngine3.Resources.Management
 		private void RunFileGatherThread()
 		{
 			stopwatch.Restart();
-
 			libraries.Clear();
+
+			resourceManager.engine.Logger.LogMessage("# Initializing resource system...");
 
 			if (!IsCancelRequested && !VerifyResourceDirectories())
 			{
@@ -171,6 +172,8 @@ namespace FragEngine3.Resources.Management
 			}
 
 			gatherProgress?.CompleteAllTasks();
+
+			resourceManager.engine.Logger.LogMessage($"# Finished initializing resource system. ({stopwatch.ElapsedMilliseconds} ms)\n");
 
 		exit:
 			// Terminate progress:

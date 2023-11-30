@@ -1,6 +1,7 @@
 ﻿using FragEngine3.EngineCore;
 using FragEngine3.EngineCore.Config;
 using FragEngine3.Graphics.Internal;
+using System.Diagnostics;
 using Veldrid;
 using Veldrid.MetalBindings;
 using Veldrid.StartupUtilities;
@@ -38,6 +39,9 @@ namespace FragEngine3.Graphics.MacOS
 				Logger.LogError("Metal graphics devices are already initialized!");
 				return true;
 			}
+
+			Stopwatch stopwatch = new();
+			stopwatch.Start();
 
 			Console.Write("# Initializing Metal graphics device... ");
 
@@ -94,6 +98,7 @@ namespace FragEngine3.Graphics.MacOS
 				Logger.LogMessage("# Initializing D3D graphics device... FAIL.", true);
 				Logger.LogException("Failed to create system default metal graphics device!", ex);
 				Shutdown();
+				stopwatch.Stop();
 				return false;
 			}
 
@@ -137,7 +142,14 @@ namespace FragEngine3.Graphics.MacOS
 				}
 			}
 
-			isInitialized = Device != null;
+			stopwatch.Stop();
+
+			isInitialized = Device != null && Window != null;
+			if (isInitialized)
+			{
+				Logger.LogMessage($"# Finished initializing Metal graphics device. ({stopwatch.ElapsedMilliseconds} ms)\n");
+			}
+
 			quitMessageReceived = false;
 			return isInitialized;
 		}
