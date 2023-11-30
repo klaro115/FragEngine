@@ -15,7 +15,7 @@ namespace FragEngine3.Graphics.Components
 
 		public enum LightType : uint
 		{
-			Point,
+			Point			= 0,
 			Spot,
 			Directional,
 		}

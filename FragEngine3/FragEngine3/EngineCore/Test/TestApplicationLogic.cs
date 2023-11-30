@@ -74,6 +74,10 @@ namespace FragEngine3.EngineCore.Test
 			{
 				handle.Load(true);
 			}
+			if (Engine.ResourceManager.GetResource("DefaultSurface", out handle))
+			{
+				handle.Load(true);
+			}
 
 			Scene scene = Engine.SceneManager.MainScene!;
 
@@ -112,7 +116,7 @@ namespace FragEngine3.EngineCore.Test
 			if (cubeNode.CreateComponent(out StaticMeshRenderer? cubeRenderer) && cubeRenderer != null)
 			{
 				cubeRenderer.SetMesh("Cube.obj");
-				cubeRenderer.SetMaterial("Default.mtl");
+				cubeRenderer.SetMaterial("DefaultSurface");
 			}
 
 			return true;

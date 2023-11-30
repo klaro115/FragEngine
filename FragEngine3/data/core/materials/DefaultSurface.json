@@ -1,0 +1,47 @@
+{
+    "Key": "DefaultSurface",
+    "States":
+    {
+        "EnableDepthTest": true,
+        "EnableDepthWrite": true,
+        
+        "EnableStencil": false,
+        "StencilFront":
+        {
+            "Fail": 0,
+            "Pass": 0,
+            "DepthFail": 0,
+            "ComparisonKind": 3
+        },
+        "StencilBack":
+        {
+            "Fail": 0,
+            "Pass": 0,
+            "DepthFail": 0,
+            "ComparisonKind": 3
+        },
+
+        "EnableCulling": true,
+        "RenderMode": 1,
+        "ZSortingBias": 0.0
+    },
+    "Shaders":
+    {
+        "IsSurfaceMaterial": true,
+        "Compute": "",
+        "Vertex": "DefaultSurface_VS",
+        "Geometry": "",
+        "TesselationCtrl": "",
+        "TesselationEval": "",
+        "Pixel": "DefaultSurface_PS"
+    },
+    "Replacements":
+    {
+        "SimplifiedVersion": "",
+        "ShadowMap": ""
+    },
+    "Resources":
+    {
+
+    }
+}

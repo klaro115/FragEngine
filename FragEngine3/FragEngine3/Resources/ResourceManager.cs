@@ -8,7 +8,7 @@ using System.Diagnostics;
 
 namespace FragEngine3.Resources
 {
-    public sealed class ResourceManager : IDisposable
+	public sealed class ResourceManager : IDisposable
 	{
 		#region Types
 
@@ -566,8 +566,8 @@ namespace FragEngine3.Resources
 			if (resourceObj != null && !resourceObj.IsDisposed)
 			{
 				resourceObj.Dispose();
-				handle.LoadState = ResourceLoadState.NotLoaded;
 			}
+			handle.LoadState = ResourceLoadState.NotLoaded;
 			return true;
 		}
 
