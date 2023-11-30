@@ -26,7 +26,7 @@ struct Light
     float3 lightPosition;
     uint lightType;
     float3 lightDirection;
-    float lightHalfSpotAngleRad;
+    float lightSpotAngleAcos;
 };
 
 StructuredBuffer<Light> BufLights : register(ps, t0);   // Buffer containing an array of light source data. Number of lights is given in 'Global.lightCount'.
@@ -61,22 +61,28 @@ float4 Main_Pixel(in VertexOutput_Basic inputBasic) : SV_Target0
         Light light = BufLights[i];
 
         float4 lightIntens = light.lightIntensity;
-        float3 lightDir;
+        float3 lightRayDir;
 
         // Directional light:
         if (light.lightType == 2)
         {
-            lightDir = light.lightDirection;
+            lightRayDir = light.lightDirection;
         }
         // Point or Spot light:
         else
         {
             float3 lightOffset = inputBasic.worldPosition - light.lightPosition;
             lightIntens /= dot(lightOffset, lightOffset);
-            lightDir = normalize(lightOffset);
+            lightRayDir = normalize(lightOffset);
+
+            // Spot light angle:
+            if (light.lightType == 1 && dot(light.lightDirection, lightRayDir) < light.lightSpotAngleAcos)
+            {
+                lightIntens = (0, 0, 0, 0);
+            }
         }
 
-        float lightDot = max(dot(lightDir, inputBasic.normal), 0);
+        float lightDot = max(dot(lightRayDir, inputBasic.normal), 0);
         totalLightIntensity += lightDot * lightIntens;
     }
     albedo *= totalLightIntensity;

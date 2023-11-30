@@ -29,7 +29,7 @@ namespace FragEngine3.Graphics.Components
 			public Vector3 position;
 			public uint type;
 			public Vector3 direction;
-			public float halfSpotAngleRad;
+			public float spotAngleAcos;
 
 			public const int byteSize = 3 * 3 * sizeof(float) + 2 * sizeof(float) + sizeof(uint);	// 48 bytes
 		}
@@ -168,7 +168,7 @@ namespace FragEngine3.Graphics.Components
 				position = WorldPosition,
 				type = (uint)type,
 				direction = type == LightType.Spot ? Direction : Vector3.UnitZ,
-				halfSpotAngleRad = spotAngleRad * 0.5f,
+				spotAngleAcos = MathF.Acos(spotAngleRad * 0.5f),
 			};
 		}
 
