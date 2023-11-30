@@ -7,25 +7,17 @@ using Veldrid;
 
 namespace FragEngine3.Graphics.Resources
 {
-    public class StaticMesh : Mesh
+	/// <summary>
+	/// Creates a new static 3D model, with polygonal surface geometry but without animations or blendshapes.<para/>
+	/// NOTE: The model needs to initialized first by setting its geometry data at least once before first use.
+	/// </summary>
+	/// <param name="_handle">A resource handle for accessing and managing this model.</param>
+	/// <param name="_core">The graphics core through which the model will be rendered.</param>
+	/// <param name="_useFullSurfaceDef">Whether to use the full vertex definition, or only the basic surface
+	/// geometry data. Basically, if your model needs tangent space or a second set of UV coordinates, set this
+	/// to true.</param>
+	public class StaticMesh(ResourceHandle _handle, GraphicsCore _core, bool _useFullSurfaceDef) : Mesh(_handle, _core, _useFullSurfaceDef)
 	{
-		#region Constructors
-
-		/// <summary>
-		/// Creates a new static 3D model, with polygonal surface geometry but without animations or blendshapes.<para/>
-		/// NOTE: The model needs to initialized first by setting its geometry data at least once before first use.
-		/// </summary>
-		/// <param name="_handle">A resource handle for accessing and managing this model.</param>
-		/// <param name="_core">The graphics core through which the model will be rendered.</param>
-		/// <param name="_useFullSurfaceDef">Whether to use the full vertex definition, or only the basic surface
-		/// geometry data. Basically, if your model needs tangent space or a second set of UV coordinates, set this
-		/// to true.</param>
-		public StaticMesh(ResourceHandle _handle, GraphicsCore _core, bool _useFullSurfaceDef) :
-			base(_handle, _core, _useFullSurfaceDef)
-		{
-		}
-
-		#endregion
 		#region Fields
 
 		private uint vertexCount = 0;
@@ -309,6 +301,17 @@ namespace FragEngine3.Graphics.Resources
 
 			tempIndexBuffer16 = _indices;
 			tempIndexBuffer32 = null;
+
+			// Create index buffer on GPU:
+			if (indexBuffer == null)
+			{
+				indexBuffer?.Dispose();
+
+				uint byteSize = IndexCount * sizeof(ushort);
+				BufferDescription bufferDesc = new(byteSize, BufferUsage.IndexBuffer);
+
+				indexBuffer = core.MainFactory.CreateBuffer(ref bufferDesc);
+			}
 			return true;
 		}
 
@@ -328,6 +331,8 @@ namespace FragEngine3.Graphics.Resources
 			IndexFormat = _indices.Length < 65536 ? IndexFormat.UInt16 : IndexFormat.UInt32;
 			indexCount = (uint)_indices.Length;
 
+			uint indexByteSize;
+
 			if (IndexFormat == IndexFormat.UInt16)
 			{
 				tempIndexBuffer16 = new ushort[_indices.Length];
@@ -335,11 +340,24 @@ namespace FragEngine3.Graphics.Resources
 				{
 					tempIndexBuffer16[i] = (ushort)_indices[i];
 				}
+				indexByteSize = sizeof(ushort);
 			}
 			else
 			{
 				tempIndexBuffer16 = null;
 				tempIndexBuffer32 = _indices;
+				indexByteSize = sizeof(int);
+			}
+
+			// Create index buffer on GPU:
+			if (indexBuffer == null)
+			{
+				indexBuffer?.Dispose();
+
+				uint byteSize = IndexCount * indexByteSize;
+				BufferDescription bufferDesc = new(byteSize, BufferUsage.IndexBuffer);
+
+				indexBuffer = core.MainFactory.CreateBuffer(ref bufferDesc);
 			}
 			return true;
 		}

@@ -27,7 +27,7 @@ namespace FragEngine3.Graphics.Resources
 		public readonly MeshVertexDataFlags vertexDataFlags;
 		private readonly VertexLayoutDescription[] vertexLayoutDescs;
 
-		private Shader[] shaders = Array.Empty<Shader>();
+		private Shader[] shaders = [];
 		private Pipeline pipeline = null!;
 
 		private GraphicsPipelineDescription pipelineDesc;
@@ -60,7 +60,7 @@ namespace FragEngine3.Graphics.Resources
 
 			if (_disposing)
 			{
-				shaders = Array.Empty<Shader>();
+				shaders = [];
 			}
 		}
 
@@ -88,7 +88,7 @@ namespace FragEngine3.Graphics.Resources
 					}
 
 					// Update outputs:
-					OutputDescription outputs = new();
+					OutputDescription outputs = new();			//TODO [IMPORTANT]: Actually define outputs here!!!
 
 					// Recreate full description:
 					if (_dirtyFlags.HasFlag(Material.DirtyFlags.All))
@@ -170,7 +170,7 @@ namespace FragEngine3.Graphics.Resources
 		{
 			// Determine the number of (supported) shader stages:
 			bool hasGeometry = material.GeometryShader != null && material.graphicsCore.GetCapabilities().geometryShaders;
-			bool hasTesselation = material.TesselationShader != null && material.graphicsCore.GetCapabilities().tesselationShaders;
+			bool hasTesselation = material.TesselationShaderCtrl != null && material.TesselationShaderEval != null && material.graphicsCore.GetCapabilities().tesselationShaders;
 
 			int shaderCount = 2;
 			if (hasGeometry) shaderCount++;
@@ -186,7 +186,8 @@ namespace FragEngine3.Graphics.Resources
 			}
 			if (hasTesselation)
 			{
-				shaders[i++] = GetShader(material.TesselationShader!);
+				shaders[i++] = GetShader(material.TesselationShaderCtrl!);
+				shaders[i++] = GetShader(material.TesselationShaderEval!);
 			}
 			shaders[i++] = GetShader(material.PixelShader);
 

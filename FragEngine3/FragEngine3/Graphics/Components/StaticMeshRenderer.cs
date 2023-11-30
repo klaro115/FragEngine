@@ -146,7 +146,7 @@ namespace FragEngine3.Graphics.Components
 				Logger.LogError("Cannot assign null or disposed material handle to static mesh renderer!");
 				return false;
 			}
-			if (_materialHandle.resourceType != ResourceType.Model)
+			if (_materialHandle.resourceType != ResourceType.Material)
 			{
 				Logger.LogError($"Cannot assign resource handle of invalid type '{_materialHandle.resourceType}' as material to static mesh renderer!");
 				return false;

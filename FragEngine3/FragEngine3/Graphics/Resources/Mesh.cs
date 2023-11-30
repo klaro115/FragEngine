@@ -32,7 +32,7 @@ namespace FragEngine3.Graphics.Resources
 		protected DeviceBuffer? vertexBufferExt = null;
 		protected DeviceBuffer? indexBuffer = null;
 
-		protected DeviceBuffer[] vertexBuffers = Array.Empty<DeviceBuffer>();
+		protected DeviceBuffer[] vertexBuffers = [];
 
 		#endregion
 		#region Properties
@@ -69,7 +69,7 @@ namespace FragEngine3.Graphics.Resources
 
 			if (_disposing)
 			{
-				vertexBuffers = Array.Empty<DeviceBuffer>();
+				vertexBuffers = [];
 			}
 		}
 
@@ -101,7 +101,7 @@ namespace FragEngine3.Graphics.Resources
 			if (IsDisposed)
 			{
 				Logger.LogError("Cannot get geometry buffers of disposed mesh!");
-				_outVertexBuffers = Array.Empty<DeviceBuffer>();
+				_outVertexBuffers = [];
 				_outIndexBuffer = null!;
 				_outVertexDataFlags = 0;
 				return false;
@@ -109,7 +109,7 @@ namespace FragEngine3.Graphics.Resources
 			if (!IsInitialized || vertexBufferBasic == null || indexBuffer == null)
 			{
 				Logger.LogError($"Cannot get geometry buffers; mesh '{resourceKey}' has not been initialized!");
-				_outVertexBuffers = Array.Empty<DeviceBuffer>();
+				_outVertexBuffers = [];
 				_outIndexBuffer = null!;
 				_outVertexDataFlags = 0;
 				return false;

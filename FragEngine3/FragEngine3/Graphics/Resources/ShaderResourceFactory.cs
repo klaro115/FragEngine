@@ -101,11 +101,14 @@ namespace FragEngine3.Graphics.Resources
 			}
 
 			// Retrieve the file that this resource is loaded from:
-			if (!_handle.resourceManager.GetFileWithResource(_handle.resourceKey, out ResourceFileHandle? fileHandle) || fileHandle == null)
+			if (!_handle.resourceManager.GetFile(_handle.fileKey, out ResourceFileHandle fileHandle))
 			{
-				logger.LogError($"Could not find source file for resource handle '{_handle}'!");
-				_outShaderRes = null;
-				return false;
+				if (!_handle.resourceManager.GetFileWithResource(_handle.resourceKey, out fileHandle) || fileHandle == null)
+				{
+					logger.LogError($"Could not find source file for resource handle '{_handle}'!");
+					_outShaderRes = null;
+					return false;
+				}
 			}
 
 			// Try reading raw byte data from file:
@@ -125,6 +128,8 @@ namespace FragEngine3.Graphics.Resources
 				StringBuilder suffixBuilder = new(128);
 				Utf16Iterator e = new(bytes, byteCount);
 				Utf16Iterator.Position pos;
+
+				e.MoveNext();
 
 				// Find next entry point:
 				while ((pos = e.FindNext(_entryPoint)).IsValid)

@@ -52,7 +52,8 @@ namespace FragEngine3.Graphics.Resources
 
 		private ResourceHandle vertexShader = null!;
 		private ResourceHandle? geometryShader = null;
-		private ResourceHandle? tesselationShader = null;
+		private ResourceHandle? tesselationShaderCtrl = null;
+		private ResourceHandle? tesselationShaderEval = null;
 		private ResourceHandle pixelShader = null!;
 
 		private ResourceLayout[] resLayouts = [];
@@ -88,10 +89,15 @@ namespace FragEngine3.Graphics.Resources
 			get => geometryShader;
 			set { bool isChanged = geometryShader?.resourceKey != value?.resourceKey; geometryShader = value!; if (isChanged) { MarkDirty(DirtyFlags.ShaderSet); } }
 		}
-		public ResourceHandle? TesselationShader
+		public ResourceHandle? TesselationShaderCtrl
 		{
-			get => tesselationShader;
-			set { bool isChanged = tesselationShader?.resourceKey != value?.resourceKey; tesselationShader = value!; if (isChanged) { MarkDirty(DirtyFlags.ShaderSet); } }
+			get => tesselationShaderCtrl;
+			set { bool isChanged = tesselationShaderCtrl?.resourceKey != value?.resourceKey; tesselationShaderCtrl = value!; if (isChanged) { MarkDirty(DirtyFlags.ShaderSet); } }
+		}
+		public ResourceHandle? TesselationShaderEval
+		{
+			get => tesselationShaderEval;
+			set { bool isChanged = tesselationShaderEval?.resourceKey != value?.resourceKey; tesselationShaderEval = value!; if (isChanged) { MarkDirty(DirtyFlags.ShaderSet); } }
 		}
 		public ResourceHandle PixelShader
 		{
@@ -172,7 +178,8 @@ namespace FragEngine3.Graphics.Resources
 			{
 				vertexShader = null!;
 				geometryShader = null;
-				tesselationShader = null;
+				tesselationShaderCtrl = null;
+				tesselationShaderEval = null;
 				pixelShader = null!;
 
 				//TODO: Drop bound resources.
@@ -242,7 +249,7 @@ namespace FragEngine3.Graphics.Resources
 				variant = new MaterialVariant(this, _vertexDataFlags);
 				variants[variantIdx] = variant;
 			}
-			else if (IsDirty && !variant.UpdatePipeline(dirtyFlags))
+			if (IsDirty && !variant.UpdatePipeline(dirtyFlags))
 			{
 				_outPipeline = null!;
 				return false;
@@ -253,7 +260,7 @@ namespace FragEngine3.Graphics.Resources
 
 			// Output up-to-date pipeline and return success:
 			_outPipeline = variant.Pipeline;
-			return !variant.IsDisposed && !_outPipeline.IsDisposed;
+			return _outPipeline != null && !variant.IsDisposed && !_outPipeline.IsDisposed;
 		}
 
 		internal DepthStencilStateDescription GetDepthStencilDesc()
@@ -324,12 +331,16 @@ namespace FragEngine3.Graphics.Resources
 			if (IsDisposed) yield break;
 
 			bool hasGeometry = geometryShader != null && graphicsCore.GetCapabilities().geometryShaders;
-			bool hasTesselation = tesselationShader != null && graphicsCore.GetCapabilities().tesselationShaders;
+			bool hasTesselation = tesselationShaderCtrl != null && tesselationShaderEval != null && graphicsCore.GetCapabilities().tesselationShaders;
 
 			// Iterate all (supported) shader stages:
 			if (vertexShader != null) yield return vertexShader;
 			if (hasGeometry) yield return geometryShader!;
-			if (hasTesselation) yield return tesselationShader!;
+			if (hasTesselation)
+			{
+				yield return tesselationShaderCtrl!;
+				yield return tesselationShaderEval!;
+			}
 			if (pixelShader != null) yield return pixelShader;
 
 			//TODO: Enumerate bound resources.
@@ -415,10 +426,66 @@ namespace FragEngine3.Graphics.Resources
 				return false;
 			}
 
-			//TODO: Create and initialize material instance from data.
+			// Assemble stencil description, if required and available:
+			StencilBehaviourDesc stencilDesc;
+			if (data.States.StencilFront != null && data.States.StencilBack != null)
+			{
+				stencilDesc = new()
+				{
+					stencilFront = new(
+						data.States.StencilFront.Fail,
+						data.States.StencilFront.Pass,
+						data.States.StencilFront.DepthFail,
+						data.States.StencilFront.ComparisonKind),
+					stencilBack = new(
+						data.States.StencilBack.Fail,
+						data.States.StencilBack.Pass,
+						data.States.StencilBack.DepthFail,
+						data.States.StencilBack.ComparisonKind),
+					readMask = data.States.StencilReadMask,
+					writeMask = data.States.StencilWriteMask,
+					referenceValue = data.States.StencilReferenceValue,
+				};
+			}
+			else
+			{
+				stencilDesc = new();
+			}
 
-			_outMaterial = null;
+			// Create and initialize material instance from data.
+			_outMaterial = new(_handle, _graphicsCore)
+			{
+				vertexShader = GetResourceHandle(data.Shaders.Vertex) ?? ResourceHandle.None,
+				geometryShader = GetResourceHandle(data.Shaders.Geometry),
+				tesselationShaderCtrl = GetResourceHandle(data.Shaders.TesselationCtrl),
+				tesselationShaderEval = GetResourceHandle(data.Shaders.TesselationEval),
+				pixelShader = GetResourceHandle(data.Shaders.Pixel) ?? ResourceHandle.None,
+
+				enableDepthRead = data.States!.EnableDepthTest,
+				enableDepthWrite = data.States.EnableDepthWrite,
+				enableStencil = data.States.EnableStencil,
+				stencilBehaviour = stencilDesc,
+				enableCulling = data.States.EnableCulling,
+
+				renderMode = data.States.RenderMode,
+				zSortingBias = data.States.ZSortingBias,
+
+				SimplifiedMaterialVersion = GetResourceHandle(data.Replacements?.SimplifiedVersion),
+				ShadowMapMaterialVersion = GetResourceHandle(data.Replacements?.ShadowMap),
+
+				//... (bound resources)
+			};
+			_outMaterial.MarkDirty();
 			return true;
+
+			
+			// Local helper methods for getching shader handles:
+			ResourceHandle? GetResourceHandle(string? _resourceKey)
+			{
+				return !string.IsNullOrEmpty(_resourceKey) && _handle.resourceManager.GetResource(_resourceKey, out ResourceHandle handle)
+					? handle
+					: null;
+			}
 		}
 
 		#endregion

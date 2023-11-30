@@ -8,13 +8,8 @@ using Veldrid.StartupUtilities;
 
 namespace FragEngine3.Graphics.MacOS
 {
-	internal sealed class MacGraphicsCore : GraphicsCore
+	internal sealed class MacGraphicsCore(GraphicsSystem _graphicsSystem, EngineConfig _config) : GraphicsCore(_graphicsSystem, _config)
 	{
-		#region Constructors
-
-		public MacGraphicsCore(GraphicsSystem _graphicsSystem, EngineConfig _config) : base(_graphicsSystem, _config) { }
-
-		#endregion
 		#region Fields
 
 		private static readonly GraphicsCapabilities capabilities = new();

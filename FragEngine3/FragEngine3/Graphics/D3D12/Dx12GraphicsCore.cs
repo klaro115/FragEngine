@@ -8,13 +8,8 @@ using Veldrid.StartupUtilities;
 
 namespace FragEngine3.Graphics.D3D12
 {
-	internal sealed class Dx12GraphicsCore : GraphicsCore
+	internal sealed class Dx12GraphicsCore(GraphicsSystem _graphicsSystem, EngineConfig _config) : GraphicsCore(_graphicsSystem, _config)
 	{
-		#region Constructors
-
-		public Dx12GraphicsCore(GraphicsSystem _graphicsSystem, EngineConfig _config) : base(_graphicsSystem, _config) { }
-
-		#endregion
 		#region Fields
 
 		private static readonly GraphicsCapabilities capabilities = new();

@@ -104,7 +104,7 @@ namespace FragEngine3.Utility.Unicode
 
 		public bool MoveNext()
 		{
-			if (Utf8Position >= utf8Length)
+			if (Utf8Position >= utf8Length - 1)
 			{
 				Current = '\0';
 				return false;
@@ -292,7 +292,9 @@ namespace FragEngine3.Utility.Unicode
 		/// iterator continues until the end of the enumeration.<para/>
 		/// NOTE: The enumerator will always advance past the starting position of a search result. It will however
 		/// return the starting position of the match. To get the current reading positions after finding a result,
-		/// use '<see cref="CurrentPosition"/>'.
+		/// use '<see cref="CurrentPosition"/>'.<para/>
+		/// WARNING: The iterator must have been advanced to a valid starting position via a call to '<see cref="MoveNext"/>'
+		/// at least once before this search function is used!
 		/// </summary>
 		/// <param name="_query">A text query to look for in this enumerator's UTF-8 byte array. If null or empty,
 		/// the iterator will ignore the query and stay where it is.</param>
@@ -318,7 +320,7 @@ namespace FragEngine3.Utility.Unicode
 
 					// Iterate and check for continued query overlap as we go:
 					int i = 1;
-					while (MoveNext() && Current == _query[i])
+					while (MoveNext() && i < _query.Length && Current == _query[i])
 					{
 						i++;
 					}
