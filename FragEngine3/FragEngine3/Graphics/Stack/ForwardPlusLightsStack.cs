@@ -211,128 +211,181 @@ namespace FragEngine3.Graphics.Stack
 				return true;
 			}
 
+			// Start drawing a new application frame via the core:
+			if (!core.BeginFrame(GraphicsSystem.DirtyFlags.None))
+			{
+				Logger.LogError("Graphics core failed to perform frame start operations!");
+				isDrawing = false;
+				return false;
+			}
+
 			bool success = true;
 			isDrawing = true;
 
 			uint maxActiveLightCount = Math.Max(core.graphicsSystem.Settings.MaxActiveLightCount, 1);
 
 			// Draw scene for each of the scene's active cameras:
-			foreach (Camera camera in _cameras)
+			bool[] camerasAreLive = new bool[_cameras.Count];
+			for (int i = 0; i < _cameras.Count; ++i)
 			{
 				// Skip any cameras that are expired or disabled:
+				Camera camera = _cameras[i];
 				if (camera == null || camera.IsDisposed || !camera.node.IsEnabledInHierarchy() || camera.layerMask == 0u)
 				{
+					camerasAreLive[i] = false;
 					continue;
 				}
+				camerasAreLive[i] = true;
 
-				// Identify all relevant lights for this camera's viewport:
-				foreach (Light light in _lights)
+				GatherLightsForCamera(in _lights, camera);
+
+				success &= TryRenderCamera(_scene, _renderers, camera, maxActiveLightCount);
+			}
+
+			// Composite results to backbuffer:
+			{
+				CommandList mainCmdList = core.MainCommandList;
+				Framebuffer backBuffer = core.Device.SwapchainFramebuffer;
+				Texture backBufferColorTarget = backBuffer.ColorTargets[0].Target;
+				Texture backBufferDepthTarget = backBuffer.DepthTarget!.Value.Target;	//TODO: This is a temporary and overly pathetic way of throwing content at the backbuffer. Change this to use an actual composition shader!
+
+				for (int i = 0; i < _cameras.Count; ++i)
 				{
-					if (!light.IsDisposed &&
-						light.node.IsEnabledInHierarchy() &&
-						(light.layerMask & camera.layerMask) != 0)
+					if (!camerasAreLive[i]) continue;
+
+					Camera camera = _cameras[i];
+					if (camera.GetActiveRenderTargets(out Framebuffer? framebuffer) && framebuffer != null)
 					{
-						if (light.Type != Light.LightType.Directional)
+						Texture colorTarget = framebuffer.ColorTargets[0].Target;
+						mainCmdList.CopyTexture(colorTarget, backBufferColorTarget);
+
+						Texture? depthTarget = framebuffer?.DepthTarget?.Target;
+						if (depthTarget != null)
 						{
-							// TODO: Determine if light's maximum range overlaps viewport frustum!
-							cameraLightBuffer.Add(light);
-						}
-						else
-						{
-							cameraLightBuffer.Add(light);
+							mainCmdList.CopyTexture(depthTarget, backBufferDepthTarget);
 						}
 					}
-				}
-
-				try
-				{
-					lock (lockObj)
-					{
-						// Get or create CPU and CPU-side buffers for assembling and binding light data:
-						uint activeLightCount = Math.Clamp((uint)cameraLightBuffer.Count, 0, maxActiveLightCount);
-						if (!camera.GetLightDataBuffer(activeLightCount, out DeviceBuffer? lightDataBuffer) || lightDataBuffer == null)
-						{
-							Logger.LogError("Failed to get or create camera's light source data buffer!");
-							success = false;
-							continue;
-						}
-						if (lightSourceDataBuffer.Length < activeLightCount)
-						{
-							lightSourceDataBuffer = new Light.LightSourceData[activeLightCount];
-						}
-						// Upload light data to GPU buffer:
-						for (int i = 0; i < activeLightCount; i++)
-						{
-							lightSourceDataBuffer[i] = cameraLightBuffer[i].GetLightSourceData();
-						}
-						ReadOnlySpan<Light.LightSourceData> lightSourceDataSpan = new(lightSourceDataBuffer, 0, (int)activeLightCount);
-						core.Device.UpdateBuffer(lightDataBuffer, 0, lightSourceDataSpan);
-
-						// Get and update a constant buffer containing the camera's global scene data:
-						if (!camera.GetGlobalConstantBuffer(activeLightCount, false, out DeviceBuffer? globalConstantBuffer) || globalConstantBuffer == null)
-						{
-							Logger.LogError("Failed to get or create camera's global constant buffer!");
-							success = false;
-							continue;
-						}
-
-						// Clear out all renderer lists for the upcoming frame:
-						foreach (RendererList rendererList in rendererLists)
-						{
-							rendererList.Clear();
-						}
-						VisibleRendererCount = 0;
-						SkippedRendererCount = 0;
-
-						// No nodes and no scene behaviours? Skip drawing altogether:
-						if (_renderers.Count == 0 && _scene.SceneBehaviourCount == 0)
-						{
-							return true;
-						}
-
-						// Assign each renderer to the most appropriate rendering list:
-						foreach (IRenderer renderer in _renderers)
-						{
-							if (renderer.IsVisible && (renderer.LayerFlags & camera.layerMask) != 0)
-							{
-								// Skip any renderers that cannot be mapped to any of the supported modes:
-								if (!GetRendererListForMode(renderer.RenderMode, out RendererList? rendererList))
-								{
-									SkippedRendererCount++;
-									continue;
-								}
-
-								// Add the renderer to its mode's corresponding list:
-								rendererList!.renderers.Add(renderer);
-
-								VisibleRendererCount++;
-							}
-						}
-
-						if (VisibleRendererCount != 0)
-						{
-							// Issue draw calls for each renderer list:
-							success &= DrawOpaqueRendererList(camera);
-							success &= DrawZSortedRendererList(camera);
-							success &= DrawUiRendererList(camera);
-
-
-							//TODO: Composite end results!
-
-						}
-					}
-
-					cameraLightBuffer.Clear();
-				}
-				catch (Exception ex)
-				{
-					Logger.LogException($"An exception was caught while trying to draw scene using graphics stack of type '{nameof(ForwardPlusLightsStack)}'!", ex);
-					return false;
 				}
 			}
-			
+
+			// End the current application frame:
+			success &= core.EndFrame();
+
 			isDrawing = false;
 			return success;
+		}
+
+		private void GatherLightsForCamera(in IList<Light> _lights, Camera _camera)
+		{
+			// Identify all relevant lights for this camera's viewport:
+			foreach (Light light in _lights)
+			{
+				if (!light.IsDisposed &&
+					light.node.IsEnabledInHierarchy() &&
+					(light.layerMask & _camera.layerMask) != 0)
+				{
+					if (light.Type != Light.LightType.Directional)
+					{
+						// TODO: Determine if light's maximum range overlaps viewport frustum!
+						cameraLightBuffer.Add(light);
+					}
+					else
+					{
+						cameraLightBuffer.Add(light);
+					}
+				}
+			}
+		}
+
+		private bool TryRenderCamera(Scene _scene, List<IRenderer> _renderers, Camera _camera, uint _maxActiveLightCount)
+		{
+			try
+			{
+				lock (lockObj)
+				{
+					// Get or create CPU and CPU-side buffers for assembling and binding light data:
+					uint activeLightCount = Math.Clamp((uint)cameraLightBuffer.Count, 0, _maxActiveLightCount);
+					if (!_camera.GetLightDataBuffer(activeLightCount, out DeviceBuffer? lightDataBuffer) || lightDataBuffer == null)
+					{
+						Logger.LogError("Failed to get or create camera's light source data buffer!");
+						return false;
+					}
+					if (lightSourceDataBuffer.Length < activeLightCount)
+					{
+						lightSourceDataBuffer = new Light.LightSourceData[activeLightCount];
+					}
+					// Upload light data to GPU buffer:
+					for (int i = 0; i < activeLightCount; i++)
+					{
+						lightSourceDataBuffer[i] = cameraLightBuffer[i].GetLightSourceData();
+					}
+					ReadOnlySpan<Light.LightSourceData> lightSourceDataSpan = new(lightSourceDataBuffer, 0, (int)activeLightCount);
+					core.Device.UpdateBuffer(lightDataBuffer, 0, lightSourceDataSpan);
+
+					// Get and update a constant buffer containing the camera's global scene data:
+					if (!_camera.GetGlobalConstantBuffer(activeLightCount, false, out DeviceBuffer? globalConstantBuffer) || globalConstantBuffer == null)
+					{
+						Logger.LogError("Failed to get or create camera's global constant buffer!");
+						return false;
+					}
+
+					// Clear out all renderer lists for the upcoming frame:
+					foreach (RendererList rendererList in rendererLists)
+					{
+						rendererList.Clear();
+					}
+					VisibleRendererCount = 0;
+					SkippedRendererCount = 0;
+
+					// No nodes and no scene behaviours? Skip drawing altogether:
+					if (_renderers.Count == 0 && _scene.SceneBehaviourCount == 0)
+					{
+						return true;
+					}
+
+					// Assign each renderer to the most appropriate rendering list:
+					foreach (IRenderer renderer in _renderers)
+					{
+						if (renderer.IsVisible && (renderer.LayerFlags & _camera.layerMask) != 0)
+						{
+							// Skip any renderers that cannot be mapped to any of the supported modes:
+							if (!GetRendererListForMode(renderer.RenderMode, out RendererList? rendererList))
+							{
+								SkippedRendererCount++;
+								continue;
+							}
+
+							// Add the renderer to its mode's corresponding list:
+							rendererList!.renderers.Add(renderer);
+
+							VisibleRendererCount++;
+						}
+					}
+
+					if (VisibleRendererCount != 0)
+					{
+						bool success = true;
+
+						// Issue draw calls for each renderer list:
+						success &= DrawOpaqueRendererList(_camera);
+						success &= DrawZSortedRendererList(_camera);
+						success &= DrawUiRendererList(_camera);
+
+						if (!success)
+						{
+							return false;
+						}
+					}
+				}
+
+				cameraLightBuffer.Clear();
+				return true;
+			}
+			catch (Exception ex)
+			{
+				Logger.LogException($"An exception was caught while trying to draw scene using graphics stack of type '{nameof(ForwardPlusLightsStack)}'!", ex);
+				return false;
+			}
 		}
 
 		private bool GetRendererListForMode(RenderMode _mode, out RendererList? _outRendererList)
@@ -383,7 +436,7 @@ namespace FragEngine3.Graphics.Stack
 				FailedRendererCount += renderer.Draw(ctx) ? 0 : 1;
 			}
 
-			success &= _camera.EndFrame();
+			success &= _camera.EndFrame(opaqueList.cmdList);
 
 			return success;
 		}
@@ -425,7 +478,7 @@ namespace FragEngine3.Graphics.Stack
 				FailedRendererCount += renderer.Draw(ctx) ? 0 : 1;
 			}
 
-			success &= _camera.EndFrame();
+			success &= _camera.EndFrame(zSortedList.cmdList);
 
 			return success;
 		}
@@ -461,7 +514,7 @@ namespace FragEngine3.Graphics.Stack
 				FailedRendererCount += renderer.Draw(ctx) ? 0 : 1;
 			}
 
-			success &= _camera.EndFrame();
+			success &= _camera.EndFrame(uiList.cmdList);
 
 			return success;
 		}

@@ -703,6 +703,8 @@ namespace FragEngine3.Graphics.Components
 				return false;
 			}
 
+			_cmdList.Begin();
+
 			bool outputHasChanged = dirtyFlags.HasFlag(DirtyFlags.Resolution) || dirtyFlags.HasFlag(DirtyFlags.RenderTarget);
 
 			lock (cameraStateLockObj)
@@ -815,7 +817,7 @@ namespace FragEngine3.Graphics.Components
 			return true;
 		}
 
-		public bool EndFrame()
+		public bool EndFrame(CommandList _cmdList)
 		{
 			if (IsDisposed)
 			{
@@ -829,7 +831,9 @@ namespace FragEngine3.Graphics.Components
 
 				isDrawing = false;
 			}
-			return true;
+
+			_cmdList.End();
+			return core.CommitCommandList(_cmdList);
 		}
 
 		public Vector3 TransformWorldPointToPixelCoord(Vector3 _worldPoint, bool _allowUpdateProjection = true)
