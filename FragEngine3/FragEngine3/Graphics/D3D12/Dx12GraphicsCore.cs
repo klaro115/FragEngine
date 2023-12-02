@@ -45,8 +45,8 @@ namespace FragEngine3.Graphics.D3D12
 				// DEFINE WINDOW:
 
 				WindowStyle windowStyle = config.Graphics.WindowStyle;
-				int width = 640;
-				int height = 480;
+				int width = 1280;
+				int height = 720;
 				string windowTitle = config.MainWindowTitle ?? config.ApplicationName ?? string.Empty;
 
 				WindowCreateInfo windowCreateInfo = new(

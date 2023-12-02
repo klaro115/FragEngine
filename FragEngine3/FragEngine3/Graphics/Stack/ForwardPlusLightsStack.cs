@@ -237,11 +237,16 @@ namespace FragEngine3.Graphics.Stack
 				}
 				camerasAreLive[i] = true;
 
+				//TEST TEST TEST TEST
+				camera.SetOverrideRenderTargets(core.Device.SwapchainFramebuffer, false);
+				//TEST TEST TEST TEST
+
 				GatherLightsForCamera(in _lights, camera);
 
 				success &= TryRenderCamera(_scene, _renderers, camera, maxActiveLightCount);
 			}
 
+			/*
 			// Composite results to backbuffer:
 			{
 				CommandList mainCmdList = core.MainCommandList;
@@ -267,6 +272,7 @@ namespace FragEngine3.Graphics.Stack
 					}
 				}
 			}
+			*/
 
 			// End the current application frame:
 			success &= core.EndFrame();

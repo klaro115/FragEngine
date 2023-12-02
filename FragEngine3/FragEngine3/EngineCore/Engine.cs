@@ -313,12 +313,6 @@ namespace FragEngine3.EngineCore
 		{
 			bool success = true;
 
-			//TEST TEST TEST TEST
-			if (stopwatch.ElapsedMilliseconds > 2500 && State == EngineState.Running)
-			{
-				Exit();
-			}
-
 			// UPDATE:
 
 			if (State == EngineState.Running)

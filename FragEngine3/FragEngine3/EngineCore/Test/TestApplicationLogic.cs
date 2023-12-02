@@ -124,6 +124,11 @@ namespace FragEngine3.EngineCore.Test
 
 		public override bool UpdateRunningState()
 		{
+			if (Engine.InputManager.GetMouseButtonUp(Veldrid.MouseButton.Right))
+			{
+				Engine.Exit();
+			}
+
 			return true;
 		}
 
