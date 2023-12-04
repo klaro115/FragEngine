@@ -15,6 +15,12 @@ namespace FragEngine3.Graphics.Resources
 			core = _core ?? throw new ArgumentNullException(nameof(_core), "Graphics core may not be null!");
 			useFullSurfaceDef = _useFullSurfaceDef;
 		}
+
+		protected Mesh(string _resourceKey, ResourceManager _resourceManager, GraphicsCore _core, bool _useFullSurfaceDef) : base(_resourceKey, _resourceManager)
+		{
+			core = _core ?? throw new ArgumentNullException(nameof(_core), "Graphics core may not be null!");
+			useFullSurfaceDef = _useFullSurfaceDef;
+		}
 		
 		#endregion
 		#region Fields

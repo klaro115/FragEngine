@@ -1,15 +1,15 @@
 {
-    "DataFilePath": "./DefaultSurface_PS.hlsl",
+    "DataFilePath": "./Test_PS.hlsl",
     "DataFileType": 0,
-    "DataFileSize": 2777,
-    "UncompressedFileSize": 2777,
+    "DataFileSize": 392,
+    "UncompressedFileSize": 392,
     "BlockSize": 0,
     "BlockCount": 0,
     "ResourceCount": 1,
     "Resources":
     [
         {
-            "ResourceKey": "DefaultSurface_PS",
+            "ResourceKey": "Test_PS",
             "ResourceType": 4,
             "DataOffset": 0,
             "DataSize": 0,

@@ -7,17 +7,30 @@ using Veldrid;
 
 namespace FragEngine3.Graphics.Resources
 {
-	/// <summary>
-	/// Creates a new static 3D model, with polygonal surface geometry but without animations or blendshapes.<para/>
-	/// NOTE: The model needs to initialized first by setting its geometry data at least once before first use.
-	/// </summary>
-	/// <param name="_handle">A resource handle for accessing and managing this model.</param>
-	/// <param name="_core">The graphics core through which the model will be rendered.</param>
-	/// <param name="_useFullSurfaceDef">Whether to use the full vertex definition, or only the basic surface
-	/// geometry data. Basically, if your model needs tangent space or a second set of UV coordinates, set this
-	/// to true.</param>
-	public class StaticMesh(ResourceHandle _handle, GraphicsCore _core, bool _useFullSurfaceDef) : Mesh(_handle, _core, _useFullSurfaceDef)
+	public class StaticMesh : Mesh
 	{
+		#region Constructors
+
+		/// <summary>
+		/// Creates a new static 3D model, with polygonal surface geometry but without animations or blendshapes.<para/>
+		/// NOTE: The model needs to initialized first by setting its geometry data at least once before first use.
+		/// </summary>
+		/// <param name="_handle">A resource handle for accessing and managing this model.</param>
+		/// <param name="_core">The graphics core through which the model will be rendered.</param>
+		/// <param name="_useFullSurfaceDef">Whether to use the full vertex definition, or only the basic surface
+		/// geometry data. Basically, if your model needs tangent space or a second set of UV coordinates, set this
+		/// to true.</param>
+		public StaticMesh(ResourceHandle _handle, GraphicsCore _core, bool _useFullSurfaceDef) : base(_handle, _core, _useFullSurfaceDef)
+		{
+			//...
+		}
+
+		public StaticMesh(string _resourceKey, ResourceManager _resourceManager, GraphicsCore _core, bool _useFullSurfaceDef, out ResourceHandle _outHandle) : base(_resourceKey, _resourceManager, _core, _useFullSurfaceDef)
+		{
+			_outHandle = new(this);
+		}
+		
+		#endregion
 		#region Fields
 
 		private uint vertexCount = 0;

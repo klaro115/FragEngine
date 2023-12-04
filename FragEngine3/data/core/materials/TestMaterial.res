@@ -1,16 +1,16 @@
 {
-    "DataFilePath": "./DefaultSurface_PS.hlsl",
+    "DataFilePath": "./TestMaterial.json",
     "DataFileType": 0,
-    "DataFileSize": 2777,
-    "UncompressedFileSize": 2777,
+    "DataFileSize": 947,
+    "UncompressedFileSize": 947,
     "BlockSize": 0,
     "BlockCount": 0,
     "ResourceCount": 1,
     "Resources":
     [
         {
-            "ResourceKey": "DefaultSurface_PS",
-            "ResourceType": 4,
+            "ResourceKey": "TestMaterial",
+            "ResourceType": 5,
             "DataOffset": 0,
             "DataSize": 0,
             "DependencyCount": 0,

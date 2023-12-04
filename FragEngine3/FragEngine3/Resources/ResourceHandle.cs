@@ -90,7 +90,7 @@ namespace FragEngine3.Resources
 		public readonly ulong dataOffset;
 		public readonly ulong dataSize;
 
-		public Resource? resource = null;
+		private Resource? resource = null;
 
 		public readonly string[]? dependencies = null;
 

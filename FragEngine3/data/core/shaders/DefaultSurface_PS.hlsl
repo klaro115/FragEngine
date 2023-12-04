@@ -52,10 +52,10 @@ struct VertexOutput_Extended
 
 float4 Main_Pixel(in VertexOutput_Basic inputBasic) : SV_Target0
 {
-    float4 albedo = (1, 1, 1, 1);
+    float4 albedo = {1, 1, 1, 1};
 
     // Apply basic phong lighting:
-    float4 totalLightIntensity = (0, 0, 0, 0);
+    float4 totalLightIntensity = {0, 0, 0, 0};
     for (uint i = 0; i < lightCount; ++i)
     {
         Light light = BufLights[i];
@@ -78,7 +78,7 @@ float4 Main_Pixel(in VertexOutput_Basic inputBasic) : SV_Target0
             // Spot light angle:
             if (light.lightType == 1 && dot(light.lightDirection, lightRayDir) < light.lightSpotAngleAcos)
             {
-                lightIntens = (0, 0, 0, 0);
+                lightIntens = float4(0, 0, 0, 0);
             }
         }
 

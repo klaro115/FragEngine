@@ -1,6 +1,8 @@
 ﻿using FragEngine3.EngineCore;
 using FragEngine3.EngineCore.Config;
 using FragEngine3.Graphics.Internal;
+using FragEngine3.Graphics.Resources;
+using FragEngine3.Resources;
 using Veldrid;
 using Veldrid.Sdl2;
 

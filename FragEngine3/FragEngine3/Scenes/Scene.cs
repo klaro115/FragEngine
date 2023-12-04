@@ -12,7 +12,10 @@ namespace FragEngine3.Scenes
 		public Scene(Engine _engine, string? _name = null)
 		{
 			engine = _engine ?? throw new ArgumentNullException(nameof(_engine), "Engine may not be null!");
-			rootNode = new SceneNode(this);
+			rootNode = new SceneNode(this)
+			{
+				LocalTransformation = Pose.Identity
+			};
 			if (_name != null) Name = _name;
 
 			updateManager = new(this);

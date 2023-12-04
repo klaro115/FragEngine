@@ -75,6 +75,7 @@ namespace FragEngine3.EngineCore
 
 		protected abstract bool BeginRunningState();
 		public abstract bool UpdateRunningState();
+		public abstract bool DrawRunningState();
 		protected abstract bool EndRunningState();
 
 		protected abstract bool BeginUnloadingState();

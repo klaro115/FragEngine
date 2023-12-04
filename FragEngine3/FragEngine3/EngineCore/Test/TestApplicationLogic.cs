@@ -1,8 +1,12 @@
-﻿using FragEngine3.Graphics.Components;
+﻿using FragEngine3.Graphics;
+using FragEngine3.Graphics.Components;
+using FragEngine3.Graphics.Resources;
+using FragEngine3.Graphics.Resources.Data;
 using FragEngine3.Graphics.Stack;
 using FragEngine3.Resources;
 using FragEngine3.Scenes;
 using System.Numerics;
+using Veldrid;
 using Veldrid.Sdl2;
 
 namespace FragEngine3.EngineCore.Test
@@ -88,15 +92,15 @@ namespace FragEngine3.EngineCore.Test
 				Sdl2Window window = Engine.GraphicsSystem.graphicsCore.Window;
 				camera.ResolutionX = (uint)window.Width;
 				camera.ResolutionY = (uint)window.Height;
-
+			
 				camera.FieldOfViewDegrees = 60.0f;
 				camera.NearClipPlane = 0.1f;
 				camera.FarClipPlane = 1000.0f;
-
+			
 				camera.clearBackground = true;
-				camera.clearColor = Graphics.Color32.Cornflower;
-				camera.clearDepth = 1.0e+8f;
-
+				camera.clearColor = Color32.Cornflower;
+				camera.clearDepth = 1.0f;
+			
 				camera.IsMainCamera = true;
 			}
 
@@ -119,6 +123,37 @@ namespace FragEngine3.EngineCore.Test
 				cubeRenderer.SetMaterial("DefaultSurface");
 			}
 
+			// Create a simple quad:
+			MeshSurfaceData quadData = new()
+			{
+				verticesBasic =
+				[
+					new BasicVertex() { position = new(-1, -1, -1), normal = Vector3.UnitZ, uv = new(0, 0) },
+					new BasicVertex() { position = new(1, -1, -1), normal = Vector3.UnitZ, uv = new(1, 0) },
+					new BasicVertex() { position = new(-1, 1, 1), normal = Vector3.UnitZ, uv = new(0, 1) },
+					new BasicVertex() { position = new(1, 1, 1), normal = Vector3.UnitZ, uv = new(1, 1) },
+
+					new BasicVertex() { position = new(1, 1, 1), normal = -Vector3.UnitZ, uv = new(0, 0) },
+					new BasicVertex() { position = new(-1, 1, 1), normal = -Vector3.UnitZ, uv = new(1, 0) },
+					new BasicVertex() { position = new(1, -1, -1), normal = -Vector3.UnitZ, uv = new(0, 1) },
+					new BasicVertex() { position = new(-1, -1, -1), normal = -Vector3.UnitZ, uv = new(1, 1) },
+				],
+				indices16 = [0, 1, 2, 1, 3, 2,		5, 4, 6, 5, 6, 7],
+			};
+			quadData.TransformVertices(new(new Vector3(0, 0, 0.5f), Quaternion.Identity, Vector3.One));
+
+			StaticMesh quadMesh = new("Quad", Engine.ResourceManager, Engine.GraphicsSystem.graphicsCore, false, out ResourceHandle quadHandle);
+			Engine.ResourceManager.AddResource(quadHandle);
+			quadMesh.SetGeometry(quadData);
+			SceneNode quadNode = scene.rootNode.CreateChild("Quad");
+			quadNode.LocalPosition = new(0, 0, 10);
+			quadNode.LocalScale = Vector3.One;
+			if (quadNode.CreateComponent(out StaticMeshRenderer? quadRenderer) && quadRenderer != null)
+			{
+				quadRenderer.SetMesh(quadMesh);
+				quadRenderer.SetMaterial("DefaultSurface");
+			}
+
 			return true;
 		}
 
@@ -129,6 +164,11 @@ namespace FragEngine3.EngineCore.Test
 				Engine.Exit();
 			}
 
+			return true;
+		}
+
+		public override bool DrawRunningState()
+		{
 			return true;
 		}
 

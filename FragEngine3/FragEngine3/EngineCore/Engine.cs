@@ -329,6 +329,10 @@ namespace FragEngine3.EngineCore
 			// DRAW:
 
 			success &= GraphicsSystem.BeginFrame();
+			if (State == EngineState.Running)
+			{
+				success &= applicationLogic.DrawRunningState();
+			}
 			success &= SceneManager.DrawAllScenes(State);
 			success &= GraphicsSystem.EndFrame();
 

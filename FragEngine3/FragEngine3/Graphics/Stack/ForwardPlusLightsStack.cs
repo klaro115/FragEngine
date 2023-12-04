@@ -211,14 +211,6 @@ namespace FragEngine3.Graphics.Stack
 				return true;
 			}
 
-			// Start drawing a new application frame via the core:
-			if (!core.BeginFrame(GraphicsSystem.DirtyFlags.None))
-			{
-				Logger.LogError("Graphics core failed to perform frame start operations!");
-				isDrawing = false;
-				return false;
-			}
-
 			bool success = true;
 			isDrawing = true;
 
@@ -273,9 +265,6 @@ namespace FragEngine3.Graphics.Stack
 				}
 			}
 			*/
-
-			// End the current application frame:
-			success &= core.EndFrame();
 
 			isDrawing = false;
 			return success;
@@ -434,7 +423,7 @@ namespace FragEngine3.Graphics.Stack
 
 			bool success = true;
 
-			success &= _camera.BeginFrame(opaqueList.cmdList, out GraphicsDrawContext ctx);
+			success &= _camera.BeginFrame(opaqueList.cmdList, true, out GraphicsDrawContext ctx);
 
 			// Draw list of renderers as-is:
 			foreach (IRenderer renderer in opaqueList.renderers)
@@ -476,7 +465,7 @@ namespace FragEngine3.Graphics.Stack
 
 			zSortedList.renderers.Sort((a, b) => a.GetZSortingDepth(viewportPosition, cameraDirection).CompareTo(b.GetZSortingDepth(viewportPosition, cameraDirection)));
 			
-			success &= _camera.BeginFrame(zSortedList.cmdList, out GraphicsDrawContext ctx);
+			success &= _camera.BeginFrame(zSortedList.cmdList, false, out GraphicsDrawContext ctx);
 
 			// Draw Z-sorted list of renderers:
 			foreach (IRenderer renderer in zSortedList.renderers)
@@ -512,7 +501,7 @@ namespace FragEngine3.Graphics.Stack
 
 			bool success = true;
 
-			success &= _camera.BeginFrame(uiList.cmdList, out GraphicsDrawContext ctx);
+			success &= _camera.BeginFrame(uiList.cmdList, false, out GraphicsDrawContext ctx);
 
 			// Draw list of renderers in strictly hierarchical order:
 			foreach (IRenderer renderer in uiList.renderers)

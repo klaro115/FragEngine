@@ -91,7 +91,7 @@ namespace FragEngine3.Graphics.Resources
 					if (_dirtyFlags.HasFlag(Material.DirtyFlags.All))
 					{
 						pipelineDesc = new(
-							BlendStateDescription.SingleOverrideBlend,
+							BlendStateDescription.SingleAlphaBlend,
 							material.GetDepthStencilDesc(),
 							material.GetRasterizerStateDesc(),
 							PrimitiveTopology.TriangleList,

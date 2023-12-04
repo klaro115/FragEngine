@@ -85,7 +85,7 @@ namespace FragEngine3.Graphics.Components
 		private bool allowClearDepth = true;
 		private bool allowClearStencil = false;
 		public Color32 clearColor = Color32.Cornflower;
-		public float clearDepth = 1.0e+8f;
+		public float clearDepth = 1.0f;
 		public byte clearStencil = 0x00;
 
 		// Lighting & Scene:
@@ -688,7 +688,7 @@ namespace FragEngine3.Graphics.Components
 			}
 		}
 
-		public bool BeginFrame(CommandList _cmdList, out GraphicsDrawContext _outDrawCtx)
+		public bool BeginFrame(CommandList _cmdList, bool _clearRenderTargets, out GraphicsDrawContext _outDrawCtx)
 		{
 			if (IsDisposed)
 			{
@@ -794,7 +794,7 @@ namespace FragEngine3.Graphics.Components
 				_cmdList.SetFramebuffer(activeRenderTargets);
 
 				// Clear the framebuffer before any new content is drawn to it:
-				if (clearBackground)
+				if (_clearRenderTargets && clearBackground)
 				{
 					_cmdList.ClearColorTarget(0, clearColor.ToRgbaFloat());
 

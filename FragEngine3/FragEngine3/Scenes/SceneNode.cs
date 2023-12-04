@@ -40,7 +40,7 @@ namespace FragEngine3.Scenes
 		// Local properties:
 		private string name = string.Empty;
 		private bool isEnabled = true;
-		private Pose localPose;
+		private Pose localPose = Pose.Identity;
 
 		// Hierarchy:
 		private SceneNode parentNode;
