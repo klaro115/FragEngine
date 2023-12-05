@@ -71,10 +71,10 @@ namespace FragEngine3.Graphics.Components
 		private float nearClipPlane = 0.01f;
 		private float farClipPlane = 1000.0f;
 		private float fieldOfViewRad = 60.0f * DEG2RAD;
-		private Matrix4x4 mtxProjection = Matrix4x4.Identity;
-		private Matrix4x4 mtxViewport = Matrix4x4.Identity;
-		private Matrix4x4 mtxCamera = Matrix4x4.Identity;
-		private Matrix4x4 mtxInvCamera = Matrix4x4.Identity;
+		private Matrix4x4 mtxProjection = Matrix4x4.Identity;	// Local space => Clip space
+		private Matrix4x4 mtxViewport = Matrix4x4.Identity;		// Clip space => Pixel space
+		private Matrix4x4 mtxCamera = Matrix4x4.Identity;		// World space => Pixel space
+		private Matrix4x4 mtxInvCamera = Matrix4x4.Identity;	// Pixel space => World space
 
 		// Content:
 		public uint cameraPriority = 1000;
@@ -625,7 +625,7 @@ namespace FragEngine3.Graphics.Components
 		}
 		private void RecalculateViewportMatrix()
 		{
-			mtxViewport = Matrix4x4.CreateViewportLeftHanded(0, 0, resolutionX, resolutionY, nearClipPlane, farClipPlane);
+			mtxViewport = Matrix4x4.CreateViewportLeftHanded(0, 0, resolutionX, resolutionY, 0, 1);
 		}
 		private void UpdateFinalCameraMatrix()
 		{
@@ -635,7 +635,7 @@ namespace FragEngine3.Graphics.Components
 				// World space => Camera's local space => Clip space => Viewport/pixel space
 
 				// Calculate combined matrix or transforming from world space to clip space:
-				mtxCamera = Matrix4x4.Multiply(mtxViewport, Matrix4x4.Multiply(mtxProjection, mtxWorld2Camera));
+				mtxCamera = mtxWorld2Camera * mtxProjection * mtxViewport;
 
 				Matrix4x4.Invert(mtxCamera, out mtxInvCamera);
 			}
@@ -853,7 +853,8 @@ namespace FragEngine3.Graphics.Components
 			}
 
 			// Transform world space position to viewport pixel space:
-			return Vector3.Transform(_worldPoint, mtxCamera);
+			Vector4 result = Vector4.Transform(_worldPoint, mtxCamera);
+			return new Vector3(result.X, result.Y, result.Z) / result.W;
 		}
 
 		public Vector3 TransformPixelCoordToWorldPoint(Vector3 _pixelCoord, bool _allowUpdateProjection = true)

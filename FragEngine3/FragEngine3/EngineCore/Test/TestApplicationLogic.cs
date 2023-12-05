@@ -87,6 +87,8 @@ namespace FragEngine3.EngineCore.Test
 
 			// Create a camera:
 			SceneNode cameraNode = scene.rootNode.CreateChild("Camera");
+			cameraNode.WorldPosition = Vector3.Zero;
+			cameraNode.WorldRotation = Quaternion.Identity;
 			if (cameraNode.CreateComponent(out Camera? camera) && camera != null)
 			{
 				Sdl2Window window = Engine.GraphicsSystem.graphicsCore.Window;
@@ -102,6 +104,14 @@ namespace FragEngine3.EngineCore.Test
 				camera.clearDepth = 1.0f;
 			
 				camera.IsMainCamera = true;
+
+				//TEST
+				camera.UpdateProjection();
+				Vector3 screenPos0 = camera.TransformWorldPointToPixelCoord(new Vector3(0, 1, 1));
+				Vector3 screenPos1 = camera.TransformWorldPointToPixelCoord(new Vector3(1, 0, 1));
+				Vector3 screenPos2 = camera.TransformWorldPointToPixelCoord(new Vector3(-0.1f, 0, 1));
+				Vector3 screenPos3 = camera.TransformWorldPointToPixelCoord(new Vector3(0, 0, 0.01f));
+				Vector3 screenPos4 = camera.TransformWorldPointToPixelCoord(new Vector3(0, 0, 10));
 			}
 
 			// Create a directional light:

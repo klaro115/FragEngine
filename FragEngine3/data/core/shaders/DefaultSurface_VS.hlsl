@@ -72,7 +72,9 @@ void Main_Vertex(in VertexInput_Basic inputBasic, out VertexOutput_Basic outputB
 {
     float4x4 mtxModel2Camera = mul(mtxCamera, mtxInvWorld);
 
-    outputBasic.position = mul(mtxModel2Camera, float4(inputBasic.position, 1));
+    float4 projResult = mul(mtxModel2Camera, float4(inputBasic.position, 1));
+
+    outputBasic.position = projResult / projResult.w;
     outputBasic.worldPosition = mul(mtxInvWorld, float4(inputBasic.position, 1)).xyz;
     outputBasic.normal = mul(mtxInvWorld, float4(inputBasic.position, 0)).xyz;
     outputBasic.uv = inputBasic.uv;
@@ -82,7 +84,9 @@ void Main_Vertex_Ext(in VertexInput_Basic inputBasic, in VertexInput_Extended in
 {
     float4x4 mtxModel2Camera = mul(mtxCamera, mtxInvWorld);
 
-    outputBasic.position = mul(mtxModel2Camera, float4(inputBasic.position, 1));
+    float4 projResult = mul(mtxModel2Camera, float4(inputBasic.position, 1));
+
+    outputBasic.position = projResult / projResult.w;
     outputBasic.worldPosition = mul(mtxInvWorld, float4(inputBasic.position, 1)).xyz;
     outputBasic.normal = mul(mtxModel2Camera, float4(inputBasic.position, 0)).xyz;
     outputBasic.uv = inputBasic.uv;
