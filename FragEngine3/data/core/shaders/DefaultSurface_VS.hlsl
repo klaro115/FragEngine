@@ -53,8 +53,8 @@ struct VertexInput_BoneWeights
 
 struct VertexOutput_Basic
 {
-    float4 position : SV_Position;
-    float3 worldPosition : POSITION;
+    float4 position : SV_POSITION;
+    float3 worldPosition : COLOR0;
     float3 normal : NORMAL0;
     float2 uv : TEXCOORD0;
 };

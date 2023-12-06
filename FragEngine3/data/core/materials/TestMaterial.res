@@ -1,8 +1,8 @@
 {
     "DataFilePath": "./TestMaterial.json",
     "DataFileType": 0,
-    "DataFileSize": 947,
-    "UncompressedFileSize": 947,
+    "DataFileSize": 0,
+    "UncompressedFileSize": 0,
     "BlockSize": 0,
     "BlockCount": 0,
     "ResourceCount": 1,

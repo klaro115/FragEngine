@@ -1,8 +1,8 @@
 {
     "DataFilePath": "./Test_PS.hlsl",
     "DataFileType": 0,
-    "DataFileSize": 392,
-    "UncompressedFileSize": 392,
+    "DataFileSize": 0,
+    "UncompressedFileSize": 0,
     "BlockSize": 0,
     "BlockCount": 0,
     "ResourceCount": 1,

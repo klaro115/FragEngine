@@ -1,8 +1,8 @@
 {
     "DataFilePath": "./Rabbit.obj",
     "DataFileType": 0,
-    "DataFileSize": 980,
-    "UncompressedFileSize": 980,
+    "DataFileSize": 0,
+    "UncompressedFileSize": 0,
     "BlockSize": 0,
     "BlockCount": 0,
     "ResourceCount": 1,

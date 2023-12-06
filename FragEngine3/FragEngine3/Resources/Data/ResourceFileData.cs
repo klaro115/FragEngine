@@ -88,6 +88,11 @@ namespace FragEngine3.Resources.Data
 				{
 					FileInfo fileInfo = new(DataFilePath);
 					DataFileSize = (ulong)fileInfo.Length;
+
+					if (DataFileType == ResourceFileType.Single && UncompressedFileSize == 0)
+					{
+						UncompressedFileSize = DataFileSize;
+					}
 				}
 				catch (Exception ex)
 				{

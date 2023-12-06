@@ -1,8 +1,8 @@
 {
     "DataFilePath": "./DefaultSurface_PS.hlsl",
     "DataFileType": 0,
-    "DataFileSize": 2777,
-    "UncompressedFileSize": 2777,
+    "DataFileSize": 0,
+    "UncompressedFileSize": 0,
     "BlockSize": 0,
     "BlockCount": 0,
     "ResourceCount": 1,

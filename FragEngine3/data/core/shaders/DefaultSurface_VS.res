@@ -1,8 +1,8 @@
 {
     "DataFilePath": "./DefaultSurface_VS.hlsl",
     "DataFileType": 0,
-    "DataFileSize": 3087,
-    "UncompressedFileSize": 3087,
+    "DataFileSize": 0,
+    "UncompressedFileSize": 0,
     "BlockSize": 0,
     "BlockCount": 0,
     "ResourceCount": 1,

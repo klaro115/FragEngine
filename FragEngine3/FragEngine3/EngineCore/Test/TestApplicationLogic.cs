@@ -125,7 +125,7 @@ namespace FragEngine3.EngineCore.Test
 
 			// Create a static mesh renderer displaying a default-shaded cube:
 			SceneNode cubeNode = scene.rootNode.CreateChild("Cube");
-			cubeNode.LocalPosition = new(0.4f, -0.5f, 5.0f);
+			cubeNode.LocalPosition = new(0.4f, -0.5f, 0.9f);
 			cubeNode.LocalScale = Vector3.One;
 			if (cubeNode.CreateComponent(out StaticMeshRenderer? cubeRenderer) && cubeRenderer != null)
 			{
@@ -139,24 +139,28 @@ namespace FragEngine3.EngineCore.Test
 				verticesBasic =
 				[
 					new BasicVertex() { position = new(-1, -1, -1), normal = Vector3.UnitZ, uv = new(0, 0) },
-					new BasicVertex() { position = new(1, -1, -1), normal = Vector3.UnitZ, uv = new(1, 0) },
-					new BasicVertex() { position = new(-1, 1, 1), normal = Vector3.UnitZ, uv = new(0, 1) },
-					new BasicVertex() { position = new(1, 1, 1), normal = Vector3.UnitZ, uv = new(1, 1) },
+					new BasicVertex() { position = new( 1, -1, -1), normal = Vector3.UnitZ, uv = new(1, 0) },
+					new BasicVertex() { position = new(-1,  1,  1), normal = Vector3.UnitZ, uv = new(0, 1) },
+					new BasicVertex() { position = new( 1,  1,  1), normal = Vector3.UnitZ, uv = new(1, 1) },
 
-					new BasicVertex() { position = new(1, 1, 1), normal = -Vector3.UnitZ, uv = new(0, 0) },
-					new BasicVertex() { position = new(-1, 1, 1), normal = -Vector3.UnitZ, uv = new(1, 0) },
-					new BasicVertex() { position = new(1, -1, -1), normal = -Vector3.UnitZ, uv = new(0, 1) },
-					new BasicVertex() { position = new(-1, -1, -1), normal = -Vector3.UnitZ, uv = new(1, 1) },
+					new BasicVertex() { position = new( 1,  1, -1), normal = -Vector3.UnitZ, uv = new(0, 0) },
+					new BasicVertex() { position = new(-1,  1, -1), normal = -Vector3.UnitZ, uv = new(1, 0) },
+					new BasicVertex() { position = new( 1, -1,  1), normal = -Vector3.UnitZ, uv = new(0, 1) },
+					new BasicVertex() { position = new(-1, -1,  1), normal = -Vector3.UnitZ, uv = new(1, 1) },
 				],
 				indices16 = [0, 1, 2, 1, 3, 2,		5, 4, 6, 5, 6, 7],
 			};
 			quadData.TransformVertices(new(new Vector3(0, 0, 0.5f), Quaternion.Identity, Vector3.One));
+			Vector3 vert0 = Camera.MainCamera!.TransformWorldPointToPixelCoord(quadData.verticesBasic[0].position, false);
+			Vector3 vert1 = Camera.MainCamera!.TransformWorldPointToPixelCoord(quadData.verticesBasic[1].position, false);
+			Vector3 vert2 = Camera.MainCamera!.TransformWorldPointToPixelCoord(quadData.verticesBasic[2].position, false);
+			Vector3 vert3 = Camera.MainCamera!.TransformWorldPointToPixelCoord(quadData.verticesBasic[3].position, false);
 
 			StaticMesh quadMesh = new("Quad", Engine.ResourceManager, Engine.GraphicsSystem.graphicsCore, false, out ResourceHandle quadHandle);
 			Engine.ResourceManager.AddResource(quadHandle);
 			quadMesh.SetGeometry(quadData);
 			SceneNode quadNode = scene.rootNode.CreateChild("Quad");
-			quadNode.LocalPosition = new(0, 0, 10);
+			quadNode.LocalPosition = Vector3.Zero;
 			quadNode.LocalScale = Vector3.One;
 			if (quadNode.CreateComponent(out StaticMeshRenderer? quadRenderer) && quadRenderer != null)
 			{
