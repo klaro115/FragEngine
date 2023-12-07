@@ -1,12 +1,13 @@
 ﻿using FragEngine3.EngineCore;
 using FragEngine3.Graphics.Components;
+using FragEngine3.Graphics.Contexts;
 using FragEngine3.Scenes;
 using System.Numerics;
 using Veldrid;
 
 namespace FragEngine3.Graphics.Stack
 {
-	public sealed class ForwardPlusLightsStack(GraphicsCore _core) : IGraphicsStack
+    public sealed class ForwardPlusLightsStack(GraphicsCore _core) : IGraphicsStack
 	{
 		#region Types
 
@@ -317,13 +318,6 @@ namespace FragEngine3.Graphics.Stack
 					ReadOnlySpan<Light.LightSourceData> lightSourceDataSpan = new(lightSourceDataBuffer, 0, (int)activeLightCount);
 					core.Device.UpdateBuffer(lightDataBuffer, 0, lightSourceDataSpan);
 
-					// Get and update a constant buffer containing the camera's global scene data:
-					if (!_camera.GetGlobalConstantBuffer(activeLightCount, false, out DeviceBuffer? globalConstantBuffer) || globalConstantBuffer == null)
-					{
-						Logger.LogError("Failed to get or create camera's global constant buffer!");
-						return false;
-					}
-
 					// Clear out all renderer lists for the upcoming frame:
 					foreach (RendererList rendererList in rendererLists)
 					{
@@ -362,8 +356,8 @@ namespace FragEngine3.Graphics.Stack
 						bool success = true;
 
 						// Issue draw calls for each renderer list:
-						success &= DrawOpaqueRendererList(_camera);
-						success &= DrawZSortedRendererList(_camera);
+						success &= DrawOpaqueRendererList(_camera, activeLightCount);
+						success &= DrawZSortedRendererList(_camera, activeLightCount);
 						success &= DrawUiRendererList(_camera);
 
 						if (!success)
@@ -397,7 +391,7 @@ namespace FragEngine3.Graphics.Stack
 			return false;
 		}
 
-		private bool DrawOpaqueRendererList(Camera _camera)
+		private bool DrawOpaqueRendererList(Camera _camera, uint _activeLightCount)
 		{
 			if (!GetRendererListForMode(RenderMode.Opaque, out RendererList? opaqueList) || opaqueList == null)
 			{
@@ -423,12 +417,12 @@ namespace FragEngine3.Graphics.Stack
 
 			bool success = true;
 
-			success &= _camera.BeginFrame(opaqueList.cmdList, true, out GraphicsDrawContext ctx);
+			success &= _camera.BeginFrame(opaqueList.cmdList, _activeLightCount, true, out GraphicsDrawContext drawCtx, out CameraContext cameraCtx);
 
 			// Draw list of renderers as-is:
 			foreach (IRenderer renderer in opaqueList.renderers)
 			{
-				FailedRendererCount += renderer.Draw(ctx) ? 0 : 1;
+				FailedRendererCount += renderer.Draw(drawCtx, cameraCtx) ? 0 : 1;
 			}
 
 			success &= _camera.EndFrame(opaqueList.cmdList);
@@ -436,7 +430,7 @@ namespace FragEngine3.Graphics.Stack
 			return success;
 		}
 
-		private bool DrawZSortedRendererList(Camera _camera)
+		private bool DrawZSortedRendererList(Camera _camera, uint _activeLightCount)
 		{
 			if (!GetRendererListForMode(RenderMode.Transparent, out RendererList? zSortedList) || zSortedList == null)
 			{
@@ -465,12 +459,12 @@ namespace FragEngine3.Graphics.Stack
 
 			zSortedList.renderers.Sort((a, b) => a.GetZSortingDepth(viewportPosition, cameraDirection).CompareTo(b.GetZSortingDepth(viewportPosition, cameraDirection)));
 			
-			success &= _camera.BeginFrame(zSortedList.cmdList, false, out GraphicsDrawContext ctx);
+			success &= _camera.BeginFrame(zSortedList.cmdList, _activeLightCount, false, out GraphicsDrawContext drawCtx, out CameraContext cameraCtx);
 
 			// Draw Z-sorted list of renderers:
 			foreach (IRenderer renderer in zSortedList.renderers)
 			{
-				FailedRendererCount += renderer.Draw(ctx) ? 0 : 1;
+				FailedRendererCount += renderer.Draw(drawCtx, cameraCtx) ? 0 : 1;
 			}
 
 			success &= _camera.EndFrame(zSortedList.cmdList);
@@ -501,12 +495,12 @@ namespace FragEngine3.Graphics.Stack
 
 			bool success = true;
 
-			success &= _camera.BeginFrame(uiList.cmdList, false, out GraphicsDrawContext ctx);
+			success &= _camera.BeginFrame(uiList.cmdList, 0, false, out GraphicsDrawContext drawCtx, out CameraContext cameraCtx);
 
 			// Draw list of renderers in strictly hierarchical order:
 			foreach (IRenderer renderer in uiList.renderers)
 			{
-				FailedRendererCount += renderer.Draw(ctx) ? 0 : 1;
+				FailedRendererCount += renderer.Draw(drawCtx, cameraCtx) ? 0 : 1;
 			}
 
 			success &= _camera.EndFrame(uiList.cmdList);

@@ -1,6 +1,7 @@
 ﻿using System.Numerics;
 using FragEngine3.Graphics.Components.ConstantBuffers;
 using FragEngine3.Graphics.Components.Data;
+using FragEngine3.Graphics.Contexts;
 using FragEngine3.Graphics.Resources;
 using FragEngine3.Resources;
 using FragEngine3.Scenes;
@@ -11,7 +12,7 @@ using Veldrid;
 
 namespace FragEngine3.Graphics.Components
 {
-	public sealed class Camera : Component
+    public sealed class Camera : Component
 	{
 		#region Types
 
@@ -551,7 +552,7 @@ namespace FragEngine3.Graphics.Components
 		/// The data layout in this buffer matches the type '<see cref="GlobalConstantBuffer"/>'. Null if the camera has been disposed or if
 		/// buffer creation failed.</param>
 		/// <returns>True if the constant buffer could be retrieved/created, and updated with fresh data, false otherwise.</returns>
-		internal bool GetGlobalConstantBuffer(uint _activeLightCount, bool _updateProjection, out DeviceBuffer? _outGlobalConstantBuffer)
+		private bool GetGlobalConstantBuffer(uint _activeLightCount, bool _updateProjection, out DeviceBuffer? _outGlobalConstantBuffer)
 		{
 			if (IsDisposed)
 			{
@@ -688,18 +689,20 @@ namespace FragEngine3.Graphics.Components
 			}
 		}
 
-		public bool BeginFrame(CommandList _cmdList, bool _clearRenderTargets, out GraphicsDrawContext _outDrawCtx)
+		public bool BeginFrame(CommandList _cmdList, uint _activeLightCount, bool _clearRenderTargets, out GraphicsDrawContext _outDrawCtx, out CameraContext _outCameraCtx)
 		{
 			if (IsDisposed)
 			{
 				Logger.LogError("Cannot bind disposed camera for rendering!");
 				_outDrawCtx = null!;
+				_outCameraCtx = null!;
 				return false;
 			}
 			if (_cmdList == null || _cmdList.IsDisposed)
 			{
 				Logger.LogError("Cannot bind camera using null or disposed command list!");
 				_outDrawCtx = null!;
+				_outCameraCtx = null!;
 				return false;
 			}
 
@@ -753,6 +756,7 @@ namespace FragEngine3.Graphics.Components
 						{
 							Logger.LogError("Resolution mismatch between camera output and override render targets!");
 							_outDrawCtx = null!;
+							_outCameraCtx = null!;
 							return false;
 						}
 					}
@@ -782,13 +786,20 @@ namespace FragEngine3.Graphics.Components
 				if (!GetActiveRenderTargets(out Framebuffer? activeRenderTargets) || activeRenderTargets == null)
 				{
 					_outDrawCtx = null!;
+					_outCameraCtx = null!;
 					return false;
 				}
 
-				_outDrawCtx = new(core, _cmdList, activeRenderTargets.OutputDescription)
+				if (!GetGlobalConstantBuffer(_activeLightCount, false, out _) ||
+					!GetLightDataBuffer(_activeLightCount, out _))
 				{
-					outputDescChanged = outputHasChanged
-				};
+					_outDrawCtx = null!;
+					_outCameraCtx = null!;
+					return false;
+				}
+
+				_outDrawCtx = new(core, _cmdList);
+				_outCameraCtx = new(this, globalConstantBuffer!, lightDataBuffer!, activeRenderTargets.OutputDescription);
 
 				// Bind current render targets as output to command list:
 				_cmdList.SetFramebuffer(activeRenderTargets);

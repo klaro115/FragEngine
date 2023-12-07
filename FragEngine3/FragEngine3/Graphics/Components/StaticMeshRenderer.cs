@@ -1,4 +1,7 @@
-﻿using FragEngine3.Graphics.Components.Data;
+﻿using FragEngine3.Containers;
+using FragEngine3.Graphics.Components.ConstantBuffers;
+using FragEngine3.Graphics.Components.Data;
+using FragEngine3.Graphics.Contexts;
 using FragEngine3.Graphics.Resources;
 using FragEngine3.Resources;
 using FragEngine3.Scenes;
@@ -9,11 +12,17 @@ using Veldrid;
 
 namespace FragEngine3.Graphics.Components
 {
-	public sealed class StaticMeshRenderer(SceneNode _node) : Component(_node), IRenderer
+    public sealed class StaticMeshRenderer(SceneNode _node) : Component(_node), IRenderer
 	{
 		#region Fields
 
 		public readonly GraphicsCore core = _node.scene.engine.GraphicsSystem.graphicsCore ?? throw new NullReferenceException("Could not find graphics core for static mesh renderer!");
+
+		private uint rendererVersion = 1;
+
+		private DeviceBuffer? objectDataConstantBuffer = null;
+		private VersionedMember<ResourceSet?> resourceSet = new(null, 0);
+		private VersionedMember<Pipeline> pipeline = new(null!, 0);
 
 		#endregion
 		#region Properties
@@ -48,6 +57,11 @@ namespace FragEngine3.Graphics.Components
 		protected override void Dispose(bool _disposing)
 		{
 			base.Dispose(_disposing);
+
+			objectDataConstantBuffer?.Dispose();
+			objectDataConstantBuffer = null;
+
+			pipeline.DisposeValue();
 
 			if (_disposing)
 			{
@@ -98,6 +112,7 @@ namespace FragEngine3.Graphics.Components
 
 			// Assign handle:
 			MeshHandle = _meshHandle;
+			rendererVersion++;
 			return true;
 		}
 
@@ -123,6 +138,7 @@ namespace FragEngine3.Graphics.Components
 			// Assign mesh and update bounds:
 			Mesh = _mesh;
 			BoundingRadius = Mesh.BoundingRadius;
+			rendererVersion++;
 			return true;
 		}
 
@@ -164,6 +180,7 @@ namespace FragEngine3.Graphics.Components
 
 			// Assign handle:
 			MaterialHandle = _materialHandle;
+			rendererVersion++;
 			return true;
 		}
 
@@ -188,6 +205,7 @@ namespace FragEngine3.Graphics.Components
 
 			// Assign material:
 			Material = _material;
+			rendererVersion++;
 			return true;
 		}
 
@@ -200,7 +218,7 @@ namespace FragEngine3.Graphics.Components
 			return Vector3.DistanceSquared(posFront, _viewportPosition);
 		}
 
-		public bool Draw(GraphicsDrawContext _ctx)
+		public bool Draw(GraphicsDrawContext _drawCtx, CameraContext _cameraCtx)
 		{
 			// Check mesh and load it now if necessary:
 			if (Mesh == null || Mesh.IsDisposed)
@@ -253,27 +271,81 @@ namespace FragEngine3.Graphics.Components
 				return false;
 			}
 
-			// Fetch (or create) pipeline description for rendering this material and vertex data combo:
-			if (!Material.GetOrUpdatePipeline(_ctx, out Pipeline pipeline, vertexDataFlags))
+			UpdateObjectDataConstantBuffer(_drawCtx.cmdList);
+
+			// Update (or recreate) pipeline for rendering this material and geometry combo:
+			if (!Material.IsPipelineUpToDate(in pipeline, rendererVersion))
 			{
-				Logger.LogError($"Failed to retrieve pipeline description for material '{Material}'!");
-				return false;
+				pipeline.DisposeValue();
+				if (!Material.CreatePipeline(_drawCtx, _cameraCtx, rendererVersion, vertexDataFlags, out pipeline))
+				{
+					Logger.LogError($"Failed to retrieve pipeline description for material '{Material}'!");
+					return false;
+				}
 			}
 
+			UpdateResourceSet(Material, _cameraCtx);
+
 			// Throw pipeline and geometry buffers at the command list:
-			_ctx.cmdList.SetPipeline(pipeline);
+			_drawCtx.cmdList.SetPipeline(pipeline.Value);
 			for (uint i = 0; i < vertexBuffers.Length; ++i)
 			{
-				_ctx.cmdList.SetVertexBuffer(i, vertexBuffers[i]);
+				_drawCtx.cmdList.SetVertexBuffer(i, vertexBuffers[i]);
 			}
-			_ctx.cmdList.SetIndexBuffer(indexBuffer, Mesh.IndexFormat);
+			_drawCtx.cmdList.SetIndexBuffer(indexBuffer, Mesh.IndexFormat);
+
+			_drawCtx.cmdList.SetGraphicsResourceSet(0, resourceSet.Value);
 
 			//TODO: Bind material resources, such as textures and buffers!
 			//TODO: Update constant buffers, both for system variables and from material!
 
 			// Issue draw call:
-			_ctx.cmdList.DrawIndexed(Mesh.IndexCount);
+			_drawCtx.cmdList.DrawIndexed(Mesh.IndexCount);
 
+			return true;
+		}
+
+		private bool UpdateObjectDataConstantBuffer(CommandList _cmdList)
+		{
+			if (objectDataConstantBuffer == null || objectDataConstantBuffer.IsDisposed)
+			{
+				BufferDescription constantBufferDesc = new(ObjectDataConstantBuffer.packedByteSize, BufferUsage.UniformBuffer | BufferUsage.Dynamic);
+
+				objectDataConstantBuffer = core.MainFactory.CreateBuffer(ref constantBufferDesc);
+				rendererVersion++;
+			}
+
+			Pose worldPose = node.WorldTransformation;
+			Matrix4x4.Invert(worldPose.Matrix, out Matrix4x4 mtxInvWorld);
+
+			ObjectDataConstantBuffer objectData = new()
+			{
+				mtxInvWorld = mtxInvWorld,
+				worldPosition = worldPose.position,
+				boundingRadius = BoundingRadius,
+			};
+
+			_cmdList.UpdateBuffer(objectDataConstantBuffer, 0, objectData);
+
+			return true;
+		}
+
+		private bool UpdateResourceSet(Material _material, CameraContext _cameraCtx)
+		{
+			if (resourceSet.GetValue(rendererVersion, out ResourceSet? rs) || rs == null || rs.IsDisposed)
+			{
+				resourceSet.DisposeValue();
+
+				ResourceSetDescription resourceSetDesc = new(
+					_material.ResourceLayout,
+					_cameraCtx.globalConstantBuffer,
+					objectDataConstantBuffer,
+					_cameraCtx.lightDataBuffer);
+
+				rs = core.MainFactory.CreateResourceSet(ref resourceSetDesc);
+				resourceSet.UpdateValue(rendererVersion, rs);
+			}
+			
 			return true;
 		}
 

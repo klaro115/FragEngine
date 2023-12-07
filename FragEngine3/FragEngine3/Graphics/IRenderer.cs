@@ -1,9 +1,10 @@
 ﻿using System.Numerics;
+using FragEngine3.Graphics.Contexts;
 using Veldrid;
 
 namespace FragEngine3.Graphics
 {
-	public interface IRenderer : IDisposable
+    public interface IRenderer : IDisposable
 	{
 		#region Properties
 
@@ -62,9 +63,9 @@ namespace FragEngine3.Graphics
 		/// Requests the renderer to generate draw calls by writing them into the given command list.
 		/// </summary>
 		/// <param name="_ctx">Context object for drawing stuff. This includes the command list that
-		/// draw calls should be written into, but but also the output descriptions.</param>
+		/// draw calls should be written into.</param>
 		/// <returns>True if draw calls were issued, false otherwise.</returns>
-		bool Draw(GraphicsDrawContext _ctx);
+		bool Draw(GraphicsDrawContext _ctx, CameraContext _cameraCtx);
 
 		#endregion
 	}

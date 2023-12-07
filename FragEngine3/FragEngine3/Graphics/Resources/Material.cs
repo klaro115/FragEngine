@@ -1,4 +1,7 @@
-﻿using FragEngine3.EngineCore;
+﻿using FragEngine3.Containers;
+using FragEngine3.EngineCore;
+using FragEngine3.Graphics.Contexts;
+using FragEngine3.Graphics.Internal;
 using FragEngine3.Graphics.Resources.Data;
 using FragEngine3.Resources;
 using FragEngine3.Utility.Serialization;
@@ -6,33 +9,9 @@ using Veldrid;
 
 namespace FragEngine3.Graphics.Resources
 {
-    /// <summary>
-    /// A graphics resource depicting how a geometry surface shall be rendered. A material is a composite resource made out
-    /// of shader programs (for each pipeline stage, and for different vertex variants), bound textures and buffers, as well
-    /// as resource layouts and other reusable pipeline definitions that are used for efficiently rendering the surface.<para/>
-    /// IMPORT: Resource dependencies and pipeline objects are generated on-demand and just-in-time when they are first used,
-    /// if they haven't been loaded in the background beforehand.<para/>
-    /// LIFECYCLE: Disposing the material will only release the material resource itself; all shaders and textures referenced
-    /// by the material will remain loaded unless they are explicitly disposed themselves - multiple materials and assets may
-    /// be referencing a same resource instance as a shared dependency.
-    /// </summary>
-    public sealed class Material(ResourceHandle _handle, GraphicsCore _graphicsCore) : Resource(_handle)
+	public class Material : Resource
 	{
 		#region Types
-
-		[Flags]
-		public enum DirtyFlags : byte
-		{
-			None			= 0x00,
-
-			DepthStencil	= 1,
-			Rasterizer		= 2,
-			ShaderSet		= 4,
-			ResourceLayouts	= 8,
-			Output			= 16,
-
-			All				= DepthStencil | Rasterizer | ShaderSet | ResourceLayouts | Output
-		}
 
 		public struct StencilBehaviourDesc
 		{
@@ -44,67 +23,86 @@ namespace FragEngine3.Graphics.Resources
 			public StencilBehaviorDescription stencilBack;
 		}
 
+		private struct DepthStencilDesc
+		{
+			public bool enableDepthRead;
+			public bool enableDepthWrite;
+			public bool enableStencil;
+			public StencilBehaviourDesc stencilBehaviour;
+			public bool enableCulling;
+
+			public static DepthStencilDesc Default => new()
+			{
+				enableDepthRead = true,
+				enableDepthWrite = true,
+				enableStencil = false,
+				stencilBehaviour = default,
+				enableCulling = true,
+			};
+		}
+
+		private struct RenderModeDesc
+		{
+			public RenderMode renderMode;
+			public float zSortingBias;
+
+			public static RenderModeDesc Default => new()
+			{
+				renderMode = RenderMode.Opaque,
+				zSortingBias = 0.0f,
+			};
+		}
+
+		#endregion
+		#region Constructors
+
+		public Material(GraphicsCore _core, ResourceHandle _handle) : base(_handle)
+		{
+			core = _core ?? throw new ArgumentNullException(nameof(_core), "Graphics core may not be null!");
+
+			CreateResourceLayout(0);
+		}
+
 		#endregion
 		#region Fields
 
-		public readonly GraphicsCore graphicsCore = _graphicsCore ?? throw new ArgumentNullException(nameof(_graphicsCore), "Material's graphics core may not be null!");
+		public GraphicsCore core;
 
-		private MaterialVariant?[] variants = [];
+		private uint materialVersion = 1000;
 
-		private ResourceHandle vertexShader = null!;
+		private ResourceHandle vertexShader = ResourceHandle.None;
 		private ResourceHandle? geometryShader = null;
 		private ResourceHandle? tesselationShaderCtrl = null;
 		private ResourceHandle? tesselationShaderEval = null;
-		private ResourceHandle pixelShader = null!;
+		private ResourceHandle pixelShader = ResourceHandle.None;
 
-		private ResourceLayout[] resLayouts = [];
-		private ResourceLayoutDescription[] resLayoutDescs = [];
+		private VersionedMember<ResourceLayout> resourceLayout = new(null!, 0);
+		private VersionedMember<ShaderSetDescription> shaderSetDesc = new(default, 0);
 
-		private bool enableDepthRead = true;
-		private bool enableDepthWrite = true;
-		private bool enableStencil = false;
-		private StencilBehaviourDesc stencilBehaviour;
-		private bool enableCulling = true;
-
-		private RenderMode renderMode = RenderMode.Opaque;
-		private float zSortingBias = 0.0f;
-
-		private DirtyFlags dirtyFlags = DirtyFlags.None;
+		private VersionedMember<DepthStencilDesc> depthStencilDesc = new(DepthStencilDesc.Default, 0);
+		private VersionedMember<RenderModeDesc> renderModeDesc = new(RenderModeDesc.Default, 0);
 
 		#endregion
 		#region Properties
 
-		public bool IsDirty => dirtyFlags != 0;
-
 		public override ResourceType ResourceType => ResourceType.Material;
 
-		// SHADERS:
+		public ResourceLayout ResourceLayout => resourceLayout.Value;
 
-		public ResourceHandle VertexShader
+		// RENDERING:
+
+		public RenderMode RenderMode
 		{
-			get => vertexShader;
-			set { bool isChanged = vertexShader.resourceKey != value?.resourceKey; vertexShader = value!; if (isChanged) { MarkDirty(DirtyFlags.ShaderSet); } }
+			get => renderModeDesc.Value.renderMode;
+			set { RenderModeDesc rmd = renderModeDesc.Value; rmd.renderMode = value; renderModeDesc.UpdateValue(renderModeDesc.Version + 1, rmd); }
 		}
-		public ResourceHandle? GeometryShader
+		public float ZSortingBias
 		{
-			get => geometryShader;
-			set { bool isChanged = geometryShader?.resourceKey != value?.resourceKey; geometryShader = value!; if (isChanged) { MarkDirty(DirtyFlags.ShaderSet); } }
+			get => renderModeDesc.Value.zSortingBias;
+			set { if (!float.IsNaN(value)) { RenderModeDesc rmd = renderModeDesc.Value; rmd.zSortingBias = value; renderModeDesc.UpdateValue(renderModeDesc.Version + 1, rmd); } }
 		}
-		public ResourceHandle? TesselationShaderCtrl
-		{
-			get => tesselationShaderCtrl;
-			set { bool isChanged = tesselationShaderCtrl?.resourceKey != value?.resourceKey; tesselationShaderCtrl = value!; if (isChanged) { MarkDirty(DirtyFlags.ShaderSet); } }
-		}
-		public ResourceHandle? TesselationShaderEval
-		{
-			get => tesselationShaderEval;
-			set { bool isChanged = tesselationShaderEval?.resourceKey != value?.resourceKey; tesselationShaderEval = value!; if (isChanged) { MarkDirty(DirtyFlags.ShaderSet); } }
-		}
-		public ResourceHandle PixelShader
-		{
-			get => pixelShader;
-			set { bool isChanged = pixelShader.resourceKey != value?.resourceKey; pixelShader = value!; if (isChanged) { MarkDirty(DirtyFlags.ShaderSet); } }
-		}
+
+		// REPLACEMENTS:
 
 		/// <summary>
 		/// Gets whether this material has a valid simplified replacement material assigned.
@@ -125,240 +123,221 @@ namespace FragEngine3.Graphics.Resources
 		/// </summary>
 		public ResourceHandle? ShadowMapMaterialVersion { get; set; } = null;
 
-		// STATES:
-
-		public bool EnableDepthRead
-		{
-			get => enableDepthRead;
-			set { bool isChanged = enableDepthRead != value; enableDepthRead = value; if (isChanged) { MarkDirty(DirtyFlags.DepthStencil); } }
-		}
-		public bool EnableDepthWrite
-		{
-			get => enableDepthWrite;
-			set { bool isChanged = enableDepthWrite != value; enableDepthWrite = value; if (isChanged) { MarkDirty(DirtyFlags.DepthStencil); } }
-		}
-		public bool EnableStencil
-		{
-			get => enableStencil;
-			set { bool isChanged = enableStencil != value; enableStencil = value; if (isChanged) { MarkDirty(DirtyFlags.DepthStencil); } }
-		}
-		public StencilBehaviourDesc StencilBehaviour
-		{
-			get => stencilBehaviour;
-			set { stencilBehaviour = value; MarkDirty(DirtyFlags.DepthStencil); }
-		}
-		public bool EnableCulling
-		{
-			get => enableCulling;
-			set { bool isChanged = enableCulling != value; enableCulling = value; if (isChanged) { MarkDirty(DirtyFlags.Rasterizer); } }
-		}
-
-		// RENDERING:
-
-		public RenderMode RenderMode
-		{
-			get => renderMode;
-			set => renderMode = value;
-		}
-		public float ZSortingBias
-		{
-			get => zSortingBias;
-			set { if (!float.IsNaN(value)) zSortingBias = value; }
-		}
-
-		private Logger Logger => graphicsCore.graphicsSystem.engine.Logger ?? Logger.Instance!;
+		private Logger Logger => core.graphicsSystem.engine.Logger;
 
 		#endregion
 		#region Methods
 
 		protected override void Dispose(bool _disposing)
 		{
-			IsDisposed = true;
+			base.Dispose(_disposing);
 
-			if (_disposing)
+			resourceLayout.DisposeValue();
+		}
+
+		internal bool IsPipelineUpToDate(in VersionedMember<Pipeline> _pipeline, uint _rendererVersion)
+		{
+			if (_pipeline.Value == null || _pipeline.Value.IsDisposed)
 			{
-				vertexShader = null!;
-				geometryShader = null;
-				tesselationShaderCtrl = null;
-				tesselationShaderEval = null;
-				pixelShader = null!;
-
-				//TODO: Drop bound resources.
+				return false;
 			}
+			uint newestPipelineVersion = materialVersion ^ _rendererVersion;
+			return newestPipelineVersion == _pipeline.Version;
+		}
 
-			if (variants != null)
+		private bool CreateResourceLayout(uint _newVersion)
+		{
+			try
 			{
-				foreach (MaterialVariant? variant in variants)
+				resourceLayout.DisposeValue();
+
+				ResourceLayoutDescription resLayoutDesc = new(GraphicsContants.DEFAULT_SURFACE_RESOURCE_LAYOUT_DESC);
+
+				ResourceLayout resLayout = core.MainFactory.CreateResourceLayout(ref resLayoutDesc);
+
+				resourceLayout.UpdateValue(_newVersion, resLayout);
+				return true;
+			}
+			catch (Exception ex)
+			{
+				Logger.LogException($"Failed to create resource layout for material '{resourceKey}'!", ex);
+				resourceLayout.DisposeValue();
+				return false;
+			}
+		}
+
+		private bool CreateShaderSetDesc(uint _newVersion, MeshVertexDataFlags _vertexDataFlags)
+		{
+			shaderSetDesc.DisposeValue();
+
+			GraphicsCapabilities capabilities = core.GetCapabilities();
+
+			// VERTEX DEFINITIONS:
+
+			bool hasExtendedData = _vertexDataFlags.HasFlag(MeshVertexDataFlags.ExtendedSurfaceData);
+			bool hasBlendShapes = _vertexDataFlags.HasFlag(MeshVertexDataFlags.BlendShapes);
+			bool hasBoneAnimations = _vertexDataFlags.HasFlag(MeshVertexDataFlags.Animations);
+
+			int vertexBufferCount = 1;
+			if (hasExtendedData)	vertexBufferCount++;
+			if (hasBlendShapes)		vertexBufferCount++;
+			if (hasBoneAnimations)	vertexBufferCount++;
+
+			VertexLayoutDescription[] vertexLayoutDescs = new VertexLayoutDescription[vertexBufferCount];
+
+			int i = 0;
+			vertexLayoutDescs[i++] = BasicVertex.vertexLayoutDesc;
+			if (hasExtendedData)	vertexLayoutDescs[i++] = ExtendedVertex.vertexLayoutDesc;
+			if (hasBlendShapes)		vertexLayoutDescs[i++] = IndexedWeightedVertex.vertexLayoutDesc;
+			if (hasBoneAnimations)	vertexLayoutDescs[i++] = IndexedWeightedVertex.vertexLayoutDesc;
+
+			// SHADER SET:
+
+			bool hasGeometryShader = capabilities.geometryShaders && geometryShader != null;
+			bool hasTesselationShader = capabilities.tesselationShaders && tesselationShaderCtrl != null && tesselationShaderEval != null;
+
+			int shaderCount = 0;
+			if (vertexShader != null)	shaderCount++;
+			if (hasGeometryShader)		shaderCount++;
+			if (hasTesselationShader)	shaderCount += 2;
+			if (pixelShader != null)	shaderCount++;
+
+			try
+			{
+				Shader[] shaders = new Shader[shaderCount];
+
+				i = 0;
+				shaders[i++] = GetShaderVariant(vertexShader);
+				if (hasGeometryShader)
 				{
-					variant?.Dispose();
+					shaders[i++] = GetShaderVariant(geometryShader);
+				}
+				if (hasTesselationShader)
+				{
+					shaders[i++] = GetShaderVariant(tesselationShaderCtrl);
+					shaders[i++] = GetShaderVariant(tesselationShaderEval);
+				}
+				shaders[i++] = GetShaderVariant(pixelShader);
+
+				// Assemble shader set:
+
+				ShaderSetDescription ssd = new(
+					vertexLayoutDescs,
+					shaders);
+
+				shaderSetDesc.UpdateValue(_newVersion, ssd);
+				return true;
+			}
+			catch (Exception ex)
+			{
+				Logger.LogException($"Failed to create shader set description for material '{resourceKey}' and variant '{_vertexDataFlags}'!", ex);
+				shaderSetDesc.DisposeValue();
+				return false;
+			}
+			
+
+			// Local helper method for fetching and loading a shader variant:
+			Shader GetShaderVariant(ResourceHandle? _handle)
+			{
+				if (_handle == null || !_handle.IsValid) return null!;
+
+				ShaderResource shaderRes = (_handle.GetResource(true, true) as ShaderResource)!;
+				return shaderRes.GetShaderProgram(_vertexDataFlags, out Shader? shader) && shader != null ? shader : null!;
+			}
+		}
+
+		internal bool CreatePipeline(GraphicsDrawContext _drawCtx, CameraContext _cameraCtx, uint _rendererVersion, MeshVertexDataFlags _vertexDataFlags, out VersionedMember<Pipeline> _outPipeline)
+		{
+			// Update material version from versioned members:
+			{
+				uint newestVersion = materialVersion;
+
+				newestVersion = Math.Max(newestVersion, depthStencilDesc.Version);
+				newestVersion = Math.Max(newestVersion, resourceLayout.Version);
+				newestVersion = Math.Max(newestVersion, shaderSetDesc.Version);
+
+				if (materialVersion != newestVersion)
+				{
+					materialVersion = newestVersion + 1;
 				}
 			}
-			foreach (ResourceLayout layout in resLayouts)
+
+			// Check and recreate all out-of-date members:
+			if (depthStencilDesc.Version != materialVersion)
 			{
-				if (layout != null && !layout.IsDisposed) layout.Dispose();
+				depthStencilDesc.UpdateValue(materialVersion, depthStencilDesc.Value);
 			}
-
-			if (_disposing)
+			if (resourceLayout.Version != materialVersion && !CreateResourceLayout(materialVersion))
 			{
-				variants = [];
-				resLayouts = [];
-			}
-		}
-
-		public void MarkDirty()
-		{
-			dirtyFlags = DirtyFlags.All;
-		}
-		private void MarkDirty(DirtyFlags _flags)
-		{
-			dirtyFlags |= _flags;
-		}
-
-		/// <summary>
-		/// Gets the material's graphics pipeline, or recreates it if outdated.<para/>
-		/// NOTE: The pipeline must be rebuilt each time the material is marked as dirty via '<see cref="MarkDirty()"/>',
-		/// which is done automatically if any of its flags, shaders, or bound resources have changed. In any other case,
-		/// the previous pipeline should still be valid and is returned instead.
-		/// </summary>
-		/// <param name="_outPipeline">Outputs the graphics pipeline encoding how to render stuff with this material.</param>
-		/// <param name="_vertexDataFlags">Flags for which vertex data must be bound to the pipeline.<para/>
-		/// NOTE: At least '<see cref="MeshVertexDataFlags.BasicSurfaceData"/>' must be set, all others are optional.</param>
-		/// <returns>True if the pipeline could be retrieved or updated successfully, false otherwise.</returns>
-		public bool GetOrUpdatePipeline(GraphicsDrawContext _ctx, out Pipeline _outPipeline, MeshVertexDataFlags _vertexDataFlags = MeshVertexDataFlags.BasicSurfaceData)
-		{
-			if (_ctx == null)
-			{
-				Logger.LogError($"Cannot get or create pipeline for material variant using null draw context!");
-				_outPipeline = null!;
+				_outPipeline = new(null!, 0);
 				return false;
 			}
-			if (!_vertexDataFlags.HasFlag(MeshVertexDataFlags.BasicSurfaceData))
+			if (shaderSetDesc.Version != materialVersion && !CreateShaderSetDesc(materialVersion, _vertexDataFlags))
 			{
-				Logger.LogError($"Material's vertex data flags must include at least '{MeshVertexDataFlags.BasicSurfaceData}'!");
-				_outPipeline = null!;
+				_outPipeline = new(null!, 0);
 				return false;
 			}
 
-			if (_ctx.outputDescChanged)
+			// Try creating the pipeline:
+			try
 			{
-				dirtyFlags |= DirtyFlags.Output;
-			}
+				DepthStencilDesc dsd = depthStencilDesc.Value;
+				StencilBehaviourDesc sd = depthStencilDesc.Value.stencilBehaviour;
 
-			// Variants are stored in an array, with as many elements as there are vertex flag permutations:
-			if (variants == null || variants.Length < (int)_vertexDataFlags)
-			{
-				MaterialVariant?[]? oldVariants = variants;
-				variants = new MaterialVariant?[(int)MeshVertexDataFlags.ALL];
-				oldVariants?.CopyTo(variants, 0);
-			}
+				DepthStencilStateDescription depthStateDesc = new(
+						dsd.enableDepthRead,
+						dsd.enableDepthWrite,
+						ComparisonKind.LessEqual,
+						dsd.enableStencil,
+						sd.stencilFront,
+						sd.stencilBack,
+						sd.readMask,
+						sd.writeMask,
+						sd.referenceValue);
 
-			// Get or create, then update pipeline for the requested variant:
-			int variantIdx = (int)_vertexDataFlags - 1;
-			MaterialVariant? variant = variants[variantIdx];
+				RasterizerStateDescription rasterizerState = dsd.enableCulling
+					? RasterizerStateDescription.Default
+					: RasterizerStateDescription.CullNone;
 
-			if (variant == null || variant.IsDisposed)
-			{
-				variant = new MaterialVariant(this, _vertexDataFlags);
-				variants[variantIdx] = variant;
+				GraphicsPipelineDescription pipelineDesc = new(
+					BlendStateDescription.SingleAlphaBlend,
+					depthStateDesc,
+					rasterizerState,
+					PrimitiveTopology.TriangleList,
+					shaderSetDesc.Value,
+					[resourceLayout.Value],
+					_cameraCtx.outputDesc);
+
+				Pipeline pipeline = core.MainFactory.CreateGraphicsPipeline(ref pipelineDesc);
+				uint newPipelineVersion = materialVersion ^ _rendererVersion;
+
+				_outPipeline = new(pipeline, newPipelineVersion);
+				return true;
 			}
-			if (IsDirty && !variant.UpdatePipeline(_ctx, dirtyFlags))
+			catch (Exception ex)
 			{
-				_outPipeline = null!;
+				Logger.LogException($"Failed to create pipeline for material '{resourceKey}' and variant '{_vertexDataFlags}'!", ex);
+				_outPipeline = new(null!, 0);
 				return false;
 			}
-
-			// Reset all dirty flags:
-			dirtyFlags = DirtyFlags.None;
-
-			// Output up-to-date pipeline and return success:
-			_outPipeline = variant.Pipeline;
-			return _outPipeline != null && !variant.IsDisposed && !_outPipeline.IsDisposed;
-		}
-
-		internal DepthStencilStateDescription GetDepthStencilDesc()
-		{
-			if (enableStencil)
-			{
-				return new(
-					enableDepthRead,
-					enableDepthWrite,
-					ComparisonKind.LessEqual,
-					true,
-					stencilBehaviour.stencilFront,
-					stencilBehaviour.stencilBack,
-					stencilBehaviour.readMask,
-					stencilBehaviour.writeMask,
-					stencilBehaviour.referenceValue);
-			}
-			else
-			{
-				return new(
-					enableDepthRead,
-					enableDepthWrite,
-					ComparisonKind.LessEqual);
-			}
-		}
-
-		internal RasterizerStateDescription GetRasterizerStateDesc()
-		{
-			return enableCulling
-				? RasterizerStateDescription.Default
-				: RasterizerStateDescription.CullNone;
-		}
-
-		internal ResourceLayout[] GetResourceLayouts()
-		{
-			const int resLayoutCount = 1;
-
-			// Assemble descriptions:
-			if (resLayoutDescs == null || resLayoutDescs.Length != resLayoutCount)
-			{
-				resLayoutDescs = new ResourceLayoutDescription[resLayoutCount];
-			}
-			resLayoutDescs[0] = new ResourceLayoutDescription(GraphicsContants.DEFAULT_SURFACE_RESOURCE_LAYOUT_DESC);
-
-			// Create layouts:
-			if (resLayouts == null || resLayouts.Length != resLayoutCount)
-			{
-				// Dispose outdated existing layouts:
-				if (resLayouts != null)
-				{
-					foreach (ResourceLayout resLayout in resLayouts)
-					{
-						resLayout?.Dispose();
-					}
-				}
-
-				resLayouts = new ResourceLayout[resLayoutCount];
-			}
-			for (int i = 0; i < resLayoutCount; ++i)
-			{
-				resLayouts[i] = graphicsCore.MainFactory.CreateResourceLayout(ref resLayoutDescs[i]);
-			}
-			return resLayouts;
 		}
 
 		public override IEnumerator<ResourceHandle> GetResourceDependencies()
 		{
-			if (IsDisposed) yield break;
-
-			bool hasGeometry = geometryShader != null && graphicsCore.GetCapabilities().geometryShaders;
-			bool hasTesselation = tesselationShaderCtrl != null && tesselationShaderEval != null && graphicsCore.GetCapabilities().tesselationShaders;
-
-			// Iterate all (supported) shader stages:
-			if (vertexShader != null) yield return vertexShader;
-			if (hasGeometry) yield return geometryShader!;
-			if (hasTesselation)
+			// Shader programs:
+			if (vertexShader != null)	yield return vertexShader;
+			if (geometryShader != null)	yield return geometryShader;
+			if (tesselationShaderCtrl != null && tesselationShaderEval != null)
 			{
-				yield return tesselationShaderCtrl!;
-				yield return tesselationShaderEval!;
+				yield return tesselationShaderCtrl;
+				yield return tesselationShaderEval;
 			}
-			if (pixelShader != null) yield return pixelShader;
+			if (pixelShader != null)	yield return pixelShader;
 
-			//TODO: Enumerate bound resources.
+			//TODO: Iterate dependencies and referenced assets.
 
-			// Lastly, return self:
-			if (GetResourceHandle(out ResourceHandle handle))
+			// Lastly, return this material itself:
+			if (resourceManager.GetResource(resourceKey, out ResourceHandle handle))
 			{
 				yield return handle;
 			}
@@ -465,32 +444,37 @@ namespace FragEngine3.Graphics.Resources
 			}
 
 			// Create and initialize material instance from data.
-			_outMaterial = new(_handle, _graphicsCore)
+			_outMaterial = new(_graphicsCore, _handle)
 			{
+				materialVersion = 1,
+
 				vertexShader = GetResourceHandle(data.Shaders.Vertex) ?? ResourceHandle.None,
 				geometryShader = GetResourceHandle(data.Shaders.Geometry),
 				tesselationShaderCtrl = GetResourceHandle(data.Shaders.TesselationCtrl),
 				tesselationShaderEval = GetResourceHandle(data.Shaders.TesselationEval),
 				pixelShader = GetResourceHandle(data.Shaders.Pixel) ?? ResourceHandle.None,
 
-				enableDepthRead = data.States!.EnableDepthTest,
-				enableDepthWrite = data.States.EnableDepthWrite,
-				enableStencil = data.States.EnableStencil,
-				stencilBehaviour = stencilDesc,
-				enableCulling = data.States.EnableCulling,
+				depthStencilDesc = new(new()
+				{
+					enableDepthRead = data.States!.EnableDepthTest,
+					enableDepthWrite = data.States.EnableDepthWrite,
+					enableStencil = data.States.EnableStencil,
+					stencilBehaviour = stencilDesc,
+					enableCulling = data.States.EnableCulling,
+				}, 0),
 
-				renderMode = data.States.RenderMode,
-				zSortingBias = data.States.ZSortingBias,
+				renderModeDesc = new(new()
+				{
+					renderMode = data.States.RenderMode,
+					zSortingBias = data.States.ZSortingBias,
+				}, 0),
 
 				SimplifiedMaterialVersion = GetResourceHandle(data.Replacements?.SimplifiedVersion),
 				ShadowMapMaterialVersion = GetResourceHandle(data.Replacements?.ShadowMap),
-
-				//... (bound resources)
 			};
-			_outMaterial.MarkDirty();
 			return true;
 
-			
+
 			// Local helper methods for getching shader handles:
 			ResourceHandle? GetResourceHandle(string? _resourceKey)
 			{

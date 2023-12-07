@@ -3,6 +3,7 @@ using System.Runtime.InteropServices;
 
 namespace FragEngine3.Graphics.Components.ConstantBuffers
 {
+	[Serializable]
 	[StructLayout(LayoutKind.Sequential, Pack = 16, Size = byteSize)]
 	public struct GlobalConstantBuffer
 	{

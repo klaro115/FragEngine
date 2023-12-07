@@ -1,14 +1,16 @@
 ﻿using FragEngine3.EngineCore;
+using FragEngine3.Graphics.Contexts;
 using FragEngine3.Resources;
 using Veldrid;
 
 namespace FragEngine3.Graphics.Resources
 {
-	public class MaterialVariant : IDisposable
+	[Obsolete("replace this")]
+    public class MaterialVariant : IDisposable
 	{
 		#region Constructors
 
-		public MaterialVariant(Material _material, MeshVertexDataFlags _vertexDataFlags)
+		public MaterialVariant(MaterialOld _material, MeshVertexDataFlags _vertexDataFlags)
 		{
 			material = _material ?? throw new ArgumentNullException(nameof(_material), "Material may not be null!");
 			vertexDataFlags = _vertexDataFlags != 0 ? _vertexDataFlags : MeshVertexDataFlags.BasicSurfaceData;
@@ -23,7 +25,7 @@ namespace FragEngine3.Graphics.Resources
 		#endregion
 		#region Fields
 
-		public readonly Material material;
+		public readonly MaterialOld material;
 		public readonly MeshVertexDataFlags vertexDataFlags;
 		private readonly VertexLayoutDescription[] vertexLayoutDescs;
 
@@ -64,7 +66,7 @@ namespace FragEngine3.Graphics.Resources
 			}
 		}
 
-		public bool UpdatePipeline(GraphicsDrawContext _ctx, Material.DirtyFlags _dirtyFlags)
+		public bool UpdatePipeline(CameraContext _ctx, MaterialOld.DirtyFlags _dirtyFlags)
 		{
 			if (IsDisposed || material.IsDisposed)
 			{
@@ -72,7 +74,7 @@ namespace FragEngine3.Graphics.Resources
 				return false;
 			}
 
-			if (_dirtyFlags == Material.DirtyFlags.None && pipeline != null && !pipeline.IsDisposed)
+			if (_dirtyFlags == MaterialOld.DirtyFlags.None && pipeline != null && !pipeline.IsDisposed)
 			{
 				return true;
 			}
@@ -88,7 +90,7 @@ namespace FragEngine3.Graphics.Resources
 					}
 
 					// Recreate full description:
-					if (_dirtyFlags.HasFlag(Material.DirtyFlags.All))
+					if (_dirtyFlags.HasFlag(MaterialOld.DirtyFlags.All))
 					{
 						pipelineDesc = new(
 							BlendStateDescription.SingleAlphaBlend,
@@ -103,23 +105,23 @@ namespace FragEngine3.Graphics.Resources
 					// Update current description:
 					else
 					{
-						if (_dirtyFlags.HasFlag(Material.DirtyFlags.DepthStencil))
+						if (_dirtyFlags.HasFlag(MaterialOld.DirtyFlags.DepthStencil))
 						{
 							pipelineDesc.DepthStencilState = material.GetDepthStencilDesc();
 						}
-						if (_dirtyFlags.HasFlag(Material.DirtyFlags.Rasterizer))
+						if (_dirtyFlags.HasFlag(MaterialOld.DirtyFlags.Rasterizer))
 						{
 							pipelineDesc.RasterizerState = material.GetRasterizerStateDesc();
 						}
-						if (_dirtyFlags.HasFlag(Material.DirtyFlags.ShaderSet) || shaders == null || shaders.Length == 0)
+						if (_dirtyFlags.HasFlag(MaterialOld.DirtyFlags.ShaderSet) || shaders == null || shaders.Length == 0)
 						{
 							pipelineDesc.ShaderSet = GetShaderSet(in vertexLayoutDescs, vertexDataFlags);
 						}
-						if (_dirtyFlags.HasFlag(Material.DirtyFlags.ResourceLayouts))
+						if (_dirtyFlags.HasFlag(MaterialOld.DirtyFlags.ResourceLayouts))
 						{
 							pipelineDesc.ResourceLayouts = material.GetResourceLayouts();
 						}
-						if (_dirtyFlags.HasFlag(Material.DirtyFlags.Output))
+						if (_dirtyFlags.HasFlag(MaterialOld.DirtyFlags.Output))
 						{
 							pipelineDesc.Outputs = _ctx.outputDesc;
 						}
@@ -127,6 +129,7 @@ namespace FragEngine3.Graphics.Resources
 
 					// create new pipeline resource:
 					pipeline = material.graphicsCore.MainFactory.CreateGraphicsPipeline(ref pipelineDesc);
+					pipeline.Name = $"{material.resourceKey}_{(uint)vertexDataFlags}";
 				}
 				return true;
 			}

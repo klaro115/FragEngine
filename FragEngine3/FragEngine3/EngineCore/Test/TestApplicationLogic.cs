@@ -87,8 +87,9 @@ namespace FragEngine3.EngineCore.Test
 
 			// Create a camera:
 			SceneNode cameraNode = scene.rootNode.CreateChild("Camera");
-			cameraNode.WorldPosition = Vector3.Zero;
-			cameraNode.WorldRotation = Quaternion.Identity;
+			cameraNode.LocalPosition = new(0, 0, -1);
+			cameraNode.LocalRotation = Quaternion.Identity;
+			cameraNode.LocalScale = Vector3.One;
 			if (cameraNode.CreateComponent(out Camera? camera) && camera != null)
 			{
 				Sdl2Window window = Engine.GraphicsSystem.graphicsCore.Window;
@@ -123,6 +124,27 @@ namespace FragEngine3.EngineCore.Test
 				light.node.SetRotationFromYawPitchRoll(45, 45, 0, true, true);
 			}
 
+			SceneNode rabbitNode = scene.rootNode.CreateChild("Rabbit");
+			rabbitNode.LocalPosition = Vector3.Zero;
+			rabbitNode.LocalRotation = Quaternion.Identity;
+			rabbitNode.LocalScale = Vector3.One;
+			if (rabbitNode.CreateComponent(out StaticMeshRenderer? rabbitRenderer) && rabbitRenderer != null)
+			{
+				rabbitRenderer.SetMesh("Rabbit.obj");
+				rabbitRenderer.SetMaterial("DefaultSurface");
+			}
+
+			SceneNode cubeNode = scene.rootNode.CreateChild("Cube");
+			cubeNode.LocalPosition = Vector3.Zero;
+			cubeNode.LocalRotation = Quaternion.Identity;
+			cubeNode.LocalScale = Vector3.One * 0.5f;
+			if (cubeNode.CreateComponent(out StaticMeshRenderer? cubeRenderer) && cubeRenderer != null)
+			{
+				cubeRenderer.SetMesh("Cube.obj");
+				cubeRenderer.SetMaterial("DefaultSurface");
+			}
+
+			/*
 			// Create a static mesh renderer displaying a default-shaded cube:
 			SceneNode cubeNode = scene.rootNode.CreateChild("Cube");
 			cubeNode.LocalPosition = new(0.4f, -0.5f, 0.9f);
@@ -167,6 +189,7 @@ namespace FragEngine3.EngineCore.Test
 				quadRenderer.SetMesh(quadMesh);
 				quadRenderer.SetMaterial("DefaultSurface");
 			}
+			*/
 
 			return true;
 		}

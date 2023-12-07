@@ -369,6 +369,13 @@ namespace FragEngine3.Resources.Management
 							continue;
 						}
 
+						// Make the data file's path absolute. If it ain't, it is expected to be relative to the resource file's location:
+						if (!Path.IsPathFullyQualified(fileData.DataFilePath))
+						{
+							string descFileDirectoryPath = Path.GetDirectoryName(fileEnumerator.Current) ?? string.Empty;
+							fileData.DataFilePath = Path.Combine(descFileDirectoryPath, fileData.DataFilePath);
+						}
+
 						// If data is somehow incomplete or slightly incorrect, try fixing it:
 						if (!fileData.IsComplete() && !fileData.TryToCompleteData())
 						{
@@ -381,13 +388,6 @@ namespace FragEngine3.Resources.Management
 						{
 							libFileFailed++;
 							continue;
-						}
-
-						// Make the data file's path absolute. If it ain't, it is expected to be relative to the resource file's location:
-						if (!Path.IsPathFullyQualified(fileData.DataFilePath))
-						{
-							string descFileDirectoryPath = Path.GetDirectoryName(fileEnumerator.Current) ?? string.Empty;
-							fileData.DataFilePath = Path.Combine(descFileDirectoryPath, fileData.DataFilePath);
 						}
 
 						// Register the file:
