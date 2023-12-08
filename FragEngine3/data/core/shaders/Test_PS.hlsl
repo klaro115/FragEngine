@@ -12,5 +12,5 @@ struct VertexOutput_Basic
 
 float4 Main_Pixel(in VertexOutput_Basic inputBasic) : SV_Target0
 {
-    return float4(abs(inputBasic.uv), 0, 1);
+    return float4(abs(inputBasic.uv), inputBasic.position.z, 1);
 }

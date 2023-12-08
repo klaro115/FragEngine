@@ -68,7 +68,7 @@ namespace FragEngine3.Graphics.D3D12
 					DefaultDepthTargetPixelFormat,
 					vsync,
 					ResourceBindingModel.Improved,
-					false,
+					true,
 					true,
 					useSrgb);
 

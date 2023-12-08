@@ -1,6 +1,6 @@
 /****************** CONSTANTS: *****************/
 
-cbuffer Global : register(b0)
+cbuffer CBGlobal : register(b0)
 {
 	// Camera parameters:
     uint resolutionX;           // Render target width, in pixels.
@@ -15,6 +15,13 @@ cbuffer Global : register(b0)
 
     // Lighting:
     uint lightCount;
+};
+
+cbuffer CBObject : register(b1)
+{
+    float4x4 mtxWorld;          // Object world matrix, transforming vertices from model space to world space.
+    float3 worldPosition;       // World space position of the object.
+    float boundingRadius;       // Bounding sphere radius of the object.
 };
 
 /******************* BUFFERS: ******************/

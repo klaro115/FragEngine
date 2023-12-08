@@ -9,6 +9,7 @@ using FragEngine3.Scenes.Data;
 using FragEngine3.Scenes.EventSystem;
 using FragEngine3.Utility.Serialization;
 using Veldrid;
+using Vortice.Mathematics;
 
 namespace FragEngine3.Graphics.Components
 {
@@ -582,27 +583,27 @@ namespace FragEngine3.Graphics.Components
 					UpdateFinalCameraMatrix();
 				}
 			}
-
+			
 			// Assemble global constant buffer contents:
 			GlobalConstantBuffer globalConstantBufferData = new()
 			{
+				// Camera vectors & matrices:
+				mtxCamera = mtxCamera,
+				cameraPosition = node.WorldPosition,
+				cameraDirection = node.WorldForward,
+
 				// Camera parameters:
 				resolutionX = resolutionX,
 				resolutionY = resolutionY,
 				nearClipPlane = nearClipPlane,
 				farClipPlane = farClipPlane,
 
-				// Camera vectors & matrices:
-				cameraPosition = node.WorldPosition,
-				cameraDirection = node.WorldForward,
-				mtxCamera = mtxCamera,
-
 				// Lighting:
 				lightCount = _activeLightCount,
 			};
 
 			// Upload to GPU:
-			core.Device.UpdateBuffer(globalConstantBuffer, 0, globalConstantBufferData);
+			core.Device.UpdateBuffer(globalConstantBuffer, 0, ref globalConstantBufferData, GlobalConstantBuffer.byteSize);
 
 			_outGlobalConstantBuffer = globalConstantBuffer;
 			return true;

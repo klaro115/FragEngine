@@ -288,13 +288,13 @@ namespace FragEngine3.Graphics.Components
 
 			// Throw pipeline and geometry buffers at the command list:
 			_drawCtx.cmdList.SetPipeline(pipeline.Value);
+			_drawCtx.cmdList.SetGraphicsResourceSet(0, resourceSet.Value);
+
 			for (uint i = 0; i < vertexBuffers.Length; ++i)
 			{
 				_drawCtx.cmdList.SetVertexBuffer(i, vertexBuffers[i]);
 			}
 			_drawCtx.cmdList.SetIndexBuffer(indexBuffer, Mesh.IndexFormat);
-
-			_drawCtx.cmdList.SetGraphicsResourceSet(0, resourceSet.Value);
 
 			//TODO: Bind material resources, such as textures and buffers!
 			//TODO: Update constant buffers, both for system variables and from material!
@@ -316,23 +316,22 @@ namespace FragEngine3.Graphics.Components
 			}
 
 			Pose worldPose = node.WorldTransformation;
-			Matrix4x4.Invert(worldPose.Matrix, out Matrix4x4 mtxInvWorld);
 
 			ObjectDataConstantBuffer objectData = new()
 			{
-				mtxInvWorld = mtxInvWorld,
+				mtxWorld = worldPose.Matrix,
 				worldPosition = worldPose.position,
 				boundingRadius = BoundingRadius,
 			};
 
-			_cmdList.UpdateBuffer(objectDataConstantBuffer, 0, objectData);
+			_cmdList.UpdateBuffer(objectDataConstantBuffer, 0, ref objectData, ObjectDataConstantBuffer.byteSize);
 
 			return true;
 		}
 
 		private bool UpdateResourceSet(Material _material, CameraContext _cameraCtx)
 		{
-			if (resourceSet.GetValue(rendererVersion, out ResourceSet? rs) || rs == null || rs.IsDisposed)
+			if (!resourceSet.GetValue(rendererVersion, out ResourceSet? rs) || rs == null || rs.IsDisposed)
 			{
 				resourceSet.DisposeValue();
 

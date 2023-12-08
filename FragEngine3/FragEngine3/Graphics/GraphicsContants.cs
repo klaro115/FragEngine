@@ -1,4 +1,5 @@
-﻿using FragEngine3.Graphics.Resources;
+﻿using FragEngine3.Graphics.Components.ConstantBuffers;
+using FragEngine3.Graphics.Resources;
 using Veldrid;
 
 namespace FragEngine3.Graphics
@@ -71,10 +72,9 @@ namespace FragEngine3.Graphics
 
 		public static readonly ResourceLayoutElementDescription[] DEFAULT_SURFACE_RESOURCE_LAYOUT_DESC =
 		[
-			new ResourceLayoutElementDescription("CBGlobal", ResourceKind.UniformBuffer, ShaderStages.Vertex | ShaderStages.Fragment),	// Global scene constants
-			new ResourceLayoutElementDescription("CBObjectData", ResourceKind.UniformBuffer, ShaderStages.Vertex),                      // Object-specific constants
-			new ResourceLayoutElementDescription("BufLights", ResourceKind.StructuredBufferReadOnly, ShaderStages.Fragment),			// Light source buffer
-			//new ResourceLayoutElementDescription("TexMain", ResourceKind.TextureReadOnly, ShaderStages.Fragment)
+			GlobalConstantBuffer.ResourceLayoutElementDesc,
+			ObjectDataConstantBuffer.ResourceLayoutElementDesc,
+			new ResourceLayoutElementDescription("BufLights", ResourceKind.StructuredBufferReadOnly, ShaderStages.Fragment),
 		];
 
 		/// <summary>

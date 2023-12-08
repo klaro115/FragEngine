@@ -16,7 +16,7 @@
 		// OUTPUT & SWAPCHAIN:
 
 		public int OutputBitDepth { get; set; } = 8;
-		public bool OutputIsSRGB { get; set; } = true;
+		public bool OutputIsSRGB { get; set; } = false;
 		//...
 
 		// SETTINGS:

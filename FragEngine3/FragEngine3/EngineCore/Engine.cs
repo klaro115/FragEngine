@@ -3,7 +3,6 @@ using FragEngine3.EngineCore.Logging;
 using FragEngine3.Graphics;
 using FragEngine3.Resources;
 using FragEngine3.Scenes;
-using System.Diagnostics;
 
 namespace FragEngine3.EngineCore
 {
@@ -25,6 +24,7 @@ namespace FragEngine3.EngineCore
 
 			// Create main engine modules:
 			PlatformSystem = new PlatformSystem(this);
+			TimeManager = new TimeManager(this);
 			ResourceManager = new ResourceManager(this);
 			InputManager = new InputManager(this);
 			GraphicsSystem = new GraphicsSystem(this);
@@ -49,9 +49,6 @@ namespace FragEngine3.EngineCore
 		private readonly object stateLockObj = new();
 
 		// Frame timings:
-		private readonly Stopwatch stopwatch = new();
-		private long frameStartTimeMs = 0;
-		private long frameEndTimeMs = 0;
 		const long frameTimeTargetMs = 1000 / 60;
 
 		#endregion
@@ -63,6 +60,7 @@ namespace FragEngine3.EngineCore
 
 		public Logger Logger { get; private set; } = null!;
 		public PlatformSystem PlatformSystem { get; private set; } = null!;
+		public TimeManager TimeManager { get; private set; } = null!;
 		public ResourceManager ResourceManager { get; private set; } = null!;
 		public InputManager InputManager { get; private set; } = null!;
 		public GraphicsSystem GraphicsSystem { get; private set; } = null!;
@@ -88,6 +86,7 @@ namespace FragEngine3.EngineCore
 			SceneManager?.Dispose();
 			GraphicsSystem?.Dispose();
 			ResourceManager?.Dispose();
+			TimeManager?.Dispose();
 			PlatformSystem?.Dispose();
 			//...
 
@@ -167,6 +166,8 @@ namespace FragEngine3.EngineCore
 
 			mainLoopCancellationSrc = new CancellationTokenSource();
 
+			TimeManager.Reset();
+
 			bool success = true;
 
 			try
@@ -204,8 +205,6 @@ namespace FragEngine3.EngineCore
 
 		private bool RunMainLoop()
 		{
-			stopwatch.Restart();
-
 			// Start gathering resources and load data asynchronously:
 			SetState(EngineState.Loading);
 
@@ -220,7 +219,7 @@ namespace FragEngine3.EngineCore
 			// Run the main loop across the entire loading and application run-time stages:
 			while (success)
 			{
-				frameStartTimeMs = stopwatch.ElapsedMilliseconds;
+				TimeManager.BeginFrame(out _);
 
 				// Update main window message loop, exit if an OS signal requested application quit:
 				success &= GraphicsSystem.UpdateMessageLoop(out bool requestExit);
@@ -293,8 +292,7 @@ namespace FragEngine3.EngineCore
 				else break;
 
 				// Sleep thread to target a consistent 60Hz:
-				frameEndTimeMs = stopwatch.ElapsedMilliseconds;
-				long elapsedFrameTimeMs = frameEndTimeMs - frameStartTimeMs;
+				TimeManager.EndFrame(out _, out long elapsedFrameTimeMs);
 				long sleepTime = Math.Max(frameTimeTargetMs - elapsedFrameTimeMs, 0);
 				Thread.Sleep((int)sleepTime);
 			}
@@ -305,7 +303,6 @@ namespace FragEngine3.EngineCore
 			ResourceManager.AbortAllImports();
 			ResourceManager.DisposeAllResources();
 
-			stopwatch.Stop();
 			return success;
 		}
 

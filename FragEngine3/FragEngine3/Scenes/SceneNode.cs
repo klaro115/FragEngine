@@ -480,7 +480,7 @@ namespace FragEngine3.Scenes
 			if (_newParent.IsDisposed)
 				throw new ObjectDisposedException(nameof(_newParent), "Cannot add child to disposed node!");
 
-			if (_newParent == parentNode)
+			if (_newParent == parentNode && parentNode.children.Contains(this))
 			{
 				return true;
 			}

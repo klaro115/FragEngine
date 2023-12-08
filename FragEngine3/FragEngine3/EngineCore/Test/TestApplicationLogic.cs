@@ -87,7 +87,7 @@ namespace FragEngine3.EngineCore.Test
 
 			// Create a camera:
 			SceneNode cameraNode = scene.rootNode.CreateChild("Camera");
-			cameraNode.LocalPosition = new(0, 0, -1);
+			cameraNode.LocalPosition = new(0, 0, -0.5f);
 			cameraNode.LocalRotation = Quaternion.Identity;
 			cameraNode.LocalScale = Vector3.One;
 			if (cameraNode.CreateComponent(out Camera? camera) && camera != null)
@@ -128,20 +128,52 @@ namespace FragEngine3.EngineCore.Test
 			rabbitNode.LocalPosition = Vector3.Zero;
 			rabbitNode.LocalRotation = Quaternion.Identity;
 			rabbitNode.LocalScale = Vector3.One;
+			//rabbitNode.SetEnabled(false);
 			if (rabbitNode.CreateComponent(out StaticMeshRenderer? rabbitRenderer) && rabbitRenderer != null)
 			{
 				rabbitRenderer.SetMesh("Rabbit.obj");
-				rabbitRenderer.SetMaterial("DefaultSurface");
+				//rabbitRenderer.SetMaterial("DefaultSurface");
+				rabbitRenderer.SetMaterial("TestMaterial");
 			}
 
 			SceneNode cubeNode = scene.rootNode.CreateChild("Cube");
 			cubeNode.LocalPosition = Vector3.Zero;
 			cubeNode.LocalRotation = Quaternion.Identity;
 			cubeNode.LocalScale = Vector3.One * 0.5f;
+			//cubeNode.SetEnabled(false);
 			if (cubeNode.CreateComponent(out StaticMeshRenderer? cubeRenderer) && cubeRenderer != null)
 			{
 				cubeRenderer.SetMesh("Cube.obj");
-				cubeRenderer.SetMaterial("DefaultSurface");
+				//cubeRenderer.SetMaterial("DefaultSurface");
+				cubeRenderer.SetMaterial("TestMaterial");
+			}
+
+			// Create fullscreen quad:
+			MeshSurfaceData quadData = new()
+			{
+				verticesBasic =
+				[
+					new BasicVertex(new(-1, -1, 0), new(0, 0, -1), new(0, 0)),
+					new BasicVertex(new(1, -1, 0.5f), new(0, 0, -1), new(1, 0)),
+					new BasicVertex(new(-1, 1, 0.5f), new(0, 0, -1), new(0, 1)),
+					new BasicVertex(new(1, 1, 1), new(0, 0, -1), new(1, 1)),
+				],
+				indices16 =
+				[
+					0, 2, 1,
+					2, 3, 1,
+				],
+			};
+			StaticMesh quadMesh = new("Quad", Engine.ResourceManager, Engine.GraphicsSystem.graphicsCore, false, out ResourceHandle quadHandle);
+			quadMesh.SetGeometry(in quadData);
+			SceneNode quadNode = scene.rootNode.CreateChild("Quad");
+			quadNode.LocalTransformation = Pose.Identity;
+			//quadNode.SetEnabled(false);
+			if (quadNode.CreateComponent(out StaticMeshRenderer? quadRenderer) && quadRenderer != null)
+			{
+				quadRenderer.SetMesh(quadHandle);
+				//quadRenderer.SetMaterial("DefaultSurface");
+				quadRenderer.SetMaterial("TestMaterial");
 			}
 
 			/*
@@ -199,6 +231,19 @@ namespace FragEngine3.EngineCore.Test
 			if (Engine.InputManager.GetMouseButtonUp(Veldrid.MouseButton.Right))
 			{
 				Engine.Exit();
+			}
+
+			Scene scene = Engine.SceneManager.MainScene!;
+			if (scene.FindNode("Rabbit", out SceneNode? rabbitNode) && rabbitNode != null)
+			{
+				float radPerSec = 2 * MathF.PI / 10;
+				float deltaTime = (float)Engine.TimeManager.DeltaTime.TotalSeconds;
+				float time = (float)Engine.TimeManager.RunTime.TotalSeconds;
+
+				Pose localPose = rabbitNode.LocalTransformation;
+				localPose.position = new(0, 0, MathF.Sin(time));
+				localPose.Rotate(Quaternion.CreateFromAxisAngle(Vector3.UnitY, radPerSec * deltaTime));
+				rabbitNode.LocalTransformation = localPose;
 			}
 
 			return true;

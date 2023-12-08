@@ -61,13 +61,13 @@ namespace FragEngine3.Graphics.Resources
 	/// </summary>
 	[Serializable]
 	[StructLayout(LayoutKind.Sequential, Pack = 4, Size = (int)byteSize)]
-	public struct BasicVertex
+	public struct BasicVertex(Vector3 _position, Vector3 _normal, Vector2 _uv)
 	{
 		#region Fields
 
-		public Vector3 position;
-		public Vector3 normal;
-		public Vector2 uv;
+		public Vector3 position = _position;
+		public Vector3 normal = _normal;
+		public Vector2 uv = _uv;
 
 		#endregion
 		#region Constants
@@ -96,12 +96,12 @@ namespace FragEngine3.Graphics.Resources
 	/// </summary>
 	[Serializable]
 	[StructLayout(LayoutKind.Sequential, Pack = 4, Size = (int)byteSize)]
-	public struct ExtendedVertex
+	public struct ExtendedVertex(Vector3 _tangent, Vector2 _uv2)
 	{
 		#region Fields
 
-		public Vector3 tangent;
-		public Vector2 uv2;
+		public Vector3 tangent = _tangent;
+		public Vector2 uv2 = _uv2;
 
 		#endregion
 		#region Constants
@@ -131,6 +131,20 @@ namespace FragEngine3.Graphics.Resources
 	[StructLayout(LayoutKind.Sequential, Pack = 4, Size = (int)byteSize)]
 	public struct IndexedWeightedVertex
 	{
+		#region Constructors
+
+		public IndexedWeightedVertex(VertexWeightIndices _indices, Vector4 _weights)
+		{
+			indices = _indices;
+			weights = _weights;
+		}
+		public IndexedWeightedVertex(Vector4 _indices, Vector4 _weights)
+		{
+			indices = new(_indices);
+			weights = _weights;
+		}
+
+		#endregion
 		#region Fields
 
 		public VertexWeightIndices indices;
