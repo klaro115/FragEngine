@@ -9,7 +9,6 @@ using FragEngine3.Scenes.Data;
 using FragEngine3.Scenes.EventSystem;
 using FragEngine3.Utility.Serialization;
 using Veldrid;
-using Vortice.Mathematics;
 
 namespace FragEngine3.Graphics.Components
 {
@@ -64,10 +63,14 @@ namespace FragEngine3.Graphics.Components
 
 		private DirtyFlags dirtyFlags = 0;
 		private bool isDrawing = false;
+		private uint cameraVersion = 1;
 
 		// Resolution:
 		private uint resolutionX = 640;
 		private uint resolutionY = 480;
+		private uint prevResolutionX = 0;
+		private uint prevResolutionY = 0;
+		private PixelFormat prevColorPixelFormat = PixelFormat.R8_UNorm;
 
 		// Projection:
 		private float nearClipPlane = 0.01f;
@@ -383,6 +386,8 @@ namespace FragEngine3.Graphics.Components
 				// Reregister camera:
 				node.scene.drawManager.UnregisterCamera(this);
 				node.scene.drawManager.RegisterCamera(this);
+
+				cameraVersion++;
 			}
 
 			IsMainCamera = wasMainCamera;
@@ -528,6 +533,7 @@ namespace FragEngine3.Graphics.Components
 
 					lightDataBuffer = core.MainFactory.CreateBuffer(ref lightDataBufferDesc);
 					lightDataBufferCapacity = _expectedCapacity;
+					cameraVersion++;
 				}
 				catch (Exception ex)
 				{
@@ -569,6 +575,7 @@ namespace FragEngine3.Graphics.Components
 				BufferDescription globalConstantBufferDesc = new(GlobalConstantBuffer.packedByteSize, BufferUsage.Dynamic | BufferUsage.UniformBuffer);
 
 				globalConstantBuffer = core.MainFactory.CreateBuffer(ref globalConstantBufferDesc);
+				cameraVersion++;
 			}
 
 			// If necessary, rebuilt projection matrices, since their values will be uploaded to the constant buffer:
@@ -637,7 +644,8 @@ namespace FragEngine3.Graphics.Components
 				// World space => Camera's local space => Clip space => Viewport/pixel space
 
 				// Calculate combined matrix or transforming from world space to clip space:
-				mtxCamera = mtxWorld2Camera * mtxProjection * mtxViewport;
+				//mtxCamera = mtxWorld2Camera * mtxProjection * mtxViewport;
+				mtxCamera = mtxWorld2Camera;// * mtxProjection * mtxViewport;
 
 				Matrix4x4.Invert(mtxCamera, out mtxInvCamera);
 			}
@@ -709,7 +717,7 @@ namespace FragEngine3.Graphics.Components
 
 			_cmdList.Begin();
 
-			bool outputHasChanged = dirtyFlags.HasFlag(DirtyFlags.Resolution) || dirtyFlags.HasFlag(DirtyFlags.RenderTarget);
+			//bool outputHasChanged = dirtyFlags.HasFlag(DirtyFlags.Resolution) || dirtyFlags.HasFlag(DirtyFlags.RenderTarget);
 
 			lock (cameraStateLockObj)
 			{
@@ -791,6 +799,21 @@ namespace FragEngine3.Graphics.Components
 					return false;
 				}
 
+				// Check if the output resolution and format has changed, which may necessitate a pipeline rebuild:
+				PixelFormat colorPixelFormat = activeRenderTargets.OutputDescription.ColorAttachments[0].Format;
+				bool outputChanged =
+					prevResolutionX != resolutionX ||
+					prevResolutionY != resolutionY ||
+					prevColorPixelFormat != colorPixelFormat;
+				if (outputChanged)
+				{
+					cameraVersion++;
+				}
+				prevResolutionX = resolutionX;
+				prevResolutionY = resolutionY;
+				prevColorPixelFormat = colorPixelFormat;
+
+				// Initialize constant buffers and light buffers for upcoming draw call:
 				if (!GetGlobalConstantBuffer(_activeLightCount, false, out _) ||
 					!GetLightDataBuffer(_activeLightCount, out _))
 				{
@@ -917,6 +940,14 @@ namespace FragEngine3.Graphics.Components
 				nearClipPlane = data.NearClipPlane;
 				farClipPlane = data.FarClipPlane;
 				FieldOfViewDegrees = data.FieldOfViewDegrees;
+
+				cameraPriority = data.CameraPriority;
+				layerMask = data.LayerMask;
+
+				clearBackground = data.ClearBackground;
+				clearColor = Color32.ParseHexString(data.ClearColor);
+				clearDepth = data.ClearDepth;
+				clearStencil = data.ClearStencil;
 			}
 
 			// Re-register camera with the scene:
@@ -938,6 +969,14 @@ namespace FragEngine3.Graphics.Components
 					NearClipPlane = nearClipPlane,
 					FarClipPlane = farClipPlane,
 					FieldOfViewDegrees = FieldOfViewDegrees,
+
+					CameraPriority = cameraPriority,
+					LayerMask = layerMask,
+
+					ClearBackground = clearBackground,
+					ClearColor = clearColor.ToHexString(),
+					ClearDepth = clearDepth,
+					ClearStencil = clearStencil,
 				};
 			}
 

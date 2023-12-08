@@ -181,17 +181,17 @@ namespace FragEngine3.Scenes.Utility
 
 			foreach (SceneNode node in _outAllNodes)
 			{
+				int liveComponentCount = 0;
 				for (int i = 0; i < node.ComponentCount; i++)
 				{
-					int liveComponentCount = 0;
 					if (node.GetComponent(i, out Component? component) && component != null)
 					{
 						_outIdMap.Add(component, idCounter++);
 						liveComponentCount++;
 					}
-					_outMaxComponentCount = Math.Max(_outMaxComponentCount, liveComponentCount);
-					_outTotalComponentCount += liveComponentCount;
 				}
+				_outMaxComponentCount = Math.Max(_outMaxComponentCount, liveComponentCount);
+				_outTotalComponentCount += liveComponentCount;
 			}
 			_outTotalProgressTaskCount += _outTotalComponentCount * 2;
 			_progress.CompleteAllTasks();
@@ -229,9 +229,12 @@ namespace FragEngine3.Scenes.Utility
 					_progress.Increment();
 				}
 			}
-			for (int i = index; index < _sceneData.Behaviours.BehavioursData!.Length; ++i)
+			if (_sceneData.Behaviours.BehavioursData != null)
 			{
-				_sceneData.Behaviours.BehavioursData![i] = new();
+				for (int i = index; index < _sceneData.Behaviours.BehavioursData!.Length; ++i)
+				{
+					_sceneData.Behaviours.BehavioursData![i] = new();
+				}
 			}
 
 			return true;

@@ -760,6 +760,15 @@ namespace FragEngine3.Scenes
 				return false;
 			}
 
+			if (components == null)
+			{
+				components = [ _outNewComponent ];
+			}
+			else
+			{
+				components.Add(_outNewComponent);
+			}
+			
 			// Register the component's event listeners:
 			RegisterComponentEvents(_outNewComponent);
 

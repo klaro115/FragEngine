@@ -5,6 +5,7 @@ using FragEngine3.Graphics.Resources.Data;
 using FragEngine3.Graphics.Stack;
 using FragEngine3.Resources;
 using FragEngine3.Scenes;
+using FragEngine3.Scenes.Utility;
 using System.Numerics;
 using Veldrid;
 using Veldrid.Sdl2;
@@ -256,6 +257,14 @@ namespace FragEngine3.EngineCore.Test
 
 		protected override bool EndRunningState()
 		{
+			string saveDirPath = Path.Combine(Engine.ResourceManager.fileGatherer.applicationPath, "saves");
+			if (!Directory.Exists(saveDirPath))
+			{
+				Directory.CreateDirectory(saveDirPath);
+			}
+			string saveFilePath = Path.Combine(saveDirPath, "test.json");
+			SceneSerializer.SaveSceneToFile(Engine.SceneManager.MainScene!, saveFilePath, out _, false);
+
 			return true;
 		}
 
