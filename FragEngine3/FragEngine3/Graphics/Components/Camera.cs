@@ -16,6 +16,12 @@ namespace FragEngine3.Graphics.Components
 	{
 		#region Types
 
+		public enum ProjectionType
+		{
+			Orthographic	= 0,
+			Perpective,
+		}
+
 		[Flags]
 		private enum DirtyFlags
 		{
@@ -73,9 +79,11 @@ namespace FragEngine3.Graphics.Components
 		private PixelFormat prevColorPixelFormat = PixelFormat.R8_UNorm;
 
 		// Projection:
+		private ProjectionType projectionType = ProjectionType.Perpective;
 		private float nearClipPlane = 0.01f;
 		private float farClipPlane = 1000.0f;
 		private float fieldOfViewRad = 60.0f * DEG2RAD;
+		private float orthographicSize = 1.0f;
 		private Matrix4x4 mtxProjection = Matrix4x4.Identity;	// Local space => Clip space
 		private Matrix4x4 mtxViewport = Matrix4x4.Identity;		// Clip space => Pixel space
 		private Matrix4x4 mtxCamera = Matrix4x4.Identity;		// World space => Pixel space
@@ -161,6 +169,12 @@ namespace FragEngine3.Graphics.Components
 
 		public float AspectRatio { get; private set; } = 1.33333f;
 
+		public ProjectionType Projection
+		{
+			get => projectionType;
+			set { projectionType = value; MarkDirty(DirtyFlags.Projection); }
+		}
+
 		/// <summary>
 		/// Gets or sets the nearest clipping distance of the camera; geometry closer than this can't be rendered
 		/// and will be clipped. Must be larger than 0 and less than the value of <see cref="FarClipPlane"/>.
@@ -195,6 +209,12 @@ namespace FragEngine3.Graphics.Components
 		{
 			get => fieldOfViewRad;
 			set { fieldOfViewRad = Math.Clamp(value, 0.001f * DEG2RAD, 179.0f * DEG2RAD); MarkDirty(DirtyFlags.Projection); }
+		}
+
+		public float OrthographicSize
+		{
+			get => orthographicSize;
+			set { orthographicSize = Math.Clamp(value, 0.001f, 1000.0f); MarkDirty(DirtyFlags.Projection); }
 		}
 
 		public ResourceHandle? DefaultShadowMaterialHandle { get; private set; } = null;
@@ -621,7 +641,14 @@ namespace FragEngine3.Graphics.Components
 			//NOTE: We are using a left-handed coordinate system, where X=right, Y=up, and Z=forward.
 
 			// Calculate projection from camera's local space to clip space:
-			mtxProjection = Matrix4x4.CreatePerspectiveFieldOfViewLeftHanded(fieldOfViewRad, AspectRatio, nearClipPlane, farClipPlane);
+			if (projectionType == ProjectionType.Orthographic)
+			{
+				mtxProjection = Matrix4x4.CreateOrthographicLeftHanded(orthographicSize * AspectRatio, orthographicSize, nearClipPlane, farClipPlane);
+			}
+			else
+			{
+				mtxProjection = Matrix4x4.CreatePerspectiveFieldOfViewLeftHanded(fieldOfViewRad, AspectRatio, nearClipPlane, farClipPlane);
+			}
 
 			// Calculate viewport matrix:
 			RecalculateViewportMatrix();
@@ -644,11 +671,13 @@ namespace FragEngine3.Graphics.Components
 				// World space => Camera's local space => Clip space => Viewport/pixel space
 
 				// Calculate combined matrix or transforming from world space to clip space:
-				//mtxCamera = mtxWorld2Camera * mtxProjection * mtxViewport;
-				mtxCamera = mtxWorld2Camera;// * mtxProjection * mtxViewport;
+				mtxCamera = mtxWorld2Camera * mtxProjection;
 
 				Matrix4x4.Invert(mtxCamera, out mtxInvCamera);
 			}
+			// NOTE: If your projection is doing weird stuff on the GPU, add "#pragma pack_matrix( column_major )" to the top of it.
+			// Matrix packing order in System.Numerics is column-major, not row-major! This was messy and annoying to figure out, so
+			// just try to deal with it without loosing your mind too much.
 		}
 
 		private void UpdateStatesFromActiveRenderTarget()

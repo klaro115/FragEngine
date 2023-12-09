@@ -13,6 +13,7 @@ namespace FragEngine3.Graphics.Components.Data
 		public uint ResolutionY { get; set; } = 480u;
 
 		// Projection:
+		public Camera.ProjectionType ProjectionType { get; set; } = Camera.ProjectionType.Perpective;
 		public float NearClipPlane { get; set; } = 0.001f;
 		public float FarClipPlane { get; set; } = 1000.0f;
 		public float FieldOfViewDegrees { get; set; } = 60.0f;

@@ -1,3 +1,5 @@
+#pragma pack_matrix( column_major )
+
 /**************** VERTEX INPUT: ****************/
 
 struct VertexInput_Basic

@@ -1,4 +1,4 @@
-#pragma pack_matrix( row_major )
+#pragma pack_matrix( column_major )
 
 /****************** CONSTANTS: *****************/
 
@@ -78,10 +78,9 @@ void Main_Vertex(in VertexInput_Basic inputBasic, out VertexOutput_Basic outputB
 {
     float4x4 mtxModel2Camera = mul(mtxCamera, mtxWorld);
 
-    //float4 projResult = mul(mtxModel2Camera, float4(inputBasic.position, 1));
+    float4 projResult = mul(mtxModel2Camera, float4(inputBasic.position, 1));
 
-    outputBasic.position = mul(mtxCamera, float4(inputBasic.position, 1));
-    //outputBasic.position = float4(inputBasic.position, 1);
+    outputBasic.position = projResult;
     outputBasic.worldPosition = mul(mtxWorld, float4(inputBasic.position, 1)).xyz;
     outputBasic.normal = mul(mtxWorld, float4(inputBasic.position, 0)).xyz;
     outputBasic.uv = inputBasic.uv;
