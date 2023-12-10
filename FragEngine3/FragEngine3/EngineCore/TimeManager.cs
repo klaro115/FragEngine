@@ -2,13 +2,13 @@
 
 namespace FragEngine3.EngineCore
 {
-	public sealed class TimeManager : IDisposable
+	public sealed class TimeManager : IEngineSystem
 	{
 		#region Constructors
 
 		public TimeManager(Engine _engine)
 		{
-			engine = _engine ?? throw new ArgumentNullException(nameof(engine), "Engine may not be null!");
+			engine = _engine ?? throw new ArgumentNullException(nameof(_engine), "Engine may not be null!");
 
 			stopwatch = new();
 			stopwatch.Start();
@@ -28,6 +28,8 @@ namespace FragEngine3.EngineCore
 
 		#endregion
 		#region Properties
+
+		public Engine Engine => engine;
 
 		public long LastFrameStartTimeMs { get; private set; } = 0;
 		public long LastFrameEndTimeMs { get; private set; } = 0;

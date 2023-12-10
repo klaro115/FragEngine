@@ -21,7 +21,7 @@ namespace FragEngine3.Graphics.Components
 		}
 
 		[Serializable]
-		[StructLayout(LayoutKind.Sequential, Pack = 16, Size = byteSize)]
+		[StructLayout(LayoutKind.Sequential, Pack = 4, Size = byteSize)]
 		public struct LightSourceData
 		{
 			public Vector3 color;
@@ -168,7 +168,7 @@ namespace FragEngine3.Graphics.Components
 				position = WorldPosition,
 				type = (uint)type,
 				direction = type == LightType.Spot ? Direction : Vector3.UnitZ,
-				spotAngleAcos = MathF.Acos(spotAngleRad * 0.5f),
+				spotAngleAcos = type == LightType.Spot ? MathF.Acos(spotAngleRad * 0.5f) : 0,
 			};
 		}
 

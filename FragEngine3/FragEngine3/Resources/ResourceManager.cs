@@ -8,7 +8,7 @@ using System.Diagnostics;
 
 namespace FragEngine3.Resources
 {
-	public sealed class ResourceManager : IDisposable
+	public sealed class ResourceManager : IEngineSystem
 	{
 		#region Types
 
@@ -51,6 +51,8 @@ namespace FragEngine3.Resources
 		#region Properties
 
 		public bool IsDisposed { get; private set; } = false;
+
+		public Engine Engine => engine;
 
 		/// <summary>
 		/// Gets the total number of all registered and known resources.

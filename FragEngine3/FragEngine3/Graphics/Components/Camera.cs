@@ -610,14 +610,16 @@ namespace FragEngine3.Graphics.Components
 					UpdateFinalCameraMatrix();
 				}
 			}
-			
+
+			Vector3 ambientLight = new(0.2f, 0.2f, 0.2f);	//TEMP
+
 			// Assemble global constant buffer contents:
 			GlobalConstantBuffer globalConstantBufferData = new()
 			{
 				// Camera vectors & matrices:
 				mtxCamera = mtxCamera,
-				cameraPosition = node.WorldPosition,
-				cameraDirection = node.WorldForward,
+				cameraPosition = new(node.WorldPosition, 0),
+				cameraDirection = new(node.WorldForward, 0),
 
 				// Camera parameters:
 				resolutionX = resolutionX,
@@ -626,6 +628,7 @@ namespace FragEngine3.Graphics.Components
 				farClipPlane = farClipPlane,
 
 				// Lighting:
+				ambientLight = ambientLight,
 				lightCount = _activeLightCount,
 			};
 
@@ -878,6 +881,7 @@ namespace FragEngine3.Graphics.Components
 
 				dirtyFlags = 0;
 			}
+
 			return true;
 		}
 

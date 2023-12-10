@@ -5,9 +5,9 @@
 cbuffer CBGlobal : register(b0)
 {
     // Camera vectors & matrices:
-    float4x4 mtxCamera;         // Camera's full projection matrix, transforming from world space to viewport pixel coordinates.
-    float3 cameraPosition;      // Camera position, in world space.
-    float3 cameraDirection;     // Camera forward facing direction, in world space.
+    float4x4 mtxCamera;         // Camera's full projection matrix, transforming from world space to clip space coordinates.
+    float4 cameraPosition;      // Camera position, in world space.
+    float4 cameraDirection;     // Camera forward facing direction, in world space.
 
 	// Camera parameters:
     uint resolutionX;           // Render target width, in pixels.
@@ -16,6 +16,7 @@ cbuffer CBGlobal : register(b0)
     float farClipPlane;         // Camera's far clipping plane distance.
 
     // Lighting:
+    float3 ambientLight;
     uint lightCount;
 };
 

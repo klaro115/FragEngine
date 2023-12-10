@@ -25,9 +25,10 @@ namespace FragEngine3.Graphics.Resources
 			//...
 		}
 
-		public StaticMesh(string _resourceKey, ResourceManager _resourceManager, GraphicsCore _core, bool _useFullSurfaceDef, out ResourceHandle _outHandle) : base(_resourceKey, _resourceManager, _core, _useFullSurfaceDef)
+		public StaticMesh(string _resourceKey, Engine _engine, bool _useFullSurfaceDef, out ResourceHandle _outHandle) : base(_resourceKey, _engine, _useFullSurfaceDef)
 		{
 			_outHandle = new(this);
+			resourceManager.AddResource(_outHandle);
 		}
 		
 		#endregion

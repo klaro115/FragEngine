@@ -1,3 +1,5 @@
+#pragma pack_matrix( column_major )
+
 /**************** VERTEX OUTPUT: ***************/
 
 struct VertexOutput_Basic

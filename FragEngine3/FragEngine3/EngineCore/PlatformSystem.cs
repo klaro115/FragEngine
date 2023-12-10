@@ -1,14 +1,9 @@
 ﻿
 namespace FragEngine3.EngineCore
 {
-	public sealed class PlatformSystem : IDisposable
+	public sealed class PlatformSystem(Engine _engine) : IEngineSystem
 	{
 		#region Constructors
-
-		public PlatformSystem(Engine _engine)
-		{
-			engine = _engine ?? throw new ArgumentNullException(nameof(_engine), "Engine may not be null!");
-		}
 
 		~PlatformSystem()
 		{
@@ -18,12 +13,14 @@ namespace FragEngine3.EngineCore
 		#endregion
 		#region Fields
 
-		public readonly Engine engine;
+		public readonly Engine engine = _engine ?? throw new ArgumentNullException(nameof(_engine), "Engine may not be null!");
 
 		#endregion
 		#region Properties
 
 		public bool IsDisposed { get; private set; } = false;
+
+		public Engine Engine => engine;
 
 		#endregion
 		#region Methods
@@ -33,7 +30,7 @@ namespace FragEngine3.EngineCore
 			GC.SuppressFinalize(this);
 			Dispose(true);
 		}
-		private void Dispose(bool _disposing)
+		private void Dispose(bool _)
 		{
 			IsDisposed = true;
 			//...

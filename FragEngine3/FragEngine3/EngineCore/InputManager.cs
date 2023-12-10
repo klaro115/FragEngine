@@ -4,7 +4,7 @@ using Veldrid;
 
 namespace FragEngine3.EngineCore
 {
-	public sealed class InputManager : IDisposable
+	public sealed class InputManager : IEngineSystem
 	{
 		#region Types
 
@@ -72,6 +72,8 @@ namespace FragEngine3.EngineCore
 		#region Properties
 
 		public bool IsDisposed { get; private set; } = false;
+
+		public Engine Engine => engine;
 
 		#endregion
 		#region Methods

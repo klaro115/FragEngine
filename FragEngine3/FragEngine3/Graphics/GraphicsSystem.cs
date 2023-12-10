@@ -8,7 +8,7 @@ using FragEngine3.Utility.Serialization;
 
 namespace FragEngine3.Graphics
 {
-	public class GraphicsSystem : IDisposable
+	public class GraphicsSystem : IEngineSystem
 	{
 		#region Types
 
@@ -59,6 +59,9 @@ namespace FragEngine3.Graphics
 		#region Properties
 
 		public bool IsDisposed { get; private set; } = false;
+
+		public Engine Engine => engine;
+
 		public GraphicsSettings Settings
 		{
 			get => settings;

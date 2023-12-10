@@ -124,17 +124,16 @@ namespace FragEngine3.Graphics.Resources
 
 		public static bool CreateCubeMesh(
 			string _resourceKey,
-			ResourceManager _resourceManager,
-			GraphicsCore _graphicsCore,
+			Engine _engine,
 			Vector3 _size,
 			bool _useExtendedData,
 			out MeshSurfaceData _outMeshData,
 			out StaticMesh _outMesh,
 			out ResourceHandle _outHandle)
 		{
-			if (string.IsNullOrEmpty(_resourceKey) || _resourceManager == null || _graphicsCore == null)
+			if (string.IsNullOrEmpty(_resourceKey) || _engine == null || _engine.IsDisposed)
 			{
-				(_resourceManager?.engine.Logger ?? Logger.Instance)?.LogError("Cannot create cube mesh using null resource key, resource manager, or graphics core!");
+				(_engine?.Logger ?? Logger.Instance)?.LogError("Cannot create cube mesh using null resource key or null engine!");
 				_outMeshData = null!;
 				_outMesh = null!;
 				_outHandle = ResourceHandle.None;
@@ -144,13 +143,13 @@ namespace FragEngine3.Graphics.Resources
 			_outMeshData = CreateCubeData(_size, _useExtendedData);
 			if (!_outMeshData.IsValid)
 			{
-				_resourceManager.engine.Logger.LogError("Failed to create cube mesh data!");
+				_engine.Logger.LogError("Failed to create cube mesh data!");
 				_outMesh = null!;
 				_outHandle = ResourceHandle.None;
 				return false;
 			}
 
-			_outMesh = new(_resourceKey, _resourceManager, _graphicsCore, _useExtendedData, out _outHandle);
+			_outMesh = new(_resourceKey, _engine, _useExtendedData, out _outHandle);
 
 			return _outMesh.SetGeometry(in _outMeshData);
 		}

@@ -1,19 +1,22 @@
+#pragma pack_matrix( column_major )
+
 /****************** CONSTANTS: *****************/
 
 cbuffer CBGlobal : register(b0)
 {
+	// Camera vectors & matrices:
+    float4x4 mtxCamera;         // Camera's full projection matrix, transforming from world space to clip space coordinates.
+    float4 cameraPosition;      // Camera position, in world space.
+    float4 cameraDirection;     // Camera forward facing direction, in world space.
+
 	// Camera parameters:
     uint resolutionX;           // Render target width, in pixels.
     uint resolutionY;           // Render target height, in pixels.
     float nearClipPlane;        // Camera's near clipping plane distance.
     float farClipPlane;         // Camera's far clipping plane distance.
 
-    // Camera vectors & matrices:
-    float3 cameraPosition;      // Camera position, in world space.
-    float3 cameraDirection;     // Camera forward facing direction, in world space.
-    float4x4 mtxCamera;         // Camera's full projection matrix, transforming from world space to viewport pixel coordinates.
-
     // Lighting:
+    float3 ambientLight;
     uint lightCount;
 };
 
@@ -36,7 +39,7 @@ struct Light
     float lightSpotAngleAcos;
 };
 
-StructuredBuffer<Light> BufLights : register(ps, t0);   // Buffer containing an array of light source data. Number of lights is given in 'Global.lightCount'.
+StructuredBuffer<Light> BufLights : register(ps, t0);   // Buffer containing an array of light source data. Number of lights is given in 'CBGlobal.lightCount'.
 
 /**************** VERTEX OUTPUT: ***************/
 
@@ -62,7 +65,7 @@ float4 Main_Pixel(in VertexOutput_Basic inputBasic) : SV_Target0
     float4 albedo = {1, 1, 1, 1};
 
     // Apply basic phong lighting:
-    float4 totalLightIntensity = {0, 0, 0, 0};
+    float3 totalLightIntensity = ambientLight;
     for (uint i = 0; i < lightCount; ++i)
     {
         Light light = BufLights[i];
@@ -89,10 +92,10 @@ float4 Main_Pixel(in VertexOutput_Basic inputBasic) : SV_Target0
             }
         }
 
-        float lightDot = max(dot(lightRayDir, inputBasic.normal), 0);
-        totalLightIntensity += lightDot * lightIntens;
+        float lightDot = max(-dot(lightRayDir, inputBasic.normal), 0);
+        totalLightIntensity += lightIntens.xyz * lightDot;
     }
-    albedo *= totalLightIntensity;
+    albedo *= float4(totalLightIntensity, 1);
 
     // Return final color:
     return albedo;

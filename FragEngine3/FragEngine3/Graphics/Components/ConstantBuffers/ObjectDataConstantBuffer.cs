@@ -5,7 +5,7 @@ using Veldrid;
 namespace FragEngine3.Graphics.Components.ConstantBuffers
 {
 	[Serializable]
-	[StructLayout(LayoutKind.Sequential, Pack = 16, Size = byteSize)]
+	[StructLayout(LayoutKind.Sequential, Pack = 4, Size = byteSize)]
 	public struct ObjectDataConstantBuffer
 	{
 		#region Fields

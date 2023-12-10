@@ -130,7 +130,7 @@ namespace FragEngine3.EngineCore.Test
 				rabbitRenderer.SetMaterial("TestMaterial");
 			}
 
-			MeshPrimitiveFactory.CreateCubeMesh("Cube", Engine.ResourceManager, Engine.GraphicsSystem.graphicsCore, new(1, 1, 1), false, out _, out _, out ResourceHandle cubeHandle);
+			MeshPrimitiveFactory.CreateCubeMesh("Cube", Engine, new(1, 1, 1), false, out _, out _, out ResourceHandle cubeHandle);
 			SceneNode cubeNode = scene.rootNode.CreateChild("Cube");
 			cubeNode.LocalPosition = Vector3.Zero;
 			cubeNode.LocalRotation = Quaternion.Identity;
@@ -140,8 +140,8 @@ namespace FragEngine3.EngineCore.Test
 			{
 				//cubeRenderer.SetMesh("Cube.obj");
 				cubeRenderer.SetMesh(cubeHandle);
-				//cubeRenderer.SetMaterial("DefaultSurface");
-				cubeRenderer.SetMaterial("TestMaterial");
+				cubeRenderer.SetMaterial("DefaultSurface");
+				//cubeRenderer.SetMaterial("TestMaterial");
 			}
 
 			// Create fullscreen quad:
@@ -163,9 +163,8 @@ namespace FragEngine3.EngineCore.Test
 					2, 1, 3,
 				],
 			};
-			StaticMesh quadMesh = new("Quad", Engine.ResourceManager, Engine.GraphicsSystem.graphicsCore, false, out ResourceHandle quadHandle);
+			StaticMesh quadMesh = new("Quad", Engine, false, out ResourceHandle quadHandle);
 			quadMesh.SetGeometry(in quadData);
-			Engine.ResourceManager.AddResource(quadHandle);
 			SceneNode quadNode = scene.rootNode.CreateChild("Quad");
 			quadNode.LocalTransformation = Pose.Identity;
 			quadNode.LocalPosition = new(0, 0, 2);

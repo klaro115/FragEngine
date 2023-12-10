@@ -1,4 +1,5 @@
-﻿
+﻿using FragEngine3.EngineCore;
+
 namespace FragEngine3.Resources
 {
 	/// <summary>
@@ -14,10 +15,10 @@ namespace FragEngine3.Resources
 			resourceKey = _handle?.resourceKey ?? throw new ArgumentNullException(nameof(_handle), "Resource handle and key may not be null!");
 			resourceManager = _handle.resourceManager ?? throw new NullReferenceException("Resource manager may not be null!");
 		}
-		protected Resource(string _resourceKey, ResourceManager _resourceManager)
+		protected Resource(string _resourceKey, Engine _engine)
 		{
 			resourceKey = _resourceKey ?? throw new ArgumentNullException(nameof(_resourceKey), "Resource key may not be null!");
-			resourceManager = _resourceManager ?? throw new ArgumentNullException(nameof(_resourceManager), "Resource manager may not be null!");
+			resourceManager = _engine?.ResourceManager ?? throw new ArgumentNullException(nameof(_engine), "Engine may not be null!");
 		}
 
 		~Resource()
