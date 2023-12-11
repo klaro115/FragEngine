@@ -35,6 +35,7 @@ namespace FragEngine3.Graphics.Resources.Data
 
             public RenderMode RenderMode { get; set; } = RenderMode.Opaque;
             public float ZSortingBias { get; set; } = 0.0f;
+            public bool CastShadows { get; set; } = true;
         }
 
         [Serializable]

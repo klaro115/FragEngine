@@ -1,5 +1,5 @@
 {
-    "DataFilePath": "./DefaultSurface.json",
+    "DataFilePath": "./Mtl_ForwardPlusLight_Composition.json",
     "DataFileType": 0,
     "DataFileSize": 0,
     "UncompressedFileSize": 0,
@@ -9,7 +9,7 @@
     "Resources":
     [
         {
-            "ResourceKey": "DefaultSurface",
+            "ResourceKey": "Mtl_ForwardPlusLight_Composition",
             "ResourceType": 5,
             "DataOffset": 0,
             "DataSize": 0,

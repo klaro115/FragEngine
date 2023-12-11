@@ -78,7 +78,11 @@ namespace FragEngine3.EngineCore.Test
 			{
 				handle.Load(true);
 			}
-			if (Engine.ResourceManager.GetResource("DefaultSurface", out handle))
+			if (Engine.ResourceManager.GetResource("Mtl_DefaultSurface", out handle))
+			{
+				handle.Load(true);
+			}
+			if (Engine.ResourceManager.GetResource("ForwardPlusLight_Composition_PS", out handle))
 			{
 				handle.Load(true);
 			}
@@ -126,8 +130,8 @@ namespace FragEngine3.EngineCore.Test
 			if (rabbitNode.CreateComponent(out StaticMeshRenderer? rabbitRenderer) && rabbitRenderer != null)
 			{
 				rabbitRenderer.SetMesh("Rabbit.obj");
-				//rabbitRenderer.SetMaterial("DefaultSurface");
-				rabbitRenderer.SetMaterial("TestMaterial");
+				//rabbitRenderer.SetMaterial("Mtl_DefaultSurface");
+				rabbitRenderer.SetMaterial("Mtl_TestMaterial");
 			}
 
 			MeshPrimitiveFactory.CreateCubeMesh("Cube", Engine, new(1, 1, 1), false, out _, out _, out ResourceHandle cubeHandle);
@@ -140,8 +144,8 @@ namespace FragEngine3.EngineCore.Test
 			{
 				//cubeRenderer.SetMesh("Cube.obj");
 				cubeRenderer.SetMesh(cubeHandle);
-				cubeRenderer.SetMaterial("DefaultSurface");
-				//cubeRenderer.SetMaterial("TestMaterial");
+				cubeRenderer.SetMaterial("Mtl_DefaultSurface");
+				//cubeRenderer.SetMaterial("Mtl_TestMaterial");
 			}
 
 			// Create fullscreen quad:
@@ -173,8 +177,8 @@ namespace FragEngine3.EngineCore.Test
 			if (quadNode.CreateComponent(out StaticMeshRenderer? quadRenderer) && quadRenderer != null)
 			{
 				quadRenderer.SetMesh(quadHandle);
-				//quadRenderer.SetMaterial("DefaultSurface");
-				quadRenderer.SetMaterial("TestMaterial");
+				//quadRenderer.SetMaterial("Mtl_DefaultSurface");
+				quadRenderer.SetMaterial("Mtl_TestMaterial");
 			}
 
 			return true;
@@ -208,7 +212,7 @@ namespace FragEngine3.EngineCore.Test
 				float dt = 0.001f;
 				Pose localPose = quadNode.LocalTransformation;
 				localPose.Rotate(Quaternion.CreateFromYawPitchRoll(10 * dt, 5 * dt, 5 * dt));
-				quadNode.LocalTransformation = localPose;
+				//quadNode.LocalTransformation = localPose;
 			}
 
 			//const float DEG2RAD = MathF.PI / 180.0f;

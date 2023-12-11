@@ -1,5 +1,5 @@
 {
-    "DataFilePath": "./TestMaterial.json",
+    "DataFilePath": "./Mtl_TestMaterial.json",
     "DataFileType": 0,
     "DataFileSize": 0,
     "UncompressedFileSize": 0,
@@ -9,7 +9,7 @@
     "Resources":
     [
         {
-            "ResourceKey": "TestMaterial",
+            "ResourceKey": "Mtl_TestMaterial",
             "ResourceType": 5,
             "DataOffset": 0,
             "DataSize": 0,

@@ -1,9 +1,9 @@
 {
-    "Key": "DefaultSurface",
+    "Key": "Mtl_ForwardPlusLight_Composition",
     "States":
     {
-        "EnableDepthTest": true,
-        "EnableDepthWrite": true,
+        "EnableDepthTest": false,
+        "EnableDepthWrite": false,
         
         "EnableStencil": false,
         "StencilFront":
@@ -21,19 +21,20 @@
             "ComparisonKind": 3
         },
 
-        "EnableCulling": true,
-        "RenderMode": 1,
-        "ZSortingBias": 0.0
+        "EnableCulling": false,
+        "RenderMode": 4,
+        "ZSortingBias": 0.0,
+        "CastShadows": false
     },
     "Shaders":
     {
         "IsSurfaceMaterial": true,
         "Compute": "",
-        "Vertex": "DefaultSurface_VS",
+        "Vertex": "Test_VS",
         "Geometry": "",
         "TesselationCtrl": "",
         "TesselationEval": "",
-        "Pixel": "DefaultSurface_PS"
+        "Pixel": "ForwardPlusLight_Composition_PS"
     },
     "Replacements":
     {

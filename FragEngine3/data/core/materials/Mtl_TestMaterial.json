@@ -1,5 +1,5 @@
 {
-    "Key": "TestMaterial",
+    "Key": "Mtl_TestMaterial",
     "States":
     {
         "EnableDepthTest": true,
@@ -23,7 +23,8 @@
 
         "EnableCulling": true,
         "RenderMode": 1,
-        "ZSortingBias": 0.0
+        "ZSortingBias": 0.0,
+        "CastShadows": true
     },
     "Shaders":
     {

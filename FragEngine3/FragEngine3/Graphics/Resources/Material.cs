@@ -45,11 +45,13 @@ namespace FragEngine3.Graphics.Resources
 		{
 			public RenderMode renderMode;
 			public float zSortingBias;
+			public bool castShadows;
 
 			public static RenderModeDesc Default => new()
 			{
 				renderMode = RenderMode.Opaque,
 				zSortingBias = 0.0f,
+				castShadows = true,
 			};
 		}
 
@@ -467,6 +469,7 @@ namespace FragEngine3.Graphics.Resources
 				{
 					renderMode = data.States.RenderMode,
 					zSortingBias = data.States.ZSortingBias,
+					castShadows = data.States.CastShadows,
 				}, 0),
 
 				SimplifiedMaterialVersion = GetResourceHandle(data.Replacements?.SimplifiedVersion),
@@ -482,6 +485,79 @@ namespace FragEngine3.Graphics.Resources
 					? handle
 					: null;
 			}
+		}
+
+		public bool CreateMaterialData(out MaterialData _outData)
+		{
+			if (IsDisposed)
+			{
+				Logger.LogError("Cannot create material data for disposed material resource!");
+				_outData = null!;
+				return false;
+			}
+
+			DepthStencilDesc dsd = depthStencilDesc.Value;
+			RenderModeDesc rmd = renderModeDesc.Value;
+
+			// Gather and assemble material data:
+			_outData = new()
+			{
+				Key = resourceKey,
+
+				States = new()
+				{
+					EnableDepthTest = dsd.enableDepthRead,
+					EnableDepthWrite = dsd.enableDepthWrite,
+
+					EnableStencil = dsd.enableStencil,
+					StencilFront = new()
+					{
+						Fail = dsd.stencilBehaviour.stencilFront.Fail,
+						Pass = dsd.stencilBehaviour.stencilFront.Pass,
+						DepthFail = dsd.stencilBehaviour.stencilFront.DepthFail,
+						ComparisonKind = dsd.stencilBehaviour.stencilFront.Comparison,
+					},
+					StencilBack = new()
+					{
+						Fail = dsd.stencilBehaviour.stencilBack.Fail,
+						Pass = dsd.stencilBehaviour.stencilBack.Pass,
+						DepthFail = dsd.stencilBehaviour.stencilBack.DepthFail,
+						ComparisonKind = dsd.stencilBehaviour.stencilBack.Comparison,
+					},
+					StencilReadMask = dsd.stencilBehaviour.readMask,
+					StencilWriteMask = dsd.stencilBehaviour.writeMask,
+					StencilReferenceValue = dsd.stencilBehaviour.referenceValue,
+
+					EnableCulling = dsd.enableCulling,
+
+					RenderMode = rmd.renderMode,
+					ZSortingBias = rmd.zSortingBias,
+					CastShadows = rmd.castShadows,
+				},
+
+				Shaders = new()
+				{
+					IsSurfaceMaterial = true,
+					Compute = string.Empty,
+					Vertex = vertexShader.resourceKey,
+					Geometry = geometryShader?.resourceKey ?? string.Empty,
+					TesselationCtrl = tesselationShaderCtrl?.resourceKey ?? string.Empty,
+					TesselationEval = tesselationShaderEval?.resourceKey ?? string.Empty,
+					Pixel = pixelShader.resourceKey,
+				},
+
+				Replacements = new()
+				{
+					SimplifiedVersion = SimplifiedMaterialVersion?.resourceKey ?? string.Empty,
+					ShadowMap = ShadowMapMaterialVersion?.resourceKey ?? string.Empty,
+				},
+
+				Resources = new()
+				{
+					//...
+				},
+			};
+			return _outData.IsValid();
 		}
 
 		#endregion
