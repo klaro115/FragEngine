@@ -10,7 +10,7 @@ namespace FragEngine3.Graphics.Config
 
 		// Output:
 		public bool Vsync { get; set; } = false;
-		public Vector2 Resolution { get; set; } = new Vector2(640, 480);
+		public Vector2 Resolution { get; set; } = new Vector2(1280, 720);
 		public int MsaaCount { get; set; } = 1;
 
 		// Lighting:

@@ -1,5 +1,6 @@
 ﻿using FragEngine3.EngineCore;
 using FragEngine3.EngineCore.Config;
+using FragEngine3.Graphics.Config;
 using FragEngine3.Graphics.Internal;
 using System.Diagnostics;
 using Veldrid;
@@ -42,15 +43,33 @@ namespace FragEngine3.Graphics.D3D12
 
 			try
 			{
+				GraphicsSettings settings = graphicsSystem.Settings;
+
 				// DEFINE WINDOW:
 
+				Rectangle displayRect = new(0, 0, 1920, 1080);
+				unsafe
+				{
+					Sdl2Native.SDL_GetDisplayBounds(config.Graphics.DisplayIndex, &displayRect);
+				}
+
+				int posX = 0;
+				int posY = 0;
+				int width = Math.Min((int)settings.Resolution.X, displayRect.Width);
+				int height = Math.Min((int)settings.Resolution.Y, displayRect.Height);
+				if (config.Graphics.CenterWindowOnScreen)
+				{
+					posX = displayRect.Width / 2 - width / 2;
+					posY = displayRect.Height / 2 - height / 2;
+				}
+				posX += displayRect.X;
+				posY += displayRect.Y;
+
 				WindowStyle windowStyle = config.Graphics.WindowStyle;
-				int width = 1280;
-				int height = 720;
 				string windowTitle = config.MainWindowTitle ?? config.ApplicationName ?? string.Empty;
 
 				WindowCreateInfo windowCreateInfo = new(
-					0, 0,
+					posX, posY,
 					width, height,
 					windowStyle.GetVeldridWindowState(),
 					windowTitle);
@@ -58,7 +77,7 @@ namespace FragEngine3.Graphics.D3D12
 				// DEFINE GRAPHICS DEVICE:
 
 				capabilities.GetBestOutputBitDepth(config.Graphics.OutputBitDepth, out int outputBitDepth);
-				bool vsync = graphicsSystem.Settings.Vsync;
+				bool vsync = settings.Vsync;
 				bool useSrgb = config.Graphics.OutputIsSRGB;
 				DefaultColorTargetPixelFormat = GetOutputPixelFormat(outputBitDepth, useSrgb);
 				DefaultDepthTargetPixelFormat = GetOutputDepthFormat(outputBitDepth);

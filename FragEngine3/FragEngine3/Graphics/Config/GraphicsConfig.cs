@@ -11,6 +11,8 @@
 		public WindowStyle WindowStyle { get; set; } = WindowStyle.Windowed;
 		public bool AllowWindowResize { get; set; } = false;
 		public bool AllowWindowClose { get; set; } = true;
+		public int DisplayIndex { get; set; } = 0;
+		public bool CenterWindowOnScreen { get; set; } = true;
 		//...
 
 		// OUTPUT & SWAPCHAIN:
