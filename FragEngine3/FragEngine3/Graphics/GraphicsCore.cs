@@ -182,7 +182,7 @@ namespace FragEngine3.Graphics
 			return true;
 		}
 
-		public bool BeginFrame(GraphicsSystem.DirtyFlags _dirtyFlags)
+		public bool BeginFrame()
 		{
 			if (!IsInitialized)
 			{

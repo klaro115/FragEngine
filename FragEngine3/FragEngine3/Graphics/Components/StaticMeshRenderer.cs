@@ -21,8 +21,10 @@ namespace FragEngine3.Graphics.Components
 		private uint rendererVersion = 1;
 
 		private DeviceBuffer? objectDataConstantBuffer = null;
-		private VersionedMember<ResourceSet?> resourceSet = new(null, 0);
+		private VersionedMember<ResourceSet?> defaultResourceSet = new(null, 0);
 		private VersionedMember<Pipeline> pipeline = new(null!, 0);
+
+		private ResourceSet? overrideBoundResourceSet = null;
 
 		#endregion
 		#region Properties
@@ -209,6 +211,25 @@ namespace FragEngine3.Graphics.Components
 			return true;
 		}
 
+		public bool SetOverrideBoundResourceSet(ResourceSet? _newOverrideResourceSet)
+		{
+			if (IsDisposed)
+			{
+				Logger.LogError("Cannot set override resource set on disposed static mesh renderer!");
+				return false;
+			}
+
+			if (_newOverrideResourceSet == null || _newOverrideResourceSet.IsDisposed)
+			{
+				overrideBoundResourceSet = null;
+			}
+			else
+			{
+				overrideBoundResourceSet = _newOverrideResourceSet;
+			}
+			return true;
+		}
+
 		public float GetZSortingDepth(Vector3 _viewportPosition, Vector3 _cameraDirection)
 		{
 			float zSortingBias = Material != null ? Material.ZSortingBias : 0.0f;
@@ -288,7 +309,13 @@ namespace FragEngine3.Graphics.Components
 
 			// Throw pipeline and geometry buffers at the command list:
 			_drawCtx.cmdList.SetPipeline(pipeline.Value);
-			_drawCtx.cmdList.SetGraphicsResourceSet(0, resourceSet.Value);
+			_drawCtx.cmdList.SetGraphicsResourceSet(0, defaultResourceSet.Value);
+
+			ResourceSet? boundResourceSet = overrideBoundResourceSet ?? Material.BoundResourceSet;
+			if (boundResourceSet != null)
+			{
+				_drawCtx.cmdList.SetGraphicsResourceSet(1, boundResourceSet);
+			}
 
 			for (uint i = 0; i < vertexBuffers.Length; ++i)
 			{
@@ -332,9 +359,9 @@ namespace FragEngine3.Graphics.Components
 
 		private bool UpdateResourceSet(Material _material, CameraContext _cameraCtx)
 		{
-			if (!resourceSet.GetValue(rendererVersion, out ResourceSet? rs) || rs == null || rs.IsDisposed)
+			if (!defaultResourceSet.GetValue(rendererVersion, out ResourceSet? rs) || rs == null || rs.IsDisposed)
 			{
-				resourceSet.DisposeValue();
+				defaultResourceSet.DisposeValue();
 
 				ResourceSetDescription resourceSetDesc = new(
 					_material.ResourceLayout,
@@ -343,7 +370,7 @@ namespace FragEngine3.Graphics.Components
 					_cameraCtx.lightDataBuffer);
 
 				rs = core.MainFactory.CreateResourceSet(ref resourceSetDesc);
-				resourceSet.UpdateValue(rendererVersion, rs);
+				defaultResourceSet.UpdateValue(rendererVersion, rs);
 			}
 			
 			return true;

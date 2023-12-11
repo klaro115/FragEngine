@@ -54,12 +54,12 @@ namespace FragEngine3.Graphics
 	{
 		#region Fields
 
-		private static readonly WindowState[] windowStates = new WindowState[]
-		{
+		private static readonly WindowState[] windowStates =
+		[
 			WindowState.Normal,
 			WindowState.BorderlessFullScreen,
 			WindowState.FullScreen
-		};
+		];
 
 		#endregion
 		#region Methods

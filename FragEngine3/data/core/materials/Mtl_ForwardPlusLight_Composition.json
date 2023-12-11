@@ -43,6 +43,49 @@
     },
     "Resources":
     {
-
+        "BoundResourceCount": 5,
+        "BoundResources":
+        [
+            {
+                "ResourceKey": "",
+                "SlotName": "TexOpaqueColor",
+                "SlotIndex": 1,
+                "ResourceKind": 3,
+                "ShaderStageFlags": 16,
+                "IsBoundBySystem": true
+            },
+            {
+                "ResourceKey": "",
+                "SlotName": "TexOpaqueDepth",
+                "SlotIndex": 2,
+                "ResourceKind": 3,
+                "ShaderStageFlags": 16,
+                "IsBoundBySystem": true
+            },
+            {
+                "ResourceKey": "",
+                "SlotName": "TexTransparentColor",
+                "SlotIndex": 3,
+                "ResourceKind": 3,
+                "ShaderStageFlags": 16,
+                "IsBoundBySystem": true
+            },
+            {
+                "ResourceKey": "",
+                "SlotName": "TexTransparentDepth",
+                "SlotIndex": 4,
+                "ResourceKind": 3,
+                "ShaderStageFlags": 16,
+                "IsBoundBySystem": true
+            },
+            {
+                "ResourceKey": "",
+                "SlotName": "TexUIColor",
+                "SlotIndex": 5,
+                "ResourceKind": 3,
+                "ShaderStageFlags": 16,
+                "IsBoundBySystem": true
+            }
+        ]
     }
 }

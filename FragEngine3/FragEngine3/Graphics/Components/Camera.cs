@@ -32,10 +32,24 @@ namespace FragEngine3.Graphics.Components
 			All				= Resolution | RenderTarget | Projection
 		}
 
+		private sealed class RenderTargets(Texture _texColor, Texture? _texDepth, Framebuffer _framebuffer)
+		{
+			public readonly Texture texColor = _texColor;
+			public readonly Texture? texDepth = _texDepth;
+			public readonly Framebuffer framebuffer = _framebuffer;
+
+			public void Dispose()
+			{
+				framebuffer?.Dispose();
+				texColor?.Dispose();
+				texDepth?.Dispose();
+			}
+		}
+
 		#endregion
 		#region Constructors
 
-		public Camera(SceneNode _node) : base(_node)
+		public Camera(SceneNode _node, RenderMode _mainRenderMode = RenderMode.Opaque) : base(_node)
 		{
 			core = node.scene.engine.GraphicsSystem.graphicsCore;
 
@@ -47,15 +61,13 @@ namespace FragEngine3.Graphics.Components
 				out Texture? texDepth,
 				out Framebuffer framebuffer))
 			{
-				TexColorTarget = texColor;
-				TexDepthStencilTarget = texDepth;
-				renderTargets = framebuffer;
+				renderTargetDict.Add(_mainRenderMode, new(texColor, texDepth, framebuffer));
 			}
 
 			MarkDirty(DirtyFlags.Resolution | DirtyFlags.Projection);
 
 			UpdateProjection();
-			UpdateStatesFromActiveRenderTarget();
+			UpdateStatesFromActiveRenderTarget(_mainRenderMode);
 
 			GetGlobalConstantBuffer(0, false, out _);
 
@@ -109,7 +121,7 @@ namespace FragEngine3.Graphics.Components
 		//TODO: Consider adding a "useSimplifiedRendering" flag, which would prompt usage of simplified material overrides, if available.
 
 		// Output:
-		private Framebuffer renderTargets = null!;
+		private readonly Dictionary<RenderMode, RenderTargets> renderTargetDict = [];
 		private Framebuffer? overrideRenderTargets = null;
 
 		private static Camera? mainCamera = null;
@@ -219,9 +231,6 @@ namespace FragEngine3.Graphics.Components
 
 		public ResourceHandle? DefaultShadowMaterialHandle { get; private set; } = null;
 		public Material? DefaultShadowMaterial { get; private set; } = null;
-
-		public Texture TexColorTarget { get; private set; } = null!;
-		public Texture? TexDepthStencilTarget { get; private set; } = null!;
 
 		/// <summary>
 		/// Gets matrix containing the camera's world space transformation.
@@ -345,16 +354,15 @@ namespace FragEngine3.Graphics.Components
 				lightDataBufferCapacity = 0;
 			}
 
-			renderTargets?.Dispose();
-			TexColorTarget?.Dispose();
-			TexDepthStencilTarget?.Dispose();
+			foreach (var kvp in renderTargetDict)
+			{
+				kvp.Value.Dispose();
+			}
+			renderTargetDict.Clear();
 
 			if (_disposing)
 			{
-				renderTargets = null!;
 				overrideRenderTargets = null;
-				TexColorTarget = null!;
-				TexDepthStencilTarget = null;
 			}
 
 			base.Dispose(_disposing);
@@ -374,14 +382,12 @@ namespace FragEngine3.Graphics.Components
 				lightDataBufferCapacity = 0;
 
 				// Purge render targets and framebuffer:
-				renderTargets?.Dispose();
-				TexColorTarget?.Dispose();
-				TexDepthStencilTarget?.Dispose();
-
-				renderTargets = null!;
+				foreach (var kvp in renderTargetDict)
+				{
+					kvp.Value.Dispose();
+				}
+				renderTargetDict.Clear();
 				overrideRenderTargets = null;
-				TexColorTarget = null!;
-				TexDepthStencilTarget = null;
 
 				// Recreate render targets and framebuffer:
 				if (core.CreateStandardRenderTargets(
@@ -392,16 +398,14 @@ namespace FragEngine3.Graphics.Components
 					out Texture? texDepth,
 					out Framebuffer framebuffer))
 				{
-					TexColorTarget = texColor;
-					TexDepthStencilTarget = texDepth;
-					renderTargets = framebuffer;
+					renderTargetDict.Add(RenderMode.Opaque, new(texColor, texDepth, framebuffer));
 				}
 
 				// Mark dirty and rebuild matrices:
 				MarkDirty(DirtyFlags.Resolution | DirtyFlags.Projection);
 
 				UpdateProjection();
-				UpdateStatesFromActiveRenderTarget();
+				UpdateStatesFromActiveRenderTarget(RenderMode.Opaque);
 
 				// Reregister camera:
 				node.scene.drawManager.UnregisterCamera(this);
@@ -420,6 +424,58 @@ namespace FragEngine3.Graphics.Components
 		private void MarkDirty(DirtyFlags _changeFlags)
 		{
 			dirtyFlags |= _changeFlags;
+		}
+
+		public bool InitializeRenderModes(bool _replaceExistingFramebuffers, params RenderMode[] _renderModes)
+		{
+			if (IsDisposed)
+			{
+				Logger.LogError("Cannot initialize render modes for disposed camera!");
+				return false;
+			}
+			if (_renderModes == null)
+			{
+				return true;
+			}
+			if (isDrawing)
+			{
+				Logger.LogError("Cannot initialize render modes while camera is in the processing of drawing!");
+				return false;
+			}
+
+			bool success = true;
+
+			lock (cameraStateLockObj)
+			{
+				foreach (RenderMode renderMode in _renderModes)
+				{
+					bool createNew = true;
+					if (renderTargetDict.TryGetValue(renderMode, out RenderTargets? renderTargets))
+					{
+						if (_replaceExistingFramebuffers)
+						{
+							renderTargets?.Dispose();
+							renderTargetDict.Remove(renderMode);
+						}
+						else
+						{
+							createNew = false;
+						}
+					}
+
+					if (createNew && (success &= core.CreateStandardRenderTargets(
+							resolutionX,
+							resolutionY,
+							true,
+							out Texture texColor,
+							out Texture? texDepth,
+							out Framebuffer framebuffer)))
+					{
+						renderTargetDict.Add(renderMode, new(texColor, texDepth, framebuffer));
+					}
+				}
+			}
+			return success;
 		}
 
 		public override void ReceiveSceneEvent(SceneEventType _eventType, object? _eventData)
@@ -510,7 +566,7 @@ namespace FragEngine3.Graphics.Components
 			// Assign (or clear) overrides:
 			overrideRenderTargets = _newOverrideRenderTargets;
 
-			UpdateStatesFromActiveRenderTarget();
+			UpdateStatesFromActiveRenderTarget(0);
 
 			MarkDirty(DirtyFlags.RenderTarget);
 			return true;
@@ -683,9 +739,9 @@ namespace FragEngine3.Graphics.Components
 			// just try to deal with it without loosing your mind too much.
 		}
 
-		private void UpdateStatesFromActiveRenderTarget()
+		private void UpdateStatesFromActiveRenderTarget(RenderMode _renderMode)
 		{
-			if (!GetActiveRenderTargets(out Framebuffer? activeRenderTargets) || activeRenderTargets == null)
+			if (!GetActiveRenderTargets(_renderMode, out Framebuffer? activeRenderTargets) || activeRenderTargets == null)
 			{
 				return;
 			}
@@ -710,7 +766,7 @@ namespace FragEngine3.Graphics.Components
 		/// If an override render target was assigned, that will be prioritized. In all other cases, the camera's own
 		/// render target will be used instead.</param>
 		/// <returns>True if any valid render target exists and is assigned to this camera, false otherwise.</returns>
-		public bool GetActiveRenderTargets(out Framebuffer? _outActiveRenderTargets)
+		public bool GetActiveRenderTargets(RenderMode _renderMode, out Framebuffer? _outActiveRenderTargets)
 		{
 			if (IsDisposed)
 			{
@@ -723,14 +779,46 @@ namespace FragEngine3.Graphics.Components
 				_outActiveRenderTargets = overrideRenderTargets;
 				return true;
 			}
+			else if (renderTargetDict.TryGetValue(_renderMode, out RenderTargets? renderTargets))
+			{
+				_outActiveRenderTargets = renderTargets.framebuffer;
+				return !_outActiveRenderTargets.IsDisposed;
+			}
 			else
 			{
-				_outActiveRenderTargets = renderTargets;
-				return !renderTargets.IsDisposed;
+				bool success = core.CreateStandardRenderTargets(
+					resolutionX,
+					resolutionY,
+					true,
+					out Texture texColor,
+					out Texture? texDepth,
+					out _outActiveRenderTargets);
+				if (success)
+				{
+					renderTargetDict.Add(_renderMode, new(texColor, texDepth, _outActiveRenderTargets));
+				}
+				return success;
 			}
 		}
 
-		public bool BeginFrame(CommandList _cmdList, uint _activeLightCount, bool _clearRenderTargets, out GraphicsDrawContext _outDrawCtx, out CameraContext _outCameraCtx)
+		public bool TryGetOwnRenderTargets(RenderMode _renderMode, out Framebuffer? _outRenderTargets)
+		{
+			if (IsDisposed)
+			{
+				_outRenderTargets = null;
+				return false;
+			}
+
+			if (renderTargetDict.TryGetValue(_renderMode, out RenderTargets? renderTargets))
+			{
+				_outRenderTargets = renderTargets.framebuffer;
+				return true;
+			}
+			_outRenderTargets = null;
+			return false;
+		}
+
+		public bool BeginFrame(CommandList _cmdList, RenderMode _renderMode, uint _activeLightCount, bool _clearRenderTargets, out GraphicsDrawContext _outDrawCtx, out CameraContext _outCameraCtx)
 		{
 			if (IsDisposed)
 			{
@@ -747,7 +835,10 @@ namespace FragEngine3.Graphics.Components
 				return false;
 			}
 
-			_cmdList.Begin();
+			if (_cmdList != core.MainCommandList)
+			{
+				_cmdList.Begin();
+			}
 
 			//bool outputHasChanged = dirtyFlags.HasFlag(DirtyFlags.Resolution) || dirtyFlags.HasFlag(DirtyFlags.RenderTarget);
 
@@ -771,24 +862,27 @@ namespace FragEngine3.Graphics.Components
 				// Respond to changed resolution:
 				if (dirtyFlags.HasFlag(DirtyFlags.Resolution))
 				{
-					renderTargets?.Dispose();
-					TexColorTarget?.Dispose();
-					TexDepthStencilTarget?.Dispose();
-
-					if (core.CreateStandardRenderTargets(
-						resolutionX,
-						resolutionY,
-						true,
-						out Texture texColor,
-						out Texture? texDepth,
-						out Framebuffer framebuffer))
+					RenderMode[] prevRenderModes = renderTargetDict.Keys.ToArray();
+					foreach (var kvp in renderTargetDict)
 					{
-						TexColorTarget = texColor;
-						TexDepthStencilTarget = texDepth;
-						renderTargets = framebuffer;
+						kvp.Value?.Dispose();
+					}
+					renderTargetDict.Clear();
+					foreach (RenderMode prevRenderMode in prevRenderModes)
+					{
+						if (core.CreateStandardRenderTargets(
+								resolutionX,
+								resolutionY,
+								true,
+								out Texture texColor,
+								out Texture? texDepth,
+								out Framebuffer framebuffer))
+						{
+							renderTargetDict.Add(prevRenderMode, new(texColor, texDepth, framebuffer));
+						}
 					}
 
-					UpdateStatesFromActiveRenderTarget();
+					UpdateStatesFromActiveRenderTarget(_renderMode);
 
 					// Check if any render target override that is currently assigned matches the camera's resolution:
 					if (overrideRenderTargets != null && !overrideRenderTargets.IsDisposed)
@@ -819,12 +913,8 @@ namespace FragEngine3.Graphics.Components
 					UpdateFinalCameraMatrix();
 				}
 
-
-				//TODO: Update system constant buffer with camera and projection data.
-
-
 				// Fetch the currently active render targets that shall be drawn to:
-				if (!GetActiveRenderTargets(out Framebuffer? activeRenderTargets) || activeRenderTargets == null)
+				if (!GetActiveRenderTargets(_renderMode, out Framebuffer? activeRenderTargets) || activeRenderTargets == null)
 				{
 					_outDrawCtx = null!;
 					_outCameraCtx = null!;
@@ -900,7 +990,10 @@ namespace FragEngine3.Graphics.Components
 				isDrawing = false;
 			}
 
-			_cmdList.End();
+			if (_cmdList != core.MainCommandList)
+			{
+				_cmdList.End();
+			}
 			return core.CommitCommandList(_cmdList);
 		}
 

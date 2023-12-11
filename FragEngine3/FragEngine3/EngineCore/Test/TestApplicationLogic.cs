@@ -94,7 +94,7 @@ namespace FragEngine3.EngineCore.Test
 			cameraNode.LocalPosition = new(0, 0, -5);
 			cameraNode.LocalRotation = Quaternion.Identity;
 			cameraNode.LocalScale = Vector3.One;
-			if (cameraNode.CreateComponent(out Camera? camera) && camera != null)
+			if (cameraNode.CreateComponent(out Camera? camera, RenderMode.Opaque) && camera != null)
 			{
 				Sdl2Window window = Engine.GraphicsSystem.graphicsCore.Window;
 				camera.ResolutionX = (uint)window.Width;

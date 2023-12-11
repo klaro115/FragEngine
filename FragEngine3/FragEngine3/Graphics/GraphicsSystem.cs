@@ -234,7 +234,7 @@ namespace FragEngine3.Graphics
 			{
 				if (core.IsInitialized)
 				{
-					success &= core.BeginFrame(dirtyFlags);
+					success &= core.BeginFrame();
 				}
 			}
 

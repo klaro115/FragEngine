@@ -49,7 +49,7 @@ Texture2D<half4> TexTransparentColor : register(ps, t3);
 Texture2D<float> TexTransparentDepth : register(ps, t4);
 
 // UI Overlay:
-Texture2D<half4> TexUI : register(ps, t5);
+Texture2D<half4> TexUIColor : register(ps, t5);
 
 /******************* SHADERS: ******************/
 
@@ -67,7 +67,7 @@ PixelOutput Main_Pixel(in VertexOutput_Basic inputBasic)
     half4 colTransparent = TexTransparentColor.Load(posPixel);
     float depthTransparent = TexTransparentDepth.Load(posPixel);
 
-    half4 colUI = TexUI.Load(posPixel);
+    half4 colUI = TexUIColor.Load(posPixel);
 
     // Composite geometry: (opaque & transparent)
     float k = depthTransparent > depthOpaque ? colTransparent.w : 0;

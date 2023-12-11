@@ -78,8 +78,12 @@ namespace FragEngine3.Graphics.Resources
 		private ResourceHandle? tesselationShaderEval = null;
 		private ResourceHandle pixelShader = ResourceHandle.None;
 
-		private VersionedMember<ResourceLayout> resourceLayout = new(null!, 0);
+		private VersionedMember<ResourceLayout> defaultResourceLayout = new(null!, 0);
 		private VersionedMember<ShaderSetDescription> shaderSetDesc = new(default, 0);
+
+		private ResourceLayout? boundResourceLayout = null;
+		private Tuple<string, int>[]? boundResourceKeys = null;
+		private VersionedMember<ResourceSet?> boundResourceSet = new(null, 0);
 
 		private VersionedMember<DepthStencilDesc> depthStencilDesc = new(DepthStencilDesc.Default, 0);
 		private VersionedMember<RenderModeDesc> renderModeDesc = new(RenderModeDesc.Default, 0);
@@ -89,7 +93,10 @@ namespace FragEngine3.Graphics.Resources
 
 		public override ResourceType ResourceType => ResourceType.Material;
 
-		public ResourceLayout ResourceLayout => resourceLayout.Value;
+		public bool UseExternalBoundResources { get; private set; } = false;
+		public ResourceLayout ResourceLayout => defaultResourceLayout.Value;
+		public ResourceLayout? BoundResourceLayout => boundResourceLayout;
+		public ResourceSet? BoundResourceSet => boundResourceSet.Value;
 
 		// RENDERING:
 
@@ -134,7 +141,9 @@ namespace FragEngine3.Graphics.Resources
 		{
 			base.Dispose(_disposing);
 
-			resourceLayout.DisposeValue();
+			defaultResourceLayout.DisposeValue();
+			boundResourceLayout?.Dispose();
+			boundResourceSet.DisposeValue();
 		}
 
 		internal bool IsPipelineUpToDate(in VersionedMember<Pipeline> _pipeline, uint _rendererVersion)
@@ -151,19 +160,19 @@ namespace FragEngine3.Graphics.Resources
 		{
 			try
 			{
-				resourceLayout.DisposeValue();
+				defaultResourceLayout.DisposeValue();
 
 				ResourceLayoutDescription resLayoutDesc = new(GraphicsContants.DEFAULT_SURFACE_RESOURCE_LAYOUT_DESC);
 
 				ResourceLayout resLayout = core.MainFactory.CreateResourceLayout(ref resLayoutDesc);
 
-				resourceLayout.UpdateValue(_newVersion, resLayout);
+				defaultResourceLayout.UpdateValue(_newVersion, resLayout);
 				return true;
 			}
 			catch (Exception ex)
 			{
 				Logger.LogException($"Failed to create resource layout for material '{resourceKey}'!", ex);
-				resourceLayout.DisposeValue();
+				defaultResourceLayout.DisposeValue();
 				return false;
 			}
 		}
@@ -248,6 +257,49 @@ namespace FragEngine3.Graphics.Resources
 			}
 		}
 
+		private bool CreateBoundResourceSet()
+		{
+			boundResourceSet.DisposeValue();
+			if (boundResourceLayout == null || boundResourceKeys == null)
+			{
+				return false;
+			}
+
+			BindableResource[] boundResources = new BindableResource[boundResourceKeys.Length];
+			for (int i = 0; i < boundResourceKeys.Length; ++i)
+			{
+				Tuple<string, int> resourceKeys = boundResourceKeys[i];
+				if (string.IsNullOrEmpty(resourceKeys.Item1) || !resourceManager.GetResource(resourceKeys.Item1, out ResourceHandle handle))
+				{
+					return false;
+				}
+
+				Resource? resource = handle.GetResource(true, true);
+				if (resource is TextureResource texture)
+				{
+					boundResources[resourceKeys.Item2] = texture.Texture!;
+				}
+				else
+				{
+					boundResources[resourceKeys.Item2] = null!;
+				}
+			}
+
+			try
+			{
+				ResourceSetDescription resourceSetDesc = new(boundResourceLayout, boundResources);
+				ResourceSet resourceSet = core.MainFactory.CreateResourceSet(ref resourceSetDesc);
+
+				boundResourceSet.UpdateValue(materialVersion, resourceSet);
+				return true;
+			}
+			catch (Exception ex)
+			{
+				Logger.LogException("Failed to create resource layout for material's bound textures and buffers!", ex);
+				return false;
+			}
+		}
+
 		internal bool CreatePipeline(GraphicsDrawContext _drawCtx, CameraContext _cameraCtx, uint _rendererVersion, MeshVertexDataFlags _vertexDataFlags, out VersionedMember<Pipeline> _outPipeline)
 		{
 			// Update material version from versioned members:
@@ -255,8 +307,9 @@ namespace FragEngine3.Graphics.Resources
 				uint newestVersion = materialVersion;
 
 				newestVersion = Math.Max(newestVersion, depthStencilDesc.Version);
-				newestVersion = Math.Max(newestVersion, resourceLayout.Version);
+				newestVersion = Math.Max(newestVersion, defaultResourceLayout.Version);
 				newestVersion = Math.Max(newestVersion, shaderSetDesc.Version);
+				newestVersion = Math.Max(newestVersion, boundResourceSet.Version);
 
 				if (materialVersion != newestVersion)
 				{
@@ -269,12 +322,17 @@ namespace FragEngine3.Graphics.Resources
 			{
 				depthStencilDesc.UpdateValue(materialVersion, depthStencilDesc.Value);
 			}
-			if (resourceLayout.Version != materialVersion && !CreateResourceLayout(materialVersion))
+			if (defaultResourceLayout.Version != materialVersion && !CreateResourceLayout(materialVersion))
 			{
 				_outPipeline = new(null!, 0);
 				return false;
 			}
 			if (shaderSetDesc.Version != materialVersion && !CreateShaderSetDesc(materialVersion, _vertexDataFlags))
+			{
+				_outPipeline = new(null!, 0);
+				return false;
+			}
+			if (boundResourceSet.Value == null && boundResourceLayout != null && !CreateBoundResourceSet())
 			{
 				_outPipeline = new(null!, 0);
 				return false;
@@ -307,7 +365,7 @@ namespace FragEngine3.Graphics.Resources
 					rasterizerState,
 					PrimitiveTopology.TriangleList,
 					shaderSetDesc.Value,
-					[resourceLayout.Value],
+					[defaultResourceLayout.Value],
 					_cameraCtx.outputDesc);
 
 				Pipeline pipeline = core.MainFactory.CreateGraphicsPipeline(ref pipelineDesc);
@@ -419,6 +477,13 @@ namespace FragEngine3.Graphics.Resources
 				return false;
 			}
 
+			// Assemble layout descriptions for bound resources:
+			ResourceLayout? boundResourceLayout = null;
+			if (data.GetBoundResourceLayoutDesc(out ResourceLayoutDescription boundResourceLayoutDesc, out Tuple<string, int>[]? boundResourceKeys, out bool useExternalBoundResources))
+			{
+				boundResourceLayout = _graphicsCore.MainFactory.CreateResourceLayout(boundResourceLayoutDesc);
+			}
+
 			// Assemble stencil description, if required and available:
 			StencilBehaviourDesc stencilDesc;
 			if (data.States.StencilFront != null && data.States.StencilBack != null)
@@ -471,6 +536,11 @@ namespace FragEngine3.Graphics.Resources
 					zSortingBias = data.States.ZSortingBias,
 					castShadows = data.States.CastShadows,
 				}, 0),
+
+				UseExternalBoundResources = useExternalBoundResources,
+				boundResourceLayout = boundResourceLayout,
+				boundResourceKeys = boundResourceKeys,
+				boundResourceSet = new(null!, 0),
 
 				SimplifiedMaterialVersion = GetResourceHandle(data.Replacements?.SimplifiedVersion),
 				ShadowMapMaterialVersion = GetResourceHandle(data.Replacements?.ShadowMap),
@@ -554,7 +624,7 @@ namespace FragEngine3.Graphics.Resources
 
 				Resources = new()
 				{
-					//...
+					// TODO
 				},
 			};
 			return _outData.IsValid();

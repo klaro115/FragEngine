@@ -1,6 +1,9 @@
-﻿using FragEngine3.EngineCore;
+﻿using FragEngine3.Containers;
+using FragEngine3.EngineCore;
 using FragEngine3.Graphics.Components;
 using FragEngine3.Graphics.Contexts;
+using FragEngine3.Graphics.Resources;
+using FragEngine3.Resources;
 using FragEngine3.Scenes;
 using System.Numerics;
 using Veldrid;
@@ -34,6 +37,7 @@ namespace FragEngine3.Graphics.Stack
 
 		private bool isInitialized = false;
 		private bool isDrawing = false;
+		private uint stackVersion = 1;
 
 		private static readonly int[] rendererModeIndices =
 		[
@@ -55,6 +59,10 @@ namespace FragEngine3.Graphics.Stack
 
 		private readonly List<Light> cameraLightBuffer = new(64);
 		private Light.LightSourceData[] lightSourceDataBuffer = new Light.LightSourceData[32];
+
+		private VersionedMember<Pipeline> compositionPipeline = new(null!, 0);
+		private ResourceSet? compositionResourceSet = null;
+		private StaticMeshRenderer? compositionRenderer = null;
 
 		private readonly object lockObj = new();
 
@@ -91,6 +99,8 @@ namespace FragEngine3.Graphics.Stack
 
 			IsDisposed = true;
 
+			compositionPipeline.DisposeValue();
+			compositionResourceSet?.Dispose();
 			//...
 		}
 
@@ -119,8 +129,21 @@ namespace FragEngine3.Graphics.Stack
 
 				Logger.LogMessage($"Initialized graphics stack of type '{nameof(ForwardPlusLightsStack)}' for scene '{Scene.Name}'.");
 
+				stackVersion++;
+				isDrawing = false;
 				isInitialized = true;
 			}
+
+			if (!Scene.FindNode("ForwardPlusLight_Composition", out SceneNode? compositionNode))
+			{
+				compositionNode = Scene.rootNode.CreateChild("ForwardPlusLight_Composition");
+				if (compositionNode.CreateComponent(out compositionRenderer) && compositionRenderer != null)
+				{
+					compositionRenderer.SetMaterial("Mtl_ForwardPlusLight_Composition");
+					compositionRenderer.SetMesh("FullscreenQuad");
+				}
+			}
+
 			return true;
 		}
 
@@ -130,6 +153,15 @@ namespace FragEngine3.Graphics.Stack
 
 			lock(lockObj)
 			{
+				if (Scene != null && compositionRenderer != null)
+				{
+					Scene.rootNode.DestroyChild(compositionRenderer.node);
+					compositionRenderer = null;
+				}
+
+				compositionPipeline.DisposeValue();
+				compositionResourceSet?.Dispose();
+
 				cameraLightBuffer.Clear();
 
 				foreach (RendererList rendererList in rendererLists)
@@ -145,6 +177,7 @@ namespace FragEngine3.Graphics.Stack
 
 				isDrawing = false;
 				isInitialized = false;
+				stackVersion++;
 			}
 
 			Logger.LogMessage($"Shut down graphics stack of type '{nameof(ForwardPlusLightsStack)}'.");
@@ -218,55 +251,29 @@ namespace FragEngine3.Graphics.Stack
 			uint maxActiveLightCount = Math.Max(core.graphicsSystem.Settings.MaxActiveLightCount, 1);
 
 			// Draw scene for each of the scene's active cameras:
-			bool[] camerasAreLive = new bool[_cameras.Count];
 			for (int i = 0; i < _cameras.Count; ++i)
 			{
 				// Skip any cameras that are expired or disabled:
 				Camera camera = _cameras[i];
 				if (camera == null || camera.IsDisposed || !camera.node.IsEnabledInHierarchy() || camera.layerMask == 0u)
 				{
-					camerasAreLive[i] = false;
 					continue;
 				}
-				camerasAreLive[i] = true;
+
+				camera.InitializeRenderModes(false, RenderMode.Opaque, RenderMode.Transparent, RenderMode.UI, RenderMode.Custom);
 
 				//TEST TEST TEST TEST
-				camera.SetOverrideRenderTargets(core.Device.SwapchainFramebuffer, false);
+				//camera.SetOverrideRenderTargets(core.Device.SwapchainFramebuffer, false);
 				//TEST TEST TEST TEST
 
 				GatherLightsForCamera(in _lights, camera);
 
 				success &= TryRenderCamera(_scene, _renderers, camera, maxActiveLightCount);
+			
+				// Composite results to backbuffer:
+				success &= CompositeFinalOutput(camera, maxActiveLightCount);
 			}
-
-			/*
-			// Composite results to backbuffer:
-			{
-				CommandList mainCmdList = core.MainCommandList;
-				Framebuffer backBuffer = core.Device.SwapchainFramebuffer;
-				Texture backBufferColorTarget = backBuffer.ColorTargets[0].Target;
-				Texture backBufferDepthTarget = backBuffer.DepthTarget!.Value.Target;	//TODO: This is a temporary and overly pathetic way of throwing content at the backbuffer. Change this to use an actual composition shader!
-
-				for (int i = 0; i < _cameras.Count; ++i)
-				{
-					if (!camerasAreLive[i]) continue;
-
-					Camera camera = _cameras[i];
-					if (camera.GetActiveRenderTargets(out Framebuffer? framebuffer) && framebuffer != null)
-					{
-						Texture colorTarget = framebuffer.ColorTargets[0].Target;
-						mainCmdList.CopyTexture(colorTarget, backBufferColorTarget);
-
-						Texture? depthTarget = framebuffer?.DepthTarget?.Target;
-						if (depthTarget != null)
-						{
-							mainCmdList.CopyTexture(depthTarget, backBufferDepthTarget);
-						}
-					}
-				}
-			}
-			*/
-
+			
 			isDrawing = false;
 			return success;
 		}
@@ -417,7 +424,7 @@ namespace FragEngine3.Graphics.Stack
 
 			bool success = true;
 
-			success &= _camera.BeginFrame(opaqueList.cmdList, _activeLightCount, true, out GraphicsDrawContext drawCtx, out CameraContext cameraCtx);
+			success &= _camera.BeginFrame(opaqueList.cmdList, RenderMode.Opaque, _activeLightCount, true, out GraphicsDrawContext drawCtx, out CameraContext cameraCtx);
 
 			// Draw list of renderers as-is:
 			foreach (IRenderer renderer in opaqueList.renderers)
@@ -459,7 +466,7 @@ namespace FragEngine3.Graphics.Stack
 
 			zSortedList.renderers.Sort((a, b) => a.GetZSortingDepth(viewportPosition, cameraDirection).CompareTo(b.GetZSortingDepth(viewportPosition, cameraDirection)));
 			
-			success &= _camera.BeginFrame(zSortedList.cmdList, _activeLightCount, false, out GraphicsDrawContext drawCtx, out CameraContext cameraCtx);
+			success &= _camera.BeginFrame(zSortedList.cmdList, RenderMode.Transparent, _activeLightCount, false, out GraphicsDrawContext drawCtx, out CameraContext cameraCtx);
 
 			// Draw Z-sorted list of renderers:
 			foreach (IRenderer renderer in zSortedList.renderers)
@@ -495,7 +502,7 @@ namespace FragEngine3.Graphics.Stack
 
 			bool success = true;
 
-			success &= _camera.BeginFrame(uiList.cmdList, 0, false, out GraphicsDrawContext drawCtx, out CameraContext cameraCtx);
+			success &= _camera.BeginFrame(uiList.cmdList, RenderMode.UI, 0, false, out GraphicsDrawContext drawCtx, out CameraContext cameraCtx);
 
 			// Draw list of renderers in strictly hierarchical order:
 			foreach (IRenderer renderer in uiList.renderers)
@@ -506,6 +513,57 @@ namespace FragEngine3.Graphics.Stack
 			success &= _camera.EndFrame(uiList.cmdList);
 
 			return success;
+		}
+
+		private bool CompositeFinalOutput(Camera _camera, uint _maxActiveLightCount)
+		{
+			if (compositionRenderer == null || compositionRenderer.IsDisposed)
+			{
+				return false;
+			}
+			Material compositionMaterial = (compositionRenderer.MaterialHandle!.GetResource(true, true) as Material)!;
+
+			CommandList cmdList = core.MainCommandList;
+			Framebuffer backbuffer = core.Device.SwapchainFramebuffer;
+
+			_camera.SetOverrideRenderTargets(backbuffer, false);
+			_camera.BeginFrame(cmdList, RenderMode.Custom, _maxActiveLightCount, false, out GraphicsDrawContext drawCtx, out CameraContext cameraCtx);
+
+			ResourceLayout resourceLayout = compositionMaterial.BoundResourceLayout!;
+			if (resourceLayout != null && (compositionResourceSet == null || compositionResourceSet.IsDisposed))
+			{
+				_camera.TryGetOwnRenderTargets(RenderMode.Opaque, out Framebuffer? opaqueTargets);
+				_camera.TryGetOwnRenderTargets(RenderMode.Transparent, out Framebuffer? transparentTargets);
+				_camera.TryGetOwnRenderTargets(RenderMode.UI, out Framebuffer? uiTargets);
+
+				Texture texOpaqueColor = opaqueTargets!.ColorTargets[0].Target;
+				Texture texOpaqueDepth = opaqueTargets!.DepthTarget!.Value.Target;
+
+				Texture texTransparentColor = transparentTargets!.ColorTargets[0].Target;
+				Texture texTransparentDepth = transparentTargets!.DepthTarget!.Value.Target;
+
+				Texture texUIColor = uiTargets!.ColorTargets[0].Target;
+
+				ResourceSetDescription resourceSetDesc = new(
+					resourceLayout,
+					texOpaqueColor,
+					texOpaqueDepth,
+					texTransparentColor,
+					texTransparentDepth,
+					texUIColor);
+
+				compositionResourceSet = core.MainFactory.CreateResourceSet(ref resourceSetDesc);
+			}
+
+			if (compositionResourceSet != null)
+			{
+				compositionRenderer.SetOverrideBoundResourceSet(compositionResourceSet);
+			}
+			compositionRenderer.Draw(drawCtx, cameraCtx);
+
+			_camera.EndFrame(cmdList);
+
+			return true;
 		}
 
 		#endregion
