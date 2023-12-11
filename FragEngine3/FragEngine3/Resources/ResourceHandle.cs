@@ -180,7 +180,9 @@ namespace FragEngine3.Resources
 
 		public override string ToString()
 		{
-			return $"{resourceKey} ({resourceType}, {LoadState}) [@{fileKey ?? "NULL"},{dataOffset},{dataSize}]";
+			const int maxFileKeyLength = 48;
+			string? fileKeyTrunc = fileKey != null && fileKey.Length > maxFileKeyLength ? "..." + fileKey[(fileKey.Length - maxFileKeyLength - 2)..] : fileKey;
+			return $"{resourceKey} ({resourceType}, {LoadState}) [@{fileKeyTrunc ?? "NULL"},{dataOffset},{dataSize}]";
 		}
 
 		#endregion
