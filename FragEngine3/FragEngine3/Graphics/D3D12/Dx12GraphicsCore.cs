@@ -97,7 +97,7 @@ namespace FragEngine3.Graphics.D3D12
 				Device = device;
 				Window = window;
 				Window.Closing += () => quitMessageReceived = true;
-
+				
 				Device.WaitForIdle();
 				Device.SwapBuffers();
 

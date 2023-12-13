@@ -1,6 +1,8 @@
 ﻿using System.Numerics;
+using FragEngine3.Containers;
 using FragEngine3.Graphics.Components.ConstantBuffers;
 using FragEngine3.Graphics.Components.Data;
+using FragEngine3.Graphics.Components.Internal;
 using FragEngine3.Graphics.Contexts;
 using FragEngine3.Graphics.Resources;
 using FragEngine3.Resources;
@@ -22,28 +24,36 @@ namespace FragEngine3.Graphics.Components
 			Perpective,
 		}
 
-		[Flags]
-		private enum DirtyFlags
+		private sealed class OutputData
 		{
-			Resolution		= 1,
-			RenderTarget	= 2,
-			Projection		= 4,
-
-			All				= Resolution | RenderTarget | Projection
+			public uint resolutionX = 640;
+			public uint resolutionY = 480;
 		}
 
-		private sealed class RenderTargets(Texture _texColor, Texture? _texDepth, Framebuffer _framebuffer)
+		private sealed class ProjectionData
 		{
-			public readonly Texture texColor = _texColor;
-			public readonly Texture? texDepth = _texDepth;
-			public readonly Framebuffer framebuffer = _framebuffer;
+			public ProjectionType projectionType = ProjectionType.Perpective;
 
-			public void Dispose()
-			{
-				framebuffer?.Dispose();
-				texColor?.Dispose();
-				texDepth?.Dispose();
-			}
+			public float nearClipPlane = 0.01f;
+			public float farClipPlane = 1000.0f;
+			public float fieldOfViewRad = 60.0f * DEG2RAD;
+			public float orthographicSize = 1.0f;
+
+			public Matrix4x4 mtxProjection = Matrix4x4.Identity;   // Local space => Clip space
+			public Matrix4x4 mtxViewport = Matrix4x4.Identity;     // Clip space => Pixel space
+			public Matrix4x4 mtxCamera = Matrix4x4.Identity;       // World space => Pixel space
+			public Matrix4x4 mtxInvCamera = Matrix4x4.Identity;    // Pixel space => World space
+		}
+
+		private sealed class ClearingData
+		{
+			public bool clearBackground = true;
+			public bool allowClearDepth = true;
+			public bool allowClearStencil = false;
+
+			public Color32 clearColor = Color32.Cornflower;
+			public float clearDepth = 1.0f;
+			public byte clearStencil = 0x00;
 		}
 
 		#endregion
@@ -52,22 +62,13 @@ namespace FragEngine3.Graphics.Components
 		public Camera(SceneNode _node, RenderMode _mainRenderMode = RenderMode.Opaque) : base(_node)
 		{
 			core = node.scene.engine.GraphicsSystem.graphicsCore;
+			mainRenderMode = _mainRenderMode;
 
-			if (core.CreateStandardRenderTargets(
-				resolutionX,
-				resolutionY,
-				true,
-				out Texture texColor,
-				out Texture? texDepth,
-				out Framebuffer framebuffer))
-			{
-				renderTargetDict.Add(_mainRenderMode, new(texColor, texDepth, framebuffer));
-			}
-
-			MarkDirty(DirtyFlags.Resolution | DirtyFlags.Projection);
+			CameraTarget mainTarget = new(core, mainRenderMode, ResolutionX, ResolutionY, core.DefaultColorTargetPixelFormat, true);
+			targetDict.Add(mainRenderMode, mainTarget);
 
 			UpdateProjection();
-			UpdateStatesFromActiveRenderTarget(_mainRenderMode);
+			UpdateStatesFromActiveRenderTarget(mainRenderMode);
 
 			GetGlobalConstantBuffer(0, false, out _);
 
@@ -78,54 +79,35 @@ namespace FragEngine3.Graphics.Components
 		#region Fields
 
 		private readonly GraphicsCore core;
+		private readonly RenderMode mainRenderMode;
 
-		private DirtyFlags dirtyFlags = 0;
 		private bool isDrawing = false;
 		private uint cameraVersion = 1;
 
-		// Resolution:
-		private uint resolutionX = 640;
-		private uint resolutionY = 480;
-		private uint prevResolutionX = 0;
-		private uint prevResolutionY = 0;
-		private PixelFormat prevColorPixelFormat = PixelFormat.R8_UNorm;
-
-		// Projection:
-		private ProjectionType projectionType = ProjectionType.Perpective;
-		private float nearClipPlane = 0.01f;
-		private float farClipPlane = 1000.0f;
-		private float fieldOfViewRad = 60.0f * DEG2RAD;
-		private float orthographicSize = 1.0f;
-		private Matrix4x4 mtxProjection = Matrix4x4.Identity;	// Local space => Clip space
-		private Matrix4x4 mtxViewport = Matrix4x4.Identity;		// Clip space => Pixel space
-		private Matrix4x4 mtxCamera = Matrix4x4.Identity;		// World space => Pixel space
-		private Matrix4x4 mtxInvCamera = Matrix4x4.Identity;	// Pixel space => World space
+		// Output:
+		private VersionedMember<OutputData> output = new(new(), 0);
+		private VersionedMember<ProjectionData> projection = new(new(), 0);
+		private readonly ClearingData clearing = new();
 
 		// Content:
 		public uint cameraPriority = 1000;
 		public uint layerMask = 0xFFFFFFFFu;
-
-		// Clearing:
-		public bool clearBackground = true;
-		private bool allowClearDepth = true;
-		private bool allowClearStencil = false;
-		public Color32 clearColor = Color32.Cornflower;
-		public float clearDepth = 1.0f;
-		public byte clearStencil = 0x00;
 
 		// Lighting & Scene:
 		private DeviceBuffer? lightDataBuffer = null;
 		private uint lightDataBufferCapacity = 0;
 		private DeviceBuffer? globalConstantBuffer = null;
 
+		// Render targets:
+		private readonly Dictionary<RenderMode, CameraTarget> targetDict = [];
+		private CameraTarget? overrideTarget = null;
+
 		//TODO: Consider adding a "useSimplifiedRendering" flag, which would prompt usage of simplified material overrides, if available.
 
-		// Output:
-		private readonly Dictionary<RenderMode, RenderTargets> renderTargetDict = [];
-		private Framebuffer? overrideRenderTargets = null;
 
+		// Main camera:
 		private static Camera? mainCamera = null;
-
+		
 		private readonly object cameraStateLockObj = new();
 		private static readonly object mainCameraLockObj = new();
 
@@ -144,8 +126,6 @@ namespace FragEngine3.Graphics.Components
 		#endregion
 		#region Properties
 
-		public bool IsDirty => dirtyFlags != 0;
-
 		public override SceneEventType[] GetSceneEventList() => sceneEventTypes;
 
 		public bool IsDrawing => !IsDisposed && isDrawing;
@@ -157,12 +137,12 @@ namespace FragEngine3.Graphics.Components
 		/// </summary>
 		public uint ResolutionX
 		{
-			get => resolutionX;
+			get => output.Value.resolutionX;
 			set
 			{
-				resolutionX = Math.Clamp(value, 1, 8192);
-				AspectRatio = resolutionX / resolutionY;
-				MarkDirty(DirtyFlags.Resolution);
+				output.Value.resolutionX = Math.Clamp(value, 1, 8192);
+				AspectRatio = output.Value.resolutionX / output.Value.resolutionY;
+				output.UpdateValue(cameraVersion + 1, output.Value);
 			}
 		}
 		/// <summary>
@@ -170,12 +150,12 @@ namespace FragEngine3.Graphics.Components
 		/// </summary>
 		public uint ResolutionY
 		{
-			get => resolutionY;
+			get => output.Value.resolutionY;
 			set
 			{
-				resolutionY = Math.Clamp(value, 1, 8192);
-				AspectRatio = resolutionX / resolutionY;
-				MarkDirty(DirtyFlags.Resolution);
+				output.Value.resolutionY = Math.Clamp(value, 1, 8192);
+				AspectRatio = output.Value.resolutionX / output.Value.resolutionY;
+				output.UpdateValue(cameraVersion + 1, output.Value);
 			}
 		}
 
@@ -183,8 +163,12 @@ namespace FragEngine3.Graphics.Components
 
 		public ProjectionType Projection
 		{
-			get => projectionType;
-			set { projectionType = value; MarkDirty(DirtyFlags.Projection); }
+			get => projection.Value.projectionType;
+			set
+			{
+				projection.Value.projectionType = value;
+				projection.UpdateValue(cameraVersion + 1, projection.Value);
+			}
 		}
 
 		/// <summary>
@@ -193,8 +177,12 @@ namespace FragEngine3.Graphics.Components
 		/// </summary>
 		public float NearClipPlane
 		{
-			get => nearClipPlane;
-			set { nearClipPlane = Math.Clamp(value, 0.001f, Math.Min(farClipPlane, 99999.9f)); MarkDirty(DirtyFlags.Projection); }
+			get => projection.Value.nearClipPlane;
+			set
+			{
+				projection.Value.nearClipPlane = Math.Clamp(value, 0.001f, Math.Min(projection.Value.farClipPlane, 99999.9f));
+				projection.UpdateValue(cameraVersion + 1, projection.Value);
+			}
 		}
 		/// <summary>
 		/// Gets or sets the far clipping distance of the camera; geometry further away than this can't be rendered
@@ -202,8 +190,12 @@ namespace FragEngine3.Graphics.Components
 		/// </summary>
 		public float FarClipPlane
 		{
-			get => farClipPlane;
-			set { farClipPlane = Math.Clamp(value, Math.Min(nearClipPlane, 0.002f), 100000.0f); MarkDirty(DirtyFlags.Projection); }
+			get => projection.Value.farClipPlane;
+			set
+			{
+				projection.Value.farClipPlane = Math.Clamp(value, Math.Min(projection.Value.nearClipPlane, 0.002f), 100000.0f);
+				projection.UpdateValue(cameraVersion + 1, projection.Value);
+			}
 		}
 
 		/// <summary>
@@ -211,22 +203,34 @@ namespace FragEngine3.Graphics.Components
 		/// </summary>
 		public float FieldOfViewDegrees
 		{
-			get => fieldOfViewRad * RAD2DEG;
-			set { fieldOfViewRad = Math.Clamp(value, 0.001f, 179.0f) * DEG2RAD; MarkDirty(DirtyFlags.Projection); }
+			get => projection.Value.fieldOfViewRad * RAD2DEG;
+			set
+			{
+				projection.Value.fieldOfViewRad = Math.Clamp(value, 0.001f, 179.0f) * DEG2RAD;
+				projection.UpdateValue(cameraVersion + 1, projection.Value);
+			}
 		}
 		/// <summary>
 		/// Gets or sets the field of view angle in radians.
 		/// </summary>
 		public float FieldOfViewRadians
 		{
-			get => fieldOfViewRad;
-			set { fieldOfViewRad = Math.Clamp(value, 0.001f * DEG2RAD, 179.0f * DEG2RAD); MarkDirty(DirtyFlags.Projection); }
+			get => projection.Value.fieldOfViewRad;
+			set
+			{
+				projection.Value.fieldOfViewRad = Math.Clamp(value, 0.001f * DEG2RAD, 179.0f * DEG2RAD);
+				projection.UpdateValue(cameraVersion + 1, projection.Value);
+			}
 		}
 
 		public float OrthographicSize
 		{
-			get => orthographicSize;
-			set { orthographicSize = Math.Clamp(value, 0.001f, 1000.0f); MarkDirty(DirtyFlags.Projection); }
+			get => projection.Value.orthographicSize;
+			set
+			{
+				projection.Value.orthographicSize = Math.Clamp(value, 0.001f, 1000.0f);
+				projection.UpdateValue(cameraVersion + 1, projection.Value);
+			}
 		}
 
 		public ResourceHandle? DefaultShadowMaterialHandle { get; private set; } = null;
@@ -244,11 +248,11 @@ namespace FragEngine3.Graphics.Components
 		{
 			get
 			{
-				if (dirtyFlags.HasFlag(DirtyFlags.Projection))
+				if (!projection.GetValue(cameraVersion, out _))
 				{
 					UpdateProjection();
 				}
-				return mtxProjection;
+				return projection.Value.mtxProjection;
 			}
 		}
 		/// <summary>
@@ -259,11 +263,11 @@ namespace FragEngine3.Graphics.Components
 		{
 			get
 			{
-				if (dirtyFlags.HasFlag(DirtyFlags.Projection) || dirtyFlags.HasFlag(DirtyFlags.Resolution))
+				if (!projection.GetValue(cameraVersion, out _))
 				{
 					UpdateProjection();
 				}
-				return mtxViewport;
+				return projection.Value.mtxViewport;
 			}
 		}
 		/// <summary>
@@ -278,15 +282,11 @@ namespace FragEngine3.Graphics.Components
 		{
 			get
 			{
-				if (dirtyFlags.HasFlag(DirtyFlags.Projection))
+				if (!projection.GetValue(cameraVersion, out _))
 				{
 					UpdateProjection();
 				}
-				else
-				{
-					UpdateFinalCameraMatrix();
-				}
-				return mtxCamera;
+				return projection.Value.mtxCamera;
 			}
 		}
 		/// <summary>
@@ -299,16 +299,30 @@ namespace FragEngine3.Graphics.Components
 		{
 			get
 			{
-				if (dirtyFlags.HasFlag(DirtyFlags.Projection))
+				if (!projection.GetValue(cameraVersion, out _))
 				{
 					UpdateProjection();
 				}
-				else
-				{
-					UpdateFinalCameraMatrix();
-				}
-				return mtxInvCamera;
+				return projection.Value.mtxInvCamera;
 			}
+		}
+
+		public bool ClearBackground
+		{
+			get => clearing.clearBackground;
+			set => clearing.clearBackground = value;
+		}
+
+		public Color32 ClearColor
+		{
+			get => clearing.clearColor;
+			set => clearing.clearColor = value;
+		}
+
+		public float ClearDepth
+		{
+			get => clearing.clearDepth;
+			set => clearing.clearDepth = Math.Clamp(value, 0.0f, 1.0f);
 		}
 
 		/// <summary>
@@ -345,7 +359,6 @@ namespace FragEngine3.Graphics.Components
 		protected override void Dispose(bool _disposing)
 		{
 			IsMainCamera = false;
-			dirtyFlags = 0;
 
 			lightDataBuffer?.Dispose();
 			if (_disposing)
@@ -354,15 +367,16 @@ namespace FragEngine3.Graphics.Components
 				lightDataBufferCapacity = 0;
 			}
 
-			foreach (var kvp in renderTargetDict)
+			foreach (var kvp in targetDict)
 			{
 				kvp.Value.Dispose();
 			}
-			renderTargetDict.Clear();
+			targetDict.Clear();
 
+			overrideTarget?.Dispose();
 			if (_disposing)
 			{
-				overrideRenderTargets = null;
+				overrideTarget = null;
 			}
 
 			base.Dispose(_disposing);
@@ -382,27 +396,18 @@ namespace FragEngine3.Graphics.Components
 				lightDataBufferCapacity = 0;
 
 				// Purge render targets and framebuffer:
-				foreach (var kvp in renderTargetDict)
+				foreach (var kvp in targetDict)
 				{
 					kvp.Value.Dispose();
 				}
-				renderTargetDict.Clear();
-				overrideRenderTargets = null;
+				targetDict.Clear();
+
+				overrideTarget?.Dispose();
+				overrideTarget = null;
 
 				// Recreate render targets and framebuffer:
-				if (core.CreateStandardRenderTargets(
-					resolutionX,
-					resolutionY,
-					true,
-					out Texture texColor,
-					out Texture? texDepth,
-					out Framebuffer framebuffer))
-				{
-					renderTargetDict.Add(RenderMode.Opaque, new(texColor, texDepth, framebuffer));
-				}
-
-				// Mark dirty and rebuild matrices:
-				MarkDirty(DirtyFlags.Resolution | DirtyFlags.Projection);
+				CameraTarget newTarget = new(core, mainRenderMode, ResolutionX, ResolutionY, core.DefaultColorTargetPixelFormat, true);
+				targetDict.Add(mainRenderMode, newTarget);
 
 				UpdateProjection();
 				UpdateStatesFromActiveRenderTarget(RenderMode.Opaque);
@@ -419,63 +424,7 @@ namespace FragEngine3.Graphics.Components
 
 		public void MarkDirty()
 		{
-			dirtyFlags |= DirtyFlags.All;
-		}
-		private void MarkDirty(DirtyFlags _changeFlags)
-		{
-			dirtyFlags |= _changeFlags;
-		}
-
-		public bool InitializeRenderModes(bool _replaceExistingFramebuffers, params RenderMode[] _renderModes)
-		{
-			if (IsDisposed)
-			{
-				Logger.LogError("Cannot initialize render modes for disposed camera!");
-				return false;
-			}
-			if (_renderModes == null)
-			{
-				return true;
-			}
-			if (isDrawing)
-			{
-				Logger.LogError("Cannot initialize render modes while camera is in the processing of drawing!");
-				return false;
-			}
-
-			bool success = true;
-
-			lock (cameraStateLockObj)
-			{
-				foreach (RenderMode renderMode in _renderModes)
-				{
-					bool createNew = true;
-					if (renderTargetDict.TryGetValue(renderMode, out RenderTargets? renderTargets))
-					{
-						if (_replaceExistingFramebuffers)
-						{
-							renderTargets?.Dispose();
-							renderTargetDict.Remove(renderMode);
-						}
-						else
-						{
-							createNew = false;
-						}
-					}
-
-					if (createNew && (success &= core.CreateStandardRenderTargets(
-							resolutionX,
-							resolutionY,
-							true,
-							out Texture texColor,
-							out Texture? texDepth,
-							out Framebuffer framebuffer)))
-					{
-						renderTargetDict.Add(renderMode, new(texColor, texDepth, framebuffer));
-					}
-				}
-			}
-			return success;
+			cameraVersion++;
 		}
 
 		public override void ReceiveSceneEvent(SceneEventType _eventType, object? _eventData)
@@ -533,7 +482,7 @@ namespace FragEngine3.Graphics.Components
 			return true;
 		}
 
-		public bool SetOverrideRenderTargets(Framebuffer? _newOverrideRenderTargets, bool _disposedPreviousOverride = false)
+		public bool SetOverrideRenderTargets(Framebuffer? _newOverrideRenderTargets, bool _transferOwnership)
 		{
 			if (IsDisposed)
 			{
@@ -546,29 +495,30 @@ namespace FragEngine3.Graphics.Components
 				return false;
 			}
 
+			CameraTarget? prevTarget = overrideTarget;
+			overrideTarget?.Dispose();
+			overrideTarget = null;
+
 			// Validate new overrides, if non-null:
 			if (_newOverrideRenderTargets != null)
 			{
 				// Only allow correctly dimensioned render targets to be assigned to a camers:
-				if (_newOverrideRenderTargets.Width != resolutionX || _newOverrideRenderTargets.Height != resolutionY)
+				if (_newOverrideRenderTargets.Width != ResolutionX || _newOverrideRenderTargets.Height != ResolutionY)
 				{
 					Logger.LogError("Resolution mismatch between override render targets and camera!");
 					return false;
 				}
-			}
 
-			// If requested, purge any previously assigned overrides:
-			if (_disposedPreviousOverride && overrideRenderTargets != null)
-			{
-				overrideRenderTargets.Dispose();
+				// Assign (or clear) overrides:
+				overrideTarget = new(core, mainRenderMode, null!, null!, _newOverrideRenderTargets, _transferOwnership);
 			}
-
-			// Assign (or clear) overrides:
-			overrideRenderTargets = _newOverrideRenderTargets;
 
 			UpdateStatesFromActiveRenderTarget(0);
 
-			MarkDirty(DirtyFlags.RenderTarget);
+			if (prevTarget != overrideTarget)
+			{
+				cameraVersion++;
+			}
 			return true;
 		}
 
@@ -657,9 +607,10 @@ namespace FragEngine3.Graphics.Components
 			// If necessary, rebuilt projection matrices, since their values will be uploaded to the constant buffer:
 			if (_updateProjection)
 			{
-				if (dirtyFlags.HasFlag(DirtyFlags.Resolution) || dirtyFlags.HasFlag(DirtyFlags.Projection))
+				if (!projection.GetValue(cameraVersion, out _))
 				{
 					UpdateProjection();
+					projection.UpdateValue(cameraVersion, projection.Value);
 				}
 				else
 				{
@@ -673,15 +624,15 @@ namespace FragEngine3.Graphics.Components
 			GlobalConstantBuffer globalConstantBufferData = new()
 			{
 				// Camera vectors & matrices:
-				mtxCamera = mtxCamera,
+				mtxCamera = projection.Value.mtxCamera,
 				cameraPosition = new(node.WorldPosition, 0),
 				cameraDirection = new(node.WorldForward, 0),
 
 				// Camera parameters:
-				resolutionX = resolutionX,
-				resolutionY = resolutionY,
-				nearClipPlane = nearClipPlane,
-				farClipPlane = farClipPlane,
+				resolutionX = ResolutionX,
+				resolutionY = ResolutionY,
+				nearClipPlane = projection.Value.nearClipPlane,
+				farClipPlane = projection.Value.farClipPlane,
 
 				// Lighting:
 				ambientLight = ambientLight,
@@ -700,27 +651,31 @@ namespace FragEngine3.Graphics.Components
 			//NOTE: We are using a left-handed coordinate system, where X=right, Y=up, and Z=forward.
 
 			// Calculate projection from camera's local space to clip space:
-			if (projectionType == ProjectionType.Orthographic)
+			if (projection.Value.projectionType == ProjectionType.Orthographic)
 			{
-				mtxProjection = Matrix4x4.CreateOrthographicLeftHanded(orthographicSize * AspectRatio, orthographicSize, nearClipPlane, farClipPlane);
+				projection.Value.mtxProjection = Matrix4x4.CreateOrthographicLeftHanded(
+					projection.Value.orthographicSize * AspectRatio,
+					projection.Value.orthographicSize,
+					projection.Value.nearClipPlane,
+					projection.Value.farClipPlane);
 			}
 			else
 			{
-				mtxProjection = Matrix4x4.CreatePerspectiveFieldOfViewLeftHanded(fieldOfViewRad, AspectRatio, nearClipPlane, farClipPlane);
+				projection.Value.mtxProjection = Matrix4x4.CreatePerspectiveFieldOfViewLeftHanded(
+					projection.Value.fieldOfViewRad,
+					AspectRatio,
+					projection.Value.nearClipPlane,
+					projection.Value.farClipPlane);
 			}
 
 			// Calculate viewport matrix:
-			RecalculateViewportMatrix();
+			projection.Value.mtxViewport = Matrix4x4.CreateViewportLeftHanded(0, 0, ResolutionX, ResolutionY, 0, 1);
 
 			// Recalculate the final camera matrix by combining the above matrices with the camera node's inverse world matrix:
 			UpdateFinalCameraMatrix();
 
 			// Reset the projection's dirty flag:
-			dirtyFlags &= ~DirtyFlags.Projection;
-		}
-		private void RecalculateViewportMatrix()
-		{
-			mtxViewport = Matrix4x4.CreateViewportLeftHanded(0, 0, resolutionX, resolutionY, 0, 1);
+			projection.UpdateValue(cameraVersion, projection.Value);
 		}
 		private void UpdateFinalCameraMatrix()
 		{
@@ -730,9 +685,9 @@ namespace FragEngine3.Graphics.Components
 				// World space => Camera's local space => Clip space => Viewport/pixel space
 
 				// Calculate combined matrix or transforming from world space to clip space:
-				mtxCamera = mtxWorld2Camera * mtxProjection;
+				projection.Value.mtxCamera = mtxWorld2Camera * projection.Value.mtxProjection;
 
-				Matrix4x4.Invert(mtxCamera, out mtxInvCamera);
+				Matrix4x4.Invert(projection.Value.mtxCamera, out projection.Value.mtxInvCamera);
 			}
 			// NOTE: If your projection is doing weird stuff on the GPU, add "#pragma pack_matrix( column_major )" to the top of it.
 			// Matrix packing order in System.Numerics is column-major, not row-major! This was messy and annoying to figure out, so
@@ -741,81 +696,86 @@ namespace FragEngine3.Graphics.Components
 
 		private void UpdateStatesFromActiveRenderTarget(RenderMode _renderMode)
 		{
-			if (!GetActiveRenderTargets(_renderMode, out Framebuffer? activeRenderTargets) || activeRenderTargets == null)
+			if (!GetActiveRenderTargets(_renderMode, out CameraTarget? activeTarget) || activeTarget == null)
 			{
 				return;
 			}
 
 			// Check whether depth and stencil buffers are present and require clearing:
-			allowClearDepth = activeRenderTargets.OutputDescription.DepthAttachment.HasValue;
-			if (allowClearDepth)
-			{
-				PixelFormat depthFormat = activeRenderTargets.OutputDescription.DepthAttachment!.Value.Format;
-				allowClearStencil = depthFormat == PixelFormat.D24_UNorm_S8_UInt || depthFormat == PixelFormat.D32_Float_S8_UInt;
-			}
-			else
-			{
-				allowClearStencil = false;
-			}
+			clearing.allowClearDepth = activeTarget.hasDepth;
+			clearing.allowClearStencil = clearing.allowClearDepth && activeTarget.hasStencil;
 		}
 
 		/// <summary>
 		/// Gets this camera's currently active render targets (aka the framebuffer it will be rendering to).
 		/// </summary>
-		/// <param name="_outActiveRenderTargets">Outputs a currently framebuffer that the camera will be rendering to.
+		/// <param name="_outActiveTarget">Outputs a currently framebuffer that the camera will be rendering to.
 		/// If an override render target was assigned, that will be prioritized. In all other cases, the camera's own
 		/// render target will be used instead.</param>
 		/// <returns>True if any valid render target exists and is assigned to this camera, false otherwise.</returns>
-		public bool GetActiveRenderTargets(RenderMode _renderMode, out Framebuffer? _outActiveRenderTargets)
+		internal bool GetActiveRenderTargets(RenderMode _renderMode, out CameraTarget? _outActiveTarget)
 		{
 			if (IsDisposed)
 			{
-				_outActiveRenderTargets = null;
+				_outActiveTarget = null;
 				return false;
 			}
 
-			if (overrideRenderTargets != null && !overrideRenderTargets.IsDisposed)
+			if (overrideTarget != null && !overrideTarget.IsDisposed)
 			{
-				_outActiveRenderTargets = overrideRenderTargets;
+				_outActiveTarget = overrideTarget;
 				return true;
 			}
-			else if (renderTargetDict.TryGetValue(_renderMode, out RenderTargets? renderTargets))
+			else if (targetDict.TryGetValue(_renderMode, out CameraTarget? target))
 			{
-				_outActiveRenderTargets = renderTargets.framebuffer;
-				return !_outActiveRenderTargets.IsDisposed;
+				ulong expectedDescriptorID = CameraTarget.CreateDescriptorID(ResolutionX, ResolutionY, core.DefaultColorTargetPixelFormat, core.DefaultDepthTargetPixelFormat, true, true);
+
+				// If the target is expired or out-of-spec, recreate it now:
+				if (target == null || target.IsDisposed || expectedDescriptorID != target.descriptorID)
+				{
+					target?.Dispose();
+					target = new(core, _renderMode, ResolutionX, ResolutionY, core.DefaultColorTargetPixelFormat, true);
+					targetDict.Remove(_renderMode);
+					targetDict.Add(_renderMode, target);
+				}
+
+				_outActiveTarget = target;
+				return true;
 			}
 			else
 			{
-				bool success = core.CreateStandardRenderTargets(
-					resolutionX,
-					resolutionY,
-					true,
-					out Texture texColor,
-					out Texture? texDepth,
-					out _outActiveRenderTargets);
-				if (success)
-				{
-					renderTargetDict.Add(_renderMode, new(texColor, texDepth, _outActiveRenderTargets));
-				}
-				return success;
+				_outActiveTarget = new(core, _renderMode, ResolutionX, ResolutionY, core.DefaultColorTargetPixelFormat, true);
+				targetDict.Add(_renderMode, _outActiveTarget);
+				return true;
 			}
 		}
 
-		public bool TryGetOwnRenderTargets(RenderMode _renderMode, out Framebuffer? _outRenderTargets)
+		internal bool GetOrCreateOwnRenderTargets(RenderMode _renderMode, out CameraTarget? _outTarget)
 		{
 			if (IsDisposed)
 			{
-				_outRenderTargets = null;
+				_outTarget = null;
 				return false;
 			}
 
-			if (renderTargetDict.TryGetValue(_renderMode, out RenderTargets? renderTargets))
+			bool recreateTarget = targetDict.TryGetValue(_renderMode, out _outTarget);
+			if (!recreateTarget)
 			{
-				_outRenderTargets = renderTargets.framebuffer;
-				return true;
+				ulong expectedDescriptorID = CameraTarget.CreateDescriptorID(ResolutionX, ResolutionY, core.DefaultColorTargetPixelFormat, core.DefaultDepthTargetPixelFormat, true, true);
+				recreateTarget =
+					_outTarget == null ||
+					_outTarget.IsDisposed ||
+					expectedDescriptorID != _outTarget.descriptorID;
 			}
-			_outRenderTargets = null;
-			return false;
+			
+			if (recreateTarget)
+			{
+				_outTarget?.Dispose();
+				_outTarget = new(core, _renderMode, ResolutionX, ResolutionY, core.DefaultColorTargetPixelFormat, true);
+				targetDict.Remove(_renderMode);
+				targetDict.Add(_renderMode, _outTarget);
+			}
+			return true;
 		}
 
 		public bool BeginFrame(CommandList _cmdList, RenderMode _renderMode, uint _activeLightCount, bool _clearRenderTargets, out GraphicsDrawContext _outDrawCtx, out CameraContext _outCameraCtx)
@@ -840,8 +800,6 @@ namespace FragEngine3.Graphics.Components
 				_cmdList.Begin();
 			}
 
-			//bool outputHasChanged = dirtyFlags.HasFlag(DirtyFlags.Resolution) || dirtyFlags.HasFlag(DirtyFlags.RenderTarget);
-
 			lock (cameraStateLockObj)
 			{
 				isDrawing = true;
@@ -859,52 +817,21 @@ namespace FragEngine3.Graphics.Components
 					}
 				}
 
-				// Respond to changed resolution:
-				if (dirtyFlags.HasFlag(DirtyFlags.Resolution))
+				// Update camera version from versioned members:
 				{
-					RenderMode[] prevRenderModes = renderTargetDict.Keys.ToArray();
-					foreach (var kvp in renderTargetDict)
-					{
-						kvp.Value?.Dispose();
-					}
-					renderTargetDict.Clear();
-					foreach (RenderMode prevRenderMode in prevRenderModes)
-					{
-						if (core.CreateStandardRenderTargets(
-								resolutionX,
-								resolutionY,
-								true,
-								out Texture texColor,
-								out Texture? texDepth,
-								out Framebuffer framebuffer))
-						{
-							renderTargetDict.Add(prevRenderMode, new(texColor, texDepth, framebuffer));
-						}
-					}
+					uint newestVersion = cameraVersion;
 
-					UpdateStatesFromActiveRenderTarget(_renderMode);
+					newestVersion = Math.Max(newestVersion, projection.Version);
+					newestVersion = Math.Max(newestVersion, output.Version);
 
-					// Check if any render target override that is currently assigned matches the camera's resolution:
-					if (overrideRenderTargets != null && !overrideRenderTargets.IsDisposed)
+					if (cameraVersion != newestVersion)
 					{
-						if (overrideRenderTargets.Width != resolutionX || overrideRenderTargets.Height != resolutionY)
-						{
-							Logger.LogError("Resolution mismatch between camera output and override render targets!");
-							_outDrawCtx = null!;
-							_outCameraCtx = null!;
-							return false;
-						}
-					}
-
-					// Update viewport matrix now that output resolution has changed:
-					if (!dirtyFlags.HasFlag(DirtyFlags.Projection))
-					{
-						RecalculateViewportMatrix();
+						cameraVersion = newestVersion + 1;
 					}
 				}
 
 				// Respond to changed projection or viewport:
-				if (dirtyFlags.HasFlag(DirtyFlags.Projection))
+				if (!projection.GetValue(cameraVersion, out _))
 				{
 					UpdateProjection();
 				}
@@ -914,26 +841,12 @@ namespace FragEngine3.Graphics.Components
 				}
 
 				// Fetch the currently active render targets that shall be drawn to:
-				if (!GetActiveRenderTargets(_renderMode, out Framebuffer? activeRenderTargets) || activeRenderTargets == null)
+				if (!GetActiveRenderTargets(_renderMode, out CameraTarget? activeTarget) || activeTarget == null)
 				{
 					_outDrawCtx = null!;
 					_outCameraCtx = null!;
 					return false;
 				}
-
-				// Check if the output resolution and format has changed, which may necessitate a pipeline rebuild:
-				PixelFormat colorPixelFormat = activeRenderTargets.OutputDescription.ColorAttachments[0].Format;
-				bool outputChanged =
-					prevResolutionX != resolutionX ||
-					prevResolutionY != resolutionY ||
-					prevColorPixelFormat != colorPixelFormat;
-				if (outputChanged)
-				{
-					cameraVersion++;
-				}
-				prevResolutionX = resolutionX;
-				prevResolutionY = resolutionY;
-				prevColorPixelFormat = colorPixelFormat;
 
 				// Initialize constant buffers and light buffers for upcoming draw call:
 				if (!GetGlobalConstantBuffer(_activeLightCount, false, out _) ||
@@ -945,31 +858,29 @@ namespace FragEngine3.Graphics.Components
 				}
 
 				_outDrawCtx = new(core, _cmdList);
-				_outCameraCtx = new(this, globalConstantBuffer!, lightDataBuffer!, activeRenderTargets.OutputDescription);
+				_outCameraCtx = new(this, globalConstantBuffer!, lightDataBuffer!, activeTarget.outputDesc);
 
 				// Bind current render targets as output to command list:
-				_cmdList.SetFramebuffer(activeRenderTargets);
+				_cmdList.SetFramebuffer(activeTarget.framebuffer);
 
 				// Clear the framebuffer before any new content is drawn to it:
-				if (_clearRenderTargets && clearBackground)
+				if (_clearRenderTargets && clearing.clearBackground)
 				{
-					_cmdList.ClearColorTarget(0, clearColor.ToRgbaFloat());
+					_cmdList.ClearColorTarget(0, clearing.clearColor.ToRgbaFloat());
 
 					// Clear depth and stencil buffer, as required:
-					if (allowClearDepth)
+					if (clearing.allowClearDepth)
 					{
-						if (allowClearStencil)
+						if (clearing.allowClearStencil)
 						{
-							_cmdList.ClearDepthStencil(clearDepth, clearStencil);
+							_cmdList.ClearDepthStencil(clearing.clearDepth, clearing.clearStencil);
 						}
 						else
 						{
-							_cmdList.ClearDepthStencil(clearDepth);
+							_cmdList.ClearDepthStencil(clearing.clearDepth);
 						}
 					}
 				}
-
-				dirtyFlags = 0;
 			}
 
 			return true;
@@ -1002,7 +913,7 @@ namespace FragEngine3.Graphics.Components
 			// If requested, rebuild all projection matrices, or at least all those that have changed:
 			if (_allowUpdateProjection)
 			{
-				if (dirtyFlags.HasFlag(DirtyFlags.Projection))
+				if (projection.GetValue(cameraVersion, out _))
 				{
 					UpdateProjection();
 				}
@@ -1014,7 +925,7 @@ namespace FragEngine3.Graphics.Components
 			}
 
 			// Transform world space position to viewport pixel space:
-			Vector4 result = Vector4.Transform(_worldPoint, mtxCamera);
+			Vector4 result = Vector4.Transform(_worldPoint, projection.Value.mtxCamera);
 			return new Vector3(result.X, result.Y, result.Z) / result.W;
 		}
 
@@ -1023,7 +934,7 @@ namespace FragEngine3.Graphics.Components
 			// If requested, rebuild all projection matrices, or at least all those that have changed:
 			if (_allowUpdateProjection)
 			{
-				if (dirtyFlags.HasFlag(DirtyFlags.Projection))
+				if (projection.GetValue(cameraVersion, out _))
 				{
 					UpdateProjection();
 				}
@@ -1035,7 +946,7 @@ namespace FragEngine3.Graphics.Components
 			}
 
 			// Transform world space position to viewport pixel space:
-			return Vector3.Transform(_pixelCoord, mtxInvCamera);
+			return Vector3.Transform(_pixelCoord, projection.Value.mtxInvCamera);
 		}
 
 		public override bool LoadFromData(in ComponentData _componentData, in Dictionary<int, ISceneElement> _idDataMap)
@@ -1058,22 +969,31 @@ namespace FragEngine3.Graphics.Components
 				return false;
 			}
 
+			// Reset camera version:
+			cameraVersion = 0;
+
 			lock (cameraStateLockObj)
 			{
-				resolutionX = data.ResolutionX;
-				resolutionY = data.ResolutionY;
+				output.UpdateValue(cameraVersion, new()
+				{
+					resolutionX = data.ResolutionX,
+					resolutionY = data.ResolutionY,
+				});
 
-				nearClipPlane = data.NearClipPlane;
-				farClipPlane = data.FarClipPlane;
-				FieldOfViewDegrees = data.FieldOfViewDegrees;
+				projection.UpdateValue(cameraVersion, new()
+				{
+					nearClipPlane = data.NearClipPlane,
+					farClipPlane = data.FarClipPlane,
+					fieldOfViewRad = data.FieldOfViewDegrees * DEG2RAD,
+				});
 
 				cameraPriority = data.CameraPriority;
 				layerMask = data.LayerMask;
 
-				clearBackground = data.ClearBackground;
-				clearColor = Color32.ParseHexString(data.ClearColor);
-				clearDepth = data.ClearDepth;
-				clearStencil = data.ClearStencil;
+				clearing.clearBackground = data.ClearBackground;
+				clearing.clearColor = Color32.ParseHexString(data.ClearColor);
+				clearing.clearDepth = data.ClearDepth;
+				clearing.clearStencil = data.ClearStencil;
 			}
 
 			// Re-register camera with the scene:
@@ -1089,20 +1009,20 @@ namespace FragEngine3.Graphics.Components
 			{
 				data = new()
 				{
-					ResolutionX = resolutionX,
-					ResolutionY = resolutionY,
+					ResolutionX = ResolutionX,
+					ResolutionY = ResolutionY,
 
-					NearClipPlane = nearClipPlane,
-					FarClipPlane = farClipPlane,
+					NearClipPlane = projection.Value.nearClipPlane,
+					FarClipPlane = projection.Value.farClipPlane,
 					FieldOfViewDegrees = FieldOfViewDegrees,
 
 					CameraPriority = cameraPriority,
 					LayerMask = layerMask,
 
-					ClearBackground = clearBackground,
-					ClearColor = clearColor.ToHexString(),
-					ClearDepth = clearDepth,
-					ClearStencil = clearStencil,
+					ClearBackground = clearing.clearBackground,
+					ClearColor = clearing.clearColor.ToHexString(),
+					ClearDepth = clearing.clearDepth,
+					ClearStencil = clearing.clearStencil,
 				};
 			}
 

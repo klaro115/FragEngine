@@ -312,7 +312,7 @@ namespace FragEngine3.Graphics.Components
 			_drawCtx.cmdList.SetGraphicsResourceSet(0, defaultResourceSet.Value);
 
 			ResourceSet? boundResourceSet = overrideBoundResourceSet ?? Material.BoundResourceSet;
-			if (boundResourceSet != null)
+			if (boundResourceSet != null && Material.BoundResourceLayout != null)
 			{
 				_drawCtx.cmdList.SetGraphicsResourceSet(1, boundResourceSet);
 			}
@@ -322,9 +322,6 @@ namespace FragEngine3.Graphics.Components
 				_drawCtx.cmdList.SetVertexBuffer(i, vertexBuffers[i]);
 			}
 			_drawCtx.cmdList.SetIndexBuffer(indexBuffer, Mesh.IndexFormat);
-
-			//TODO: Bind material resources, such as textures and buffers!
-			//TODO: Update constant buffers, both for system variables and from material!
 
 			// Issue draw call:
 			_drawCtx.cmdList.DrawIndexed(Mesh.IndexCount);

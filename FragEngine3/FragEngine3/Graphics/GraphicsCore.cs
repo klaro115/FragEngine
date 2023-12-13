@@ -1,8 +1,6 @@
 ﻿using FragEngine3.EngineCore;
 using FragEngine3.EngineCore.Config;
 using FragEngine3.Graphics.Internal;
-using FragEngine3.Graphics.Resources;
-using FragEngine3.Resources;
 using Veldrid;
 using Veldrid.Sdl2;
 
@@ -311,7 +309,7 @@ namespace FragEngine3.Graphics
 		/// <param name="_height">Vertical resolution of output image, in pixels.</param>
 		/// <param name="_createDepth">Whether to create a depth and stencil buffer for Z-testing while drawing to the render targets.</param>
 		/// <param name="_outTexColorTarget">Outputs an RGBA render target for lit and colored render results. This is the stuff you want to display on screen.</param>
-		/// <param name="_outDepthTarget">Outputs a depth texture, with an optional stencil channel. Null if no depth buffer was requested.</param>
+		/// <param name="_outTexDepthTarget">Outputs a depth texture, with an optional stencil channel. Null if no depth buffer was requested.</param>
 		/// <param name="_outFramebuffer">Outputs a framebuffer using the created color and depth textures as render targets.</param>
 		/// <returns>True if frame buffer and texture creation succeeded, false otherwise. All outputs will be disposed on failure.</returns>
 		public virtual bool CreateStandardRenderTargets(
@@ -319,15 +317,34 @@ namespace FragEngine3.Graphics
 			uint _height,
 			bool _createDepth,
 			out Texture _outTexColorTarget,
-			out Texture? _outDepthTarget,
+			out Texture? _outTexDepthTarget,
+			out Framebuffer _outFramebuffer)
+		{
+			return CreateRenderTargets(
+				DefaultColorTargetPixelFormat,
+				_width,
+				_height,
+				_createDepth,
+				out _outTexColorTarget,
+				out _outTexDepthTarget,
+				out _outFramebuffer);
+		}
+
+		public virtual bool CreateRenderTargets(
+			PixelFormat _colorFormat,
+			uint _width,
+			uint _height,
+			bool _createDepth,
+			out Texture _outTexColorTarget,
+			out Texture? _outTexDepthTarget,
 			out Framebuffer _outFramebuffer)
 		{
 			if (!IsInitialized)
 			{
 				_outTexColorTarget = null!;
-				_outDepthTarget = null;
+				_outTexDepthTarget = null;
 				_outFramebuffer = null!;
-				Logger.LogError("Cannot create standard render targets using uninitialized graphics core!");
+				Logger.LogError("Cannot create render targets using uninitialized graphics core!");
 				return false;
 			}
 
@@ -349,9 +366,9 @@ namespace FragEngine3.Graphics
 			}
 			catch (Exception ex)
 			{
-				Logger.LogException("Failed to create standard color render targets!", ex);
+				Logger.LogException("Failed to create color render targets!", ex);
 				_outTexColorTarget = null!;
-				_outDepthTarget = null;
+				_outTexDepthTarget = null;
 				_outFramebuffer = null!;
 				return false;
 			}
@@ -370,37 +387,37 @@ namespace FragEngine3.Graphics
 
 				try
 				{
-					_outDepthTarget = MainFactory.CreateTexture(ref texDepthTargetDesc);
+					_outTexDepthTarget = MainFactory.CreateTexture(ref texDepthTargetDesc);
 				}
 				catch (Exception ex)
 				{
-					Logger.LogException("Failed to create standard depth render targets!", ex);
+					Logger.LogException("Failed to create depth render targets!", ex);
 					_outTexColorTarget?.Dispose();
 					_outTexColorTarget = null!;
-					_outDepthTarget = null;
+					_outTexDepthTarget = null;
 					_outFramebuffer = null!;
 					return false;
 				}
 			}
 			else
 			{
-				_outDepthTarget = null;
+				_outTexDepthTarget = null;
 			}
 
 			try
 			{
-				FramebufferDescription frameBufferDesc = new(_outDepthTarget, _outTexColorTarget);
+				FramebufferDescription frameBufferDesc = new(_outTexDepthTarget, _outTexColorTarget);
 
 				_outFramebuffer = MainFactory.CreateFramebuffer(ref frameBufferDesc);
 				return true;
 			}
 			catch (Exception ex)
 			{
-				Logger.LogException("Failed to create framebuffer from standard render targets!", ex);
+				Logger.LogException("Failed to create framebuffer from render targets!", ex);
 				_outTexColorTarget?.Dispose();
-				_outDepthTarget?.Dispose();
+				_outTexDepthTarget?.Dispose();
 				_outTexColorTarget = null!;
-				_outDepthTarget = null;
+				_outTexDepthTarget = null;
 				_outFramebuffer = null!;
 				return false;
 			}

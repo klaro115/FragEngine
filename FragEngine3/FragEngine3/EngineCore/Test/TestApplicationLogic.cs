@@ -106,9 +106,9 @@ namespace FragEngine3.EngineCore.Test
 				camera.FarClipPlane = 1000.0f;
 				camera.OrthographicSize = 5;
 			
-				camera.clearBackground = true;
-				camera.clearColor = Color32.Cornflower;
-				camera.clearDepth = 1.0f;
+				camera.ClearBackground = true;
+				camera.ClearColor = Color32.Cornflower;
+				camera.ClearDepth = 1.0f;
 			
 				camera.IsMainCamera = true;
 			}

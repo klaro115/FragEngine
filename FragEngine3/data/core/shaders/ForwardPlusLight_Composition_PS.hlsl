@@ -35,18 +35,18 @@ struct VertexOutput_Basic
 struct PixelOutput
 {
     half4 color : SV_Target0;
-    float depth : SV_Depth;
+    //float depth : SV_Depth;
 };
 
 /****************** TEXTURES: ******************/
 
 // Opaque geometry:
 Texture2D<half4> TexOpaqueColor : register(ps, t1);
-Texture2D<float> TexOpaqueDepth : register(ps, t2);
+Texture2D<float2> TexOpaqueDepth : register(ps, t2);
 
 // Transparent geometry:
 Texture2D<half4> TexTransparentColor : register(ps, t3);
-Texture2D<float> TexTransparentDepth : register(ps, t4);
+Texture2D<float2> TexTransparentDepth : register(ps, t4);
 
 // UI Overlay:
 Texture2D<half4> TexUIColor : register(ps, t5);
@@ -62,17 +62,17 @@ PixelOutput Main_Pixel(in VertexOutput_Basic inputBasic)
 
     // Load pixel color and depth for all textures:
     half4 colOpaque = TexOpaqueColor.Load(posPixel);
-    float depthOpaque = TexOpaqueDepth.Load(posPixel);
+    float depthOpaque = TexOpaqueDepth.Load(posPixel).r;
 
     half4 colTransparent = TexTransparentColor.Load(posPixel);
-    float depthTransparent = TexTransparentDepth.Load(posPixel);
+    float depthTransparent = TexTransparentDepth.Load(posPixel).r;
 
     half4 colUI = TexUIColor.Load(posPixel);
 
     // Composite geometry: (opaque & transparent)
     float k = depthTransparent > depthOpaque ? colTransparent.w : 0;
     half4 colGeometry = lerp(colOpaque, colTransparent, k);
-    float depthGeometry = min(depthTransparent, depthOpaque);
+    float depthGeometry = min(depthTransparent, depthOpaque).r;
 
     // Overlay UI:
     half alphaFinal = clamp(colGeometry.w + colUI.w, 0, 1);
@@ -82,6 +82,6 @@ PixelOutput Main_Pixel(in VertexOutput_Basic inputBasic)
     // Assemble final output:
     PixelOutput o;
     o.color = colFinal;
-    o.depth = depthFinal;
+    //o.depth = depthFinal;
     return o;
 }

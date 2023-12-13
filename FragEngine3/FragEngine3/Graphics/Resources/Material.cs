@@ -332,7 +332,7 @@ namespace FragEngine3.Graphics.Resources
 				_outPipeline = new(null!, 0);
 				return false;
 			}
-			if (boundResourceSet.Value == null && boundResourceLayout != null && !CreateBoundResourceSet())
+			if (boundResourceSet.Value == null && boundResourceLayout != null && !UseExternalBoundResources && !CreateBoundResourceSet())
 			{
 				_outPipeline = new(null!, 0);
 				return false;
@@ -359,17 +359,24 @@ namespace FragEngine3.Graphics.Resources
 					? RasterizerStateDescription.Default
 					: RasterizerStateDescription.CullNone;
 
+				ResourceLayout[] resourceLayouts = boundResourceLayout != null
+					? [ defaultResourceLayout.Value, boundResourceLayout ]
+					: [ defaultResourceLayout.Value ];
+
 				GraphicsPipelineDescription pipelineDesc = new(
 					BlendStateDescription.SingleAlphaBlend,
 					depthStateDesc,
 					rasterizerState,
 					PrimitiveTopology.TriangleList,
 					shaderSetDesc.Value,
-					[defaultResourceLayout.Value],
+					resourceLayouts,
 					_cameraCtx.outputDesc);
 
 				Pipeline pipeline = core.MainFactory.CreateGraphicsPipeline(ref pipelineDesc);
 				uint newPipelineVersion = materialVersion ^ _rendererVersion;
+
+				PixelFormat colorFormat = _cameraCtx.outputDesc.ColorAttachments[0].Format;
+				pipeline.Name = $"{resourceKey}_{colorFormat}";
 
 				_outPipeline = new(pipeline, newPipelineVersion);
 				return true;

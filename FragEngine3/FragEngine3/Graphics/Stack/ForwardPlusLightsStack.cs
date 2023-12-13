@@ -1,8 +1,10 @@
 ﻿using FragEngine3.Containers;
 using FragEngine3.EngineCore;
 using FragEngine3.Graphics.Components;
+using FragEngine3.Graphics.Components.Internal;
 using FragEngine3.Graphics.Contexts;
 using FragEngine3.Graphics.Resources;
+using FragEngine3.Graphics.Resources.Data;
 using FragEngine3.Resources;
 using FragEngine3.Scenes;
 using System.Numerics;
@@ -47,7 +49,7 @@ namespace FragEngine3.Graphics.Stack
 			-1,		// RenderMode.Volumetric
 			-1,		// RenderMode.PostProcessing
 			3,		// RenderMode.UI
-			-1,		// RenderMode.Custom
+			4,		// RenderMode.Custom
 		];
 		private readonly RendererList[] rendererLists =
 		[
@@ -55,6 +57,7 @@ namespace FragEngine3.Graphics.Stack
 			new(RenderMode.Opaque, 128),
 			new(RenderMode.Transparent, 32),
 			new(RenderMode.UI, 32),
+			new(RenderMode.Custom, 1),
 		];
 
 		private readonly List<Light> cameraLightBuffer = new(64);
@@ -65,6 +68,13 @@ namespace FragEngine3.Graphics.Stack
 		private StaticMeshRenderer? compositionRenderer = null;
 
 		private readonly object lockObj = new();
+
+		#endregion
+		#region Constants
+
+		public const string RESOURCE_KEY_COMPOSITION_MATERIAL = "Mtl_ForwardPlusLight_Composition";
+		public const string RESOURCE_KEY_FULLSCREEN_QUAD_MESH = "FullscreenQuad";
+		public const uint COMPOSITION_LAYER_MASK = 0x800000u;
 
 		#endregion
 		#region Properties
@@ -134,13 +144,37 @@ namespace FragEngine3.Graphics.Stack
 				isInitialized = true;
 			}
 
+			if (!Scene.engine.ResourceManager.GetResource(RESOURCE_KEY_FULLSCREEN_QUAD_MESH, out ResourceHandle fullscreenQuadHandle))
+			{
+				// Create fullscreen quad:
+				MeshSurfaceData fullscreenQuadData = new()
+				{
+					verticesBasic =
+					[
+						new BasicVertex(new(-1, -1, 0), new(0, 0, -1), new(0, 0)),
+						new BasicVertex(new( 1, -1, 0), new(0, 0, -1), new(1, 0)),
+						new BasicVertex(new(-1,  1, 0), new(0, 0, -1), new(0, 1)),
+						new BasicVertex(new( 1,  1, 0), new(0, 0, -1), new(1, 1)),
+					],
+					indices16 =
+					[
+						0, 2, 1,
+						2, 3, 1,
+					],
+				};
+				StaticMesh fullscreenQuadMesh = new(RESOURCE_KEY_FULLSCREEN_QUAD_MESH, Scene.engine, false, out fullscreenQuadHandle);
+				fullscreenQuadMesh.SetGeometry(in fullscreenQuadData);
+			}
+
 			if (!Scene.FindNode("ForwardPlusLight_Composition", out SceneNode? compositionNode))
 			{
-				compositionNode = Scene.rootNode.CreateChild("ForwardPlusLight_Composition");
+				compositionNode = Scene.rootNode.CreateChild(RESOURCE_KEY_COMPOSITION_MATERIAL);
+				compositionNode.LocalTransformation = Pose.Identity;
 				if (compositionNode.CreateComponent(out compositionRenderer) && compositionRenderer != null)
 				{
-					compositionRenderer.SetMaterial("Mtl_ForwardPlusLight_Composition");
-					compositionRenderer.SetMesh("FullscreenQuad");
+					compositionRenderer.SetMaterial(RESOURCE_KEY_COMPOSITION_MATERIAL, true);
+					compositionRenderer.SetMesh(RESOURCE_KEY_FULLSCREEN_QUAD_MESH);
+					compositionRenderer.LayerFlags = COMPOSITION_LAYER_MASK;
 				}
 			}
 
@@ -260,8 +294,6 @@ namespace FragEngine3.Graphics.Stack
 					continue;
 				}
 
-				camera.InitializeRenderModes(false, RenderMode.Opaque, RenderMode.Transparent, RenderMode.UI, RenderMode.Custom);
-
 				//TEST TEST TEST TEST
 				//camera.SetOverrideRenderTargets(core.Device.SwapchainFramebuffer, false);
 				//TEST TEST TEST TEST
@@ -345,7 +377,7 @@ namespace FragEngine3.Graphics.Stack
 						if (renderer.IsVisible && (renderer.LayerFlags & _camera.layerMask) != 0)
 						{
 							// Skip any renderers that cannot be mapped to any of the supported modes:
-							if (!GetRendererListForMode(renderer.RenderMode, out RendererList? rendererList))
+							if (!GetRendererListForMode(renderer.RenderMode, out RendererList? rendererList, out _))
 							{
 								SkippedRendererCount++;
 								continue;
@@ -384,7 +416,7 @@ namespace FragEngine3.Graphics.Stack
 			}
 		}
 
-		private bool GetRendererListForMode(RenderMode _mode, out RendererList? _outRendererList)
+		private bool GetRendererListForMode(RenderMode _mode, out RendererList? _outRendererList, out CommandList? _outCmdList)
 		{
 			int modeIdx = (int)_mode;
 			int rendererListIdx = rendererModeIndices[modeIdx];
@@ -392,15 +424,31 @@ namespace FragEngine3.Graphics.Stack
 			if (rendererListIdx >= 0)
 			{
 				_outRendererList = rendererLists[rendererListIdx];
+
+				if (_outRendererList.cmdList == null || _outRendererList.cmdList.IsDisposed)
+				{
+					if (!_core.CreateCommandList(out _outRendererList.cmdList) || _outRendererList.cmdList == null)
+					{
+						Logger.LogError($"Failed to create command list for {_mode} renderer list!");
+						_outRendererList.cmdList?.Dispose();
+						_outRendererList.cmdList = null;
+						_outCmdList = null;
+						return false;
+					}
+					_outRendererList.cmdList.Name = $"CmdList_{_mode}";
+				}
+
+				_outCmdList = _outRendererList.cmdList;
 				return true;
 			}
 			_outRendererList = null;
+			_outCmdList = null;
 			return false;
 		}
 
 		private bool DrawOpaqueRendererList(Camera _camera, uint _activeLightCount)
 		{
-			if (!GetRendererListForMode(RenderMode.Opaque, out RendererList? opaqueList) || opaqueList == null)
+			if (!GetRendererListForMode(RenderMode.Opaque, out RendererList? opaqueList, out CommandList? cmdList) || opaqueList == null || cmdList == null)
 			{
 				return false;
 			}
@@ -410,21 +458,9 @@ namespace FragEngine3.Graphics.Stack
 				return true;
 			}
 
-			// Ensure the command list is set:
-			if (opaqueList.cmdList == null || opaqueList.cmdList.IsDisposed)
-			{
-				if (!core.CreateCommandList(out opaqueList.cmdList) || opaqueList.cmdList == null)
-				{
-					Logger.LogError("Failed to create command list for opaque renderer list!");
-					opaqueList.cmdList?.Dispose();
-					opaqueList.cmdList = null;
-					return false;
-				}
-			}
-
 			bool success = true;
 
-			success &= _camera.BeginFrame(opaqueList.cmdList, RenderMode.Opaque, _activeLightCount, true, out GraphicsDrawContext drawCtx, out CameraContext cameraCtx);
+			success &= _camera.BeginFrame(cmdList, RenderMode.Opaque, _activeLightCount, true, out GraphicsDrawContext drawCtx, out CameraContext cameraCtx);
 
 			// Draw list of renderers as-is:
 			foreach (IRenderer renderer in opaqueList.renderers)
@@ -432,31 +468,19 @@ namespace FragEngine3.Graphics.Stack
 				FailedRendererCount += renderer.Draw(drawCtx, cameraCtx) ? 0 : 1;
 			}
 
-			success &= _camera.EndFrame(opaqueList.cmdList);
+			success &= _camera.EndFrame(cmdList);
 
 			return success;
 		}
 
 		private bool DrawZSortedRendererList(Camera _camera, uint _activeLightCount)
 		{
-			if (!GetRendererListForMode(RenderMode.Transparent, out RendererList? zSortedList) || zSortedList == null)
+			if (!GetRendererListForMode(RenderMode.Transparent, out RendererList? zSortedList, out CommandList? cmdList) || zSortedList == null || cmdList == null)
 			{
 				return false;
 			}
 
 			if (zSortedList.renderers.Count == 0) return true;
-
-			// Ensure the command list is set:
-			if (zSortedList.cmdList == null || zSortedList.cmdList.IsDisposed)
-			{
-				if (!core.CreateCommandList(out zSortedList.cmdList) || zSortedList.cmdList == null)
-				{
-					Logger.LogError("Failed to create command list for Z-sorted renderer list!");
-					zSortedList.cmdList?.Dispose();
-					zSortedList.cmdList = null;
-					return false;
-				}
-			}
 
 			bool success = true;
 
@@ -466,7 +490,7 @@ namespace FragEngine3.Graphics.Stack
 
 			zSortedList.renderers.Sort((a, b) => a.GetZSortingDepth(viewportPosition, cameraDirection).CompareTo(b.GetZSortingDepth(viewportPosition, cameraDirection)));
 			
-			success &= _camera.BeginFrame(zSortedList.cmdList, RenderMode.Transparent, _activeLightCount, false, out GraphicsDrawContext drawCtx, out CameraContext cameraCtx);
+			success &= _camera.BeginFrame(cmdList, RenderMode.Transparent, _activeLightCount, false, out GraphicsDrawContext drawCtx, out CameraContext cameraCtx);
 
 			// Draw Z-sorted list of renderers:
 			foreach (IRenderer renderer in zSortedList.renderers)
@@ -474,35 +498,23 @@ namespace FragEngine3.Graphics.Stack
 				FailedRendererCount += renderer.Draw(drawCtx, cameraCtx) ? 0 : 1;
 			}
 
-			success &= _camera.EndFrame(zSortedList.cmdList);
+			success &= _camera.EndFrame(cmdList);
 
 			return success;
 		}
 
 		private bool DrawUiRendererList(Camera _camera)
 		{
-			if (!GetRendererListForMode(RenderMode.UI, out RendererList? uiList) || uiList == null)
+			if (!GetRendererListForMode(RenderMode.UI, out RendererList? uiList, out CommandList? cmdList) || uiList == null || cmdList == null)
 			{
 				return false;
 			}
 
 			if (uiList.renderers.Count == 0) return true;
 
-			// Ensure the command list is set:
-			if (uiList.cmdList == null || uiList.cmdList.IsDisposed)
-			{
-				if (!core.CreateCommandList(out uiList.cmdList) || uiList.cmdList == null)
-				{
-					Logger.LogError("Failed to create command list for UI renderer list!");
-					uiList.cmdList?.Dispose();
-					uiList.cmdList = null;
-					return false;
-				}
-			}
-
 			bool success = true;
 
-			success &= _camera.BeginFrame(uiList.cmdList, RenderMode.UI, 0, false, out GraphicsDrawContext drawCtx, out CameraContext cameraCtx);
+			success &= _camera.BeginFrame(cmdList, RenderMode.UI, 0, false, out GraphicsDrawContext drawCtx, out CameraContext cameraCtx);
 
 			// Draw list of renderers in strictly hierarchical order:
 			foreach (IRenderer renderer in uiList.renderers)
@@ -510,39 +522,51 @@ namespace FragEngine3.Graphics.Stack
 				FailedRendererCount += renderer.Draw(drawCtx, cameraCtx) ? 0 : 1;
 			}
 
-			success &= _camera.EndFrame(uiList.cmdList);
+			success &= _camera.EndFrame(cmdList);
 
 			return success;
 		}
 
 		private bool CompositeFinalOutput(Camera _camera, uint _maxActiveLightCount)
 		{
+			if (!GetRendererListForMode(RenderMode.Custom, out RendererList? customList, out CommandList? cmdList) || customList == null || cmdList == null)
+			{
+				return false;
+			}
 			if (compositionRenderer == null || compositionRenderer.IsDisposed)
 			{
 				return false;
 			}
 			Material compositionMaterial = (compositionRenderer.MaterialHandle!.GetResource(true, true) as Material)!;
 
-			CommandList cmdList = core.MainCommandList;
-			Framebuffer backbuffer = core.Device.SwapchainFramebuffer;
+			//Framebuffer backbuffer = core.Device.SwapchainFramebuffer;
 
-			_camera.SetOverrideRenderTargets(backbuffer, false);
-			_camera.BeginFrame(cmdList, RenderMode.Custom, _maxActiveLightCount, false, out GraphicsDrawContext drawCtx, out CameraContext cameraCtx);
+			//if (!_camera.SetOverrideRenderTargets(backbuffer, false))
+			//{
+			//	Logger.LogError("Failed to set override render targets for graphics stack's composition pass!");
+			//	return false;
+			//}
+
+			if (!_camera.BeginFrame(cmdList, RenderMode.Custom, _maxActiveLightCount, false, out GraphicsDrawContext drawCtx, out CameraContext cameraCtx))
+			{
+				Logger.LogError("Failed to begin frame on graphics stack's composition pass!");
+				return false;
+			}
 
 			ResourceLayout resourceLayout = compositionMaterial.BoundResourceLayout!;
 			if (resourceLayout != null && (compositionResourceSet == null || compositionResourceSet.IsDisposed))
 			{
-				_camera.TryGetOwnRenderTargets(RenderMode.Opaque, out Framebuffer? opaqueTargets);
-				_camera.TryGetOwnRenderTargets(RenderMode.Transparent, out Framebuffer? transparentTargets);
-				_camera.TryGetOwnRenderTargets(RenderMode.UI, out Framebuffer? uiTargets);
+				_camera.GetOrCreateOwnRenderTargets(RenderMode.Opaque, out CameraTarget? opaqueTarget);
+				_camera.GetOrCreateOwnRenderTargets(RenderMode.Transparent, out CameraTarget? transparentTarget);
+				_camera.GetOrCreateOwnRenderTargets(RenderMode.UI, out CameraTarget? uiTarget);
 
-				Texture texOpaqueColor = opaqueTargets!.ColorTargets[0].Target;
-				Texture texOpaqueDepth = opaqueTargets!.DepthTarget!.Value.Target;
+				Texture texOpaqueColor = opaqueTarget!.texColorTarget;
+				Texture texOpaqueDepth = opaqueTarget!.texDepthTarget;
 
-				Texture texTransparentColor = transparentTargets!.ColorTargets[0].Target;
-				Texture texTransparentDepth = transparentTargets!.DepthTarget!.Value.Target;
+				Texture texTransparentColor = transparentTarget!.texColorTarget;
+				Texture texTransparentDepth = transparentTarget!.texDepthTarget;
 
-				Texture texUIColor = uiTargets!.ColorTargets[0].Target;
+				Texture texUIColor = uiTarget!.texColorTarget;
 
 				ResourceSetDescription resourceSetDesc = new(
 					resourceLayout,
@@ -555,15 +579,29 @@ namespace FragEngine3.Graphics.Stack
 				compositionResourceSet = core.MainFactory.CreateResourceSet(ref resourceSetDesc);
 			}
 
-			if (compositionResourceSet != null)
+			if (compositionResourceSet != null && !compositionRenderer.SetOverrideBoundResourceSet(compositionResourceSet))
 			{
-				compositionRenderer.SetOverrideBoundResourceSet(compositionResourceSet);
+				Logger.LogError("Failed to override bound resource set for graphics stack's composition pass!");
+				return false;
 			}
-			compositionRenderer.Draw(drawCtx, cameraCtx);
 
-			_camera.EndFrame(cmdList);
+			bool success = compositionRenderer.Draw(drawCtx, cameraCtx);
 
-			return true;
+			success &= _camera.EndFrame(cmdList);
+
+			//if (_camera.GetActiveRenderTargets(RenderMode.Custom, out CameraTarget? customTarget) && customTarget != null)
+			//{
+			//	Framebuffer backbuffer = core.Device.SwapchainFramebuffer;
+			//	Texture texBackbufferColor = backbuffer.ColorTargets[0].Target;
+			//	Texture texBackbufferDepth = backbuffer.DepthTarget!.Value.Target;
+			//	Texture texCameraColor = customTarget.texColorTarget;
+			//	Texture texCameraDepth = customTarget.texDepthTarget;
+			//
+			//	core.MainCommandList.CopyTexture(texCameraColor, texBackbufferColor, 0, 0);
+			//	//core.MainCommandList.CopyTexture(texCameraDepth, texBackbufferDepth, 0, 0);
+			//}
+
+			return success;
 		}
 
 		#endregion
