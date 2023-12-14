@@ -72,7 +72,7 @@ PixelOutput Main_Pixel(in VertexOutput_Basic inputBasic)
     // Composite geometry: (opaque & transparent)
     float k = depthTransparent > depthOpaque ? colTransparent.w : 0;
     half4 colGeometry = lerp(colOpaque, colTransparent, k);
-    float depthGeometry = min(depthTransparent, depthOpaque).r;
+    float depthGeometry = min(depthTransparent, depthOpaque);
 
     // Overlay UI:
     half alphaFinal = clamp(colGeometry.w + colUI.w, 0, 1);

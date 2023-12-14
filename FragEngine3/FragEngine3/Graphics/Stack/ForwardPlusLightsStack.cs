@@ -539,13 +539,13 @@ namespace FragEngine3.Graphics.Stack
 			}
 			Material compositionMaterial = (compositionRenderer.MaterialHandle!.GetResource(true, true) as Material)!;
 
-			//Framebuffer backbuffer = core.Device.SwapchainFramebuffer;
+			Framebuffer backbuffer = core.Device.SwapchainFramebuffer;
 
-			//if (!_camera.SetOverrideRenderTargets(backbuffer, false))
-			//{
-			//	Logger.LogError("Failed to set override render targets for graphics stack's composition pass!");
-			//	return false;
-			//}
+			if (!_camera.SetOverrideRenderTargets(backbuffer, false))
+			{
+				Logger.LogError("Failed to set override render targets for graphics stack's composition pass!");
+				return false;
+			}
 
 			if (!_camera.BeginFrame(cmdList, RenderMode.Custom, _maxActiveLightCount, false, out GraphicsDrawContext drawCtx, out CameraContext cameraCtx))
 			{
@@ -598,7 +598,7 @@ namespace FragEngine3.Graphics.Stack
 			//	Texture texCameraDepth = customTarget.texDepthTarget;
 			//
 			//	core.MainCommandList.CopyTexture(texCameraColor, texBackbufferColor, 0, 0);
-			//	//core.MainCommandList.CopyTexture(texCameraDepth, texBackbufferDepth, 0, 0);
+			//	core.MainCommandList.CopyTexture(texCameraDepth, texBackbufferDepth, 0, 0);
 			//}
 
 			return success;

@@ -355,7 +355,7 @@ namespace FragEngine3.Graphics
 				_width,
 				_height,
 				1, 1, 1,
-				DefaultColorTargetPixelFormat,
+				_colorFormat,
 				TextureUsage.RenderTarget | TextureUsage.Sampled,
 				TextureType.Texture2D,
 				msaaCount);

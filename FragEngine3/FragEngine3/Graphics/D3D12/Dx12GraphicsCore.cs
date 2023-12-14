@@ -194,11 +194,11 @@ namespace FragEngine3.Graphics.D3D12
 			{
 				return _bitDepth switch
 				{
-					8 => PixelFormat.R8_G8_B8_A8_UNorm,
+					8 => PixelFormat.B8_G8_R8_A8_UNorm,
 					10 => PixelFormat.R10_G10_B10_A2_UNorm,
 					16 => PixelFormat.R16_G16_B16_A16_UNorm,
 					32 => PixelFormat.R32_G32_B32_A32_Float,
-					_ => PixelFormat.B8_G8_R8_A8_UNorm,
+					_ => PixelFormat.R8_G8_B8_A8_UNorm,
 				};
 			}
 		}

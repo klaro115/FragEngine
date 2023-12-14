@@ -28,6 +28,7 @@ namespace FragEngine3.Graphics.Components
 		{
 			public uint resolutionX = 640;
 			public uint resolutionY = 480;
+			public PixelFormat outputFormat = PixelFormat.B8_G8_R8_A8_UNorm;
 		}
 
 		private sealed class ProjectionData
@@ -64,7 +65,9 @@ namespace FragEngine3.Graphics.Components
 			core = node.scene.engine.GraphicsSystem.graphicsCore;
 			mainRenderMode = _mainRenderMode;
 
-			CameraTarget mainTarget = new(core, mainRenderMode, ResolutionX, ResolutionY, core.DefaultColorTargetPixelFormat, true);
+			output.Value.outputFormat = core.DefaultColorTargetPixelFormat;
+
+			CameraTarget mainTarget = new(core, mainRenderMode, ResolutionX, ResolutionY, OutputFormat, true);
 			targetDict.Add(mainRenderMode, mainTarget);
 
 			UpdateProjection();
@@ -141,7 +144,7 @@ namespace FragEngine3.Graphics.Components
 			set
 			{
 				output.Value.resolutionX = Math.Clamp(value, 1, 8192);
-				AspectRatio = output.Value.resolutionX / output.Value.resolutionY;
+				AspectRatio = (float)output.Value.resolutionX / output.Value.resolutionY;
 				output.UpdateValue(cameraVersion + 1, output.Value);
 			}
 		}
@@ -154,7 +157,17 @@ namespace FragEngine3.Graphics.Components
 			set
 			{
 				output.Value.resolutionY = Math.Clamp(value, 1, 8192);
-				AspectRatio = output.Value.resolutionX / output.Value.resolutionY;
+				AspectRatio = (float)output.Value.resolutionX / output.Value.resolutionY;
+				output.UpdateValue(cameraVersion + 1, output.Value);
+			}
+		}
+
+		public PixelFormat OutputFormat
+		{
+			get => output.Value.outputFormat;
+			set
+			{
+				output.Value.outputFormat = value;
 				output.UpdateValue(cameraVersion + 1, output.Value);
 			}
 		}
@@ -406,7 +419,7 @@ namespace FragEngine3.Graphics.Components
 				overrideTarget = null;
 
 				// Recreate render targets and framebuffer:
-				CameraTarget newTarget = new(core, mainRenderMode, ResolutionX, ResolutionY, core.DefaultColorTargetPixelFormat, true);
+				CameraTarget newTarget = new(core, mainRenderMode, ResolutionX, ResolutionY, OutputFormat, true);
 				targetDict.Add(mainRenderMode, newTarget);
 
 				UpdateProjection();
@@ -728,13 +741,13 @@ namespace FragEngine3.Graphics.Components
 			}
 			else if (targetDict.TryGetValue(_renderMode, out CameraTarget? target))
 			{
-				ulong expectedDescriptorID = CameraTarget.CreateDescriptorID(ResolutionX, ResolutionY, core.DefaultColorTargetPixelFormat, core.DefaultDepthTargetPixelFormat, true, true);
+				ulong expectedDescriptorID = CameraTarget.CreateDescriptorID(ResolutionX, ResolutionY, OutputFormat, core.DefaultDepthTargetPixelFormat, true, true);
 
 				// If the target is expired or out-of-spec, recreate it now:
 				if (target == null || target.IsDisposed || expectedDescriptorID != target.descriptorID)
 				{
 					target?.Dispose();
-					target = new(core, _renderMode, ResolutionX, ResolutionY, core.DefaultColorTargetPixelFormat, true);
+					target = new(core, _renderMode, ResolutionX, ResolutionY, OutputFormat, true);
 					targetDict.Remove(_renderMode);
 					targetDict.Add(_renderMode, target);
 				}
@@ -744,7 +757,7 @@ namespace FragEngine3.Graphics.Components
 			}
 			else
 			{
-				_outActiveTarget = new(core, _renderMode, ResolutionX, ResolutionY, core.DefaultColorTargetPixelFormat, true);
+				_outActiveTarget = new(core, _renderMode, ResolutionX, ResolutionY, OutputFormat, true);
 				targetDict.Add(_renderMode, _outActiveTarget);
 				return true;
 			}
@@ -761,7 +774,7 @@ namespace FragEngine3.Graphics.Components
 			bool recreateTarget = targetDict.TryGetValue(_renderMode, out _outTarget);
 			if (!recreateTarget)
 			{
-				ulong expectedDescriptorID = CameraTarget.CreateDescriptorID(ResolutionX, ResolutionY, core.DefaultColorTargetPixelFormat, core.DefaultDepthTargetPixelFormat, true, true);
+				ulong expectedDescriptorID = CameraTarget.CreateDescriptorID(ResolutionX, ResolutionY, OutputFormat, core.DefaultDepthTargetPixelFormat, true, true);
 				recreateTarget =
 					_outTarget == null ||
 					_outTarget.IsDisposed ||
@@ -771,7 +784,7 @@ namespace FragEngine3.Graphics.Components
 			if (recreateTarget)
 			{
 				_outTarget?.Dispose();
-				_outTarget = new(core, _renderMode, ResolutionX, ResolutionY, core.DefaultColorTargetPixelFormat, true);
+				_outTarget = new(core, _renderMode, ResolutionX, ResolutionY, OutputFormat, true);
 				targetDict.Remove(_renderMode);
 				targetDict.Add(_renderMode, _outTarget);
 			}

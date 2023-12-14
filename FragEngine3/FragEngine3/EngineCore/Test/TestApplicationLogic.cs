@@ -99,6 +99,7 @@ namespace FragEngine3.EngineCore.Test
 				Sdl2Window window = Engine.GraphicsSystem.graphicsCore.Window;
 				camera.ResolutionX = (uint)window.Width;
 				camera.ResolutionY = (uint)window.Height;
+				//camera.OutputFormat = Veldrid.PixelFormat.R16_G16_B16_A16_UNorm;
 
 				camera.Projection = Camera.ProjectionType.Perpective;
 				camera.FieldOfViewDegrees = 60.0f;
