@@ -33,6 +33,11 @@
 
 		public GraphicsCapabilities() { }
 
+		public GraphicsCapabilities(DepthStencilFormat[] _depthStencilMaps)
+		{
+			depthStencilFormats = _depthStencilMaps ?? [];
+		}
+
 		public GraphicsCapabilities(
 			int _minResX,				int _minResY,
 			int _maxResX,				int _maxResY,

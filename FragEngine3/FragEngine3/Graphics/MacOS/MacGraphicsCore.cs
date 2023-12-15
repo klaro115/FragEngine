@@ -14,7 +14,8 @@ namespace FragEngine3.Graphics.MacOS
 	{
 		#region Fields
 
-		private static readonly GraphicsCapabilities capabilities = new();
+		private static readonly GraphicsCapabilities capabilities = new(
+			[ new GraphicsCapabilities.DepthStencilFormat(32, 8) ]);
 
 		#endregion
 		#region Properties
