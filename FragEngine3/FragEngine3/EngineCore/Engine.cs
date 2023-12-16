@@ -49,7 +49,9 @@ namespace FragEngine3.EngineCore
 		private readonly object stateLockObj = new();
 
 		// Frame timings:
-		const long frameTimeTargetMs = 1000 / 60;
+		TimeSpan computeTimeSum = TimeSpan.Zero;
+		TimeSpan frameTimeSum = TimeSpan.Zero;
+		long stateStartFrameCount = 0;
 
 		#endregion
 		#region Properties
@@ -130,6 +132,20 @@ namespace FragEngine3.EngineCore
 
 			if (stateChanged)
 			{
+				// Log average frame timings of the previous state:
+				long stateFrameCount = TimeManager.FrameCount - stateStartFrameCount;
+				if (stateFrameCount > 0)
+				{
+					double avgFrameRate = (stateFrameCount / frameTimeSum.TotalMilliseconds) * 1000.0;
+					double avgFrameTimeMs = frameTimeSum.TotalMilliseconds / stateFrameCount;
+					double avgComputeTimeMs = computeTimeSum.TotalMilliseconds / stateFrameCount;
+
+					Logger.LogMessage($"Engine state {prevState} | Average frame rate: {avgFrameRate:0.00} Hz | Average frame time: {avgFrameTimeMs:0.00} ms | Average compute time: {avgComputeTimeMs} ms");
+				}
+				stateStartFrameCount = TimeManager.FrameCount;
+				frameTimeSum = TimeSpan.Zero;
+				computeTimeSum = TimeSpan.Zero;
+
 				// If requested, log state change:
 				if (_verbose)
 				{
@@ -219,7 +235,7 @@ namespace FragEngine3.EngineCore
 			// Run the main loop across the entire loading and application run-time stages:
 			while (success)
 			{
-				TimeManager.BeginFrame(out _);
+				TimeManager.BeginFrame();
 
 				// Update main window message loop, exit if an OS signal requested application quit:
 				success &= GraphicsSystem.UpdateMessageLoop(out bool requestExit);
@@ -292,9 +308,10 @@ namespace FragEngine3.EngineCore
 				else break;
 
 				// Sleep thread to target a consistent 60Hz:
-				TimeManager.EndFrame(out _, out long elapsedFrameTimeMs);
-				long sleepTime = Math.Max(frameTimeTargetMs - elapsedFrameTimeMs, 0);
-				Thread.Sleep((int)sleepTime);
+				TimeManager.EndFrame(out TimeSpan threadSleepTime);
+				computeTimeSum += TimeManager.LastFrameDuration;
+				frameTimeSum += TimeManager.DeltaTime;
+				Thread.Sleep(threadSleepTime.Milliseconds);
 			}
 
 			SetState(EngineState.Unloading);

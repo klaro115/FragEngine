@@ -209,11 +209,10 @@ namespace FragEngine3.EngineCore.Test
 
 			if (scene.FindNode("Cube", out SceneNode? quadNode) && quadNode != null)
 			{
-				//float dt = Engine.TimeManager.DeltaTimeMs * 0.001f;
-				float dt = 0.001f;
+				float dt = Engine.TimeManager.DeltaTimeMs * 0.0005f;
 				Pose localPose = quadNode.LocalTransformation;
 				localPose.Rotate(Quaternion.CreateFromYawPitchRoll(10 * dt, 5 * dt, 5 * dt));
-				//quadNode.LocalTransformation = localPose;
+				quadNode.LocalTransformation = localPose;
 			}
 
 			//const float DEG2RAD = MathF.PI / 180.0f;

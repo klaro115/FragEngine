@@ -26,18 +26,61 @@ namespace FragEngine3.EngineCore
 
 		private readonly Stopwatch stopwatch;
 
+		private TimeSpan targetFrameDuration = new(0, 0, 0, 0, 16, 667);
+		private double targetFrameRate = 60.0;
+
+		#endregion
+		#region Constants
+
+		private static readonly TimeSpan minFrameDuration = new(0, 0, 0, 0, 1);
+		private static readonly TimeSpan maxFrameDuration = new(0, 0, 0, 1, 0);
+
 		#endregion
 		#region Properties
 
 		public Engine Engine => engine;
 
-		public long LastFrameStartTimeMs { get; private set; } = 0;
-		public long LastFrameEndTimeMs { get; private set; } = 0;
-		public long LastFrameDurationMs { get; private set; } = 0;
+		public TimeSpan LastFrameStartTime { get; private set; } = TimeSpan.Zero;
+		public TimeSpan LastFrameEndTime { get; private set; } = TimeSpan.Zero;
+		public TimeSpan LastFrameDuration { get; private set; } = TimeSpan.Zero;
+		public long LastFrameDurationMs => LastFrameDuration.Milliseconds;
 
-		public long DeltaTimeMs { get; private set; } = 0;
 		public TimeSpan DeltaTime { get; private set; } = TimeSpan.Zero;
+		public long DeltaTimeMs => DeltaTime.Milliseconds;
+
 		public TimeSpan RunTime { get; private set; } = TimeSpan.Zero;
+		public long FrameCount { get; private set; } = 0;
+
+		/// <summary>
+		/// Gets or sets the targeted frame duration of the engine's main loop. The program will try to lock
+		/// the rate at which its main thread recalculates the application logic to this time limit. Must be
+		/// a value in the range between 1 millisecond and 1 second.
+		/// </summary>
+		public TimeSpan TargetFrameDuration
+		{
+			get => targetFrameDuration;
+			set
+			{
+				if (value > maxFrameDuration) value = maxFrameDuration;
+				else if (value < minFrameDuration) value = minFrameDuration;
+				targetFrameDuration = value;
+				targetFrameRate = 1000.0 / targetFrameDuration.TotalMilliseconds;
+			}
+		}
+		/// <summary>
+		/// Gets or sets the targeted frame rate of the engine's main loop. The program will try to lock the
+		/// rate at which its main thread recalculates the application logic to this frequency. Must be a
+		/// value in the range between 1 Hz and 1000 Hz.
+		/// </summary>
+		public double TargetFrameRate
+		{
+			get => targetFrameRate;
+			set
+			{
+				targetFrameRate = Math.Clamp(value, 1.0, 1000.0);
+				targetFrameDuration = TimeSpan.FromMilliseconds(1000.0 / targetFrameRate);
+			}
+		}
 
 		#endregion
 		#region Methods
@@ -55,30 +98,44 @@ namespace FragEngine3.EngineCore
 		public void Reset()
 		{
 			stopwatch.Restart();
+
+			RunTime = TimeSpan.Zero;
+
+			LastFrameStartTime = TimeSpan.Zero;
+			LastFrameEndTime = TimeSpan.Zero;
+			LastFrameDuration = TimeSpan.Zero;
+
+			DeltaTime = targetFrameDuration;
 		}
 
-		public bool BeginFrame(out long _outStartTimeMs)
+		public bool BeginFrame()
 		{
 			RunTime = stopwatch.Elapsed;
+			FrameCount++;
 
-			_outStartTimeMs = stopwatch.ElapsedMilliseconds;
-			LastFrameStartTimeMs = _outStartTimeMs;
+			LastFrameStartTime = stopwatch.Elapsed;
 
 			return true;
 		}
 
-		public bool EndFrame(out long _outEndTimeMs, out long _outFrameDurationMs)
+		public bool EndFrame(out TimeSpan _outThreadSleepTime)
 		{
 			TimeSpan newRunTime = stopwatch.Elapsed;
-			DeltaTime = newRunTime - RunTime;
-			DeltaTimeMs = (long)DeltaTime.TotalMilliseconds;
 			RunTime = newRunTime;
 
-			_outEndTimeMs = stopwatch.ElapsedMilliseconds;
-			_outFrameDurationMs = DeltaTimeMs;
-			LastFrameEndTimeMs = _outEndTimeMs;
-			LastFrameDurationMs = LastFrameEndTimeMs - LastFrameStartTimeMs;
+			LastFrameEndTime = stopwatch.Elapsed;
+			LastFrameDuration = LastFrameEndTime - LastFrameStartTime;
 
+			if (targetFrameDuration > LastFrameDuration)
+			{
+				_outThreadSleepTime = targetFrameDuration - LastFrameDuration;
+				DeltaTime = targetFrameDuration;
+			}
+			else
+			{
+				_outThreadSleepTime = TimeSpan.Zero;
+				DeltaTime = LastFrameDuration;
+			}
 			return true;
 		}
 
