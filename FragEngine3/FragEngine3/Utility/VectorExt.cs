@@ -63,6 +63,24 @@ namespace FragEngine3
 			return _vector - vProj;
 		}
 
+		public static float MoveTowards(float _from, float _to, float _maxChange)
+		{
+			float diff = _to - _from;
+			if (Math.Abs(diff) <= _maxChange)
+			{
+				return _to;
+			}
+			return _from + Math.Sign(diff) * _maxChange;
+        }
+
+		public static Vector3 MoveTowards(Vector3 _from, Vector3 _to, float _maxChange)
+		{
+			return new Vector3(
+				MoveTowards(_from.X, _to.X, _maxChange),
+				MoveTowards(_from.Y, _to.Y, _maxChange),
+				MoveTowards(_from.Z, _to.Z, _maxChange));
+		}
+
 		#endregion
 	}
 }
