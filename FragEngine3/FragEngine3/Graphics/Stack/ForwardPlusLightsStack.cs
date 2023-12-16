@@ -74,6 +74,7 @@ namespace FragEngine3.Graphics.Stack
 
 		public const string RESOURCE_KEY_COMPOSITION_MATERIAL = "Mtl_ForwardPlusLight_Composition";
 		public const string RESOURCE_KEY_FULLSCREEN_QUAD_MESH = "FullscreenQuad";
+		public const string NODE_NAME_COMPOSITION_RENDERER = "ForwardPlusLight_Composition";
 		public const uint COMPOSITION_LAYER_MASK = 0x800000u;
 
 		#endregion
@@ -166,9 +167,9 @@ namespace FragEngine3.Graphics.Stack
 				fullscreenQuadMesh.SetGeometry(in fullscreenQuadData);
 			}
 
-			if (!Scene.FindNode("ForwardPlusLight_Composition", out SceneNode? compositionNode))
+			if (!Scene.FindNode(NODE_NAME_COMPOSITION_RENDERER, out SceneNode? compositionNode))
 			{
-				compositionNode = Scene.rootNode.CreateChild(RESOURCE_KEY_COMPOSITION_MATERIAL);
+				compositionNode = Scene.rootNode.CreateChild(NODE_NAME_COMPOSITION_RENDERER);
 				compositionNode.LocalTransformation = Pose.Identity;
 				if (compositionNode.CreateComponent(out compositionRenderer) && compositionRenderer != null)
 				{
@@ -294,15 +295,11 @@ namespace FragEngine3.Graphics.Stack
 					continue;
 				}
 
-				//TEST TEST TEST TEST
-				//camera.SetOverrideRenderTargets(core.Device.SwapchainFramebuffer, false);
-				//TEST TEST TEST TEST
-
 				GatherLightsForCamera(in _lights, camera);
 
 				success &= TryRenderCamera(_scene, _renderers, camera, maxActiveLightCount);
 			
-				// Composite results to backbuffer:
+				// Composite results:
 				success &= CompositeFinalOutput(camera, maxActiveLightCount);
 			}
 			
@@ -539,12 +536,15 @@ namespace FragEngine3.Graphics.Stack
 			}
 			Material compositionMaterial = (compositionRenderer.MaterialHandle!.GetResource(true, true) as Material)!;
 
-			Framebuffer backbuffer = core.Device.SwapchainFramebuffer;
-
-			if (!_camera.SetOverrideRenderTargets(backbuffer, false))
+			// If this is the main camera, ouput composited image directly to the swapchain's backbuffer:
+			if (_camera.IsMainCamera)
 			{
-				Logger.LogError("Failed to set override render targets for graphics stack's composition pass!");
-				return false;
+				Framebuffer backbuffer = core.Device.SwapchainFramebuffer;
+				if (!_camera.SetOverrideRenderTargets(backbuffer, false))
+				{
+					Logger.LogError("Failed to set override render targets for graphics stack's composition pass!");
+					return false;
+				}
 			}
 
 			if (!_camera.BeginFrame(cmdList, RenderMode.Custom, _maxActiveLightCount, false, out GraphicsDrawContext drawCtx, out CameraContext cameraCtx))
@@ -553,53 +553,53 @@ namespace FragEngine3.Graphics.Stack
 				return false;
 			}
 
+			bool success = true;
+
+			// Create resource set containing all render targets that were previously drawn to:
 			ResourceLayout resourceLayout = compositionMaterial.BoundResourceLayout!;
 			if (resourceLayout != null && (compositionResourceSet == null || compositionResourceSet.IsDisposed))
 			{
-				_camera.GetOrCreateOwnRenderTargets(RenderMode.Opaque, out CameraTarget? opaqueTarget);
-				_camera.GetOrCreateOwnRenderTargets(RenderMode.Transparent, out CameraTarget? transparentTarget);
-				_camera.GetOrCreateOwnRenderTargets(RenderMode.UI, out CameraTarget? uiTarget);
+				success &= _camera.GetOrCreateOwnRenderTargets(RenderMode.Opaque, out CameraTarget? opaqueTarget);
+				success &= _camera.GetOrCreateOwnRenderTargets(RenderMode.Transparent, out CameraTarget? transparentTarget);
+				success &= _camera.GetOrCreateOwnRenderTargets(RenderMode.UI, out CameraTarget? uiTarget);
+				if (!success)
+				{
+					Logger.LogError("Failed to get camera's render targets needed for output composition!");
+					return false;
+				}
 
-				Texture texOpaqueColor = opaqueTarget!.texColorTarget;
-				Texture texOpaqueDepth = opaqueTarget!.texDepthTarget;
+				try
+				{
+					BindableResource[] resources =
+					[
+						opaqueTarget?.texColorTarget!,
+						opaqueTarget?.texDepthTarget!,
+						transparentTarget?.texColorTarget!,
+						transparentTarget?.texDepthTarget!,
+						uiTarget?.texColorTarget!,
+					];
+					ResourceSetDescription resourceSetDesc = new(resourceLayout, resources);
 
-				Texture texTransparentColor = transparentTarget!.texColorTarget;
-				Texture texTransparentDepth = transparentTarget!.texDepthTarget;
-
-				Texture texUIColor = uiTarget!.texColorTarget;
-
-				ResourceSetDescription resourceSetDesc = new(
-					resourceLayout,
-					texOpaqueColor,
-					texOpaqueDepth,
-					texTransparentColor,
-					texTransparentDepth,
-					texUIColor);
-
-				compositionResourceSet = core.MainFactory.CreateResourceSet(ref resourceSetDesc);
+					compositionResourceSet = core.MainFactory.CreateResourceSet(ref resourceSetDesc);
+				}
+				catch (Exception ex)
+				{
+					Logger.LogException("Failed to create resource set containing render targets for output composition!", ex, EngineCore.Logging.LogEntrySeverity.Major);
+					return false;
+				}
 			}
 
+			// Bind render targets:
 			if (compositionResourceSet != null && !compositionRenderer.SetOverrideBoundResourceSet(compositionResourceSet))
 			{
 				Logger.LogError("Failed to override bound resource set for graphics stack's composition pass!");
 				return false;
 			}
 
-			bool success = compositionRenderer.Draw(drawCtx, cameraCtx);
+			// Send draw calls for output composition:
+			success &= compositionRenderer.Draw(drawCtx, cameraCtx);
 
 			success &= _camera.EndFrame(cmdList);
-
-			//if (_camera.GetActiveRenderTargets(RenderMode.Custom, out CameraTarget? customTarget) && customTarget != null)
-			//{
-			//	Framebuffer backbuffer = core.Device.SwapchainFramebuffer;
-			//	Texture texBackbufferColor = backbuffer.ColorTargets[0].Target;
-			//	Texture texBackbufferDepth = backbuffer.DepthTarget!.Value.Target;
-			//	Texture texCameraColor = customTarget.texColorTarget;
-			//	Texture texCameraDepth = customTarget.texDepthTarget;
-			//
-			//	core.MainCommandList.CopyTexture(texCameraColor, texBackbufferColor, 0, 0);
-			//	core.MainCommandList.CopyTexture(texCameraDepth, texBackbufferDepth, 0, 0);
-			//}
 
 			return success;
 		}
