@@ -1,4 +1,5 @@
-﻿using FragEngine3.Graphics;
+﻿using FragEngine3.EngineCore.Input;
+using FragEngine3.Graphics;
 using FragEngine3.Graphics.Components;
 using FragEngine3.Graphics.Resources;
 using FragEngine3.Graphics.Resources.Data;
@@ -101,7 +102,7 @@ namespace FragEngine3.EngineCore.Test
 				camera.ResolutionY = (uint)window.Height;
 				//camera.OutputFormat = Veldrid.PixelFormat.R16_G16_B16_A16_UNorm;
 
-				camera.Projection = Camera.ProjectionType.Perpective;
+				camera.Projection = Camera.ProjectionType.Orthographic;
 				camera.FieldOfViewDegrees = 60.0f;
 				camera.NearClipPlane = 0.1f;
 				camera.FarClipPlane = 1000.0f;
@@ -124,15 +125,15 @@ namespace FragEngine3.EngineCore.Test
 			}
 
 			SceneNode rabbitNode = scene.rootNode.CreateChild("Rabbit");
-			rabbitNode.LocalPosition = new Vector3(-1, 0, 5);
+			rabbitNode.LocalPosition = new Vector3(0, 0, 0);
 			rabbitNode.LocalRotation = Quaternion.Identity;
 			rabbitNode.LocalScale = Vector3.One;
-			rabbitNode.SetEnabled(false);
+			//rabbitNode.SetEnabled(false);
 			if (rabbitNode.CreateComponent(out StaticMeshRenderer? rabbitRenderer) && rabbitRenderer != null)
 			{
-				rabbitRenderer.SetMesh("Rabbit.obj");
-				//rabbitRenderer.SetMaterial("Mtl_DefaultSurface");
-				rabbitRenderer.SetMaterial("Mtl_TestMaterial");
+				rabbitRenderer.SetMesh("Cube.obj");
+				rabbitRenderer.SetMaterial("Mtl_DefaultSurface");
+				//rabbitRenderer.SetMaterial("Mtl_TestMaterial");
 			}
 
 			MeshPrimitiveFactory.CreateCubeMesh("Cube", Engine, new(1, 1, 1), false, out _, out _, out ResourceHandle cubeHandle);
@@ -140,7 +141,7 @@ namespace FragEngine3.EngineCore.Test
 			cubeNode.LocalPosition = Vector3.Zero;
 			cubeNode.LocalRotation = Quaternion.Identity;
 			cubeNode.LocalScale = Vector3.One;
-			//cubeNode.SetEnabled(false);
+			cubeNode.SetEnabled(false);
 			if (cubeNode.CreateComponent(out StaticMeshRenderer? cubeRenderer) && cubeRenderer != null)
 			{
 				//cubeRenderer.SetMesh("Cube.obj");
@@ -163,9 +164,6 @@ namespace FragEngine3.EngineCore.Test
 				[
 					0, 2, 1,
 					2, 3, 1,
-
-					0, 1, 2,
-					2, 1, 3,
 				],
 			};
 			StaticMesh quadMesh = new("Quad", Engine, false, out ResourceHandle quadHandle);
@@ -195,24 +193,25 @@ namespace FragEngine3.EngineCore.Test
 
 			Scene scene = Engine.SceneManager.MainScene!;
 			
-			//if (scene.FindNode("Rabbit", out SceneNode? rabbitNode) && rabbitNode != null)
-			//{
-			//	float radPerSec = 2 * MathF.PI / 10;
-			//	float deltaTime = (float)Engine.TimeManager.DeltaTime.TotalSeconds;
-			//	float time = (float)Engine.TimeManager.RunTime.TotalSeconds;
-			//
-			//	Pose localPose = rabbitNode.LocalTransformation;
-			//	localPose.position = new(0, -5, MathF.Sin(time) + 10);
-			//	localPose.Rotate(Quaternion.CreateFromAxisAngle(Vector3.UnitY, radPerSec * deltaTime));
-			//	localPose.scale = Vector3.One * 0.01f;
-			//	rabbitNode.LocalTransformation = localPose;
-			//}
+			if (scene.FindNode("Rabbit", out SceneNode? rabbitNode) && rabbitNode != null)
+			{
+				float radPerSec = 2 * MathF.PI / 10;
+				float deltaTime = (float)Engine.TimeManager.DeltaTime.TotalSeconds;
+				//float time = (float)Engine.TimeManager.RunTime.TotalSeconds;
+			
+				Pose localPose = rabbitNode.LocalTransformation;
+				//localPose.position = new(0, -5, MathF.Sin(time) + 10);
+				localPose.Rotate(Quaternion.CreateFromAxisAngle(Vector3.UnitY, radPerSec * deltaTime));
+				//localPose.scale = Vector3.One * 0.01f;
+				rabbitNode.LocalTransformation = localPose;
+			}
 
 			if (scene.FindNode("Cube", out SceneNode? quadNode) && quadNode != null)
 			{
-				float dt = Engine.TimeManager.DeltaTimeMs * 0.0005f;
+				float dt = Engine.TimeManager.DeltaTimeMs * 0.005f;
 				Pose localPose = quadNode.LocalTransformation;
-				localPose.Rotate(Quaternion.CreateFromYawPitchRoll(10 * dt, 5 * dt, 5 * dt));
+				Vector3 input = Engine.InputManager.GetKeyAxesSmoothed(InputAxis.WASD);
+				localPose.Rotate(Quaternion.CreateFromYawPitchRoll(input.X * dt, input.Y * dt, input.Z * dt));
 				quadNode.LocalTransformation = localPose;
 			}
 
@@ -225,7 +224,6 @@ namespace FragEngine3.EngineCore.Test
 			//camNode.LocalRotation = Quaternion.CreateFromAxisAngle(Vector3.UnitY, angle);
 			//Matrix4x4 mtxLookAt = Matrix4x4.CreateLookAtLeftHanded(camNode.LocalPosition, Vector3.Zero, Vector3.UnitY);
 			//camNode.LocalRotation = Quaternion.CreateFromRotationMatrix(mtxLookAt);
-
 
 			return true;
 		}

@@ -1,4 +1,4 @@
-﻿using System;
+﻿
 namespace FragEngine3.EngineCore.Logging
 {
 	public static class LoggerConstants

@@ -2,82 +2,23 @@
 using System.Numerics;
 using Veldrid;
 
-namespace FragEngine3.EngineCore
+namespace FragEngine3.EngineCore.Input
 {
 	public sealed class InputManager : IEngineSystem
 	{
-		#region Types
-
-		public enum Axis : int
-		{
-			WASD		= 0,
-			IJKL,
-			ArrowKeys,
-		}
-
-		private struct ButtonState()
-		{
-			public bool IsDown { get; private set; } = false;
-			public bool WasDown { get; private set; } = false;
-
-			public readonly bool IsClicked => IsDown && !WasDown;
-			public readonly bool IsReleased => !IsDown && WasDown;
-
-			public void Update(bool _newIsDown)
-			{
-				WasDown = IsDown;
-				IsDown = _newIsDown;
-			}
-		}
-
-		private struct KeyAxes(Key _xNegative, Key _yNegative, Key _zNegative, Key _xPositive, Key _yPositive, Key _zPositive)
-		{
-			private readonly Key xNegative = _xNegative;
-			private readonly Key yNegative = _yNegative;
-			private readonly Key zNegative = _zNegative;
-
-			private readonly Key xPositive = _xPositive;
-			private readonly Key yPositive = _yPositive;
-			private readonly Key zPositive = _zPositive;
-
-			public Vector3 Value { get; private set; } = Vector3.Zero;
-			public Vector3 PrevValue { get; private set; } = Vector3.Zero;
-			public Vector3 SmoothedValue { get; private set; } = Vector3.Zero;
-			public readonly Vector3 ValueDiff => Value - PrevValue;
-
-			public void Update(in ButtonState[] _keyStates, float _smoothingDiff)
-			{
-				PrevValue = Value;
-				Value = new(
-					GetAxis(in _keyStates, xNegative, xPositive),
-					GetAxis(in _keyStates, yNegative, yPositive),
-					GetAxis(in _keyStates, zNegative, zPositive));
-				SmoothedValue = VectorExt.MoveTowards(SmoothedValue, Value, _smoothingDiff);
-			}
-
-			private static float GetAxis(in ButtonState[] _keyStates, Key _keyNegative, Key _keyPositive)
-			{
-				float x = 0.0f;
-				if (_keyStates[(int)_keyNegative].IsDown) x -= 1;
-				if (_keyStates[(int)_keyPositive].IsDown) x += 1;
-				return x;
-			}
-		}
-
-		#endregion
 		#region Constructors
 
 		public InputManager(Engine _engine)
 		{
 			engine = _engine ?? throw new ArgumentNullException(nameof(_engine), "Engine may not be null!");
 
-			mouseButtonStates = new ButtonState[14];
+			mouseButtonStates = new InputButtonState[14];
 			for (int i = 0; i < mouseButtonStates.Length; i++)
 			{
 				mouseButtonStates[i] = new();
 			}
 
-			keyStates = new ButtonState[(int)Key.LastKey];
+			keyStates = new InputButtonState[(int)Key.LastKey];
 			for (int i = 0; i < keyStates.Length; i++)
 			{
 				keyStates[i] = new();
@@ -102,13 +43,13 @@ namespace FragEngine3.EngineCore
 
 		public readonly Engine engine;
 
-		private readonly ButtonState[] mouseButtonStates;
-		private readonly ButtonState[] keyStates;
+		private readonly InputButtonState[] mouseButtonStates;
+		private readonly InputButtonState[] keyStates;
 
-		private readonly KeyAxes[] keyAxes =
+		private readonly InputKeyAxes[] keyAxes =
 		[
-			new (Key.A, Key.S, Key.Q, Key.D, Key.W, Key.E),
-			new (Key.J, Key.K, Key.U, Key.L, Key.I, Key.O),
+			new(Key.A, Key.S, Key.Q, Key.D, Key.W, Key.E),
+			new(Key.J, Key.K, Key.U, Key.L, Key.I, Key.O),
 			new(Key.Left, Key.Down, Key.PageDown, Key.Right, Key.Up, Key.PageUp),
 		];
 		private float keyAxisSmoothing = 6.0f;
@@ -137,6 +78,10 @@ namespace FragEngine3.EngineCore
 		public Vector2 MouseVelocity { get; private set; } = new();
 		public float MouseWheel { get; private set; } = 0.0f;
 
+		/// <summary>
+		/// Gets or sets a smoothing time for transitioning from a previous input axes value to the current raw input value.
+		/// This value is given in how many seconds it takes to go from an input value of 0 (no pressed) to 1 (fully pressed).
+		/// </summary>
 		public float KeyAxisSmoothing
 		{
 			get => keyAxisSmoothing;
@@ -166,9 +111,9 @@ namespace FragEngine3.EngineCore
 		public bool GetKeyDown(Key _key) => keyStates[(int)_key].IsClicked;
 		public bool GetKeyUp(Key _key) => keyStates[(int)_key].IsReleased;
 
-		public Vector3 GetKeyAxes(Axis _axis) => keyAxes[(int)_axis].Value;
-		public Vector3 GetKeyAxesSmoothed(Axis _axis) => keyAxes[(int)_axis].SmoothedValue;
-		public Vector3 GetKeyAxesDiff(Axis _axis) => keyAxes[(int)_axis].ValueDiff;
+		public Vector3 GetKeyAxes(InputAxis _axis) => keyAxes[(int)_axis].Value;
+		public Vector3 GetKeyAxesSmoothed(InputAxis _axis) => keyAxes[(int)_axis].SmoothedValue;
+		public Vector3 GetKeyAxesDiff(InputAxis _axis) => keyAxes[(int)_axis].ValueDiff;
 
 		/// <summary>
 		/// Update all input states for the current frame.<para/>
@@ -189,7 +134,7 @@ namespace FragEngine3.EngineCore
 				return false;
 			}
 
-			long newInputStateUpdateTimeMs  = stopwatch.ElapsedMilliseconds;
+			long newInputStateUpdateTimeMs = stopwatch.ElapsedMilliseconds;
 			long inputDeltatimeMs = lastInputStateUpdateTimeMs - newInputStateUpdateTimeMs;
 
 			// Update mouse button states and events:
@@ -213,7 +158,7 @@ namespace FragEngine3.EngineCore
 			}
 
 			// Update keyboard input axes: (ex.: WASD)
-			float axisSmoothingDiff = keyAxisSmoothing * (float)Engine.TimeManager.DeltaTime.TotalSeconds;
+			float axisSmoothingDiff = keyAxisSmoothing * (inputDeltatimeMs * 1000);
 			for (int i = 0; i < keyAxes.Length; ++i)
 			{
 				keyAxes[i].Update(in keyStates, axisSmoothingDiff);

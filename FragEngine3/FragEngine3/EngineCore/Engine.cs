@@ -1,4 +1,5 @@
 ﻿using FragEngine3.EngineCore.Config;
+using FragEngine3.EngineCore.Input;
 using FragEngine3.EngineCore.Logging;
 using FragEngine3.Graphics;
 using FragEngine3.Resources;
@@ -312,6 +313,8 @@ namespace FragEngine3.EngineCore
 				computeTimeSum += TimeManager.LastFrameDuration;
 				frameTimeSum += TimeManager.DeltaTime;
 				Thread.Sleep(threadSleepTime.Milliseconds);
+
+				//TODO [later]: Consider adding empty loop for delaying those last fractions of a millisecond.
 			}
 
 			SetState(EngineState.Unloading);
