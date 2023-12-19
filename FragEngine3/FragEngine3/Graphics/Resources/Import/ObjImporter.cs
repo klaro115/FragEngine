@@ -443,9 +443,9 @@ namespace FragEngine3.Graphics.Resources.Import
 			_indices.Add(curFaceIndices[2]);
 			if (vertexIdx == 4)
 			{
-				_indices.Add(curFaceIndices[1]);
-				_indices.Add(curFaceIndices[3]);
+				_indices.Add(curFaceIndices[0]);
 				_indices.Add(curFaceIndices[2]);
+				_indices.Add(curFaceIndices[3]);
 			}
 			return true;
 		}

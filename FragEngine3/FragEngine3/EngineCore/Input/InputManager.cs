@@ -135,7 +135,7 @@ namespace FragEngine3.EngineCore.Input
 			}
 
 			long newInputStateUpdateTimeMs = stopwatch.ElapsedMilliseconds;
-			long inputDeltatimeMs = lastInputStateUpdateTimeMs - newInputStateUpdateTimeMs;
+			long inputDeltatimeMs = newInputStateUpdateTimeMs - lastInputStateUpdateTimeMs;
 
 			// Update mouse button states and events:
 			foreach (MouseEvent mouseEvent in _snapshot.MouseEvents)
@@ -158,7 +158,7 @@ namespace FragEngine3.EngineCore.Input
 			}
 
 			// Update keyboard input axes: (ex.: WASD)
-			float axisSmoothingDiff = keyAxisSmoothing * (inputDeltatimeMs * 1000);
+			float axisSmoothingDiff = Math.Clamp(keyAxisSmoothing * (inputDeltatimeMs * 1000), 0.0f, 1.0f);
 			for (int i = 0; i < keyAxes.Length; ++i)
 			{
 				keyAxes[i].Update(in keyStates, axisSmoothingDiff);

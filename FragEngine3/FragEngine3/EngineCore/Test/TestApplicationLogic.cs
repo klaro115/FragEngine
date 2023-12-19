@@ -73,11 +73,11 @@ namespace FragEngine3.EngineCore.Test
 			// Import 3D models:
 			if (Engine.ResourceManager.GetResource("Cube.obj", out ResourceHandle handle))
 			{
-				handle.Load(true);
+				//handle.Load(true);
 			}
 			if (Engine.ResourceManager.GetResource("Rabbit.obj", out handle))
 			{
-				//handle.Load(true);
+				handle.Load(true);
 			}
 			if (Engine.ResourceManager.GetResource("Mtl_DefaultSurface", out handle))
 			{
@@ -102,7 +102,7 @@ namespace FragEngine3.EngineCore.Test
 				camera.ResolutionY = (uint)window.Height;
 				//camera.OutputFormat = Veldrid.PixelFormat.R16_G16_B16_A16_UNorm;
 
-				camera.Projection = Camera.ProjectionType.Orthographic;
+				camera.Projection = Camera.ProjectionType.Perpective;
 				camera.FieldOfViewDegrees = 60.0f;
 				camera.NearClipPlane = 0.1f;
 				camera.FarClipPlane = 1000.0f;
@@ -125,13 +125,13 @@ namespace FragEngine3.EngineCore.Test
 			}
 
 			SceneNode rabbitNode = scene.rootNode.CreateChild("Rabbit");
-			rabbitNode.LocalPosition = new Vector3(0, 0, 0);
+			rabbitNode.LocalPosition = new Vector3(0, -0.25f, 0);
 			rabbitNode.LocalRotation = Quaternion.Identity;
-			rabbitNode.LocalScale = Vector3.One;
+			rabbitNode.LocalScale = Vector3.One * 5;
 			//rabbitNode.SetEnabled(false);
 			if (rabbitNode.CreateComponent(out StaticMeshRenderer? rabbitRenderer) && rabbitRenderer != null)
 			{
-				rabbitRenderer.SetMesh("Cube.obj");
+				rabbitRenderer.SetMesh("Rabbit.obj");
 				rabbitRenderer.SetMaterial("Mtl_DefaultSurface");
 				//rabbitRenderer.SetMaterial("Mtl_TestMaterial");
 			}
@@ -208,7 +208,7 @@ namespace FragEngine3.EngineCore.Test
 
 			if (scene.FindNode("Cube", out SceneNode? quadNode) && quadNode != null)
 			{
-				float dt = Engine.TimeManager.DeltaTimeMs * 0.005f;
+				float dt = (float)Engine.TimeManager.DeltaTime.TotalSeconds * 5;
 				Pose localPose = quadNode.LocalTransformation;
 				Vector3 input = Engine.InputManager.GetKeyAxesSmoothed(InputAxis.WASD);
 				localPose.Rotate(Quaternion.CreateFromYawPitchRoll(input.X * dt, input.Y * dt, input.Z * dt));
