@@ -77,7 +77,7 @@ namespace FragEngine3.EngineCore.Test
 			}
 			if (Engine.ResourceManager.GetResource("Rabbit.obj", out handle))
 			{
-				handle.Load(true);
+				//handle.Load(true);
 			}
 			if (Engine.ResourceManager.GetResource("Mtl_DefaultSurface", out handle))
 			{

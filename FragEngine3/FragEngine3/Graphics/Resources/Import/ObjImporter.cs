@@ -59,6 +59,16 @@ namespace FragEngine3.Graphics.Resources.Import
 			public string name = string.Empty;
 		}
 		
+		private sealed class GeometryData
+		{
+			public readonly List<Vector3> positions = new(256);
+			public readonly List<Vector3> normals = new(256);
+			public readonly List<Vector2> uvs = new(256);
+			public readonly List<VertexIndices> vertexIndices = new(256);
+			public readonly List<SubMesh> subMeshes = new(4);
+			public readonly List<string> subMeshMaterialNames = new(4);
+		}
+
 		#endregion
 		#region Constants
 
@@ -83,12 +93,7 @@ namespace FragEngine3.Graphics.Resources.Import
 				return false;
 			}
 
-			List<Vector3> positions = new(256);
-			List<Vector3> normals = new(256);
-			List<Vector2> uvs = new(256);
-			List<VertexIndices> vertexIndices = new(256);
-			List<SubMesh> subMeshes = new(4);
-			List<string> subMeshMaterialNames = new(4);
+			GeometryData geometryData = new();
 
 			// Read lines one after another:
 			Buffers buffers = new();
@@ -96,26 +101,31 @@ namespace FragEngine3.Graphics.Resources.Import
 			{
 				if (ReadLine(_streamUtf8, ref buffers))
 				{
-					ParseLine(in buffers, positions, normals, uvs, vertexIndices, subMeshes, subMeshMaterialNames);
+					ParseLine(in buffers, geometryData);
 				}
 			}
 			while (!buffers.eof);
 
 
 			// Generate badic vertex data only for referenced vertices, and remap duplicate vertex indices:
-			Stack<BasicVertex> vertices = new(positions.Count);	// Stack of all unique verts, in reverse order of use.
-			int[] mappedIndices = new int[vertexIndices.Count];			// for each triangle idx, contains idx of first occurancee of duplicate vert.
-			int[] uniqueVertexIndices = new int[vertexIndices.Count];	// for unique verts, contains idx of vertex on stack.
+			Stack<BasicVertex> vertices = new(geometryData.positions.Count);	// Stack of all unique verts, in reverse order of use.
+			int[] mappedIndices = new int[geometryData.vertexIndices.Count];			// for each triangle idx, contains idx of first occurancee of duplicate vert.
+			int[] uniqueVertexIndices = new int[geometryData.vertexIndices.Count];	// for unique verts, contains idx of vertex on stack.
 
-			for (int i = vertexIndices.Count - 1; i >= 0 ; i--)
+			int posCount = geometryData.positions.Count;
+			int normCount = geometryData.normals.Count;
+			int uvCount = geometryData.uvs.Count;
+			int vertIdxCount = geometryData.vertexIndices.Count;
+
+			for (int i = vertIdxCount - 1; i >= 0 ; i--)
 			{
-				VertexIndices viA = vertexIndices[i];
+				VertexIndices viA = geometryData.vertexIndices[i];
 				int mappedIdx = i;
 
 				// Check if this vertex is duplicate, remap it if so:
 				for (int j = 0; j < i; ++j)
 				{
-					VertexIndices viB = vertexIndices[j];
+					VertexIndices viB = geometryData.vertexIndices[j];
 					if (viA == viB)
 					{
 						mappedIdx = j;
@@ -131,9 +141,9 @@ namespace FragEngine3.Graphics.Resources.Import
 					uniqueVertexIndices[i] = vertices.Count;
 					vertices.Push(new BasicVertex()
 					{
-						position = viA.position >= 0 && viA.position < positions.Count ? positions[viA.position] : Vector3.Zero,
-						normal   = viA.normal >= 0 && viA.normal < normals.Count ? normals[viA.normal] : Vector3.UnitY,
-						uv       = viA.uv >= 0 && viA.uv < uvs.Count ? uvs[viA.uv] : Vector2.Zero,
+						position = viA.position >= 0	&& viA.position < posCount	? geometryData.positions[viA.position]	: Vector3.Zero,
+						normal   = viA.normal >= 0		&& viA.normal < normCount	? geometryData.normals[viA.normal]		: Vector3.UnitY,
+						uv       = viA.uv >= 0			&& viA.uv < uvCount			? geometryData.uvs[viA.uv]				: Vector2.Zero,
 					});
 				}
 			}
@@ -144,8 +154,8 @@ namespace FragEngine3.Graphics.Resources.Import
 
 			if (vertices.Count <= ushort.MaxValue)
 			{
-				triangleIndices16 = new ushort[vertexIndices.Count];
-				for (int i = 0; i < vertexIndices.Count; ++i)
+				triangleIndices16 = new ushort[vertIdxCount];
+				for (int i = 0; i < vertIdxCount; ++i)
 				{
 					int mappedIdx = mappedIndices[i];
 					triangleIndices16[i] = (ushort)uniqueVertexIndices[mappedIdx];
@@ -153,8 +163,8 @@ namespace FragEngine3.Graphics.Resources.Import
 			}
 			else
 			{
-				triangleIndices32 = new int[vertexIndices.Count];
-				for (int i = 0; i < vertexIndices.Count; ++i)
+				triangleIndices32 = new int[vertIdxCount];
+				for (int i = 0; i < vertIdxCount; ++i)
 				{
 					int mappedIdx = mappedIndices[i];
 					triangleIndices32[i] = uniqueVertexIndices[mappedIdx];
@@ -205,14 +215,7 @@ namespace FragEngine3.Graphics.Resources.Import
 			return _buffers.charLength != 0;
 		}
 
-		private static bool ParseLine(
-			in Buffers _buffers,
-			List<Vector3> _positions,
-			List<Vector3> _normals,
-			List<Vector2> _uvs,
-			List<VertexIndices> _indices,
-			List<SubMesh> _subMeshes,
-			List<string> _subMeshMaterialNames)
+		private static bool ParseLine(in Buffers _buffers, GeometryData _geometryData)
 		{
 			string txt;
 			char prefix = _buffers.utf16[0];
@@ -225,23 +228,23 @@ namespace FragEngine3.Graphics.Resources.Import
 					type = _buffers.utf16[1];
 					return type switch
 					{
-						'n' => ParseVector3(_buffers, _normals),	// Normal vector
-						't' => ParseVector2(_buffers, _uvs),		// Texture coordinate
-						_ => ParseVector3(_buffers, _positions),	// Position
+						'n' => ParseVector3(_buffers, _geometryData.normals),	// Normal vector
+						't' => ParseVector2(_buffers, _geometryData.uvs),		// Texture coordinate
+						_ => ParseVector3(_buffers, _geometryData.positions),	// Position
 					};
 
 				// Parse a single face's indices:
 				case 'f':
-					return ParseFace(_buffers, _indices);
+					return ParseFace(_buffers, _geometryData.vertexIndices);
 
 				// Start a new submesh:
 				case 'o':
 					
 					txt = new string(_buffers.utf16, 2, _buffers.charLength - 3);
-					_subMeshes.Add(new SubMesh()
+					_geometryData.subMeshes.Add(new SubMesh()
 					{
 						name = txt,
-						startIdx = _indices.Count,
+						startIdx = _geometryData.vertexIndices.Count,
 					});
 					return true;
 
@@ -259,7 +262,7 @@ namespace FragEngine3.Graphics.Resources.Import
 					txt = new string(_buffers.utf16, 0, _buffers.charLength);
 					if (txt.StartsWith(KEYWORD_SUBMESH_MATERIAL, StringComparison.InvariantCultureIgnoreCase))
 					{
-						return ParseSubMeshMaterial(txt, _subMeshes, _subMeshMaterialNames);
+						return ParseSubMeshMaterial(txt, _geometryData.subMeshes, _geometryData.subMeshMaterialNames);
 					}
 					return false;
 
