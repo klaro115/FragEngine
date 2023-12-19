@@ -1,11 +1,12 @@
 ﻿using FragEngine3.EngineCore;
 using FragEngine3.Graphics.Resources.Data;
+using System.Globalization;
 using System.Numerics;
 using System.Text;
 
 namespace FragEngine3.Graphics.Resources.Import
 {
-    public static class ObjImporter
+	public static class ObjImporter
 	{
 		#region Types
 
@@ -70,6 +71,14 @@ namespace FragEngine3.Graphics.Resources.Import
 		}
 
 		#endregion
+		#region Fields
+
+		/// <summary>
+		/// Invariant culture is used and assumed when parsing floating-point values from string. The decimal separator must be a period '.'; commas are not supported!
+		/// </summary>
+		private static readonly CultureInfo culture = CultureInfo.InvariantCulture;
+
+		#endregion
 		#region Constants
 
 		private const string KEYWORD_MATERIAL_LIBRARY = "mtllib ";
@@ -108,8 +117,8 @@ namespace FragEngine3.Graphics.Resources.Import
 
 
 			// Generate badic vertex data only for referenced vertices, and remap duplicate vertex indices:
-			Stack<BasicVertex> vertices = new(geometryData.positions.Count);	// Stack of all unique verts, in reverse order of use.
-			int[] mappedIndices = new int[geometryData.vertexIndices.Count];			// for each triangle idx, contains idx of first occurancee of duplicate vert.
+			Stack<BasicVertex> vertices = new(geometryData.positions.Count);		// Stack of all unique verts, in reverse order of use.
+			int[] mappedIndices = new int[geometryData.vertexIndices.Count];		// for each triangle idx, contains idx of first occurancee of duplicate vert.
 			int[] uniqueVertexIndices = new int[geometryData.vertexIndices.Count];	// for unique verts, contains idx of vertex on stack.
 
 			int posCount = geometryData.positions.Count;
@@ -174,7 +183,7 @@ namespace FragEngine3.Graphics.Resources.Import
 			// Assemble mesh data and return success if valid:
 			_outMeshData = new()
 			{
-				verticesBasic = vertices.ToArray(),
+				verticesBasic = [.. vertices],
 				verticesExt = null,
 
 				indices16 = triangleIndices16,
@@ -301,7 +310,7 @@ namespace FragEngine3.Graphics.Resources.Import
 
 					// Set value on vector:
 					ReadOnlySpan<char> span = _buffers.utf16.AsSpan(i, endIdx - i);
-					if (float.TryParse(span, out float value))
+					if (float.TryParse(span, culture, out float value))
 					{
 						v[componentIdx] = value;
 					}
@@ -338,7 +347,7 @@ namespace FragEngine3.Graphics.Resources.Import
 
 					// Set value on vector:
 					ReadOnlySpan<char> span = _buffers.utf16.AsSpan(i, endIdx - i);
-					if (float.TryParse(span, out float value))
+					if (float.TryParse(span, culture, out float value))
 					{
 						v[componentIdx] = value;
 					}
