@@ -10,7 +10,10 @@ namespace FragEngine3.EngineCore
 		{
 			engine = _engine ?? throw new ArgumentNullException(nameof(_engine), "Engine may not be null!");
 
-			applicationPath = Path.GetFullPath(Environment.CurrentDirectory);
+			string? entryPath = Path.GetDirectoryName(System.Reflection.Assembly.GetEntryAssembly()?.Location);
+			applicationPath = entryPath ?? Environment.CurrentDirectory;
+			applicationPath = Path.GetFullPath(applicationPath);
+			
 			logDirAbsPath = Path.Combine(applicationPath, LoggerConstants.LOG_FILE_DIR_REL_PATH);
 			logFileAbsPath = Path.Combine(logDirAbsPath, LoggerConstants.MAIN_LOG_FILE_NAME);
 		}

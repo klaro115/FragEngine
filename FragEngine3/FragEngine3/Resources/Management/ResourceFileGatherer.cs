@@ -23,7 +23,10 @@ namespace FragEngine3.Resources.Management
 		{
 			resourceManager = _resourceManager ?? throw new ArgumentNullException(nameof(_resourceManager), "Resource manager may not be null!");
 
-			applicationPath = Path.GetFullPath(Environment.CurrentDirectory);
+			string? entryPath = Path.GetDirectoryName(System.Reflection.Assembly.GetEntryAssembly()?.Location);
+			applicationPath = entryPath ?? Environment.CurrentDirectory;
+			applicationPath = Path.GetFullPath(applicationPath);
+			
 			rootResourcePath = Path.Combine(applicationPath, ResourceConstants.RESOURCE_ROOT_DIR_REL_PATH);
 			coreResourcePath = Path.Combine(rootResourcePath, ResourceConstants.RESOURCE_CORE_DIR_REL_PATH);
 			modsResourcePath = Path.Combine(rootResourcePath, ResourceConstants.RESOURCE_MODS_DIR_REL_PATH);
