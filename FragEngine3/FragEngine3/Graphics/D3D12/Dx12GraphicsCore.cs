@@ -15,10 +15,12 @@ namespace FragEngine3.Graphics.D3D12
 
 		private static readonly GraphicsCapabilities capabilities = new();
 
-		#endregion
-		#region Properties
+        #endregion
+        #region Properties
 
-		private Logger Logger => graphicsSystem.engine.Logger ?? Logger.Instance!;
+        public override EnginePlatformFlag ApiPlatformFlag => EnginePlatformFlag.GraphicsAPI_D3D;
+
+        private Logger Logger => graphicsSystem.engine.Logger ?? Logger.Instance!;
 
 		#endregion
 		#region Methods

@@ -32,7 +32,7 @@ namespace FragEngine3.EngineCore
 			SceneManager = new SceneManager(this);
 			//...
 
-			SetState(EngineState.None, false);
+			SetState(EngineState.None, false, true);
 		}
 		~Engine()
 		{
@@ -118,7 +118,7 @@ namespace FragEngine3.EngineCore
 			}
 		}
 
-		private void SetState(EngineState _newState, bool _verbose = true)
+		private void SetState(EngineState _newState, bool _verbose = true, bool _force = false)
 		{
 			EngineState prevState;
 			bool stateChanged;
@@ -131,7 +131,7 @@ namespace FragEngine3.EngineCore
 				State = _newState;
 			}
 
-			if (stateChanged)
+			if (stateChanged || _force)
 			{
 				// Log average frame timings of the previous state:
 				long stateFrameCount = TimeManager.FrameCount - stateStartFrameCount;
@@ -162,6 +162,9 @@ namespace FragEngine3.EngineCore
 					};
 					Logger.LogStatus(message);
 				}
+
+				// Ensure all OS and environment flags are up-to-date:
+				PlatformSystem.UpdatePlatformFlags();
 
 				// Update states of application logic; exit if an error occures at this level:
 				bool logicUpdated = applicationLogic.SetEngineState(prevState, _newState);

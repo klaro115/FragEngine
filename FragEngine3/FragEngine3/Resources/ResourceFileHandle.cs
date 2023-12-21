@@ -69,7 +69,7 @@ namespace FragEngine3.Resources
 		public readonly uint blockCount;
 
 		// Content details:
-		public string[] resources;
+		public readonly string[] resources;
 		private byte[]? dataBuffer = null;
 
 		private static readonly ResourceFileHandle none = new();
@@ -97,7 +97,7 @@ namespace FragEngine3.Resources
 			dataBuffer = null;
 		}
 
-		public bool TryOpenDataStream(ulong _dataOffset, ulong _dataSize, out Stream _outStream)
+		public bool TryOpenDataStream(IEngineSystem _engineSystem, ulong _dataOffset, ulong _dataSize, out Stream _outStream)
 		{
 			if (LoadState == ResourceLoadState.Loaded && dataBuffer != null)
 			{
@@ -105,9 +105,12 @@ namespace FragEngine3.Resources
 				return true;
 			}
 
-			if (!File.Exists(dataFilePath))
+			// Retarget data file to 
+			string actualDataFilePath = GetPlatformAdjustedDataFilePath(_engineSystem);
+
+			if (!File.Exists(actualDataFilePath))
 			{
-				Logger.Instance?.LogError($"Resource data file '{dataFilePath}' does not exist!");
+				Logger.Instance?.LogError($"Resource data file '{actualDataFilePath}' does not exist!");
 				_outStream = null!;
 				return false;
 			}
@@ -116,12 +119,12 @@ namespace FragEngine3.Resources
 			{
 				case ResourceFileType.Single:
 					{
-						_outStream = File.OpenRead(dataFilePath);
+						_outStream = File.OpenRead(actualDataFilePath);
 						return true;
 					}
 				case ResourceFileType.Batch_Compressed:
 					{
-						using FileStream compressedStream = File.OpenRead(dataFilePath);
+						using FileStream compressedStream = File.OpenRead(actualDataFilePath);
 						using DeflateStream decompressedStream = new(compressedStream, CompressionMode.Decompress);
 						using MemoryStream resultStream = new();
 
@@ -145,7 +148,7 @@ namespace FragEngine3.Resources
 			return false;
 		}
 
-		public bool TryReadResourceBytes(ResourceHandle _handle, out byte[] _outBytes, out int _outByteCount)
+		public bool TryReadResourceBytes(IEngineSystem _engineSystem, ResourceHandle _handle, out byte[] _outBytes, out int _outByteCount)
 		{
 			if (_handle == null)
 			{
@@ -180,7 +183,7 @@ namespace FragEngine3.Resources
 			Stream? stream = null;
 			try
 			{
-				if (!TryOpenDataStream(_handle.dataOffset, _handle.dataSize, out stream))
+				if (!TryOpenDataStream(_engineSystem, _handle.dataOffset, _handle.dataSize, out stream))
 				{
 					Logger.Instance?.LogError($"Failed to open data stream of file handle '{Key}' at data offset {_handle.dataOffset} and data size {_handle.dataSize}!");
 					_outBytes = [];
@@ -208,6 +211,43 @@ namespace FragEngine3.Resources
 			}
 		}
 
+		public string GetPlatformAdjustedDataFilePath(IEngineSystem _engineSystem)
+		{
+			if (string.IsNullOrEmpty(dataFilePath))
+			{
+				return string.Empty;
+			}
+			if (_engineSystem == null)
+			{
+				Logger.Instance?.LogError("Cannot get platform adjusted data file path using null engine reference!");
+				return string.Empty;
+			}
+			if (dataFileType != ResourceFileType.Single ||
+				ResourceCount != 1 ||
+				!_engineSystem.Engine.ResourceManager.GetResource(resources[0], out ResourceHandle resHandle))
+			{
+				return dataFilePath;
+			}
+			
+			PlatformSystem platformSystem = _engineSystem.Engine.PlatformSystem;
+			ResourceType resourceType = resHandle.resourceType;
+			
+			// Adjust path to use the resource's most likely platform-specific extension:
+			return platformSystem.AdjustForPlatformSpecificFileExtension(
+					resourceType,
+					dataFilePath,
+					out string adjustedPath)
+				? adjustedPath
+				: dataFilePath;
+		}
+
+		/// <summary>
+		/// Gets a serializable description object through which a file handle may be represented in save data.
+		/// </summary>
+		/// <param name="_resourceManager">The resource manager in which this file handle was registered.</param>
+		/// <param name="_outData">Outputs a data object that may be serialized into a "*.res" resource file,
+		/// or null, if the data generation fails.</param>
+		/// <returns>True if resource file data was generated successfully, false otherwise.</returns>
 		public bool GetResourceFileData(ResourceManager _resourceManager, out ResourceFileData? _outData)
 		{
 			if (_resourceManager == null || _resourceManager.IsDisposed)

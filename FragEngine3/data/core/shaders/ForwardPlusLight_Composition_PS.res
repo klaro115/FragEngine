@@ -11,6 +11,7 @@
         {
             "ResourceKey": "ForwardPlusLight_Composition_PS",
             "ResourceType": 4,
+            "PlatformFlags": 0,
             "DataOffset": 0,
             "DataSize": 0,
             "DependencyCount": 0,

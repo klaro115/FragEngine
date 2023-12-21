@@ -39,7 +39,7 @@ namespace FragEngine3.Graphics
 
 			// Create main window and main graphics device:
 			graphicsCore = CreateGraphicsCore();
-			if (graphicsCore == null || graphicsCore.IsDisposed) throw new NullReferenceException("Main graphics core may not be null!");
+			if (graphicsCore == null || graphicsCore.IsDisposed) throw new NullReferenceException("Main graphics core creation failed!");
 			graphicsCore.Initialize();
 		}
 

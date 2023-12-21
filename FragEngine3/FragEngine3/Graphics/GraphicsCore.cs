@@ -52,6 +52,8 @@ namespace FragEngine3.Graphics
 		public CommandList MainCommandList { get; protected set; } = null!;
 		public ResourceFactory MainFactory { get; protected set; } = null!;
 
+		public abstract EnginePlatformFlag ApiPlatformFlag { get; }
+
 		private Logger Logger => graphicsSystem.engine.Logger ?? Logger.Instance!;
 
 		#endregion

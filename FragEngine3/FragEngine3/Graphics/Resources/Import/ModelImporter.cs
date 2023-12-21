@@ -9,6 +9,7 @@ namespace FragEngine3.Graphics.Resources.Import
 		#region Methods
 
 		public static bool ImportModelData(
+			ResourceManager _resourceManager,
 			ResourceHandle _handle,
 			out MeshSurfaceData? _outSurfaceData
 			/* out ... */)
@@ -53,7 +54,7 @@ namespace FragEngine3.Graphics.Resources.Import
 			try
 			{
 				// Open file stream:
-				if (!fileHandle.TryOpenDataStream(_handle.dataOffset, _handle.dataSize, out stream))
+				if (!fileHandle.TryOpenDataStream(_resourceManager, _handle.dataOffset, _handle.dataSize, out stream))
 				{
 					logger.LogError("Failed to open file stream for resource handle '{_handle}'!");
 					_outSurfaceData = null;

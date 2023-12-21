@@ -262,6 +262,13 @@ namespace FragEngine3.Resources
 			return true;
 		}
 
+		/// <summary>
+		/// Registers a new resource, identified by its resource handle, with this resource manager.
+		/// </summary>
+		/// <param name="_handle">A handle identifying and describing the new resource. Must be non-null
+		/// and valid, a resource may not be registered twice.</param>
+		/// <returns>True if the given resource handle is valid and was registered successfully, false
+		/// otherwise or if another handle with the same resource key already exists.</returns>
 		public bool AddResource(ResourceHandle _handle)
 		{
 			if (_handle == null)
@@ -297,6 +304,15 @@ namespace FragEngine3.Resources
 			return true;
 		}
 
+		/// <summary>
+		/// Removes a resource from this manager. If the resource was loaded, all its contents and data
+		/// are unloaded and disposed first.<para/>
+		/// WARNING: Removing a resource that is still in use can lead to unpredictable behaviour. Make
+		/// sure there are no lingering references to this resource in any important systems before calling
+		/// this method.
+		/// </summary>
+		/// <param name="_resourceKey">A key to the resource handle we wish to remove, may not be null.</param>
+		/// <returns>True if a resource of that key exists and was removed, false otherwise.</returns>
 		public bool RemoveResource(string _resourceKey)
 		{
 			if (string.IsNullOrEmpty(_resourceKey))
@@ -490,10 +506,16 @@ namespace FragEngine3.Resources
 					}
 					break;
 				case ResourceType.Model:
-					if ((success = ModelImporter.ImportModelData(_handle, out MeshSurfaceData? surfaceData) && surfaceData != null) &&
+					if ((success = ModelImporter.ImportModelData(this, _handle, out MeshSurfaceData? surfaceData) && surfaceData != null) &&
 						(success = ModelImporter.CreateMesh(_handle, engine.GraphicsSystem.graphicsCore, surfaceData!, out Mesh? mesh)))
 					{
 						_assignResourceCallback(mesh);
+					}
+					break;
+				case ResourceType.Texture:
+					if (success = TextureResource.CreateTexture(_handle, engine.GraphicsSystem.graphicsCore, out TextureResource? texture))
+					{
+						_assignResourceCallback(texture);
 					}
 					break;
 				//...

@@ -20,6 +20,8 @@ namespace FragEngine3.Graphics.MacOS
 		#endregion
 		#region Properties
 
+        public override EnginePlatformFlag ApiPlatformFlag => EnginePlatformFlag.GraphicsAPI_Metal;
+
 		private Logger Logger => graphicsSystem.engine.Logger ?? Logger.Instance!;
 
 		#endregion

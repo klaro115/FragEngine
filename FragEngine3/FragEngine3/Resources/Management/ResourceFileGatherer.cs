@@ -1,4 +1,5 @@
 ﻿using FragEngine3.Containers;
+using FragEngine3.EngineCore;
 using FragEngine3.Resources.Data;
 using FragEngine3.Utility;
 using System.Diagnostics;
@@ -19,6 +20,11 @@ namespace FragEngine3.Resources.Management
 		#endregion
 		#region Constructors
 
+		/// <summary>
+		/// Creates a new file gatherer for the resource manager.
+		/// </summary>
+		/// <param name="_resourceManager">A reference to the engine's resource manager, may ot be null or disposed.</param>
+		/// <exception cref="ArgumentNullException">Resource manager may not be null.</exception>
 		public ResourceFileGatherer(ResourceManager _resourceManager)
 		{
 			resourceManager = _resourceManager ?? throw new ArgumentNullException(nameof(_resourceManager), "Resource manager may not be null!");
@@ -339,6 +345,9 @@ namespace FragEngine3.Resources.Management
 
 			Dictionary<string, ResourceHandle> allResourceHandles = new(256);
 
+			PlatformSystem platformSystem = resourceManager.engine.PlatformSystem;
+			EnginePlatformFlag platformFlags = platformSystem.PlatformFlags;
+
 			// FILES:
 
 			int totalFileCount = 0;
@@ -392,7 +401,7 @@ namespace FragEngine3.Resources.Management
 							libFileFailed++;
 							continue;
 						}
-
+						
 						// Register the file:
 						ResourceFileHandle fileHandle = new(fileData, lib.source, fileEnumerator.Current);
 						if (!resourceManager.AddFile(fileHandle))
@@ -406,6 +415,24 @@ namespace FragEngine3.Resources.Management
 						for (int i = 0; i < fileHandle.ResourceCount; i++)
 						{
 							ResourceHandleData resData = fileData.Resources[i];
+							
+							// Handle cases where platform-specific versions of resources exist:
+							if (resData.PlatformFlags == EnginePlatformFlag.None ||
+								platformFlags.HasFlag(resData.PlatformFlags))
+							{
+								// For batched data files, skip resource and assume a supported alternative is available:
+								if (fileHandle.dataFileType != ResourceFileType.Single)
+								{
+									continue;
+									// ^NOTE: Multiple resource definitions using the same resource key may exist within a same resource file.
+									// They must however differ from one another by having strictly mutually exclusive platform flags. For
+									// example, a HLSL version of a shader may exist for D3D, alongside a MSL version for use with Metal.
+									// Both versions can never exist within the resource system at the same time, as they share a common key.
+								}
+								// NOTE: For single-resource data files, we'll instead assume there is a data file variant matching the platform.
+								// The appropriate data file will be located and read as part of the resource's loading/import process.
+							}
+
 							ResourceHandle resHandle = new(resourceManager, resData, fileHandle.Key);
 
 							// Overwrite any resource handles with duplicate keys by the newest redefinition: (this allows mods to be replace application data)

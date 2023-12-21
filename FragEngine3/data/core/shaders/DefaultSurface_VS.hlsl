@@ -73,8 +73,6 @@ struct VertexOutput_Extended
 
 /******************* SHADERS: ******************/
 
-static const float4x4 mtxIdentity = { { 1, 0, 0, 0 }, { 0, 1, 0, 0 }, { 0, 0, 1, 0 }, { 0, 0, 0, 1 } };
-
 void Main_Vertex(in VertexInput_Basic inputBasic, out VertexOutput_Basic outputBasic)
 {
     float4x4 mtxModel2Camera = mul(mtxCamera, mtxWorld);

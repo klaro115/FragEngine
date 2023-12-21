@@ -6,6 +6,9 @@ using Veldrid;
 
 namespace FragEngine3.Graphics.Resources
 {
+	/// <summary>
+	/// Factory class for importing and compiling GPU shader programs.
+	/// </summary>
 	public static class ShaderResourceFactory
 	{
 		#region Methods
@@ -57,6 +60,28 @@ namespace FragEngine3.Graphics.Resources
 			return CreateShader(_handle, _graphicsCore, _stage, entryPoint, out _outShaderRes);
 		}
 
+		/// <summary>
+		/// Import and compile a new shader program from file. This method will load shader code from
+		/// its resource data file, compile it, and then upload it to the GPU for rendering or compute.
+		/// </summary>
+		/// <param name="_handle">A resource handle pointing to the shader's source code file, may not
+		/// be null.</param>
+		/// <param name="_graphicsCore">The graphics core that wraps the graphics device for which the
+		/// shader is created. May not be null, must have been initialized.</param>
+		/// <param name="_stage">The shader stage that this shader program will be used for. A shader
+		/// program cannot be used for any other stage than the one it was compiled for. Depending on
+		/// graphics API, the code for multiple different stages may be contained within a same code
+		/// file, differentiated by their respective entry point functions.</param>
+		/// <param name="_entryPoint">The name of the shader program's entry point function. This name
+		/// is treated as a name stem, where suffixes are used to identify variants of a same shader.
+		/// Multiple suffixes may be added to each variant entry point name, separated by underscores.<para/>
+		/// For example, the "_Ext" suffix indicates that a vertex shader expects extended surface data
+		/// contained within an additional vertex buffer.</param>
+		/// <param name="_outShaderRes">Outputs a shader resource created from compiling the shader code.
+		/// A shader resource is specific to one shader stage, and may contain multiple variants. Null
+		/// if import or compilation fail.</param>
+		/// <returns>True if the shader resource was created successfully, false if import or compilation
+		/// failed.</returns>
 		public static bool CreateShader(
 			ResourceHandle _handle,
 			GraphicsCore _graphicsCore,
@@ -112,7 +137,7 @@ namespace FragEngine3.Graphics.Resources
 			}
 
 			// Try reading raw byte data from file:
-			if (!fileHandle.TryReadResourceBytes(_handle, out byte[] bytes, out int byteCount))
+			if (!fileHandle.TryReadResourceBytes(_graphicsCore.graphicsSystem, _handle, out byte[] bytes, out int byteCount))
 			{
 				logger.LogError($"Failed to read shader code for resource '{_handle}'!");
 				_outShaderRes = null;

@@ -11,6 +11,7 @@
         {
             "ResourceKey": "Mtl_DefaultSurface",
             "ResourceType": 5,
+            "PlatformFlags": 0,
             "DataOffset": 0,
             "DataSize": 0,
             "DependencyCount": 0,

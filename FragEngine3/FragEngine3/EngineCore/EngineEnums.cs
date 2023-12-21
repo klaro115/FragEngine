@@ -16,4 +16,24 @@
         Unloading = 1 << 4,
         Shutdown = 1 << 5,
     }
+
+    [Flags]
+    public enum EnginePlatformFlag
+    {
+        None                    = 0,
+
+		// Operating system:
+		OS_Windows				= 1,
+		OS_MacOS				= 2,
+		OS_Linux				= 4,
+		OS_FreeBSD				= 8,
+        OS_Other                = 16,
+
+		// Graphics API:
+        GraphicsAPI_D3D			= 32,
+        GraphicsAPI_Vulkan		= 64,
+        GraphicsAPI_Metal		= 128,
+
+		//...
+    }
 }

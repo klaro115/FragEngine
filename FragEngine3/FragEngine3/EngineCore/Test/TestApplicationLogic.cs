@@ -81,11 +81,15 @@ namespace FragEngine3.EngineCore.Test
 			}
 			if (Engine.ResourceManager.GetResource("Mtl_DefaultSurface", out handle))
 			{
+				//handle.Load(true);
+			}
+			if (Engine.ResourceManager.GetResource("Mtl_TestMaterial", out handle))
+			{
 				handle.Load(true);
 			}
 			if (Engine.ResourceManager.GetResource("ForwardPlusLight_Composition_PS", out handle))
 			{
-				handle.Load(true);
+				//handle.Load(true);
 			}
 
 			Scene scene = Engine.SceneManager.MainScene!;
@@ -128,7 +132,7 @@ namespace FragEngine3.EngineCore.Test
 			rabbitNode.LocalPosition = new Vector3(0, -0.25f, 0);
 			rabbitNode.LocalRotation = Quaternion.Identity;
 			rabbitNode.LocalScale = Vector3.One * 5;
-			//rabbitNode.SetEnabled(false);
+			rabbitNode.SetEnabled(false);
 			if (rabbitNode.CreateComponent(out StaticMeshRenderer? rabbitRenderer) && rabbitRenderer != null)
 			{
 				rabbitRenderer.SetMesh("Rabbit.obj");
@@ -150,7 +154,7 @@ namespace FragEngine3.EngineCore.Test
 				//cubeRenderer.SetMaterial("Mtl_TestMaterial");
 			}
 
-			// Create fullscreen quad:
+			// Create two-sided quad:
 			MeshSurfaceData quadData = new()
 			{
 				verticesBasic =
