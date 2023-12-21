@@ -53,8 +53,6 @@ Texture2D<half4> TexUIColor : register(ps, t5);
 
 /******************* SHADERS: ******************/
 
-static const float PI = 3.141592653;
-
 PixelOutput Main_Pixel(in VertexOutput_Basic inputBasic)
 {
     // Determine source pixel location from fullscreen quad's UV:
@@ -70,13 +68,13 @@ PixelOutput Main_Pixel(in VertexOutput_Basic inputBasic)
     half4 colUI = TexUIColor.Load(posPixel);
 
     // Composite geometry: (opaque & transparent)
-    float k = depthTransparent > depthOpaque ? colTransparent.w : 0;
+    half k = depthTransparent > depthOpaque ? colTransparent.w : 0;
     half4 colGeometry = lerp(colOpaque, colTransparent, k);
     float depthGeometry = min(depthTransparent, depthOpaque);
 
     // Overlay UI:
     half alphaFinal = clamp(colGeometry.w + colUI.w, 0, 1);
-    half4 colFinal = float4(lerp(colGeometry.xyz, colUI.xyz, colUI.w), alphaFinal);
+    half4 colFinal = half4(lerp(colGeometry.xyz, colUI.xyz, colUI.w), alphaFinal);
     float depthFinal = colUI.w <= 0.001 ? depthGeometry : 0;
     
     // Assemble final output:

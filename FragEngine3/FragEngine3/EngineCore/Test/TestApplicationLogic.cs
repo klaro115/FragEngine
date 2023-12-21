@@ -176,7 +176,7 @@ namespace FragEngine3.EngineCore.Test
 			quadNode.LocalTransformation = Pose.Identity;
 			quadNode.LocalPosition = new(0, 0, 2);
 			quadNode.LocalScale = Vector3.One * 5;
-			//quadNode.SetEnabled(false);
+			quadNode.SetEnabled(false);
 			if (quadNode.CreateComponent(out StaticMeshRenderer? quadRenderer) && quadRenderer != null)
 			{
 				quadRenderer.SetMesh(quadHandle);

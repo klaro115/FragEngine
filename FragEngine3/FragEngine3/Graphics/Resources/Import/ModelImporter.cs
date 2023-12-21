@@ -54,7 +54,7 @@ namespace FragEngine3.Graphics.Resources.Import
 			try
 			{
 				// Open file stream:
-				if (!fileHandle.TryOpenDataStream(_resourceManager, _handle.dataOffset, _handle.dataSize, out stream))
+				if (!fileHandle.TryOpenDataStream(_resourceManager, _handle.dataOffset, _handle.dataSize, out stream, out _))
 				{
 					logger.LogError("Failed to open file stream for resource handle '{_handle}'!");
 					_outSurfaceData = null;

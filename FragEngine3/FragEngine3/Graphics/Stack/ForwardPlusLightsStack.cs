@@ -401,6 +401,13 @@ namespace FragEngine3.Graphics.Stack
 							return false;
 						}
 					}
+					else
+					{
+						// If no renderers, just allow clearing of render targets, to ensure backbuffer contents aren't undefined:
+						GetRendererListForMode(RenderMode.Opaque, out RendererList? opaqueList, out CommandList? cmdList);
+						_camera.BeginFrame(cmdList!, RenderMode.Opaque, 0, true, out _, out _);
+						_camera.EndFrame(cmdList!);
+					}
 				}
 
 				cameraLightBuffer.Clear();

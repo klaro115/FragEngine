@@ -97,21 +97,24 @@ namespace FragEngine3.Resources
 			dataBuffer = null;
 		}
 
-		public bool TryOpenDataStream(IEngineSystem _engineSystem, ulong _dataOffset, ulong _dataSize, out Stream _outStream)
+		public bool TryOpenDataStream(IEngineSystem _engineSystem, ulong _dataOffset, ulong _dataSize, out Stream _outStream, out ulong _outStreamLength)
 		{
 			if (LoadState == ResourceLoadState.Loaded && dataBuffer != null)
 			{
 				_outStream = new MemoryStream(dataBuffer);
+				_outStreamLength = 0;
 				return true;
 			}
 
 			// Retarget data file to 
-			string actualDataFilePath = GetPlatformAdjustedDataFilePath(_engineSystem);
+			bool pathWasAdjusted = GetPlatformAdjustedDataFilePath(_engineSystem, out string adjustedFilePath);
+			string actualDataFilePath = pathWasAdjusted ? adjustedFilePath : dataFilePath;
 
 			if (!File.Exists(actualDataFilePath))
 			{
 				Logger.Instance?.LogError($"Resource data file '{actualDataFilePath}' does not exist!");
 				_outStream = null!;
+				_outStreamLength = 0;
 				return false;
 			}
 
@@ -120,6 +123,7 @@ namespace FragEngine3.Resources
 				case ResourceFileType.Single:
 					{
 						_outStream = File.OpenRead(actualDataFilePath);
+						_outStreamLength = (ulong)_outStream.Length;
 						return true;
 					}
 				case ResourceFileType.Batch_Compressed:
@@ -134,6 +138,7 @@ namespace FragEngine3.Resources
 						LoadState = ResourceLoadState.Loaded;
 
 						_outStream = new MemoryStream(dataBuffer, (int)_dataOffset, (int)_dataSize);
+						_outStreamLength = _dataSize;
 						return true;
 					}
 				case ResourceFileType.Batch_BlockCompressed:
@@ -145,6 +150,7 @@ namespace FragEngine3.Resources
 			}
 
 			_outStream = null!;
+			_outStreamLength = 0;
 			return false;
 		}
 
@@ -167,7 +173,7 @@ namespace FragEngine3.Resources
 				{
 					Logger.Instance?.LogError($"Data bytes offset and size for resource handle '{_handle}' are out-of-bounds!");
 					_outBytes = [];
-				_outByteCount = 0;
+					_outByteCount = 0;
 					return false;
 				}
 			}
@@ -181,9 +187,10 @@ namespace FragEngine3.Resources
 
 			// Try reading all resource data via a stream:
 			Stream? stream = null;
+			ulong streamLength = 0;
 			try
 			{
-				if (!TryOpenDataStream(_engineSystem, _handle.dataOffset, _handle.dataSize, out stream))
+				if (!TryOpenDataStream(_engineSystem, _handle.dataOffset, _handle.dataSize, out stream, out streamLength))
 				{
 					Logger.Instance?.LogError($"Failed to open data stream of file handle '{Key}' at data offset {_handle.dataOffset} and data size {_handle.dataSize}!");
 					_outBytes = [];
@@ -192,10 +199,22 @@ namespace FragEngine3.Resources
 				}
 
 				// Write stream output to byte buffer:
-				int expectedDataSize = dataFileType == ResourceFileType.Single && dataFileSize != 0 ? (int)dataFileSize : (int)_handle.dataSize;
+				ulong expectedDataSize;
+				if (streamLength != 0)
+				{
+					expectedDataSize = streamLength;
+				}
+				else if (dataFileType == ResourceFileType.Single && dataFileSize != 0)
+				{
+					expectedDataSize = dataFileSize;
+				}
+				else
+				{
+					expectedDataSize = _handle.dataSize;
+				}
 
 				_outBytes = new byte[expectedDataSize];
-				_outByteCount = stream.Read(_outBytes, 0, expectedDataSize);
+				_outByteCount = stream.Read(_outBytes, 0, (int)expectedDataSize);
 				return true;
 			}
 			catch (Exception ex)
@@ -211,34 +230,32 @@ namespace FragEngine3.Resources
 			}
 		}
 
-		public string GetPlatformAdjustedDataFilePath(IEngineSystem _engineSystem)
+		public bool GetPlatformAdjustedDataFilePath(IEngineSystem _engineSystem, out string _outAdjustedPath)
 		{
 			if (string.IsNullOrEmpty(dataFilePath))
 			{
-				return string.Empty;
+				_outAdjustedPath = string.Empty;
+				return false;
 			}
 			if (_engineSystem == null)
 			{
 				Logger.Instance?.LogError("Cannot get platform adjusted data file path using null engine reference!");
-				return string.Empty;
+				_outAdjustedPath = string.Empty;
+				return false;
 			}
 			if (dataFileType != ResourceFileType.Single ||
 				ResourceCount != 1 ||
 				!_engineSystem.Engine.ResourceManager.GetResource(resources[0], out ResourceHandle resHandle))
 			{
-				return dataFilePath;
+				_outAdjustedPath = dataFilePath;
+				return false;
 			}
 			
 			PlatformSystem platformSystem = _engineSystem.Engine.PlatformSystem;
 			ResourceType resourceType = resHandle.resourceType;
 			
 			// Adjust path to use the resource's most likely platform-specific extension:
-			return platformSystem.AdjustForPlatformSpecificFileExtension(
-					resourceType,
-					dataFilePath,
-					out string adjustedPath)
-				? adjustedPath
-				: dataFilePath;
+			return platformSystem.AdjustForPlatformSpecificFileExtension(resourceType, dataFilePath, out _outAdjustedPath);
 		}
 
 		/// <summary>
