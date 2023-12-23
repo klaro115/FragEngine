@@ -155,7 +155,7 @@ namespace FragEngine3.EngineCore
 						EngineState.None => "### ENTERING STANDBY...",
 						EngineState.Startup => "### STARTING UP...",
 						EngineState.Loading => "### LOADING CONTENT...",
-						EngineState.Running => "### RUNNING CONTENT...",
+						EngineState.Running => "### RUNNING APPLICATION...",
 						EngineState.Unloading => "### UNLOADING CONTENT...",
 						EngineState.Shutdown => "### SHUTTING DOWN...",
 						_ => "### wtf",

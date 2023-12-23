@@ -145,7 +145,7 @@ namespace FragEngine3.EngineCore.Test
 			cubeNode.LocalPosition = Vector3.Zero;
 			cubeNode.LocalRotation = Quaternion.Identity;
 			cubeNode.LocalScale = Vector3.One;
-			//cubeNode.SetEnabled(false);
+			cubeNode.SetEnabled(false);
 			if (cubeNode.CreateComponent(out StaticMeshRenderer? cubeRenderer) && cubeRenderer != null)
 			{
 				//cubeRenderer.SetMesh("Cube.obj");
@@ -176,12 +176,12 @@ namespace FragEngine3.EngineCore.Test
 			quadNode.LocalTransformation = Pose.Identity;
 			quadNode.LocalPosition = new(0, 0, 2);
 			quadNode.LocalScale = Vector3.One * 5;
-			quadNode.SetEnabled(false);
+			//quadNode.SetEnabled(false);
 			if (quadNode.CreateComponent(out StaticMeshRenderer? quadRenderer) && quadRenderer != null)
 			{
 				quadRenderer.SetMesh(quadHandle);
-				//quadRenderer.SetMaterial("Mtl_DefaultSurface");
-				quadRenderer.SetMaterial("Mtl_TestMaterial");
+				quadRenderer.SetMaterial("Mtl_DefaultSurface");
+				//quadRenderer.SetMaterial("Mtl_TestMaterial");
 			}
 
 			return true;

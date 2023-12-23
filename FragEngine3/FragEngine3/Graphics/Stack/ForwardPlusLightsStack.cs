@@ -16,7 +16,7 @@ namespace FragEngine3.Graphics.Stack
 	{
 		#region Types
 
-		private sealed class RendererList(RenderMode _mode, int _initialCapacity)
+		private sealed class RendererList(RenderMode _mode, int _initialCapacity)	//TODO: Move this and command list management to camera class! Multiple cameras are not currently possible!
 		{
 			public readonly RenderMode mode = _mode;
 			public readonly List<IRenderer> renderers = new(_initialCapacity);
@@ -395,6 +395,8 @@ namespace FragEngine3.Graphics.Stack
 						success &= DrawOpaqueRendererList(_camera, activeLightCount);
 						success &= DrawZSortedRendererList(_camera, activeLightCount);
 						success &= DrawUiRendererList(_camera);
+						// ^NOTE: Different command lists are used for the above steps, since issuing of their draw calls may be
+						// multi-threaded at a later point or if there is a huge number of objects in either or all categories. 
 
 						if (!success)
 						{

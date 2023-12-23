@@ -35,23 +35,29 @@ namespace FragEngine3.Graphics.Components
 		{
 			public ProjectionType projectionType = ProjectionType.Perpective;
 
+			// Projection parameters:
 			public float nearClipPlane = 0.01f;
 			public float farClipPlane = 1000.0f;
 			public float fieldOfViewRad = 60.0f * DEG2RAD;
 			public float orthographicSize = 1.0f;
 
-			public Matrix4x4 mtxProjection = Matrix4x4.Identity;   // Local space => Clip space
-			public Matrix4x4 mtxViewport = Matrix4x4.Identity;     // Clip space => Pixel space
-			public Matrix4x4 mtxCamera = Matrix4x4.Identity;       // World space => Pixel space
-			public Matrix4x4 mtxInvCamera = Matrix4x4.Identity;    // Pixel space => World space
+			// Matrices:
+			public Matrix4x4 mtxProjection = Matrix4x4.Identity;	// Local space => Clip space
+			public Matrix4x4 mtxViewport = Matrix4x4.Identity;		// Clip space => Pixel space
+			public Matrix4x4 mtxCamera = Matrix4x4.Identity;		// World space => Clip space
+			public Matrix4x4 mtxInvCamera = Matrix4x4.Identity;		// Clip space => World space
+			public Matrix4x4 mtxWorld2Pixel = Matrix4x4.Identity;	// World space => Pixel space
+			public Matrix4x4 mtxPixel2World = Matrix4x4.Identity;	// Pixel space => World space
 		}
 
 		private sealed class ClearingData
 		{
+			// Clearing behaviour flags:
 			public bool clearBackground = true;
 			public bool allowClearDepth = true;
 			public bool allowClearStencil = false;
 
+			// Clearing values:
 			public Color32 clearColor = Color32.Cornflower;
 			public float clearDepth = 1.0f;
 			public byte clearStencil = 0x00;
@@ -699,8 +705,10 @@ namespace FragEngine3.Graphics.Components
 
 				// Calculate combined matrix or transforming from world space to clip space:
 				projection.Value.mtxCamera = mtxWorld2Camera * projection.Value.mtxProjection;
+				projection.Value.mtxWorld2Pixel = projection.Value.mtxCamera * projection.Value.mtxViewport;
 
 				Matrix4x4.Invert(projection.Value.mtxCamera, out projection.Value.mtxInvCamera);
+				Matrix4x4.Invert(projection.Value.mtxWorld2Pixel, out projection.Value.mtxPixel2World);
 			}
 			// NOTE: If your projection is doing weird stuff on the GPU, add "#pragma pack_matrix( column_major )" to the top of it.
 			// Matrix packing order in System.Numerics is column-major, not row-major! This was messy and annoying to figure out, so
@@ -921,6 +929,16 @@ namespace FragEngine3.Graphics.Components
 			return core.CommitCommandList(_cmdList);
 		}
 
+		/// <summary>
+		/// Converts a position from world space to a pixel coordinate where it would appear on the camera's framebuffer.
+		/// </summary>
+		/// <param name="_worldPoint">A position coordinate in world space.</param>
+		/// <param name="_allowUpdateProjection">Whether to allow recalculation of projection matrices if some or all of
+		/// them are out-of-date. If the camera's resolution, projection, and pose didn't change, this can be set to false.
+		/// Similarly, the matrices will be up-to-date after a first call to this method with the flag enabled, so any
+		/// subsequent calls right after will not require matrices to be updated and the parameeter can be set to false.</param>
+		/// <returns>A pixel coordinate corresponding to where the camera would display the given position on its render
+		/// targets.</returns>
 		public Vector3 TransformWorldPointToPixelCoord(Vector3 _worldPoint, bool _allowUpdateProjection = true)
 		{
 			// If requested, rebuild all projection matrices, or at least all those that have changed:
@@ -938,10 +956,19 @@ namespace FragEngine3.Graphics.Components
 			}
 
 			// Transform world space position to viewport pixel space:
-			Vector4 result = Vector4.Transform(_worldPoint, projection.Value.mtxCamera);
+			Vector4 result = Vector4.Transform(_worldPoint, projection.Value.mtxWorld2Pixel);
 			return new Vector3(result.X, result.Y, result.Z) / result.W;
 		}
 
+		/// <summary>
+		/// Converts a pixel coordinate on the camera's framebuffer to a corresponding position in world space.
+		/// </summary>
+		/// <param name="_pixelCoord">A coordinate in the camera's framebuffer's pixel space.</param>
+		/// <param name="_allowUpdateProjection">Whether to allow recalculation of projection matrices if some or all of
+		/// them are out-of-date. If the camera's resolution, projection, and pose didn't change, this can be set to false.
+		/// Similarly, the matrices will be up-to-date after a first call to this method with the flag enabled, so any
+		/// subsequent calls right after will not require matrices to be updated and the parameeter can be set to false.</param>
+		/// <returns>A world space position corresponding to the given pixel coordinate.</returns>
 		public Vector3 TransformPixelCoordToWorldPoint(Vector3 _pixelCoord, bool _allowUpdateProjection = true)
 		{
 			// If requested, rebuild all projection matrices, or at least all those that have changed:
@@ -959,7 +986,7 @@ namespace FragEngine3.Graphics.Components
 			}
 
 			// Transform world space position to viewport pixel space:
-			return Vector3.Transform(_pixelCoord, projection.Value.mtxInvCamera);
+			return Vector3.Transform(_pixelCoord, projection.Value.mtxPixel2World);
 		}
 
 		public override bool LoadFromData(in ComponentData _componentData, in Dictionary<int, ISceneElement> _idDataMap)

@@ -87,7 +87,7 @@ namespace FragEngine3.Graphics.MacOS
 				bool vsync = settings.Vsync;
 				bool useSrgb = config.Graphics.OutputIsSRGB;
 				DefaultColorTargetPixelFormat = GetOutputPixelFormat(outputBitDepth, useSrgb);
-				DefaultDepthTargetPixelFormat = GetOutputDepthFormat(outputBitDepth, false);
+				DefaultDepthTargetPixelFormat = GetOutputDepthFormat(outputBitDepth, true);
 
 				GraphicsDeviceOptions deviceOptions = new(
 					false,
