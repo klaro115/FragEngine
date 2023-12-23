@@ -9,22 +9,15 @@ namespace FragEngine3.Utility.Unicode
 	/// codepoint, the high surrogate is returned right away, while the low surrogate of which is returned upon the next call
 	/// to '<see cref="MoveNext"/>'.
 	/// </summary>
-	public sealed class Utf16Iterator : IEnumerator<char>
+	public sealed class Utf8Iterator : IEnumerator<char>
 	{
 		#region Types
 
-		public readonly struct Position
-		{
-			public Position(int _utf8Position, int _codepointPosition, int _utf16Position)
-			{
-				utf8Position = _utf8Position;
-				codepointPosition = _codepointPosition;
-				utf16Position = _utf16Position;
-			}
-
-			public readonly int utf8Position;
-			public readonly int codepointPosition;
-			public readonly int utf16Position;
+		public readonly struct Position(int _utf8Position, int _codepointPosition, int _utf16Position)
+        {
+            public readonly int utf8Position = _utf8Position;
+			public readonly int codepointPosition = _codepointPosition;
+			public readonly int utf16Position = _utf16Position;
 
 			public static Position Invalid => new(-1, -1, -1);
 			public bool IsValid => utf8Position >= 0 && codepointPosition >= 0 && utf16Position >= 0;
@@ -35,13 +28,13 @@ namespace FragEngine3.Utility.Unicode
 		#endregion
 		#region Constructors
 
-		public Utf16Iterator(IList<byte> _utf8Bytes, int _utf8Length)
+		public Utf8Iterator(IList<byte> _utf8Bytes, int _utf8Length)
 		{
 			utf8Bytes = _utf8Bytes ?? throw new ArgumentNullException(nameof(_utf8Bytes), "UTF-8 byte list may not be null!");
 			utf8Length = Math.Clamp(_utf8Length, 0, utf8Bytes.Count);
 		}
 
-		~Utf16Iterator()
+		~Utf8Iterator()
 		{
 			Dispose(false);
 		}
@@ -335,6 +328,11 @@ namespace FragEngine3.Utility.Unicode
 
 			return Position.Invalid;
 		}
+
+		public override string ToString()
+        {
+            return $"UTF-8 Iterator {CurrentPosition} (UTF-8 Length: {utf8Length})";
+        }
 
 		#endregion
 	}
