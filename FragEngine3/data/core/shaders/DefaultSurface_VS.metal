@@ -76,11 +76,14 @@ struct VertexOutput_Extended
 /******************* SHADERS: ******************/
 
 VertexOutput_Basic vertex Main_Vertex(
-    device const VertexInput_Basic* pInputBasic [[ buffer( 0 ) ]],
-    device const CBGlobal& cbGlobal             [[ buffer( 1 ) ]],
-    device const CBObject& cbObject             [[ buffer( 2 ) ]],
+    device const CBGlobal& cbGlobal             [[ buffer( 0 ) ]],
+    device const CBObject& cbObject             [[ buffer( 1 ) ]],
+    device const VertexInput_Basic* pInputBasic [[ buffer( 2 ) ]],
     uint vertexId                               [[ vertex_id ]])
 {
+    //^NOTE: Using 'ResourceBindingModel.Improved', vertex buffers come after actual resources.
+    // See this page for full explanation: https://veldrid.dev/articles/shaders.html
+
     const device VertexInput_Basic& inputBasic = pInputBasic[vertexId];
 
     float4x4 mtxModel2Camera = cbGlobal.mtxCamera * cbObject.mtxWorld;
