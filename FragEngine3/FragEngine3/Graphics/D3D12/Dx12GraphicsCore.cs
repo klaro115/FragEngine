@@ -82,7 +82,7 @@ namespace FragEngine3.Graphics.D3D12
 				bool vsync = settings.Vsync;
 				bool useSrgb = config.Graphics.OutputIsSRGB;
 				DefaultColorTargetPixelFormat = GetOutputPixelFormat(outputBitDepth, useSrgb);
-				DefaultDepthTargetPixelFormat = GetOutputDepthFormat(outputBitDepth);
+				DefaultDepthTargetPixelFormat = GetOutputDepthFormat(outputBitDepth, false);
 
 				GraphicsDeviceOptions deviceOptions = new(
 					false,
@@ -170,14 +170,17 @@ namespace FragEngine3.Graphics.D3D12
 			return isInitialized;
 		}
 
-		private static PixelFormat GetOutputDepthFormat(int _bitDepth)
+		private static PixelFormat GetOutputDepthFormat(int _bitDepth, bool _addStencil)
 		{
 			GraphicsCapabilities.DepthStencilFormat format = capabilities.depthStencilFormats.MinBy(o => Math.Abs(o.depthMapDepth - _bitDepth));
 
 			return format.depthMapDepth switch
 			{
+				16 => PixelFormat.R16_UNorm,
 				24 => PixelFormat.D24_UNorm_S8_UInt,
-				32 => PixelFormat.D32_Float_S8_UInt,
+				32 => _addStencil
+					? PixelFormat.D32_Float_S8_UInt
+					: PixelFormat.R32_Float,
 				_ => PixelFormat.D24_UNorm_S8_UInt,
 			};
 		}

@@ -145,7 +145,7 @@ namespace FragEngine3.EngineCore.Test
 			cubeNode.LocalPosition = Vector3.Zero;
 			cubeNode.LocalRotation = Quaternion.Identity;
 			cubeNode.LocalScale = Vector3.One;
-			cubeNode.SetEnabled(false);
+			//cubeNode.SetEnabled(false);
 			if (cubeNode.CreateComponent(out StaticMeshRenderer? cubeRenderer) && cubeRenderer != null)
 			{
 				//cubeRenderer.SetMesh("Cube.obj");

@@ -151,8 +151,8 @@ namespace FragEngine3.Graphics.Resources
 			{
 				StringBuilder variantBuilder = new(256);
 				StringBuilder suffixBuilder = new(128);
-				Utf16Iterator e = new(bytes, byteCount);
-				Utf16Iterator.Position pos;
+				Utf8Iterator e = new(bytes, byteCount);
+				Utf8Iterator.Position pos;
 
 				e.MoveNext();
 
