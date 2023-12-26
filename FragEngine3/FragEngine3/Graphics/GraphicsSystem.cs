@@ -2,7 +2,7 @@
 using FragEngine3.EngineCore;
 using FragEngine3.EngineCore.Config;
 using FragEngine3.Graphics.Config;
-using FragEngine3.Graphics.D3D12;
+using FragEngine3.Graphics.D3D11;
 using FragEngine3.Graphics.MacOS;
 using FragEngine3.Utility.Serialization;
 
@@ -172,7 +172,7 @@ namespace FragEngine3.Graphics
 				// On Windows, create Direct3D devices if 'config.PreferNativeFramework' is true, otherwise use Vulkan:
 				if (config.Graphics.PreferNativeFramework)
 				{
-					newCore = new Dx12GraphicsCore(this, config);
+					newCore = new Dx11GraphicsCore(this, config);
 				}
 				else
 				{

@@ -93,7 +93,7 @@ namespace FragEngine3.Graphics.MacOS
 					false,
 					DefaultDepthTargetPixelFormat,
 					vsync,
-					ResourceBindingModel.Improved,
+					ResourceBindingModel.Default,
 					true,
 					true,
 					useSrgb);

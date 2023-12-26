@@ -7,9 +7,9 @@ using Veldrid;
 using Veldrid.Sdl2;
 using Veldrid.StartupUtilities;
 
-namespace FragEngine3.Graphics.D3D12
+namespace FragEngine3.Graphics.D3D11
 {
-	internal sealed class Dx12GraphicsCore(GraphicsSystem _graphicsSystem, EngineConfig _config) : GraphicsCore(_graphicsSystem, _config)
+	internal sealed class Dx11GraphicsCore(GraphicsSystem _graphicsSystem, EngineConfig _config) : GraphicsCore(_graphicsSystem, _config)
 	{
 		#region Fields
 
@@ -88,7 +88,7 @@ namespace FragEngine3.Graphics.D3D12
 					false,
 					DefaultDepthTargetPixelFormat,
 					vsync,
-					ResourceBindingModel.Improved,
+					ResourceBindingModel.Default,
 					true,
 					true,
 					useSrgb);
