@@ -298,7 +298,7 @@ namespace FragEngine3.Graphics.Components
 			if (!Material.IsPipelineUpToDate(in pipeline, rendererVersion))
 			{
 				pipeline.DisposeValue();
-				if (!Material.CreatePipeline(_drawCtx, _cameraCtx, rendererVersion, vertexDataFlags, out pipeline))
+				if (!Material.CreatePipeline(_cameraCtx, rendererVersion, vertexDataFlags, out pipeline))
 				{
 					Logger.LogError($"Failed to retrieve pipeline description for material '{Material}'!");
 					return false;

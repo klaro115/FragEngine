@@ -216,44 +216,61 @@ namespace FragEngine3.Graphics.Resources
 			try
 			{
 				Shader[] shaders = new Shader[shaderCount];
-
 				i = 0;
-				shaders[i++] = GetShaderVariant(vertexShader);
+				ShaderStages errorStages = 0;
+
+				bool success = AddShaderVariant(vertexShader, ShaderStages.Vertex);
 				if (hasGeometryShader)
 				{
-					shaders[i++] = GetShaderVariant(geometryShader);
+					success &= AddShaderVariant(geometryShader, ShaderStages.Geometry);
 				}
 				if (hasTesselationShader)
 				{
-					shaders[i++] = GetShaderVariant(tesselationShaderCtrl);
-					shaders[i++] = GetShaderVariant(tesselationShaderEval);
+					success &= AddShaderVariant(tesselationShaderCtrl, ShaderStages.TessellationControl);
+					success &= AddShaderVariant(tesselationShaderEval, ShaderStages.TessellationEvaluation);
 				}
-				shaders[i++] = GetShaderVariant(pixelShader);
+				success &= AddShaderVariant(pixelShader, ShaderStages.Fragment);
+
+				if (!success || errorStages != 0)
+				{
+					Logger.LogError($"One or more shader programs could not be loaded for material '{resourceKey}', variant '{_vertexDataFlags}'. Error stages: '{errorStages}'");
+					return false;
+				}
 
 				// Assemble shader set:
-
 				ShaderSetDescription ssd = new(
 					vertexLayoutDescs,
 					shaders);
 
 				shaderSetDesc.UpdateValue(_newVersion, ssd);
-				return true;
+				return success;
+
+
+				// Local helper method for fetching and loading a shader variant:
+				bool AddShaderVariant(ResourceHandle? _handle, ShaderStages _stageFlag)
+				{
+					if (_handle == null || !_handle.IsValid)
+					{
+						errorStages |= _stageFlag;
+						return false;
+					}
+
+					ShaderResource shaderRes = (_handle.GetResource(true, true) as ShaderResource)!;
+					if (!shaderRes.GetShaderProgram(_vertexDataFlags, out Shader? shader) || shader == null)
+					{
+						errorStages |= _stageFlag;
+						return false;
+					}
+
+					shaders[i++] = shader;
+					return true;
+				}
 			}
 			catch (Exception ex)
 			{
 				Logger.LogException($"Failed to create shader set description for material '{resourceKey}' and variant '{_vertexDataFlags}'!", ex);
 				shaderSetDesc.DisposeValue();
 				return false;
-			}
-			
-
-			// Local helper method for fetching and loading a shader variant:
-			Shader GetShaderVariant(ResourceHandle? _handle)
-			{
-				if (_handle == null || !_handle.IsValid) return null!;
-
-				ShaderResource shaderRes = (_handle.GetResource(true, true) as ShaderResource)!;
-				return shaderRes.GetShaderProgram(_vertexDataFlags, out Shader? shader) && shader != null ? shader : null!;
 			}
 		}
 
@@ -300,8 +317,14 @@ namespace FragEngine3.Graphics.Resources
 			}
 		}
 
-		internal bool CreatePipeline(GraphicsDrawContext _drawCtx, CameraContext _cameraCtx, uint _rendererVersion, MeshVertexDataFlags _vertexDataFlags, out VersionedMember<Pipeline> _outPipeline)
+		internal bool CreatePipeline(CameraContext _cameraCtx, uint _rendererVersion, MeshVertexDataFlags _vertexDataFlags, out VersionedMember<Pipeline> _outPipeline)
 		{
+			if (_cameraCtx == null || !_cameraCtx.IsValid)
+			{
+				_outPipeline = new(null!, 0);
+				return false;
+			}
+
 			// Update material version from versioned members:
 			{
 				uint newestVersion = materialVersion;

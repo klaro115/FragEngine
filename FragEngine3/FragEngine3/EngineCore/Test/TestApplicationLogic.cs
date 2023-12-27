@@ -150,8 +150,8 @@ namespace FragEngine3.EngineCore.Test
 			{
 				//cubeRenderer.SetMesh("Cube.obj");
 				cubeRenderer.SetMesh(cubeHandle);
-				cubeRenderer.SetMaterial("Mtl_DefaultSurface");
-				//cubeRenderer.SetMaterial("Mtl_TestMaterial");
+				//cubeRenderer.SetMaterial("Mtl_DefaultSurface");
+				cubeRenderer.SetMaterial("Mtl_TestMaterial");
 			}
 
 			// Create two-sided quad:
