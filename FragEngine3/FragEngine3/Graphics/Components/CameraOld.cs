@@ -14,7 +14,8 @@ using Veldrid;
 
 namespace FragEngine3.Graphics.Components
 {
-    public sealed class Camera : Component
+	[Obsolete($"Replaced using {nameof(CameraInstance)}")]
+    public sealed class CameraOld : Component
 	{
 		#region Types
 
@@ -66,7 +67,7 @@ namespace FragEngine3.Graphics.Components
 		#endregion
 		#region Constructors
 
-		public Camera(SceneNode _node, RenderMode _mainRenderMode = RenderMode.Opaque) : base(_node)
+		public CameraOld(SceneNode _node, RenderMode _mainRenderMode = RenderMode.Opaque) : base(_node)
 		{
 			core = node.scene.engine.GraphicsSystem.graphicsCore;
 			mainRenderMode = _mainRenderMode;
@@ -81,7 +82,7 @@ namespace FragEngine3.Graphics.Components
 
 			GetGlobalConstantBuffer(0, false, out _);
 
-			node.scene.drawManager.RegisterCamera(this);
+			//node.scene.drawManager.RegisterCamera(this);
 		}
 
 		#endregion
@@ -115,7 +116,7 @@ namespace FragEngine3.Graphics.Components
 
 
 		// Main camera:
-		private static Camera? mainCamera = null;
+		private static CameraOld? mainCamera = null;
 		
 		private readonly object cameraStateLockObj = new();
 		private static readonly object mainCameraLockObj = new();
@@ -367,7 +368,7 @@ namespace FragEngine3.Graphics.Components
 		/// only ever has one dedicated main camera across all scenes that can concurrently be active and loaded.
 		/// Use '<see cref="IsMainCamera"/>' to mark a camera as main.
 		/// </summary>
-		public static Camera? MainCamera
+		public static CameraOld? MainCamera
 		{
 			get { lock (mainCameraLockObj) { return mainCamera != null && mainCamera.IsMainCamera ? mainCamera : null; }; }
 		}
@@ -432,8 +433,8 @@ namespace FragEngine3.Graphics.Components
 				UpdateStatesFromActiveRenderTarget(RenderMode.Opaque);
 
 				// Reregister camera:
-				node.scene.drawManager.UnregisterCamera(this);
-				node.scene.drawManager.RegisterCamera(this);
+				//node.scene.drawManager.UnregisterCamera(this);
+				//node.scene.drawManager.RegisterCamera(this);
 
 				cameraVersion++;
 			}
@@ -451,7 +452,7 @@ namespace FragEngine3.Graphics.Components
 			if (_eventType == SceneEventType.OnNodeDestroyed ||
 				_eventType == SceneEventType.OnDestroyComponent)
 			{
-				node.scene.drawManager.UnregisterCamera(this);
+				//node.scene.drawManager.UnregisterCamera(this);
 			}
 		}
 
@@ -879,7 +880,8 @@ namespace FragEngine3.Graphics.Components
 				}
 
 				_outDrawCtx = new(core, _cmdList);
-				_outCameraCtx = new(this, globalConstantBuffer!, lightDataBuffer!, activeTarget.outputDesc);
+				//_outCameraCtx = new(this, globalConstantBuffer!, lightDataBuffer!, activeTarget.outputDesc);
+				_outCameraCtx = new(null!, globalConstantBuffer!, lightDataBuffer!, activeTarget.outputDesc);
 
 				// Bind current render targets as output to command list:
 				_cmdList.SetFramebuffer(activeTarget.framebuffer);
@@ -1037,8 +1039,9 @@ namespace FragEngine3.Graphics.Components
 			}
 
 			// Re-register camera with the scene:
-			node.scene.drawManager.UnregisterCamera(this);
-			return node.scene.drawManager.RegisterCamera(this);
+			//node.scene.drawManager.UnregisterCamera(this);
+			//return node.scene.drawManager.RegisterCamera(this);
+			return true;
 		}
 
 		public override bool SaveToData(out ComponentData _componentData, in Dictionary<ISceneElement, int> _idDataMap)

@@ -50,6 +50,12 @@ namespace FragEngine3.Graphics
 		Custom,
 	}
 
+	public enum CameraProjectionType
+	{
+		Orthographic = 0,
+		Perspective
+	}
+
 	public static class GraphicsEnumsExt
 	{
 		#region Fields

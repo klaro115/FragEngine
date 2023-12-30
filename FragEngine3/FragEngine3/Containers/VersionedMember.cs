@@ -42,6 +42,12 @@ namespace FragEngine3.Containers
 			value = _newValue;
 		}
 
+		public void UpdateValueAndVersion(T _newValue)
+		{
+			version++;
+			value = _newValue;
+		}
+
 		public override readonly string ToString()
 		{
 			return $"{value?.ToString() ?? "NULL"} (v{version})";
