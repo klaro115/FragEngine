@@ -14,7 +14,7 @@ using Veldrid;
 
 namespace FragEngine3.Graphics.Components
 {
-	[Obsolete($"Replaced using {nameof(CameraInstance)}")]
+	[Obsolete($"Replaced using {nameof(Cameras.CameraInstance)}")]
     public sealed class CameraOld : Component
 	{
 		#region Types

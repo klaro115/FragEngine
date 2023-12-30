@@ -10,10 +10,15 @@ public sealed class CameraInstance : IDisposable
 {
 	#region Constructors
 
-	public CameraInstance(GraphicsCore _graphicsCore)
+	public CameraInstance(GraphicsCore _graphicsCore, bool _createFramebufferImmediately = false)
 	{
 		graphicsCore = _graphicsCore ?? throw new ArgumentNullException(nameof(_graphicsCore));
 		hasOwnershipOfFramebuffer = true;
+
+		if (_createFramebufferImmediately)
+		{
+			GetOrCreateFramebuffer(out _, true);
+		}
 	}
 	public CameraInstance(GraphicsCore _graphicsCore, Framebuffer _framebuffer, bool _hasOwnershipOfFramebuffer)
 	{
@@ -38,6 +43,7 @@ public sealed class CameraInstance : IDisposable
 	private bool isDrawing = false;
 
 	private Framebuffer? framebuffer = null;
+	private Framebuffer? overrideFramebuffer = null;
 	private OutputDescription outputDesc = default;
 
 	private VersionedMember<Matrix4x4> mtxInvWorld = new(Matrix4x4.Identity, 0);
@@ -49,8 +55,9 @@ public sealed class CameraInstance : IDisposable
 	#region Properties
 
 	public bool IsDisposed { get; private set; } = false;
-	public bool IsInitialized => !IsDisposed && framebuffer != null && !framebuffer.IsDisposed;
+	public bool IsInitialized => !IsDisposed && ((framebuffer != null && !framebuffer.IsDisposed) || HasOverrideFramebuffer);
 	public bool IsDrawing => IsInitialized && isDrawing;
+	public bool HasOverrideFramebuffer => overrideFramebuffer != null && !overrideFramebuffer.IsDisposed;
 	private Logger Logger => graphicsCore.graphicsSystem.engine.Logger;
 
 	// WORLD:
@@ -108,6 +115,7 @@ public sealed class CameraInstance : IDisposable
 
 	public PixelFormat ColorFormat => output.Value.colorFormat;
 	public PixelFormat DepthFormat => output.Value.depthFormat;
+	public bool HasDepth => output.Value.hasDepth;
 
 	// PROJECTION:
 
@@ -318,11 +326,73 @@ public sealed class CameraInstance : IDisposable
 		return true;
 	}
 
-	public bool BeginDrawing(CommandList _cmdList, out Matrix4x4 _outMtxWorld2Clip)
+	public bool SetOverrideFramebuffer(Framebuffer? _newOverrideFramebuffer, bool _adjustParamsIfOverrideMismatched)
+	{
+		if (IsDisposed)
+		{
+			Logger.LogError("Cannot assign override framebuffer on disposed camera instance!");
+			return false;
+		}
+		if (isDrawing)
+		{
+			Logger.LogError("Cannot assign override framebuffer on a camera instance that is drawing!");
+			return false;
+		}
+
+		// If null, reset override and draw to own targets instead:
+		if (_newOverrideFramebuffer == null || _newOverrideFramebuffer == framebuffer)
+		{
+			overrideFramebuffer = null;
+			return true;
+		}
+		if (_newOverrideFramebuffer.IsDisposed)
+		{
+			Logger.LogError("Cannot assign disposed framebuffer as override to camera instance!");
+			return false;
+		}
+
+		// If the override's resolution and format mismatch current settings, either adjust those or throw an error:
+		if (output.Value.HaveSettingsChanged(in _newOverrideFramebuffer))
+		{
+			if (!_adjustParamsIfOverrideMismatched)
+			{
+				Logger.LogError("New override framebuffer mismatches output description of camera instance!");
+				return false;
+			}
+
+			output.Value.Update(in _newOverrideFramebuffer);
+			output.UpdateValue(output.Version + 1, output.Value);
+
+			// Reset projection's version to mark it as out-dated:
+			projection.UpdateValue(0, projection.Value);
+		}
+
+		overrideFramebuffer = _newOverrideFramebuffer;
+		return true;
+	}
+
+	public bool IsFramebufferCompatible(in Framebuffer _framebuffer)
+	{
+		return !output.Value.HaveSettingsChanged(in _framebuffer);
+	}
+
+	public bool BeginDrawing(CommandList _cmdList, bool _clearRenderTargets, out Matrix4x4 _outMtxWorld2Clip)
 	{
 		if (_cmdList == null || _cmdList.IsDisposed)
 		{
 			Logger.LogError("Cannot begin frame on camera instance using null or disposed command list!");
+			_outMtxWorld2Clip = Matrix4x4.Identity;
+			return false;
+		}
+		if (IsDisposed)
+		{
+			Logger.LogError("Cannot begin frame on disposed camera instance!");
+			_outMtxWorld2Clip = Matrix4x4.Identity;
+			return false;
+		}
+		if (isDrawing)
+		{
+			Logger.LogError("Cannot begin frame on a camera instance that is already drawing!");
 			_outMtxWorld2Clip = Matrix4x4.Identity;
 			return false;
 		}
@@ -386,7 +456,12 @@ public sealed class CameraInstance : IDisposable
 		_outMtxWorld2Clip = projection.Value.mtxWorld2Clip;
 
 		// Get or recreate framebuffer: (always recreate if output resolution or format has changed)
-		if (!GetOrCreateFramebuffer(out _, hasOutputChanged))
+		Framebuffer activeFramebuffer;
+		if (HasOverrideFramebuffer)
+		{
+			activeFramebuffer = overrideFramebuffer!;
+		}
+		else if (!GetOrCreateFramebuffer(out activeFramebuffer, hasOutputChanged))
 		{
 			Logger.LogError("Failed to acquire render targets for camera instance, cannot begin drawing!");
 			_outMtxWorld2Clip = Matrix4x4.Identity;
@@ -394,24 +469,27 @@ public sealed class CameraInstance : IDisposable
 		}
 
 		// Assign render targets and set target areas:
-		_cmdList.SetFramebuffer(framebuffer);
+		_cmdList.SetFramebuffer(activeFramebuffer);
 		_cmdList.SetFullViewports();
 		_cmdList.SetFullScissorRects();
 
 		// Clear render targets, if requested:
-		if (ClearColor)
+		if (_clearRenderTargets)
 		{
-			_cmdList.ClearColorTarget(0, ClearColorValue);
-		}
-		if (ClearDepth && output.Value.hasDepth)
-		{
-			if (ClearStencil && output.Value.hasStencil)
+			if (ClearColor)
 			{
-				_cmdList.ClearDepthStencil(ClearDepthValue, ClearStencilValue);
+				_cmdList.ClearColorTarget(0, ClearColorValue);
 			}
-			else
+			if (ClearDepth && output.Value.hasDepth)
 			{
-				_cmdList.ClearDepthStencil(ClearDepthValue);
+				if (ClearStencil && output.Value.hasStencil)
+				{
+					_cmdList.ClearDepthStencil(ClearDepthValue, ClearStencilValue);
+				}
+				else
+				{
+					_cmdList.ClearDepthStencil(ClearDepthValue);
+				}
 			}
 		}
 

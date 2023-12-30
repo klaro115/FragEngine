@@ -407,7 +407,7 @@ namespace FragEngine3.Graphics.Stack
 					{
 						// If no renderers, just allow clearing of render targets, to ensure backbuffer contents aren't undefined:
 						GetRendererListForMode(RenderMode.Opaque, out RendererList? opaqueList, out CommandList? cmdList);
-						_camera.BeginFrame(cmdList!, RenderMode.Opaque, 0, true, out _, out _);
+						_camera.BeginFrame(cmdList!, RenderMode.Opaque, true, 0, out _, out _);
 						_camera.EndFrame(cmdList!);
 					}
 				}
@@ -466,7 +466,7 @@ namespace FragEngine3.Graphics.Stack
 
 			bool success = true;
 
-			success &= _camera.BeginFrame(cmdList, RenderMode.Opaque, _activeLightCount, true, out GraphicsDrawContext drawCtx, out CameraContext cameraCtx);
+			success &= _camera.BeginFrame(cmdList, RenderMode.Opaque, true, _activeLightCount, out GraphicsDrawContext drawCtx, out CameraContext cameraCtx);
 
 			// Draw list of renderers as-is:
 			foreach (IRenderer renderer in opaqueList.renderers)
@@ -496,7 +496,7 @@ namespace FragEngine3.Graphics.Stack
 
 			zSortedList.renderers.Sort((a, b) => a.GetZSortingDepth(viewportPosition, cameraDirection).CompareTo(b.GetZSortingDepth(viewportPosition, cameraDirection)));
 			
-			success &= _camera.BeginFrame(cmdList, RenderMode.Transparent, _activeLightCount, false, out GraphicsDrawContext drawCtx, out CameraContext cameraCtx);
+			success &= _camera.BeginFrame(cmdList, RenderMode.Transparent, false, _activeLightCount, out GraphicsDrawContext drawCtx, out CameraContext cameraCtx);
 
 			// Draw Z-sorted list of renderers:
 			foreach (IRenderer renderer in zSortedList.renderers)
@@ -520,7 +520,7 @@ namespace FragEngine3.Graphics.Stack
 
 			bool success = true;
 
-			success &= _camera.BeginFrame(cmdList, RenderMode.UI, 0, false, out GraphicsDrawContext drawCtx, out CameraContext cameraCtx);
+			success &= _camera.BeginFrame(cmdList, RenderMode.UI, false, 0, out GraphicsDrawContext drawCtx, out CameraContext cameraCtx);
 
 			// Draw list of renderers in strictly hierarchical order:
 			foreach (IRenderer renderer in uiList.renderers)
@@ -549,14 +549,15 @@ namespace FragEngine3.Graphics.Stack
 			if (_camera.IsMainCamera)
 			{
 				Framebuffer backbuffer = core.Device.SwapchainFramebuffer;
-				if (!_camera.SetOverrideRenderTargets(backbuffer, false))
+				//if (!_camera.SetOverrideRenderTargets(backbuffer, false))
+				if (!_camera.SetOverrideCameraTarget(backbuffer, false))
 				{
 					Logger.LogError("Failed to set override render targets for graphics stack's composition pass!");
 					return false;
 				}
 			}
 
-			if (!_camera.BeginFrame(cmdList, RenderMode.Custom, _maxActiveLightCount, false, out GraphicsDrawContext drawCtx, out CameraContext cameraCtx))
+			if (!_camera.BeginFrame(cmdList, RenderMode.Custom, false, _maxActiveLightCount, out GraphicsDrawContext drawCtx, out CameraContext cameraCtx))
 			{
 				Logger.LogError("Failed to begin frame on graphics stack's composition pass!");
 				return false;
@@ -568,12 +569,12 @@ namespace FragEngine3.Graphics.Stack
 			ResourceLayout resourceLayout = compositionMaterial.BoundResourceLayout!;
 			if (resourceLayout != null && (compositionResourceSet == null || compositionResourceSet.IsDisposed))
 			{
-				success &= _camera.GetOrCreateOwnRenderTargets(RenderMode.Opaque, out CameraTarget? opaqueTarget);
-				success &= _camera.GetOrCreateOwnRenderTargets(RenderMode.Transparent, out CameraTarget? transparentTarget);
-				success &= _camera.GetOrCreateOwnRenderTargets(RenderMode.UI, out CameraTarget? uiTarget);
+				success &= _camera.GetOrCreateCameraTarget(RenderMode.Opaque, out CameraTarget? opaqueTarget);
+				success &= _camera.GetOrCreateCameraTarget(RenderMode.Transparent, out CameraTarget? transparentTarget);
+				success &= _camera.GetOrCreateCameraTarget(RenderMode.UI, out CameraTarget? uiTarget);
 				if (!success)
 				{
-					Logger.LogError("Failed to get camera's render targets needed for output composition!");
+					Logger.LogError("Failed to get camera's targets needed for output composition!");
 					return false;
 				}
 

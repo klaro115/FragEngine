@@ -99,8 +99,10 @@ namespace FragEngine3.EngineCore.Test
 			cameraNode.LocalPosition = new(0, 0, -5);
 			cameraNode.LocalRotation = Quaternion.Identity;
 			cameraNode.LocalScale = Vector3.One;
-			if (cameraNode.CreateComponent(out Camera? camera, RenderMode.Opaque) && camera != null)
+			//if (cameraNode.CreateComponent(out Camera? camera, RenderMode.Opaque) && camera != null)
+			if (cameraNode.CreateComponent(out Camera? camera) && camera != null)
 			{
+				/*
 				Sdl2Window window = Engine.GraphicsSystem.graphicsCore.Window;
 				camera.ResolutionX = (uint)window.Width;
 				camera.ResolutionY = (uint)window.Height;
@@ -115,6 +117,7 @@ namespace FragEngine3.EngineCore.Test
 				camera.ClearBackground = true;
 				camera.ClearColor = Color32.Cornflower;
 				camera.ClearDepth = 1.0f;
+				*/
 			
 				camera.IsMainCamera = true;
 			}
@@ -240,13 +243,20 @@ namespace FragEngine3.EngineCore.Test
 		protected override bool EndRunningState()
 		{
 			// Save scene to file when the game exits:
-			string saveDirPath = Path.Combine(Engine.ResourceManager.fileGatherer.applicationPath, "saves");
-			if (!Directory.Exists(saveDirPath))
+			try
 			{
-				Directory.CreateDirectory(saveDirPath);
+				string saveDirPath = Path.Combine(Engine.ResourceManager.fileGatherer.applicationPath, "saves");
+				if (!Directory.Exists(saveDirPath))
+				{
+					Directory.CreateDirectory(saveDirPath);
+				}
+				string saveFilePath = Path.Combine(saveDirPath, "test.json");
+				SceneSerializer.SaveSceneToFile(Engine.SceneManager.MainScene!, saveFilePath, out _, false);
 			}
-			string saveFilePath = Path.Combine(saveDirPath, "test.json");
-			SceneSerializer.SaveSceneToFile(Engine.SceneManager.MainScene!, saveFilePath, out _, false);
+			catch (Exception ex)
+			{
+				Engine.Logger.LogException("Failed to save scene to file!", ex);
+			}
 
 			return true;
 		}
