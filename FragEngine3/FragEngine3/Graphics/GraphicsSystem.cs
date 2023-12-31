@@ -4,7 +4,10 @@ using FragEngine3.EngineCore.Config;
 using FragEngine3.Graphics.Config;
 using FragEngine3.Graphics.D3D11;
 using FragEngine3.Graphics.MacOS;
+using FragEngine3.Graphics.Resources;
+using FragEngine3.Resources;
 using FragEngine3.Utility.Serialization;
+using Veldrid;
 
 namespace FragEngine3.Graphics
 {
@@ -59,6 +62,7 @@ namespace FragEngine3.Graphics
 		#region Properties
 
 		public bool IsDisposed { get; private set; } = false;
+		public bool IsDirty => dirtyFlags != 0;
 
 		public Engine Engine => engine;
 
@@ -68,7 +72,9 @@ namespace FragEngine3.Graphics
 			set { settings = value; MarkDirty(DirtyFlags.Settings | DirtyFlags.Output); }
 		}
 
-		public bool IsDirty => dirtyFlags != 0;
+		public ResourceHandle TexPlaceholderWhite { get; private set; } = ResourceHandle.None;
+		public ResourceHandle TexPlaceholderGray { get; private set; } = ResourceHandle.None;
+		public ResourceHandle TexPlaceholderBlack { get; private set; } = ResourceHandle.None;
 
 		private Logger Logger => engine.Logger ?? Logger.Instance!;
 
@@ -83,6 +89,16 @@ namespace FragEngine3.Graphics
 		private void Dispose(bool _disposing)
 		{
 			IsDisposed = true;
+
+			TexPlaceholderWhite?.Unload();
+			TexPlaceholderGray?.Unload();
+			TexPlaceholderBlack?.Unload();
+			if (_disposing)
+			{
+				TexPlaceholderWhite = ResourceHandle.None;
+				TexPlaceholderGray = ResourceHandle.None;
+				TexPlaceholderBlack = ResourceHandle.None;
+			}
 
 			graphicsCore.Dispose();
 			for (int i = 0; i < allGraphicsCores.Count; ++i)
@@ -200,12 +216,49 @@ namespace FragEngine3.Graphics
 			return newCore;
 		}
 
+		internal bool LoadBaseContent()
+		{
+			if (IsDisposed || !graphicsCore.IsInitialized)
+			{
+				Logger.LogError("Cannot load base content for disposed or uninitialized graphics system!");
+				return false;
+			}
+
+			Logger.LogMessage("- Creating placeholder textures.");
+
+			bool success = true;
+
+			if (success &= graphicsCore.CreateBlankTexture(RgbaByte.White, out Texture texBlank))
+			{
+				if (new TextureResource("TexWhite", engine, texBlank, out ResourceHandle texHandle).IsLoaded)
+				{
+					TexPlaceholderWhite = texHandle;
+				}
+			}
+			if (success &= graphicsCore.CreateBlankTexture(RgbaByte.Grey, out texBlank))
+			{
+				if (new TextureResource("TexGray", engine, texBlank, out ResourceHandle texHandle).IsLoaded)
+				{
+					TexPlaceholderGray = texHandle;
+				}
+			}
+			if (success &= graphicsCore.CreateBlankTexture(RgbaByte.Black, out texBlank))
+			{
+				if (new TextureResource("TexBlack", engine, texBlank, out ResourceHandle texHandle).IsLoaded)
+				{
+					TexPlaceholderBlack = texHandle;
+				}
+			}
+
+			return success;
+		}
+
 		/// <summary>
 		/// Update the window message loop to intercept user input and OS signals.
 		/// </summary>
 		/// <param name="_outRequestExit">Outputs whether a quit signal was received. (Ex.: WM_QUIT on windows)</param>
 		/// <returns>True if the message loop was worked off successfully, false if an error occurred.</returns>
-		public bool UpdateMessageLoop(out bool _outRequestExit)
+		internal bool UpdateMessageLoop(out bool _outRequestExit)
 		{
 			if (!IsDisposed && graphicsCore != null)
 			{
@@ -215,7 +268,7 @@ namespace FragEngine3.Graphics
 			return false;
 		}
 
-		public bool BeginFrame()
+		internal bool BeginFrame()
 		{
 			if (IsDisposed)
 			{
@@ -242,7 +295,7 @@ namespace FragEngine3.Graphics
 			return success;
 		}
 
-		public bool EndFrame()
+		internal bool EndFrame()
 		{
 			if (IsDisposed)
 			{

@@ -21,6 +21,15 @@ namespace FragEngine3.Graphics.Resources
 			resourceManager.AddResource(_outHandle);
 		}
 
+		public TextureResource(string _resourceKey, Engine _engine, Texture _texture, out ResourceHandle _outHandle) : base(_resourceKey, _engine)
+		{
+			core = _engine.GraphicsSystem.graphicsCore;
+			Texture = _texture ?? throw new ArgumentNullException(nameof(_texture), "Texture may not be null!");
+
+			_outHandle = new(this);
+			resourceManager.AddResource(_outHandle);
+		}
+
 		~TextureResource()
 		{
 			Dispose(false);

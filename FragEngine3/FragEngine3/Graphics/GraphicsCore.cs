@@ -305,7 +305,7 @@ namespace FragEngine3.Graphics
 		}
 
 		/// <summary>
-		/// Create the render targets according to standard/default parameters for this platform and device.
+		/// Creates a set of render targets according to standard/default parameters for this platform and device.
 		/// </summary>
 		/// <param name="_width">Horizontal resolution of output image, in pixels. Depending on platform, this should be a multiple of 8.</param>
 		/// <param name="_height">Vertical resolution of output image, in pixels.</param>
@@ -332,6 +332,17 @@ namespace FragEngine3.Graphics
 				out _outFramebuffer);
 		}
 
+		/// <summary>
+		/// Creates a set of render targets.
+		/// </summary>
+		/// <param name="_colorFormat">The pixel format for the color texture of the framebuffer. Must be a packed uncompressed format.</param>
+		/// <param name="_width">Horizontal resolution of output image, in pixels. Depending on platform, this should be a multiple of 8.</param>
+		/// <param name="_height">Vertical resolution of output image, in pixels.</param>
+		/// <param name="_createDepth">Whether to create a depth and stencil buffer for Z-testing while drawing to the render targets.</param>
+		/// <param name="_outTexColorTarget">Outputs an RGBA render target for lit and colored render results. This is the stuff you want to display on screen.</param>
+		/// <param name="_outTexDepthTarget">Outputs a depth texture, with an optional stencil channel. Null if no depth buffer was requested.</param>
+		/// <param name="_outFramebuffer">Outputs a framebuffer using the created color and depth textures as render targets.</param>
+		/// <returns>True if frame buffer and texture creation succeeded, false otherwise. All outputs will be disposed on failure.</returns>
 		public virtual bool CreateRenderTargets(
 			PixelFormat _colorFormat,
 			uint _width,
@@ -423,6 +434,71 @@ namespace FragEngine3.Graphics
 				_outFramebuffer = null!;
 				return false;
 			}
+		}
+
+		/// <summary>
+		/// Creates a tiny blank texture where all pixels are filled with the same color.<para/>
+		/// NOTE: This is used internally to create single-color placeholder textures held by the graphics system.
+		/// </summary>
+		/// <param name="_fillColor">The color to fill all pixels of the texture with.</param>
+		/// <param name="_outTexture">Outputs a new texture with a size of 8x8 pixels, that are all of the same color.
+		/// This may be null if texture creation fails.</param>
+		/// <returns>True if a texture was created and colored successfully, false otherwise. All outputs will be disposed
+		/// on failure.</returns>
+		public bool CreateBlankTexture(RgbaByte _fillColor, out Texture _outTexture)
+		{
+			if (!IsInitialized)
+			{
+				Logger.LogError("Cannot create blank texture using initialized graphics core!");
+				_outTexture = null!;
+				return false;
+			}
+
+			// Create a small 2D texture:
+			const int width = 8;
+			const int height = 8;
+			const int depth = 1;
+
+			TextureDescription textureDesc = new(
+				width,
+				height,
+				depth,
+				1, 1,
+				DefaultColorTargetPixelFormat,
+				TextureUsage.Sampled,
+				TextureType.Texture2D);
+
+			try
+			{
+				_outTexture = MainFactory.CreateTexture(ref textureDesc);
+			}
+			catch (Exception ex)
+			{
+				Logger.LogException($"Failed to create blank texture! (Fill color: {_fillColor})", ex);
+				_outTexture = null!;
+				return false;
+			}
+
+			// Initialize the texture to a solid color:
+			const int pixelCount = width * height * depth;
+			RgbaByte[] pixelData = new RgbaByte[pixelCount];
+			for (int i = 0; i < pixelCount; ++i)
+			{
+				pixelData[i] = _fillColor;
+			}
+
+			try
+			{
+				Device.UpdateTexture(_outTexture, pixelData, 0, 0, 0, width, height, depth, 0, 0);
+			}
+			catch (Exception ex)
+			{
+				Logger.LogException($"Failed to fill blank texture with solid color! (Fill color: {_fillColor})", ex);
+				_outTexture.Dispose();
+				_outTexture = null!;
+				return false;
+			}
+			return true;
 		}
 
 		#endregion
