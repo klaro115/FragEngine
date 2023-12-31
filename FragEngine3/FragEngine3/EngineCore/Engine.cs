@@ -7,7 +7,7 @@ using FragEngine3.Scenes;
 
 namespace FragEngine3.EngineCore
 {
-    public sealed class Engine : IDisposable
+	public sealed class Engine : IDisposable
 	{
 		#region Constructors
 
@@ -137,7 +137,7 @@ namespace FragEngine3.EngineCore
 				long stateFrameCount = TimeManager.FrameCount - stateStartFrameCount;
 				if (stateFrameCount > 0)
 				{
-					double avgFrameRate = (stateFrameCount / frameTimeSum.TotalMilliseconds) * 1000.0;
+					double avgFrameRate = stateFrameCount / frameTimeSum.TotalMilliseconds * 1000.0;
 					double avgFrameTimeMs = frameTimeSum.TotalMilliseconds / stateFrameCount;
 					double avgComputeTimeMs = computeTimeSum.TotalMilliseconds / stateFrameCount;
 
@@ -199,7 +199,7 @@ namespace FragEngine3.EngineCore
 				// Run the main application loop:
 				if (success)
 				{
-					success &= RunMainLoop();
+					success &= RunMainLoopStates();
 				}
 				if (IsRunning) Exit();
 
@@ -223,7 +223,38 @@ namespace FragEngine3.EngineCore
 			return success;
 		}
 
-		private bool RunMainLoop()
+		private bool RunMainLoopStates()
+		{
+			bool success = true;
+
+			// Load content loop:
+			success &= RunState_Loading(out bool continueToRunningState);
+			if (!success)
+			{
+				Logger.LogError("Engine loading state failed, exiting!", -1, LogEntrySeverity.Critical);
+			}
+			
+			// Main application loop:
+			if (success && continueToRunningState)
+			{
+				success &= RunState_Running();
+				if (!success)
+				{
+					Logger.LogError("Engine main running state failed, exiting!", -1, LogEntrySeverity.Critical);
+				}
+			}
+
+			// Unload content loop:
+			success &= RunState_Unloading();
+			if (!success)
+			{
+				Logger.LogError("Engine unloading state failed, exiting!", -1, LogEntrySeverity.Critical);
+			}
+
+			return success;
+		}
+
+		private bool RunState_Loading(out bool _outContinueToRunningState)
 		{
 			// Start gathering resources and load data asynchronously:
 			SetState(EngineState.Loading);
@@ -231,12 +262,18 @@ namespace FragEngine3.EngineCore
 			if (!ResourceManager.fileGatherer.GatherAllResources(false, out Containers.Progress fileGatherProgress))
 			{
 				Logger.LogError("Error! Failed to start up resource manager!", _severity: LogEntrySeverity.Critical);
+				_outContinueToRunningState = false;
 				return false;
 			}
 
 			bool success = true;
+			_outContinueToRunningState = true;
 
-			// Run the main loop across the entire loading and application run-time stages:
+			// Load or generate core resources for all systems:
+			success &= GraphicsSystem.LoadBaseContent();
+			//...
+
+			// Run the main loop:
 			while (success)
 			{
 				TimeManager.BeginFrame();
@@ -248,69 +285,59 @@ namespace FragEngine3.EngineCore
 					Exit();
 				}
 
-				// 1. Wait for static application resources loading to finish:
-				if (State == EngineState.Loading)
+				// Respond to thread abort:
+				if (mainLoopCancellationSrc != null && mainLoopCancellationSrc.IsCancellationRequested)
 				{
-					if (mainLoopCancellationSrc != null && mainLoopCancellationSrc.IsCancellationRequested)
-					{
-						SetState(EngineState.Unloading);
-						continue;
-					}
-					else if (fileGatherProgress.IsFinished)
-					{
-						SetState(EngineState.Running);
-						continue;
-					}
-					success &= UpdateRuntimeLogic();
+					_outContinueToRunningState = false;
+					break;
 				}
-				// 2. Run the main game logic on repeat:
-				else if (State == EngineState.Running)
+				// Respond to loading process completion:
+				else if (fileGatherProgress.IsFinished)
 				{
-					if (mainLoopCancellationSrc != null && mainLoopCancellationSrc.IsCancellationRequested)
-					{
-						SetState(EngineState.Unloading);
-						continue;
-					}
-					success &= UpdateRuntimeLogic();
+					_outContinueToRunningState = true;
+					break;
 				}
-				// 3. Wait for resouces to finish unloading:
-				else if (State == EngineState.Unloading)
+
+				// Update application logic:
+				success &= UpdateRuntimeLogic();
+				
+				// Sleep thread to target a consistent 60Hz:
+				TimeManager.EndFrame(out TimeSpan threadSleepTime);
+				computeTimeSum += TimeManager.LastFrameDuration;
+				frameTimeSum += TimeManager.DeltaTime;
+				Thread.Sleep(threadSleepTime.Milliseconds);
+			}
+
+			return success;
+		}
+
+		private bool RunState_Running()
+		{
+			SetState(EngineState.Running);
+
+			bool success = true;
+
+			// Run the main loop:
+			while (success)
+			{
+				TimeManager.BeginFrame();
+
+				// Update main window message loop, exit if an OS signal requested application quit:
+				success &= GraphicsSystem.UpdateMessageLoop(out bool requestExit);
+				if (requestExit && (mainLoopCancellationSrc == null || mainLoopCancellationSrc.IsCancellationRequested))
 				{
-					if (ResourceManager.TotalResourceCount == 0 && ResourceManager.TotalFileCount == 0)
-					{
-						break;
-					}
-					if (ResourceManager.QueuedResourceCount != 0)
-					{
-						ResourceManager.AbortAllImports();
-					}
-
-					const int maxUnloadsPerUpdate = 32;
-					int unloadsThisUpdate = 0;
-
-					// Unload and release resources:
-					{
-						IEnumerator<ResourceHandle> e = ResourceManager.IterateResources(false);
-						while (e.MoveNext() && unloadsThisUpdate++ < maxUnloadsPerUpdate)
-						{
-							ResourceManager.RemoveResource(e.Current.resourceKey);
-						}
-					}
-
-					// Unload and close resource files afterwards:
-					if (ResourceManager.TotalResourceCount == 0)
-					{
-						IEnumerator<ResourceFileHandle> e = ResourceManager.IterateFiles(false);
-						while (e.MoveNext() && unloadsThisUpdate++ < maxUnloadsPerUpdate)
-						{
-							ResourceManager.RemoveFile(e.Current.Key);
-						}
-					}
-
-					success &= UpdateRuntimeLogic();
+					Exit();
 				}
-				else break;
 
+				// Respond to thread abort:
+				if (mainLoopCancellationSrc != null && mainLoopCancellationSrc.IsCancellationRequested)
+				{
+					break;
+				}
+
+				// Update application logic:
+				success &= UpdateRuntimeLogic();
+				
 				// Sleep thread to target a consistent 60Hz:
 				TimeManager.EndFrame(out TimeSpan threadSleepTime);
 				computeTimeSum += TimeManager.LastFrameDuration;
@@ -320,13 +347,73 @@ namespace FragEngine3.EngineCore
 				//TODO [later]: Consider adding empty loop for delaying those last fractions of a millisecond.
 			}
 
+			return success;
+		}
+
+		private bool RunState_Unloading()
+		{
 			SetState(EngineState.Unloading);
+
+			bool success = true;
+
+			// Run the main loop:
+			while (success)
+			{
+				TimeManager.BeginFrame();
+
+				// Update main window message loop, exit if an OS signal requested application quit:
+				success &= GraphicsSystem.UpdateMessageLoop(out bool requestExit);
+				if (requestExit && (mainLoopCancellationSrc == null || mainLoopCancellationSrc.IsCancellationRequested))
+				{
+					Exit();
+				}
+
+				if (ResourceManager.TotalResourceCount == 0 && ResourceManager.TotalFileCount == 0)
+				{
+					break;
+				}
+				if (ResourceManager.QueuedResourceCount != 0)
+				{
+					ResourceManager.AbortAllImports();
+				}
+
+				const int maxUnloadsPerUpdate = 64;
+				int unloadsThisUpdate = 0;
+
+				// Unload and release resources:
+				{
+					IEnumerator<ResourceHandle> e = ResourceManager.IterateResources(false);
+					while (e.MoveNext() && unloadsThisUpdate++ < maxUnloadsPerUpdate)
+					{
+						ResourceManager.RemoveResource(e.Current.resourceKey);
+					}
+				}
+
+				// Unload and close resource files afterwards:
+				if (ResourceManager.TotalResourceCount == 0)
+				{
+					IEnumerator<ResourceFileHandle> e = ResourceManager.IterateFiles(false);
+					while (e.MoveNext() && unloadsThisUpdate++ < maxUnloadsPerUpdate)
+					{
+						ResourceManager.RemoveFile(e.Current.Key);
+					}
+				}
+
+				// Update application logic:
+				success &= UpdateRuntimeLogic();
+				
+				// Sleep thread to target a consistent 60Hz:
+				TimeManager.EndFrame(out TimeSpan threadSleepTime);
+				computeTimeSum += TimeManager.LastFrameDuration;
+				frameTimeSum += TimeManager.DeltaTime;
+				Thread.Sleep(threadSleepTime.Milliseconds);
+			}
 
 			// Make sure all resources are unloaded and no further imports are running:
 			ResourceManager.AbortAllImports();
 			ResourceManager.DisposeAllResources();
 
-			return success;
+			return true;
 		}
 
 		private bool UpdateRuntimeLogic()
