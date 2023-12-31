@@ -111,6 +111,15 @@ namespace FragEngine3.Resources
 		#endregion
 		#region Methods
 
+		/// <summary>
+		/// Gets the resource object held by this handle.
+		/// </summary>
+		/// <param name="_loadImmediatelyIfNotReady">Whether to load the resource immediately on the current thread if it isn't fully loaded
+		/// yet. If false, the method will return null until the resource has been loaded, either asynchronously or through some other call
+		/// to load it. This parameter does nothing if '_loadResourceIfNotReady' is set to false.</param>
+		/// <param name="_loadResourceIfNotReady">Whether to queue the resource up for immediate or asynchronous loading, if it isn't loaded
+		/// yet. When in doubt, leave this on the default value.</param>
+		/// <returns>The resource object held by this handle, or null, if the resource is not yet loaded, or if it could not be loaded.</returns>
 		public Resource? GetResource(bool _loadImmediatelyIfNotReady = true, bool _loadResourceIfNotReady = true)
 		{
 			if (!IsLoaded && _loadResourceIfNotReady)
@@ -120,6 +129,30 @@ namespace FragEngine3.Resources
 			return IsLoaded ? resource : null;
 		}
 
+		/// <summary>
+		/// Gets the resource object held by this handle.
+		/// </summary>
+		/// <typeparam name="T">The type of the resource you're expecting. Must be a non-abstract type inheriting from <see cref="Resource"/>.
+		/// </typeparam>
+		/// <param name="_loadImmediatelyIfNotReady">Whether to load the resource immediately on the current thread if it isn't fully loaded
+		/// yet. If false, the method will return null until the resource has been loaded, either asynchronously or through some other call
+		/// to load it. This parameter does nothing if '_loadResourceIfNotReady' is set to false.</param>
+		/// <param name="_loadResourceIfNotReady">Whether to queue the resource up for immediate or asynchronous loading, if it isn't loaded
+		/// yet. When in doubt, leave this on the default value.</param>
+		/// <returns>The resource object held by this handle, or null, if the resource is not yet loaded, or if it could not be loaded, or
+		/// if the resource's type did not match the generic parameter type T.</returns>
+		public T? GetResource<T>(bool _loadImmediatelyIfNotReady = true, bool _loadResourceIfNotReady = true) where T : Resource
+		{
+			return GetResource(_loadImmediatelyIfNotReady, _loadResourceIfNotReady) as T;
+		}
+
+		/// <summary>
+		/// Trigger loading of this handle's resource, if it wasn't loaded yet.
+		/// </summary>
+		/// <param name="_loadImmediately">Whether to load the resource immediately on the current thread. If false, the resource will instead
+		/// be queued up for asynchronous loading and will be ready for use at some later time.</param>
+		/// <returns>True if the resource was already loaded, or if immediate loaded succeeded, or if it was queued up for asynchronous loading.
+		/// </returns>
 		public bool Load(bool _loadImmediately)
 		{
 			// If resource is already fully loaded, do nothing:
@@ -132,6 +165,9 @@ namespace FragEngine3.Resources
 			return resourceManager.LoadResource(this, _loadImmediately, AssignResourceCallback);
 		}
 
+		/// <summary>
+		/// Request the resource manager to unload the resourcee data held by this handle, or to cancel a pending import.
+		/// </summary>
 		public void Unload()
 		{
 			if (LoadState != ResourceLoadState.NotLoaded)

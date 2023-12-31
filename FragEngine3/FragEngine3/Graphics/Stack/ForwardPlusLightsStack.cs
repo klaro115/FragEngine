@@ -580,7 +580,7 @@ namespace FragEngine3.Graphics.Stack
 
 				try
 				{
-					Texture texNull = (core.graphicsSystem.TexPlaceholderTransparent.GetResource(false, false) as TextureResource)!.Texture!;
+					Texture texNull = core.graphicsSystem.TexPlaceholderTransparent.GetResource<TextureResource>(false, false)!.Texture!;
 
 					BindableResource[] resources =
 					[
