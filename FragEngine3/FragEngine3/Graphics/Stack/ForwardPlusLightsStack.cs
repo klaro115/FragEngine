@@ -580,13 +580,15 @@ namespace FragEngine3.Graphics.Stack
 
 				try
 				{
+					Texture texNull = (core.graphicsSystem.TexPlaceholderTransparent.GetResource(false, false) as TextureResource)!.Texture!;
+
 					BindableResource[] resources =
 					[
-						opaqueTarget?.texColorTarget!,
-						opaqueTarget?.texDepthTarget!,
-						transparentTarget?.texColorTarget!,
-						transparentTarget?.texDepthTarget!,
-						uiTarget?.texColorTarget!,
+						opaqueTarget?.texColorTarget ?? texNull,
+						opaqueTarget?.texDepthTarget ?? texNull,
+						transparentTarget?.texColorTarget ?? texNull,
+						transparentTarget?.texDepthTarget ?? texNull,
+						uiTarget?.texColorTarget ?? texNull,
 					];
 					ResourceSetDescription resourceSetDesc = new(resourceLayout, resources);
 

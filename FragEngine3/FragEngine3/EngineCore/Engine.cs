@@ -269,10 +269,6 @@ namespace FragEngine3.EngineCore
 			bool success = true;
 			_outContinueToRunningState = true;
 
-			// Load or generate core resources for all systems:
-			success &= GraphicsSystem.LoadBaseContent();
-			//...
-
 			// Run the main loop:
 			while (success)
 			{
@@ -307,6 +303,10 @@ namespace FragEngine3.EngineCore
 				frameTimeSum += TimeManager.DeltaTime;
 				Thread.Sleep(threadSleepTime.Milliseconds);
 			}
+
+			// Load or generate core resources for all systems:
+			success &= GraphicsSystem.LoadBaseContent();
+			//...
 
 			return success;
 		}

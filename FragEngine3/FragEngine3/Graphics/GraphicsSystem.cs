@@ -75,6 +75,7 @@ namespace FragEngine3.Graphics
 		public ResourceHandle TexPlaceholderWhite { get; private set; } = ResourceHandle.None;
 		public ResourceHandle TexPlaceholderGray { get; private set; } = ResourceHandle.None;
 		public ResourceHandle TexPlaceholderBlack { get; private set; } = ResourceHandle.None;
+		public ResourceHandle TexPlaceholderTransparent { get; private set; } = ResourceHandle.None;
 
 		private Logger Logger => engine.Logger ?? Logger.Instance!;
 
@@ -90,14 +91,17 @@ namespace FragEngine3.Graphics
 		{
 			IsDisposed = true;
 
-			TexPlaceholderWhite?.Unload();
-			TexPlaceholderGray?.Unload();
-			TexPlaceholderBlack?.Unload();
+			if (TexPlaceholderWhite != null && TexPlaceholderWhite.IsLoaded) TexPlaceholderWhite.Unload();
+			if (TexPlaceholderGray != null && TexPlaceholderGray.IsLoaded) TexPlaceholderGray.Unload();
+			if (TexPlaceholderBlack != null && TexPlaceholderBlack.IsLoaded) TexPlaceholderBlack.Unload();
+			if (TexPlaceholderTransparent != null && TexPlaceholderTransparent.IsLoaded) TexPlaceholderTransparent.Unload();
+
 			if (_disposing)
 			{
 				TexPlaceholderWhite = ResourceHandle.None;
 				TexPlaceholderGray = ResourceHandle.None;
 				TexPlaceholderBlack = ResourceHandle.None;
+				TexPlaceholderTransparent = ResourceHandle.None;
 			}
 
 			graphicsCore.Dispose();
@@ -224,33 +228,40 @@ namespace FragEngine3.Graphics
 				return false;
 			}
 
-			Logger.LogMessage("- Creating placeholder textures.");
-
 			bool success = true;
 
-			if (success &= graphicsCore.CreateBlankTexture(RgbaByte.White, out Texture texBlank))
+			Logger.LogMessage("- Creating placeholder textures.");
+
+			if (success &= CreatePlaceholderTexture("TexWhite", RgbaByte.White, out ResourceHandle texHandle))
 			{
-				if (new TextureResource("TexWhite", engine, texBlank, out ResourceHandle texHandle).IsLoaded)
-				{
-					TexPlaceholderWhite = texHandle;
-				}
+				TexPlaceholderWhite = texHandle;
 			}
-			if (success &= graphicsCore.CreateBlankTexture(RgbaByte.Grey, out texBlank))
+			if (success &= CreatePlaceholderTexture("TexGray", RgbaByte.Grey, out texHandle))
 			{
-				if (new TextureResource("TexGray", engine, texBlank, out ResourceHandle texHandle).IsLoaded)
-				{
-					TexPlaceholderGray = texHandle;
-				}
+				TexPlaceholderGray = texHandle;
 			}
-			if (success &= graphicsCore.CreateBlankTexture(RgbaByte.Black, out texBlank))
+			if (success &= CreatePlaceholderTexture("TexBlack", RgbaByte.Black, out texHandle))
 			{
-				if (new TextureResource("TexBlack", engine, texBlank, out ResourceHandle texHandle).IsLoaded)
-				{
-					TexPlaceholderBlack = texHandle;
-				}
+				TexPlaceholderBlack = texHandle;
+			}
+			if (success &= CreatePlaceholderTexture("TexTransparent", new RgbaByte(0, 0, 0, 0), out texHandle))
+			{
+				TexPlaceholderTransparent = texHandle;
 			}
 
 			return success;
+
+
+			// Local helper method for creating solid-color placeholder textures:
+			bool CreatePlaceholderTexture(string _resourceKey, RgbaByte _fillColor, out ResourceHandle _outHandle)
+			{
+				if (!graphicsCore.CreateBlankTexture(_fillColor, out Texture texBlank))
+				{
+					_outHandle = ResourceHandle.None;
+					return false;
+				}
+				return new TextureResource(_resourceKey, engine, texBlank, out _outHandle).IsLoaded;
+			}
 		}
 
 		/// <summary>
