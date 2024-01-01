@@ -61,6 +61,27 @@ public sealed class Camera : Component
 	public bool IsDrawing => !IsDisposed && instance.IsDrawing;
 	public bool HasOverrideFramebuffer => overrideTarget != null && !overrideTarget.IsDisposed;
 
+	public CameraSettings Settings
+	{
+		get => instance.Settings;
+		set => instance.Settings = value;
+	}
+	public CameraOutput OutputSettings
+	{
+		get => instance.OutputSettings;
+		set => instance.OutputSettings = value;
+	}
+	public CameraProjection ProjectionSettings
+	{
+		get => instance.ProjectionSettings;
+		set => instance.ProjectionSettings = value;
+	}
+	public CameraClearing ClearingSettings
+	{
+		get => instance.ClearingSettings;
+		set => instance.ClearingSettings = value;
+	}
+
 	/// <summary>
 	/// Gets or sets whether this camera is the engine's main camera.
 	/// </summary>
@@ -168,14 +189,16 @@ public sealed class Camera : Component
 			targetDict.Remove(_renderMode);
 		}
 
+		CameraOutput outputSettings = OutputSettings;
+
 		// No fitting target, create a new one:
 		_outTarget = new(
 			instance.graphicsCore,
 			_renderMode,
-			instance.ResolutionX,
-			instance.ResolutionY,
-			instance.ColorFormat,
-			instance.HasDepth);
+			outputSettings.resolutionX,
+			outputSettings.resolutionY,
+			outputSettings.colorFormat,
+			outputSettings.hasDepth);
 		
 		targetDict.Add(_renderMode, _outTarget);
 		return true;
@@ -380,10 +403,10 @@ public sealed class Camera : Component
 			cameraDirection = new Vector4(worldPose.Forward, 0),
 			
 			// Camera parameters:
-			resolutionX = instance.ResolutionX,
-			resolutionY = instance.ResolutionY,
-			nearClipPlane = instance.NearClipPlane,
-			farClipPlane = instance.FarClipPlane,
+			resolutionX = instance.OutputSettings.resolutionX,
+			resolutionY = instance.OutputSettings.resolutionY,
+			nearClipPlane = instance.ProjectionSettings.nearClipPlane,
+			farClipPlane = instance.ProjectionSettings.farClipPlane,
 
 			// Lighting:
 			ambientLight = ambientLight,
@@ -415,20 +438,24 @@ public sealed class Camera : Component
 			return false;
 		}
 
-		instance.ResolutionX = data.ResolutionX;
-		instance.ResolutionY = data.ResolutionY;
+		CameraSettings settings = Settings;
 
-		instance.NearClipPlane = data.NearClipPlane;
-		instance.FarClipPlane = data.FarClipPlane;
-		instance.FieldOfViewDegrees = data.FieldOfViewDegrees;
+		settings.ResolutionX = data.ResolutionX;
+		settings.ResolutionY = data.ResolutionY;
+
+		settings.NearClipPlane = data.NearClipPlane;
+		settings.FarClipPlane = data.FarClipPlane;
+		settings.FieldOfViewDegrees = data.FieldOfViewDegrees;
 
 		cameraPriority = data.CameraPriority;
 		layerMask = data.LayerMask;
 
-		instance.ClearColor = data.ClearBackground;
-		instance.ClearColorValue = Color32.ParseHexString(data.ClearColor).ToRgbaFloat();
-		instance.ClearDepthValue = data.ClearDepth;
-		instance.ClearStencilValue = data.ClearStencil;
+		settings.ClearColor = data.ClearBackground;
+		settings.ClearColorValue = Color32.ParseHexString(data.ClearColor).ToRgbaFloat();
+		settings.ClearDepthValue = data.ClearDepth;
+		settings.ClearStencilValue = data.ClearStencil;
+
+		Settings = settings;
 
 		// Re-register camera with the scene:
 		node.scene.drawManager.UnregisterCamera(this);
@@ -439,22 +466,24 @@ public sealed class Camera : Component
 	{
 		CameraData data;
 
+		CameraSettings settings = Settings;
+
 		data = new()
 		{
-			ResolutionX = instance.ResolutionX,
-			ResolutionY = instance.ResolutionY,
+			ResolutionX = settings.ResolutionX,
+			ResolutionY = settings.ResolutionY,
 
-			NearClipPlane = instance.NearClipPlane,
-			FarClipPlane = instance.FarClipPlane,
-			FieldOfViewDegrees = instance.FieldOfViewDegrees,
+			NearClipPlane = settings.NearClipPlane,
+			FarClipPlane = settings.FarClipPlane,
+			FieldOfViewDegrees = settings.FieldOfViewDegrees,
 
 			CameraPriority = cameraPriority,
 			LayerMask = layerMask,
 
-			ClearBackground = instance.ClearColor,
-			ClearColor = new Color32(instance.ClearColorValue).ToHexString(),
-			ClearDepth = instance.ClearDepthValue,
-			ClearStencil = instance.ClearStencilValue,
+			ClearBackground = settings.ClearColor,
+			ClearColor = new Color32(settings.ClearColorValue).ToHexString(),
+			ClearDepth = settings.ClearDepthValue,
+			ClearStencil = settings.ClearStencilValue,
 		};
 
 		if (!Serializer.SerializeToJson(data, out string dataJson))

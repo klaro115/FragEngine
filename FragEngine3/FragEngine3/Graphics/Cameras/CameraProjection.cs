@@ -2,8 +2,13 @@
 
 namespace FragEngine3.Graphics.Cameras;
 
-public sealed class CameraProjection
+public struct CameraProjection
 {
+	#region Constructors
+
+	public CameraProjection() { }
+
+	#endregion
 	#region Fields
 
 	public CameraProjectionType projectionType = CameraProjectionType.Perspective;

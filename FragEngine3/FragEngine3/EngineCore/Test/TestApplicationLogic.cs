@@ -8,6 +8,7 @@ using FragEngine3.Resources;
 using FragEngine3.Scenes;
 using FragEngine3.Scenes.Utility;
 using System.Numerics;
+using Veldrid;
 using Veldrid.Sdl2;
 
 namespace FragEngine3.EngineCore.Test
@@ -102,23 +103,25 @@ namespace FragEngine3.EngineCore.Test
 			//if (cameraNode.CreateComponent(out Camera? camera, RenderMode.Opaque) && camera != null)
 			if (cameraNode.CreateComponent(out Camera? camera) && camera != null)
 			{
-				/*
 				Sdl2Window window = Engine.GraphicsSystem.graphicsCore.Window;
-				camera.ResolutionX = (uint)window.Width;
-				camera.ResolutionY = (uint)window.Height;
-				//camera.OutputFormat = Veldrid.PixelFormat.R16_G16_B16_A16_UNorm;
+				Graphics.Cameras.CameraSettings cameraSettings = new()
+				{
+					ResolutionX = (uint)window.Width,
+					ResolutionY = (uint)window.Height,
+					//ColorFormat = Veldrid.PixelFormat.R16_G16_B16_A16_UNorm,
 
-				camera.Projection = Camera.ProjectionType.Perpective;
-				camera.FieldOfViewDegrees = 60.0f;
-				camera.NearClipPlane = 0.1f;
-				camera.FarClipPlane = 1000.0f;
-				camera.OrthographicSize = 5;
+					ProjectionType = CameraProjectionType.Perspective,
+					FieldOfViewDegrees = 60.0f,
+					NearClipPlane = 0.1f,
+					FarClipPlane = 1000.0f,
+					OrthographicSize = 5,
 			
-				camera.ClearBackground = true;
-				camera.ClearColor = Color32.Cornflower;
-				camera.ClearDepth = 1.0f;
-				*/
-			
+					ClearColor = true,
+					ClearDepth = true,
+					ClearColorValue = RgbaFloat.CornflowerBlue,
+					ClearDepthValue = 1.0f,
+				};
+				camera.Settings = cameraSettings;
 				camera.IsMainCamera = true;
 			}
 

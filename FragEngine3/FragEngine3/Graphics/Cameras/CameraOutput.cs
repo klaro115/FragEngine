@@ -2,8 +2,13 @@
 
 namespace FragEngine3;
 
-public sealed class CameraOutput
+public struct CameraOutput
 {
+	#region Constructors
+
+	public CameraOutput() { }
+
+	#endregion
 	#region Fields
 
 	// Color output:
@@ -19,14 +24,14 @@ public sealed class CameraOutput
 	#endregion
 	#region Properties
 
-	public bool IsValid => resolutionX != 0 && resolutionY != 0;
+	public readonly bool IsValid => resolutionX != 0 && resolutionY != 0;
 
-	public float AspectRatio => (float)resolutionX / resolutionY;
+	public readonly float AspectRatio => (float)resolutionX / resolutionY;
 
     #endregion
     #region Methods
 
-	public bool HaveSettingsChanged(in Framebuffer _framebuffer)
+	public readonly bool HaveSettingsChanged(in Framebuffer _framebuffer)
 	{
 		if (_framebuffer == null || _framebuffer.IsDisposed) return false;
 
@@ -74,7 +79,7 @@ public sealed class CameraOutput
 		}
 	}
 
-    public override string ToString()
+    public readonly override string ToString()
 	{
 		return $"ResX: {resolutionX}, ResY: {resolutionY}, Color Format: {colorFormat}, Depth Format: {depthFormat} (D: {hasDepth}, S: {hasStencil})";
 	}

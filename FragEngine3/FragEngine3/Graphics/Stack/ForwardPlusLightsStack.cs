@@ -12,7 +12,7 @@ using Veldrid;
 
 namespace FragEngine3.Graphics.Stack
 {
-    public sealed class ForwardPlusLightsStack(GraphicsCore _core) : IGraphicsStack
+	public sealed class ForwardPlusLightsStack(GraphicsCore _core) : IGraphicsStack
 	{
 		#region Types
 

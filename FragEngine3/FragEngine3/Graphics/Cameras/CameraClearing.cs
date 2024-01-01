@@ -2,8 +2,13 @@
 
 namespace FragEngine3;
 
-public sealed class CameraClearing
+public struct CameraClearing
 {
+	#region Constructors
+
+	public CameraClearing() { }
+
+	#endregion
 	#region Fields
 
 	// Color targets:
