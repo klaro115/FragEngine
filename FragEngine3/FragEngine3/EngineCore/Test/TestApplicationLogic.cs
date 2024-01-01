@@ -74,7 +74,7 @@ namespace FragEngine3.EngineCore.Test
 			// Import 3D models:
 			if (Engine.ResourceManager.GetResource("Cube.obj", out ResourceHandle handle))
 			{
-				//handle.Load(true);
+				handle.Load(true);
 			}
 			if (Engine.ResourceManager.GetResource("Rabbit.obj", out handle))
 			{
@@ -82,7 +82,7 @@ namespace FragEngine3.EngineCore.Test
 			}
 			if (Engine.ResourceManager.GetResource("Mtl_DefaultSurface", out handle))
 			{
-				//handle.Load(true);
+				handle.Load(true);
 			}
 			if (Engine.ResourceManager.GetResource("Mtl_TestMaterial", out handle))
 			{
@@ -90,7 +90,7 @@ namespace FragEngine3.EngineCore.Test
 			}
 			if (Engine.ResourceManager.GetResource("ForwardPlusLight_Composition_PS", out handle))
 			{
-				//handle.Load(true);
+				handle.Load(true);
 			}
 
 			Scene scene = Engine.SceneManager.MainScene!;
