@@ -505,7 +505,7 @@ public sealed class CameraInstance : IDisposable
 			return false;
 		}
 
-		//...
+		isDrawing = false;
 		return true;
 	}
 

@@ -6,6 +6,7 @@ using FragEngine3.Graphics.Components.Internal;
 using FragEngine3.Graphics.Contexts;
 using FragEngine3.Scenes;
 using FragEngine3.Scenes.Data;
+using FragEngine3.Scenes.EventSystem;
 using FragEngine3.Utility.Serialization;
 using Veldrid;
 
@@ -18,6 +19,8 @@ public sealed class Camera : Component
 	public Camera(SceneNode _node) : base(_node)
 	{
 		instance = new(node.scene.engine.GraphicsSystem.graphicsCore);
+
+		node.scene.drawManager.RegisterCamera(this);
 	}
 
 	#endregion
@@ -42,28 +45,49 @@ public sealed class Camera : Component
 	private static readonly object mainCameraLockObj = new();
 
 	#endregion
+	#region Constants
+
+	private static readonly SceneEventType[] sceneEventTypes =
+	[
+		SceneEventType.OnNodeDestroyed,
+		SceneEventType.OnDestroyComponent,
+	];
+
+	#endregion
 	#region Properties
+
+	public override SceneEventType[] GetSceneEventList() => sceneEventTypes;
 
 	public bool IsDrawing => !IsDisposed && instance.IsDrawing;
 	public bool HasOverrideFramebuffer => overrideTarget != null && !overrideTarget.IsDisposed;
 
+	/// <summary>
+	/// Gets or sets whether this camera is the engine's main camera.
+	/// </summary>
 	public bool IsMainCamera
 	{
 		get => MainCamera == this;
-		set { lock(mainCameraLockObj) { mainCamera = this; } }
+		set
+		{
+			if (value && !IsDisposed) MainCamera = this;
+			else if (!value && MainCamera == this) MainCamera = null;
+		}
 	}
+	/// <summary>
+	/// Gets or sets the engine's main camera instance. Null if no main camera is assigned, may not be disposed.
+	/// </summary>
 	public static Camera? MainCamera
 	{
-		get { lock(mainCameraLockObj) { return mainCamera; } }
+		get { lock(mainCameraLockObj) { return mainCamera != null && !mainCamera.IsDisposed ? mainCamera : null; } }
 		set { lock(mainCameraLockObj) { if (value == null || !value.IsDisposed) mainCamera = value; } }
 	}
 
-    #endregion
-    #region Methods
+	#endregion
+	#region Methods
 
-    protected override void Dispose(bool _disposing)
-    {
-        base.Dispose(_disposing);
+	protected override void Dispose(bool _disposing)
+	{
+		base.Dispose(_disposing);
 
 		foreach (var kvp in targetDict)
 		{
@@ -84,7 +108,50 @@ public sealed class Camera : Component
 			lightDataBuffer = null;
 			lightDataBufferCapacity = 0;
 		}
-    }
+	}
+
+	public override void Refresh()
+	{
+		// Do not allow resetting after disposal or while actively drawing:
+		if (IsDisposed || IsDrawing) return;
+
+		// Temporarily unset camera as main camera, to reduce potential access during reset:
+		bool wasMainCamera = IsMainCamera;
+		IsMainCamera = false;
+
+		// Purge dynamically allocated resources:
+		lightDataBuffer?.Dispose();
+		lightDataBufferCapacity = 0;
+
+		overrideTarget = null;
+		foreach (var kvp in targetDict)
+		{
+			kvp.Value.Dispose();
+		}
+		targetDict.Clear();
+
+		// Reset camera instance and its external references:
+		instance.SetOverrideFramebuffer(null, false);
+
+		// Reregister camera component:
+		node.scene.drawManager.UnregisterCamera(this);
+		node.scene.drawManager.RegisterCamera(this);
+
+		// Reassign camera as main camera:
+		if (wasMainCamera)
+		{
+			IsMainCamera = wasMainCamera;
+		}
+	}
+
+	public override void ReceiveSceneEvent(SceneEventType _eventType, object? _eventData)
+	{
+		if (_eventType == SceneEventType.OnNodeDestroyed ||
+			_eventType == SceneEventType.OnDestroyComponent)
+		{
+			node.scene.drawManager.UnregisterCamera(this);
+		}
+	}
 
 	internal bool GetOrCreateCameraTarget(RenderMode _renderMode, out CameraTarget _outTarget)
 	{
@@ -268,7 +335,10 @@ public sealed class Camera : Component
 
 		try
 		{
-			BufferDescription bufferDesc = new(byteSize, BufferUsage.StructuredBufferReadOnly | BufferUsage.Dynamic);
+			BufferDescription bufferDesc = new(
+				byteSize,
+				BufferUsage.StructuredBufferReadOnly | BufferUsage.Dynamic,
+				Light.LightSourceData.byteSize);
 
 			lightDataBuffer = instance.graphicsCore.MainFactory.CreateBuffer(ref bufferDesc);
 			return true;
@@ -325,9 +395,9 @@ public sealed class Camera : Component
 		return true;
 	}
 
-    public override bool LoadFromData(in ComponentData _componentData, in Dictionary<int, ISceneElement> _idDataMap)
-    {
-        if (string.IsNullOrEmpty(_componentData.SerializedData))
+	public override bool LoadFromData(in ComponentData _componentData, in Dictionary<int, ISceneElement> _idDataMap)
+	{
+		if (string.IsNullOrEmpty(_componentData.SerializedData))
 		{
 			Logger.LogError("Cannot load camera from null or blank serialized data!");
 			return false;
@@ -363,10 +433,10 @@ public sealed class Camera : Component
 		// Re-register camera with the scene:
 		node.scene.drawManager.UnregisterCamera(this);
 		return node.scene.drawManager.RegisterCamera(this);
-    }
+	}
 
-    public override bool SaveToData(out ComponentData _componentData, in Dictionary<ISceneElement, int> _idDataMap)
-    {
+	public override bool SaveToData(out ComponentData _componentData, in Dictionary<ISceneElement, int> _idDataMap)
+	{
 		CameraData data;
 
 		data = new()
@@ -399,7 +469,7 @@ public sealed class Camera : Component
 			SerializedData = dataJson,
 		};
 		return true;
-    }
+	}
 
 	#endregion
 }
