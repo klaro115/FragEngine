@@ -406,9 +406,17 @@ namespace FragEngine3.Graphics.Stack
 					else
 					{
 						// If no renderers, just allow clearing of render targets, to ensure backbuffer contents aren't undefined:
-						GetRendererListForMode(RenderMode.Opaque, out RendererList? opaqueList, out CommandList? cmdList);
+						if (!GetRendererListForMode(RenderMode.Opaque, out RendererList? opaqueList, out CommandList? cmdList) || cmdList == null)
+						{
+							return false;
+						}
+
+						cmdList.Begin();
 						_camera.BeginFrame(cmdList!, RenderMode.Opaque, true, 0, out _, out _);
 						_camera.EndFrame(cmdList!);
+						cmdList.End();
+
+						core.CommitCommandList(cmdList);
 					}
 				}
 
@@ -479,6 +487,7 @@ namespace FragEngine3.Graphics.Stack
 			success &= _camera.EndFrame(cmdList);
 			cmdList.End();
 
+			core.CommitCommandList(cmdList);
 			return success;
 		}
 
@@ -511,6 +520,7 @@ namespace FragEngine3.Graphics.Stack
 			success &= _camera.EndFrame(cmdList);
 			cmdList.End();
 
+			core.CommitCommandList(cmdList);
 			return success;
 		}
 
@@ -537,6 +547,7 @@ namespace FragEngine3.Graphics.Stack
 			success &= _camera.EndFrame(cmdList);
 			cmdList.End();
 
+			core.CommitCommandList(cmdList);
 			return success;
 		}
 
@@ -623,6 +634,7 @@ namespace FragEngine3.Graphics.Stack
 			success &= _camera.EndFrame(cmdList);
 			cmdList.End();
 
+			core.CommitCommandList(cmdList);
 			return success;
 		}
 
