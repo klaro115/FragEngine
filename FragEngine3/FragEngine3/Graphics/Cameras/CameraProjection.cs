@@ -17,7 +17,7 @@ public struct CameraProjection
 	public float fieldOfViewRad = DEFAULT_FOV_RAD;
 	public float othographicSize = 5.0f;
 	
-	public Matrix4x4 mtxInvWorld = Matrix4x4.Identity;
+	public Matrix4x4 mtxWorld2Camera = Matrix4x4.Identity;
 	public Matrix4x4 mtxViewport = Matrix4x4.Identity;
 	public Matrix4x4 mtxWorld2Clip = Matrix4x4.Identity;
 
@@ -52,9 +52,9 @@ public struct CameraProjection
 
 	public void RecalculateClipSpaceMatrices(in Matrix4x4 _mtxWorld, float _aspectRatio)
 	{
-		if (!Matrix4x4.Invert(_mtxWorld, out mtxInvWorld))
+		if (!Matrix4x4.Invert(_mtxWorld, out mtxWorld2Camera))
 		{
-			mtxInvWorld = Matrix4x4.Identity;
+			mtxWorld2Camera = Matrix4x4.Identity;
 		}
 
 		RecalculateClipSpaceMatrices(_aspectRatio);
@@ -68,7 +68,7 @@ public struct CameraProjection
 			nearClipPlane,
 			farClipPlane);
 
-		mtxWorld2Clip = mtxProjection * mtxInvWorld;
+		mtxWorld2Clip = mtxProjection * mtxWorld2Camera;
 	}
 
 	public void RecalculatePixelSpaceMatrices(uint _resolutionX, uint _resolutionY)

@@ -269,20 +269,11 @@ public sealed class CameraInstance : IDisposable
 		}
 
 		// Update values:
-		if (dirtyFlags.HasFlag(DirtyFlags.Projection))
+		if (dirtyFlags.HasFlag(DirtyFlags.Projection) ||
+			dirtyFlags.HasFlag(DirtyFlags.Output) ||
+			dirtyFlags.HasFlag(DirtyFlags.Transformation))
 		{
 			projection.RecalculateAllMatrices(mtxInvWorld, output.resolutionY, output.resolutionY);
-		}
-		else
-		{
-			if (dirtyFlags.HasFlag(DirtyFlags.Output))
-			{
-				projection.RecalculateClipSpaceMatrices(mtxInvWorld, output.AspectRatio);
-			}
-			if (dirtyFlags.HasFlag(DirtyFlags.Transformation))
-			{
-				projection.RecalculatePixelSpaceMatrices(output.resolutionY, output.resolutionY);
-			}
 		}
 
 		// Output the most up-to-date projection matrix:

@@ -108,10 +108,9 @@ namespace FragEngine3.EngineCore.Test
 				{
 					ResolutionX = (uint)window.Width,
 					ResolutionY = (uint)window.Height,
-					//ColorFormat = PixelFormat.B8_G8_R8_A8_UNorm,
 					//ColorFormat = PixelFormat.R16_G16_B16_A16_UNorm,
 
-					ProjectionType = CameraProjectionType.Perspective,
+					ProjectionType = CameraProjectionType.Orthographic,
 					FieldOfViewDegrees = 60.0f,
 					NearClipPlane = 0.1f,
 					FarClipPlane = 1000.0f,
@@ -176,8 +175,12 @@ namespace FragEngine3.EngineCore.Test
 				[
 					0, 2, 1,
 					2, 3, 1,
+
+					0, 1, 2,
+					2, 1, 3,
 				],
 			};
+			quadData.TransformVertices(new Pose(Vector3.UnitZ * 2, Quaternion.CreateFromAxisAngle(Vector3.UnitY, 0.5f), Vector3.One, true));		//TEST
 			StaticMesh quadMesh = new("Quad", Engine, false, out ResourceHandle quadHandle);
 			quadMesh.SetGeometry(in quadData);
 			SceneNode quadNode = scene.rootNode.CreateChild("Quad");
@@ -188,8 +191,8 @@ namespace FragEngine3.EngineCore.Test
 			if (quadNode.CreateComponent(out StaticMeshRenderer? quadRenderer) && quadRenderer != null)
 			{
 				quadRenderer.SetMesh(quadHandle);
-				quadRenderer.SetMaterial("Mtl_DefaultSurface");
-				//quadRenderer.SetMaterial("Mtl_TestMaterial");
+				//quadRenderer.SetMaterial("Mtl_DefaultSurface");
+				quadRenderer.SetMaterial("Mtl_TestMaterial");
 			}
 
 			return true;
@@ -197,8 +200,8 @@ namespace FragEngine3.EngineCore.Test
 
 		public override bool UpdateRunningState()
 		{
-			if (Engine.InputManager.GetMouseButtonUp(Veldrid.MouseButton.Right) ||
-				Engine.InputManager.GetKeyUp(Veldrid.Key.Escape))
+			if (Engine.InputManager.GetMouseButtonUp(MouseButton.Right) ||
+				Engine.InputManager.GetKeyUp(Key.Escape))
 			{
 				Engine.Exit();
 			}
