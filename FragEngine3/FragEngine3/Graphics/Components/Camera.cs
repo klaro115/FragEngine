@@ -346,32 +346,34 @@ public sealed class Camera : Component
 		_maxActiveLightCount = Math.Max(_maxActiveLightCount, 1);
 		uint byteSize = Light.LightSourceData.byteSize * _maxActiveLightCount;
 
-		// Do nothing if a buffer of adequate size is already ready:
-		if (lightDataBuffer != null && !lightDataBuffer.IsDisposed && lightDataBufferCapacity >= byteSize)
+		// Create a new buffer if there is none or if the previous one was too small:
+		if (lightDataBuffer == null || lightDataBuffer.IsDisposed || lightDataBufferCapacity < byteSize)
 		{
-			return true;
-		}
+			// Purge any previously allocated buffer:
+			lightDataBuffer?.Dispose();
+			lightDataBuffer = null;
 
-		// Purge any previously allocated buffer:
-		lightDataBuffer?.Dispose();
-		lightDataBuffer = null;
+			try
+			{
+				BufferDescription bufferDesc = new(
+					byteSize,
+					BufferUsage.StructuredBufferReadOnly | BufferUsage.Dynamic,
+					Light.LightSourceData.byteSize);
 
-		try
-		{
-			BufferDescription bufferDesc = new(
-				byteSize,
-				BufferUsage.StructuredBufferReadOnly | BufferUsage.Dynamic,
-				Light.LightSourceData.byteSize);
-
-			lightDataBuffer = instance.graphicsCore.MainFactory.CreateBuffer(ref bufferDesc);
-			lightDataBuffer.Name = $"BufLights_Capacity={_maxActiveLightCount}";
-			return true;
+				lightDataBuffer = instance.graphicsCore.MainFactory.CreateBuffer(ref bufferDesc);
+				lightDataBuffer.Name = $"BufLights_Capacity={_maxActiveLightCount}";
+				lightDataBufferCapacity = byteSize;
+				return true;
+			}
+			catch (Exception ex)
+			{
+				Logger.LogException("Failed to create camera's light data buffer!", ex);
+				lightDataBuffer?.Dispose();
+				lightDataBufferCapacity = 0;
+				return false;
+			}
 		}
-		catch (Exception ex)
-		{
-			Logger.LogException("Failed to create camera's light data buffer!", ex);
-			return false;
-		}
+		return true;
 	}
 
 	private bool UpdateGlobalConstantBuffer(in Matrix4x4 _mtxWorld2Clip, uint _activeLightCount)
