@@ -364,6 +364,7 @@ public sealed class Camera : Component
 				Light.LightSourceData.byteSize);
 
 			lightDataBuffer = instance.graphicsCore.MainFactory.CreateBuffer(ref bufferDesc);
+			lightDataBuffer.Name = $"BufLights_Capacity={_maxActiveLightCount}";
 			return true;
 		}
 		catch (Exception ex)
@@ -383,6 +384,7 @@ public sealed class Camera : Component
 				BufferDescription bufferDesc = new(GlobalConstantBuffer.packedByteSize, BufferUsage.UniformBuffer | BufferUsage.Dynamic);
 
 				globalConstantBuffer = instance.graphicsCore.MainFactory.CreateBuffer(ref bufferDesc);
+				globalConstantBuffer.Name = "CBGlobal";
 				return true;
 			}
 			catch (Exception ex)

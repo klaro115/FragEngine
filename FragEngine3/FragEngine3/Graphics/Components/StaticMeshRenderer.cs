@@ -336,6 +336,7 @@ namespace FragEngine3.Graphics.Components
 				BufferDescription constantBufferDesc = new(ObjectDataConstantBuffer.packedByteSize, BufferUsage.UniformBuffer | BufferUsage.Dynamic);
 
 				objectDataConstantBuffer = core.MainFactory.CreateBuffer(ref constantBufferDesc);
+				objectDataConstantBuffer.Name = "CBObject";
 				rendererVersion++;
 			}
 
@@ -367,6 +368,7 @@ namespace FragEngine3.Graphics.Components
 					_cameraCtx.lightDataBuffer);
 
 				rs = core.MainFactory.CreateResourceSet(ref resourceSetDesc);
+				rs.Name = $"ResSet_Default_{_material.resourceKey}";
 				defaultResourceSet.UpdateValue(rendererVersion, rs);
 			}
 			

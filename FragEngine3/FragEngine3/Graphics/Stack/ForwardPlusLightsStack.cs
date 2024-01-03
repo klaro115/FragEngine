@@ -297,10 +297,10 @@ namespace FragEngine3.Graphics.Stack
 
 				GatherLightsForCamera(in _lights, camera);
 
-				success &= TryRenderCamera(_scene, _renderers, camera, maxActiveLightCount);
+				success &= TryRenderCamera(_scene, _renderers, camera, maxActiveLightCount, out uint activeLightCount);
 			
 				// Composite results:
-				success &= CompositeFinalOutput(camera, maxActiveLightCount);
+				success &= CompositeFinalOutput(camera, activeLightCount);
 			}
 			
 			isDrawing = false;
@@ -329,29 +329,29 @@ namespace FragEngine3.Graphics.Stack
 			}
 		}
 
-		private bool TryRenderCamera(Scene _scene, List<IRenderer> _renderers, Camera _camera, uint _maxActiveLightCount)
+		private bool TryRenderCamera(Scene _scene, List<IRenderer> _renderers, Camera _camera, uint _maxActiveLightCount, out uint _outActiveLightCount)
 		{
 			try
 			{
 				lock (lockObj)
 				{
 					// Get or create CPU and CPU-side buffers for assembling and binding light data:
-					uint activeLightCount = Math.Clamp((uint)cameraLightBuffer.Count, 0, _maxActiveLightCount);
-					if (!_camera.GetLightDataBuffer(activeLightCount, out DeviceBuffer? lightDataBuffer) || lightDataBuffer == null)
+					_outActiveLightCount = Math.Clamp((uint)cameraLightBuffer.Count, 0, _maxActiveLightCount);
+					if (!_camera.GetLightDataBuffer(_outActiveLightCount, out DeviceBuffer? lightDataBuffer) || lightDataBuffer == null)
 					{
 						Logger.LogError("Failed to get or create camera's light source data buffer!");
 						return false;
 					}
-					if (lightSourceDataBuffer.Length < activeLightCount)
+					if (lightSourceDataBuffer.Length < _outActiveLightCount)
 					{
-						lightSourceDataBuffer = new Light.LightSourceData[activeLightCount];
+						lightSourceDataBuffer = new Light.LightSourceData[_outActiveLightCount];
 					}
 					// Upload light data to GPU buffer:
-					for (int i = 0; i < activeLightCount; i++)
+					for (int i = 0; i < _outActiveLightCount; i++)
 					{
 						lightSourceDataBuffer[i] = cameraLightBuffer[i].GetLightSourceData();
 					}
-					ReadOnlySpan<Light.LightSourceData> lightSourceDataSpan = new(lightSourceDataBuffer, 0, (int)activeLightCount);
+					ReadOnlySpan<Light.LightSourceData> lightSourceDataSpan = new(lightSourceDataBuffer, 0, (int)_outActiveLightCount);
 					core.Device.UpdateBuffer(lightDataBuffer, 0, lightSourceDataSpan);
 
 					// Clear out all renderer lists for the upcoming frame:
@@ -392,8 +392,8 @@ namespace FragEngine3.Graphics.Stack
 						bool success = true;
 
 						// Issue draw calls for each renderer list:
-						success &= DrawOpaqueRendererList(_camera, activeLightCount);
-						success &= DrawZSortedRendererList(_camera, activeLightCount);
+						success &= DrawOpaqueRendererList(_camera, _outActiveLightCount);
+						success &= DrawZSortedRendererList(_camera, _outActiveLightCount);
 						success &= DrawUiRendererList(_camera);
 						// ^NOTE: Different command lists are used for the above steps, since issuing of their draw calls may be
 						// multi-threaded at a later point or if there is a huge number of objects in either or all categories. 
@@ -418,6 +418,7 @@ namespace FragEngine3.Graphics.Stack
 			catch (Exception ex)
 			{
 				Logger.LogException($"An exception was caught while trying to draw scene using graphics stack of type '{nameof(ForwardPlusLightsStack)}'!", ex);
+				_outActiveLightCount = 0;
 				return false;
 			}
 		}
@@ -466,6 +467,7 @@ namespace FragEngine3.Graphics.Stack
 
 			bool success = true;
 
+			cmdList.Begin();
 			success &= _camera.BeginFrame(cmdList, RenderMode.Opaque, true, _activeLightCount, out GraphicsDrawContext drawCtx, out CameraContext cameraCtx);
 
 			// Draw list of renderers as-is:
@@ -475,6 +477,7 @@ namespace FragEngine3.Graphics.Stack
 			}
 
 			success &= _camera.EndFrame(cmdList);
+			cmdList.End();
 
 			return success;
 		}
@@ -496,6 +499,7 @@ namespace FragEngine3.Graphics.Stack
 
 			zSortedList.renderers.Sort((a, b) => a.GetZSortingDepth(viewportPosition, cameraDirection).CompareTo(b.GetZSortingDepth(viewportPosition, cameraDirection)));
 			
+			cmdList.Begin();
 			success &= _camera.BeginFrame(cmdList, RenderMode.Transparent, false, _activeLightCount, out GraphicsDrawContext drawCtx, out CameraContext cameraCtx);
 
 			// Draw Z-sorted list of renderers:
@@ -505,6 +509,7 @@ namespace FragEngine3.Graphics.Stack
 			}
 
 			success &= _camera.EndFrame(cmdList);
+			cmdList.End();
 
 			return success;
 		}
@@ -520,6 +525,7 @@ namespace FragEngine3.Graphics.Stack
 
 			bool success = true;
 
+			cmdList.Begin();
 			success &= _camera.BeginFrame(cmdList, RenderMode.UI, false, 0, out GraphicsDrawContext drawCtx, out CameraContext cameraCtx);
 
 			// Draw list of renderers in strictly hierarchical order:
@@ -529,6 +535,7 @@ namespace FragEngine3.Graphics.Stack
 			}
 
 			success &= _camera.EndFrame(cmdList);
+			cmdList.End();
 
 			return success;
 		}
@@ -557,6 +564,7 @@ namespace FragEngine3.Graphics.Stack
 				}
 			}
 
+			cmdList.Begin();
 			if (!_camera.BeginFrame(cmdList, RenderMode.Custom, false, _maxActiveLightCount, out GraphicsDrawContext drawCtx, out CameraContext cameraCtx))
 			{
 				Logger.LogError("Failed to begin frame on graphics stack's composition pass!");
@@ -593,6 +601,7 @@ namespace FragEngine3.Graphics.Stack
 					ResourceSetDescription resourceSetDesc = new(resourceLayout, resources);
 
 					compositionResourceSet = core.MainFactory.CreateResourceSet(ref resourceSetDesc);
+					compositionResourceSet.Name = $"ResSet_Bound_{RESOURCE_KEY_COMPOSITION_MATERIAL}";
 				}
 				catch (Exception ex)
 				{
@@ -612,6 +621,7 @@ namespace FragEngine3.Graphics.Stack
 			success &= compositionRenderer.Draw(drawCtx, cameraCtx);
 
 			success &= _camera.EndFrame(cmdList);
+			cmdList.End();
 
 			return success;
 		}

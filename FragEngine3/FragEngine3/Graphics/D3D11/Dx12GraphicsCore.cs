@@ -107,6 +107,8 @@ namespace FragEngine3.Graphics.D3D11
 
 				MainFactory = Device.ResourceFactory;
 				MainCommandList = Device.ResourceFactory.CreateCommandList();
+				MainCommandList.Name = "CmdList_Main";
+				Device.MainSwapchain.Name = "Swapchain_Main";
 
 				Console.WriteLine("done.");
 				Logger.LogMessage("# Initializing D3D graphics device... done.", true);

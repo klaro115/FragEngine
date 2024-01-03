@@ -376,6 +376,7 @@ namespace FragEngine3.Graphics
 			try
 			{
 				_outTexColorTarget = MainFactory.CreateTexture(ref texColorTargetDesc);
+				_outTexColorTarget.Name = $"TexColorTarget_{_width}x{_height}_{_colorFormat}";
 			}
 			catch (Exception ex)
 			{
@@ -401,6 +402,7 @@ namespace FragEngine3.Graphics
 				try
 				{
 					_outTexDepthTarget = MainFactory.CreateTexture(ref texDepthTargetDesc);
+					_outTexDepthTarget.Name = $"TexDepthTarget_{_width}x{_height}_{DefaultDepthTargetPixelFormat}";
 				}
 				catch (Exception ex)
 				{
@@ -422,6 +424,7 @@ namespace FragEngine3.Graphics
 				FramebufferDescription frameBufferDesc = new(_outTexDepthTarget, _outTexColorTarget);
 
 				_outFramebuffer = MainFactory.CreateFramebuffer(ref frameBufferDesc);
+				_outFramebuffer.Name = $"Framebuffer_{_width}x{_height}_{_colorFormat}_HasDepth={_createDepth}";
 				return true;
 			}
 			catch (Exception ex)
@@ -471,6 +474,7 @@ namespace FragEngine3.Graphics
 			try
 			{
 				_outTexture = MainFactory.CreateTexture(ref textureDesc);
+				_outTexture.Name = $"TexBlank_{width}x{height}_{_fillColor}";
 			}
 			catch (Exception ex)
 			{

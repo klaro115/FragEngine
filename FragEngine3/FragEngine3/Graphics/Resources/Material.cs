@@ -62,7 +62,7 @@ namespace FragEngine3.Graphics.Resources
 		{
 			core = _core ?? throw new ArgumentNullException(nameof(_core), "Graphics core may not be null!");
 
-			CreateResourceLayout(0);
+			CreateDefaultResourceLayout(0);
 		}
 
 		#endregion
@@ -156,7 +156,7 @@ namespace FragEngine3.Graphics.Resources
 			return newestPipelineVersion == _pipeline.Version;
 		}
 
-		private bool CreateResourceLayout(uint _newVersion)
+		private bool CreateDefaultResourceLayout(uint _newVersion)
 		{
 			try
 			{
@@ -165,6 +165,7 @@ namespace FragEngine3.Graphics.Resources
 				ResourceLayoutDescription resLayoutDesc = new(GraphicsContants.DEFAULT_SURFACE_RESOURCE_LAYOUT_DESC);
 
 				ResourceLayout resLayout = core.MainFactory.CreateResourceLayout(ref resLayoutDesc);
+				resLayout.Name = $"ResLayout_Default_{resourceKey}";
 
 				defaultResourceLayout.UpdateValue(_newVersion, resLayout);
 				return true;
@@ -306,6 +307,7 @@ namespace FragEngine3.Graphics.Resources
 			{
 				ResourceSetDescription resourceSetDesc = new(boundResourceLayout, boundResources);
 				ResourceSet resourceSet = core.MainFactory.CreateResourceSet(ref resourceSetDesc);
+				resourceSet.Name = $"ResSet_Bound_{resourceKey}";
 
 				boundResourceSet.UpdateValue(materialVersion, resourceSet);
 				return true;
@@ -345,7 +347,7 @@ namespace FragEngine3.Graphics.Resources
 			{
 				depthStencilDesc.UpdateValue(materialVersion, depthStencilDesc.Value);
 			}
-			if (defaultResourceLayout.Version != materialVersion && !CreateResourceLayout(materialVersion))
+			if (defaultResourceLayout.Version != materialVersion && !CreateDefaultResourceLayout(materialVersion))
 			{
 				_outPipeline = new(null!, 0);
 				return false;
@@ -512,6 +514,7 @@ namespace FragEngine3.Graphics.Resources
 			if (data.GetBoundResourceLayoutDesc(out ResourceLayoutDescription boundResourceLayoutDesc, out Tuple<string, int>[]? boundResourceKeys, out bool useExternalBoundResources))
 			{
 				boundResourceLayout = _graphicsCore.MainFactory.CreateResourceLayout(boundResourceLayoutDesc);
+				boundResourceLayout.Name = $"ResLayout_Bound_{_handle.resourceKey}";
 			}
 
 			// Assemble stencil description, if required and available:

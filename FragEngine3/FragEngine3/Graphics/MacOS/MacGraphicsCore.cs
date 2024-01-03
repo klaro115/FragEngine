@@ -20,7 +20,7 @@ namespace FragEngine3.Graphics.MacOS
 		#endregion
 		#region Properties
 
-        public override EnginePlatformFlag ApiPlatformFlag => EnginePlatformFlag.GraphicsAPI_Metal;
+		public override EnginePlatformFlag ApiPlatformFlag => EnginePlatformFlag.GraphicsAPI_Metal;
 
 		private Logger Logger => graphicsSystem.engine.Logger ?? Logger.Instance!;
 
@@ -106,6 +106,8 @@ namespace FragEngine3.Graphics.MacOS
 
 				MainFactory = Device.ResourceFactory;
 				MainCommandList = Device.ResourceFactory.CreateCommandList();
+				MainCommandList.Name = "CmdList_Main";
+				Device.MainSwapchain.Name = "Swapchain_Main";
 
 				Console.WriteLine("done.");
 				Logger.LogMessage("# Initializing D3D graphics device... done.", true);

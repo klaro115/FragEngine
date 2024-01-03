@@ -218,6 +218,7 @@ namespace FragEngine3.Graphics.Resources
 						ShaderDescription shaderDesc = new(_stage, bytes, variantEntryPoint);
 
 						shader = _graphicsCore.MainFactory.CreateShader(ref shaderDesc);
+						shader.Name = $"Shader_{_handle.resourceKey}_{_stage}_{variantFlags}";
 					}
 					catch (Exception ex)
 					{

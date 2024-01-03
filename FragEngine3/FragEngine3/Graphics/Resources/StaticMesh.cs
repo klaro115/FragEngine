@@ -131,7 +131,7 @@ namespace FragEngine3.Graphics.Resources
 			uint newVertexCount = (uint)Math.Min(Math.Min(_positions.Length, _normals.Length), _uvs.Length);
 
 			// (Re)allocate vertex buffer to accomodate exact vertex count:
-			if (vertexBufferBasic == null || vertexCount != newVertexCount)
+			if (vertexBufferBasic == null || vertexBufferBasic.IsDisposed || vertexCount != newVertexCount)
 			{
 				vertexBufferBasic?.Dispose();
 
@@ -139,6 +139,7 @@ namespace FragEngine3.Graphics.Resources
 				BufferDescription bufferDesc = new(byteSize, BufferUsage.VertexBuffer);
 				
 				vertexBufferBasic = core.MainFactory.CreateBuffer(ref bufferDesc);
+				vertexBufferBasic.Name = $"BufVertex_Basic_{resourceKey}_Count={newVertexCount}";
 			}
 			vertexCount = newVertexCount;
 
@@ -175,7 +176,7 @@ namespace FragEngine3.Graphics.Resources
 			uint newVertexCount = (uint)_verticesBasic.Length;
 
 			// (Re)allocate vertex buffer to accomodate exact vertex count:
-			if (vertexBufferBasic == null || vertexCount != newVertexCount)
+			if (vertexBufferBasic == null || vertexBufferBasic.IsDisposed || vertexCount != newVertexCount)
 			{
 				vertexBufferBasic?.Dispose();
 
@@ -183,6 +184,7 @@ namespace FragEngine3.Graphics.Resources
 				BufferDescription bufferDesc = new(byteSize, BufferUsage.VertexBuffer);
 
 				vertexBufferBasic = core.MainFactory.CreateBuffer(ref bufferDesc);
+				vertexBufferBasic.Name = $"BufVertex_Basic_{resourceKey}_Count={newVertexCount}";
 			}
 			vertexCount = newVertexCount;
 
@@ -230,7 +232,7 @@ namespace FragEngine3.Graphics.Resources
 			}
 
 			// Create secondary vertex buffer for extended surface data:
-			if (vertexBufferExt == null)
+			if (vertexBufferExt == null || vertexBufferExt.IsDisposed)
 			{
 				vertexBufferExt?.Dispose();
 
@@ -238,6 +240,7 @@ namespace FragEngine3.Graphics.Resources
 				BufferDescription bufferDesc = new(byteSize, BufferUsage.VertexBuffer);
 
 				vertexBufferExt = core.MainFactory.CreateBuffer(ref bufferDesc);
+				vertexBufferExt.Name = $"BufVertex_Extended_{resourceKey}_Count={extVertexCount}";
 			}
 
 			// Store data in temporary buffer for later upload just before issuing draw calls:
@@ -282,7 +285,7 @@ namespace FragEngine3.Graphics.Resources
 			}
 
 			// Create secondary vertex buffer for extended surface data:
-			if (vertexBufferExt == null)
+			if (vertexBufferExt == null || vertexBufferExt.IsDisposed)
 			{
 				vertexBufferExt?.Dispose();
 
@@ -290,6 +293,7 @@ namespace FragEngine3.Graphics.Resources
 				BufferDescription bufferDesc = new(byteSize, BufferUsage.VertexBuffer);
 
 				vertexBufferExt = core.MainFactory.CreateBuffer(ref bufferDesc);
+				vertexBufferExt.Name = $"BufVertex_Extended_{resourceKey}_Count={extVertexCount}";
 			}
 
 			// Store data as temporary buffer for later upload just before issuing draw calls:
@@ -317,7 +321,7 @@ namespace FragEngine3.Graphics.Resources
 			tempIndexBuffer32 = null;
 
 			// Create index buffer on GPU:
-			if (indexBuffer == null)
+			if (indexBuffer == null || indexBuffer.IsDisposed)
 			{
 				indexBuffer?.Dispose();
 
@@ -325,6 +329,7 @@ namespace FragEngine3.Graphics.Resources
 				BufferDescription bufferDesc = new(byteSize, BufferUsage.IndexBuffer);
 
 				indexBuffer = core.MainFactory.CreateBuffer(ref bufferDesc);
+				indexBuffer.Name = $"BufIndex_{resourceKey}_16bit_Count={indexCount}";
 			}
 			return true;
 		}
@@ -364,7 +369,7 @@ namespace FragEngine3.Graphics.Resources
 			}
 
 			// Create index buffer on GPU:
-			if (indexBuffer == null)
+			if (indexBuffer == null || indexBuffer.IsDisposed)
 			{
 				indexBuffer?.Dispose();
 
@@ -372,6 +377,7 @@ namespace FragEngine3.Graphics.Resources
 				BufferDescription bufferDesc = new(byteSize, BufferUsage.IndexBuffer);
 
 				indexBuffer = core.MainFactory.CreateBuffer(ref bufferDesc);
+				indexBuffer.Name = $"BufIndex_{resourceKey}_32bit_Count={indexCount}";
 			}
 			return true;
 		}
