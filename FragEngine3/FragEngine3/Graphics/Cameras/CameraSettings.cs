@@ -59,8 +59,16 @@ public sealed class CameraSettings
 	}
 	public float AspectRatio => output.AspectRatio;
 
-	public PixelFormat ColorFormat => output.colorFormat;
-	public PixelFormat DepthFormat => output.depthFormat;
+	public PixelFormat? ColorFormat
+	{
+		get => output.colorFormat;
+		set => output.colorFormat = value;
+	}
+	public PixelFormat? DepthFormat
+	{
+		get => output.depthFormat;
+		set => output.depthFormat = value;
+	}
 	public bool HasDepth => output.hasDepth;
 
 	// PROJECTION:

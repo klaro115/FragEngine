@@ -181,7 +181,7 @@ public sealed class CameraInstance : IDisposable
 			}
 
 			if (!graphicsCore.CreateRenderTargets(
-				output.colorFormat,
+				output.colorFormat ?? graphicsCore.DefaultColorTargetPixelFormat,
 				output.resolutionX,
 				output.resolutionY,
 				output.hasDepth,

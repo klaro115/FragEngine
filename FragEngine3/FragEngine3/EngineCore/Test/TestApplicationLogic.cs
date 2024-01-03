@@ -108,7 +108,8 @@ namespace FragEngine3.EngineCore.Test
 				{
 					ResolutionX = (uint)window.Width,
 					ResolutionY = (uint)window.Height,
-					//ColorFormat = Veldrid.PixelFormat.R16_G16_B16_A16_UNorm,
+					//ColorFormat = PixelFormat.B8_G8_R8_A8_UNorm,
+					//ColorFormat = PixelFormat.R16_G16_B16_A16_UNorm,
 
 					ProjectionType = CameraProjectionType.Perspective,
 					FieldOfViewDegrees = 60.0f,
@@ -121,6 +122,7 @@ namespace FragEngine3.EngineCore.Test
 					ClearColorValue = RgbaFloat.CornflowerBlue,
 					ClearDepthValue = 1.0f,
 				};
+
 				camera.Settings = cameraSettings;
 				camera.IsMainCamera = true;
 			}
@@ -182,7 +184,7 @@ namespace FragEngine3.EngineCore.Test
 			quadNode.LocalTransformation = Pose.Identity;
 			quadNode.LocalPosition = new(0, 0, 2);
 			quadNode.LocalScale = Vector3.One * 5;
-			quadNode.SetEnabled(false);
+			//quadNode.SetEnabled(false);
 			if (quadNode.CreateComponent(out StaticMeshRenderer? quadRenderer) && quadRenderer != null)
 			{
 				quadRenderer.SetMesh(quadHandle);

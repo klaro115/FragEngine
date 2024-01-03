@@ -14,12 +14,12 @@ public struct CameraOutput
 	// Color output:
 	public uint resolutionX = 1280;
 	public uint resolutionY = 720;
-	public PixelFormat colorFormat = PixelFormat.R8_G8_B8_A8_UNorm;
+	public PixelFormat? colorFormat = null;		//default is used if null.
 
 	// Depth/Stencil output:
 	public bool hasDepth = true;
 	public bool hasStencil = false;
-	public PixelFormat depthFormat = PixelFormat.D32_Float_S8_UInt;
+	public PixelFormat? depthFormat = null;     //default is used if null.
 
 	#endregion
 	#region Properties
@@ -39,13 +39,13 @@ public struct CameraOutput
 
 		if (_framebuffer.Width != resolutionX ||
 			_framebuffer.Height != resolutionY ||
-			colorFormat != outputDesc.ColorAttachments[0].Format)
+			(colorFormat != null && colorFormat != outputDesc.ColorAttachments[0].Format))
 		{
 			return true;
 		}
 
 		bool descHasDepth = outputDesc.DepthAttachment != null;
-		if (descHasDepth == hasDepth) return true;
+		if (descHasDepth != hasDepth) return true;
 
 		if (outputDesc.DepthAttachment != null)
 		{
@@ -74,14 +74,16 @@ public struct CameraOutput
 		}
 		else
 		{
-			depthFormat = PixelFormat.R8_UNorm;
+			depthFormat = null;
 			hasStencil = false;
 		}
 	}
 
     public readonly override string ToString()
 	{
-		return $"ResX: {resolutionX}, ResY: {resolutionY}, Color Format: {colorFormat}, Depth Format: {depthFormat} (D: {hasDepth}, S: {hasStencil})";
+		string colorFormatTxt = colorFormat?.ToString() ?? "Default";
+		string depthFormatTxt = hasDepth ? (depthFormat?.ToString() ?? "Default") : "None";
+		return $"ResX: {resolutionX}, ResY: {resolutionY}, Color Format: {colorFormatTxt}, Depth Format: {depthFormatTxt} (D: {hasDepth}, S: {hasStencil})";
 	}
 
     #endregion

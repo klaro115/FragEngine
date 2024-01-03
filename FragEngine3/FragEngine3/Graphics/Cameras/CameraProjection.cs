@@ -25,6 +25,15 @@ public struct CameraProjection
 	public Matrix4x4 mtxPixel2World = Matrix4x4.Identity;
 
 	#endregion
+	#region Properties
+
+	public float FieldOfViewDegrees
+	{
+		readonly get => fieldOfViewRad * MathF.PI / 180.0f;
+		set => fieldOfViewRad = value * 180.0f / MathF.PI;
+	}
+
+	#endregion
 	#region Constants
 
 	public const float DEFAULT_FOV_DEG = 60.0f;
@@ -68,6 +77,14 @@ public struct CameraProjection
 
 		mtxWorld2Pixel = mtxWorld2Clip * mtxViewport;
 		Matrix4x4.Invert(mtxWorld2Pixel, out mtxPixel2World);
+	}
+
+	public override readonly string ToString()
+	{
+		string sizeTxt = projectionType == CameraProjectionType.Orthographic
+			? $"Size: {othographicSize}m"
+			: $"FoV: {FieldOfViewDegrees}°";
+		return $"Type: {projectionType}, Clip planes: {nearClipPlane:0.##}-{farClipPlane:0.##}m, {sizeTxt}";
 	}
 
 	#endregion

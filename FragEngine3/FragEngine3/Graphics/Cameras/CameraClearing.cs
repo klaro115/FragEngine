@@ -22,4 +22,12 @@ public struct CameraClearing
 	public byte clearStencilValue = 0x00;
 
 	#endregion
+	#region Methods
+
+	public override readonly string ToString()
+	{
+		return $"Color: clear={clearColor}, value={clearColorValue} | Depth: clear={clearDepth}, value={clearDepthValue} | Stencil: clear={clearStencil}, value={clearStencilValue}";
+	}
+
+	#endregion
 }

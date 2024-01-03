@@ -29,7 +29,7 @@ namespace FragEngine3.Graphics
 		public readonly GraphicsSystem graphicsSystem;
 		protected readonly EngineConfig config;
 
-		public PixelFormat DefaultColorTargetPixelFormat { get; protected set; }= PixelFormat.R8_G8_B8_A8_UNorm;
+		public PixelFormat DefaultColorTargetPixelFormat { get; protected set; } = PixelFormat.R8_G8_B8_A8_UNorm;
 		public PixelFormat DefaultDepthTargetPixelFormat { get; protected set; } = PixelFormat.D24_UNorm_S8_UInt;
 
 		protected readonly List<CommandList> cmdListQueue = new(1);
