@@ -62,10 +62,10 @@ namespace FragEngine3.Graphics
 		/// <summary>
 		/// Requests the renderer to generate draw calls by writing them into the given command list.
 		/// </summary>
-		/// <param name="_ctx">Context object for drawing stuff. This includes the command list that
+		/// <param name="_cameraCtx">Context object for drawing stuff. This includes the command list that
 		/// draw calls should be written into.</param>
 		/// <returns>True if draw calls were issued, false otherwise.</returns>
-		bool Draw(GraphicsDrawContext _ctx, CameraContext _cameraCtx);
+		bool Draw(CameraContext _cameraCtx);
 
 		#endregion
 	}

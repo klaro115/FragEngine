@@ -5,7 +5,7 @@
 cbuffer CBGlobal : register(b0)
 {
     // Camera vectors & matrices:
-    float4x4 mtxCamera;         // Camera's full projection matrix, transforming from world space to clip space coordinates.
+    float4x4 mtxWorld2Clip;     // Camera's full projection matrix, transforming from world space to clip space coordinates.
     float4 cameraPosition;      // Camera position, in world space.
     float4 cameraDirection;     // Camera forward facing direction, in world space.
 
@@ -75,19 +75,24 @@ struct VertexOutput_Extended
 
 void Main_Vertex(in VertexInput_Basic inputBasic, out VertexOutput_Basic outputBasic)
 {
-    float4x4 mtxModel2Camera = mul(mtxCamera, mtxWorld);
+    float4 worldPos = mul(mtxWorld, float4(inputBasic.position, 1));
+    float4 clipPos = mul(mtxWorld2Clip, worldPos);
 
-    float4 projResult = mul(mtxModel2Camera, float4(inputBasic.position, 1));
+    //float4x4 mtxModel2Camera = mul(mtxCamera, mtxWorld);
 
-    outputBasic.position = projResult;
-    outputBasic.worldPosition = mul(mtxWorld, float4(inputBasic.position, 1)).xyz;
+    //float4 projResult = mul(mtxModel2Camera, float4(inputBasic.position, 1) + float4(0, 0, 2, 0));
+
+    //outputBasic.position = projResult;
+    //outputBasic.worldPosition = mul(mtxWorld, float4(inputBasic.position, 1)).xyz;
+    outputBasic.position = clipPos;
+    outputBasic.worldPosition = worldPos.xyz;
     outputBasic.normal = mul(mtxWorld, float4(inputBasic.position, 0)).xyz;
     outputBasic.uv = inputBasic.uv;
 }
 
 void Main_Vertex_Ext(in VertexInput_Basic inputBasic, in VertexInput_Extended inputExt, out VertexOutput_Basic outputBasic, out VertexOutput_Extended outputExt)
 {
-    float4x4 mtxModel2Camera = mul(mtxCamera, mtxWorld);
+    float4x4 mtxModel2Camera = mul(mtxWorld2Clip, mtxWorld);
 
     float4 projResult = mul(mtxModel2Camera, float4(inputBasic.position, 1));
 

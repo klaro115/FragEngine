@@ -96,69 +96,67 @@ namespace FragEngine3.EngineCore.Test
 			Scene scene = Engine.SceneManager.MainScene!;
 
 			// Create a camera:
-			SceneNode cameraNode = scene.rootNode.CreateChild("Camera");
-			cameraNode.LocalPosition = new(0, 0, -5);
-			cameraNode.LocalRotation = Quaternion.Identity;
-			cameraNode.LocalScale = Vector3.One;
-			//if (cameraNode.CreateComponent(out Camera? camera, RenderMode.Opaque) && camera != null)
-			if (cameraNode.CreateComponent(out Camera? camera) && camera != null)
+			if (SceneSpawner.CreateCamera(scene, true, out Camera camera))
 			{
+				camera.node.LocalPosition = new Vector3(0, 0, -5);
+				camera.node.LocalRotation = Quaternion.Identity;
+				camera.node.LocalScale = Vector3.One;
+
 				Sdl2Window window = Engine.GraphicsSystem.graphicsCore.Window;
-				Graphics.Cameras.CameraSettings cameraSettings = new()
+				camera.Settings = new()
 				{
 					ResolutionX = (uint)window.Width,
 					ResolutionY = (uint)window.Height,
 					//ColorFormat = PixelFormat.R16_G16_B16_A16_UNorm,
 
-					ProjectionType = CameraProjectionType.Orthographic,
+					ProjectionType = CameraProjectionType.Perspective,
 					FieldOfViewDegrees = 60.0f,
 					NearClipPlane = 0.1f,
 					FarClipPlane = 1000.0f,
 					OrthographicSize = 5,
-			
+
 					ClearColor = true,
 					ClearDepth = true,
 					ClearColorValue = RgbaFloat.CornflowerBlue,
 					ClearDepthValue = 1.0f,
 				};
-
-				camera.Settings = cameraSettings;
 				camera.IsMainCamera = true;
+				camera.MarkDirty();
 			}
 
 			// Create a directional light:
-			SceneNode lightNode = scene.rootNode.CreateChild("Directional Light");
-			if (lightNode.CreateComponent(out Light? light) && light != null)
+			if (SceneSpawner.CreateLight(scene, Light.LightType.Directional, out Light light))
 			{
-				light.Type = Light.LightType.Directional;
 				light.node.WorldPosition = new Vector3(0, 5, 0);
 				light.node.SetRotationFromYawPitchRoll(45, 45, 0, true, true);
 			}
 
-			SceneNode rabbitNode = scene.rootNode.CreateChild("Rabbit");
-			rabbitNode.LocalPosition = new Vector3(0, -0.25f, 0);
-			rabbitNode.LocalRotation = Quaternion.Identity;
-			rabbitNode.LocalScale = Vector3.One * 5;
-			rabbitNode.SetEnabled(false);
-			if (rabbitNode.CreateComponent(out StaticMeshRenderer? rabbitRenderer) && rabbitRenderer != null)
+			if (SceneSpawner.CreateStaticMeshRenderer(scene, out StaticMeshRenderer rabbit))
 			{
-				rabbitRenderer.SetMesh("Rabbit.obj");
-				rabbitRenderer.SetMaterial("Mtl_DefaultSurface");
-				//rabbitRenderer.SetMaterial("Mtl_TestMaterial");
+				rabbit.node.Name = "Rabbit";
+				rabbit.node.LocalPosition = new Vector3(0, -0.25f, 0);
+				rabbit.node.LocalRotation = Quaternion.Identity;
+				rabbit.node.LocalScale = Vector3.One * 5;
+				rabbit.node.SetEnabled(false);
+
+				rabbit.SetMesh("Rabbit.obj");
+				rabbit.SetMaterial("Mtl_DefaultSurface");
+				//rabbit.SetMaterial("Mtl_TestMaterial");
 			}
 
 			MeshPrimitiveFactory.CreateCubeMesh("Cube", Engine, new(1, 1, 1), false, out _, out _, out ResourceHandle cubeHandle);
-			SceneNode cubeNode = scene.rootNode.CreateChild("Cube");
-			cubeNode.LocalPosition = Vector3.Zero;
-			cubeNode.LocalRotation = Quaternion.Identity;
-			cubeNode.LocalScale = Vector3.One;
-			cubeNode.SetEnabled(false);
-			if (cubeNode.CreateComponent(out StaticMeshRenderer? cubeRenderer) && cubeRenderer != null)
+			if (SceneSpawner.CreateStaticMeshRenderer(scene, out StaticMeshRenderer cube))
 			{
-				//cubeRenderer.SetMesh("Cube.obj");
-				cubeRenderer.SetMesh(cubeHandle);
-				//cubeRenderer.SetMaterial("Mtl_DefaultSurface");
-				cubeRenderer.SetMaterial("Mtl_TestMaterial");
+				cube.node.Name = "Cube";
+				cube.node.LocalPosition = new Vector3(0, 0, 2);
+				cube.node.LocalRotation = Quaternion.Identity;
+				//cube.node.LocalRotation = Quaternion.CreateFromAxisAngle(Vector3.UnitY, 0.5f);
+				cube.node.LocalScale = Vector3.One;
+				//cube.node.SetEnabled(false);
+
+				cube.SetMesh(cubeHandle);
+				cube.SetMaterial("Mtl_DefaultSurface");
+				//cube.SetMaterial("Mtl_TestMaterial");
 			}
 
 			// Create two-sided quad:
@@ -180,19 +178,19 @@ namespace FragEngine3.EngineCore.Test
 					2, 1, 3,
 				],
 			};
-			quadData.TransformVertices(new Pose(Vector3.UnitZ * 2, Quaternion.CreateFromAxisAngle(Vector3.UnitY, 0.5f), Vector3.One, true));		//TEST
 			StaticMesh quadMesh = new("Quad", Engine, false, out ResourceHandle quadHandle);
 			quadMesh.SetGeometry(in quadData);
-			SceneNode quadNode = scene.rootNode.CreateChild("Quad");
-			quadNode.LocalTransformation = Pose.Identity;
-			quadNode.LocalPosition = new(0, 0, 2);
-			quadNode.LocalScale = Vector3.One * 5;
-			//quadNode.SetEnabled(false);
-			if (quadNode.CreateComponent(out StaticMeshRenderer? quadRenderer) && quadRenderer != null)
+			if (SceneSpawner.CreateStaticMeshRenderer(scene, out StaticMeshRenderer quad))
 			{
-				quadRenderer.SetMesh(quadHandle);
-				//quadRenderer.SetMaterial("Mtl_DefaultSurface");
-				quadRenderer.SetMaterial("Mtl_TestMaterial");
+				quad.node.Name = "Quad";
+				quad.node.LocalTransformation = Pose.Identity;
+				quad.node.LocalPosition = new(0, 0, 5);
+				quad.node.LocalScale = Vector3.One * 5;
+				//quad.node.SetEnabled(false);
+
+				quad.SetMesh(quadHandle);
+				//quad.SetMaterial("Mtl_DefaultSurface");
+				quad.SetMaterial("Mtl_TestMaterial");
 			}
 
 			return true;
@@ -221,14 +219,20 @@ namespace FragEngine3.EngineCore.Test
 				rabbitNode.LocalTransformation = localPose;
 			}
 
-			if (scene.FindNode("Cube", out SceneNode? quadNode) && quadNode != null)
+			if (scene.FindNode("Cube", out SceneNode? cubeNode) && cubeNode != null)
 			{
 				float dt = (float)Engine.TimeManager.DeltaTime.TotalSeconds * 5;
-				Pose localPose = quadNode.LocalTransformation;
+				Pose localPose = cubeNode.LocalTransformation;
 				Vector3 input = Engine.InputManager.GetKeyAxesSmoothed(InputAxis.WASD);
 				localPose.Rotate(Quaternion.CreateFromYawPitchRoll(input.X * dt, input.Y * dt, input.Z * dt));
-				quadNode.LocalTransformation = localPose;
+				cubeNode.LocalTransformation = localPose;
 			}
+
+			//TEST
+			Pose p = Camera.MainCamera!.node.LocalTransformation;
+			p.Rotate(Quaternion.CreateFromAxisAngle(Vector3.UnitZ, 0.5f * (float)Engine.TimeManager.DeltaTime.TotalSeconds));
+			//p.position = new(MathF.Sin(0.5f * (float)Engine.TimeManager.DeltaTime.TotalSeconds) * 2, 0, 0);
+			Camera.MainCamera!.node.LocalTransformation = p;
 
 			//const float DEG2RAD = MathF.PI / 180.0f;
 			//const float radius = 2;
@@ -260,6 +264,8 @@ namespace FragEngine3.EngineCore.Test
 				}
 				string saveFilePath = Path.Combine(saveDirPath, "test.json");
 				SceneSerializer.SaveSceneToFile(Engine.SceneManager.MainScene!, saveFilePath, out _, false);
+
+				Engine.Logger.LogMessage("Saved main scene to file.");
 			}
 			catch (Exception ex)
 			{

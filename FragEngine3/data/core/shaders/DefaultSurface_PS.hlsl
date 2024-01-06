@@ -5,7 +5,7 @@
 cbuffer CBGlobal : register(b0)
 {
 	// Camera vectors & matrices:
-    float4x4 mtxCamera;         // Camera's full projection matrix, transforming from world space to clip space coordinates.
+    float4x4 mtxWorld2Clip;     // Camera's full projection matrix, transforming from world space to clip space coordinates.
     float4 cameraPosition;      // Camera position, in world space.
     float4 cameraDirection;     // Camera forward facing direction, in world space.
 
@@ -60,17 +60,17 @@ struct VertexOutput_Extended
 
 /******************* SHADERS: ******************/
 
-float4 Main_Pixel(in VertexOutput_Basic inputBasic) : SV_Target0
+half4 Main_Pixel(in VertexOutput_Basic inputBasic) : SV_Target0
 {
-    float4 albedo = {1, 1, 1, 1};
+    half4 albedo = {1, 1, 1, 1};
 
     // Apply basic phong lighting:
-    float3 totalLightIntensity = ambientLight;
+    half3 totalLightIntensity = ambientLight;
     for (uint i = 0; i < lightCount; ++i)
     {
         Light light = BufLights[i];
 
-        float4 lightIntens = light.lightIntensity;
+        half4 lightIntens = (half4)light.lightIntensity;
         float3 lightRayDir;
 
         // Directional light:
@@ -82,7 +82,7 @@ float4 Main_Pixel(in VertexOutput_Basic inputBasic) : SV_Target0
         else
         {
             float3 lightOffset = inputBasic.worldPosition - light.lightPosition;
-            lightIntens /= dot(lightOffset, lightOffset);
+            lightIntens /= (half)dot(lightOffset, lightOffset);
             lightRayDir = normalize(lightOffset);
 
             // Spot light angle:
@@ -95,7 +95,7 @@ float4 Main_Pixel(in VertexOutput_Basic inputBasic) : SV_Target0
         float lightDot = max(-dot(lightRayDir, inputBasic.normal), 0);
         totalLightIntensity += lightIntens.xyz * lightDot;
     }
-    albedo *= float4(totalLightIntensity, 1);
+    albedo *= half4(totalLightIntensity, 1);
 
     // Return final color:
     return albedo;

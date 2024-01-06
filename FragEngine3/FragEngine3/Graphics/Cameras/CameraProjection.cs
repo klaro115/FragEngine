@@ -17,12 +17,12 @@ public struct CameraProjection
 	public float fieldOfViewRad = DEFAULT_FOV_RAD;
 	public float othographicSize = 5.0f;
 	
-	public Matrix4x4 mtxWorld2Camera = Matrix4x4.Identity;
-	public Matrix4x4 mtxViewport = Matrix4x4.Identity;
-	public Matrix4x4 mtxWorld2Clip = Matrix4x4.Identity;
+	public Matrix4x4 mtxWorld2Camera = Matrix4x4.Identity;		// World space => Camera's local space
+	public Matrix4x4 mtxWorld2Clip = Matrix4x4.Identity;		// World space => Clip space
+	public Matrix4x4 mtxClip2Pixel = Matrix4x4.Identity;		// Clip space => Pixel space
 
-	public Matrix4x4 mtxWorld2Pixel = Matrix4x4.Identity;
-	public Matrix4x4 mtxPixel2World = Matrix4x4.Identity;
+	public Matrix4x4 mtxWorld2Pixel = Matrix4x4.Identity;		// World space => Pixel space
+	public Matrix4x4 mtxPixel2World = Matrix4x4.Identity;		// Pixel space => World space
 
 	#endregion
 	#region Properties
@@ -62,20 +62,20 @@ public struct CameraProjection
 
 	public void RecalculateClipSpaceMatrices(float _aspectRatio)
 	{
-		Matrix4x4 mtxProjection = Matrix4x4.CreatePerspectiveFieldOfViewLeftHanded(
+		Matrix4x4 mtxCamera2Clip = Matrix4x4.CreatePerspectiveFieldOfViewLeftHanded(
 			fieldOfViewRad,
 			_aspectRatio,
 			nearClipPlane,
 			farClipPlane);
 
-		mtxWorld2Clip = mtxProjection * mtxWorld2Camera;
+		mtxWorld2Clip = mtxCamera2Clip * mtxWorld2Camera;
 	}
 
 	public void RecalculatePixelSpaceMatrices(uint _resolutionX, uint _resolutionY)
 	{
-		mtxViewport = Matrix4x4.CreateViewportLeftHanded(0, 0, _resolutionX, _resolutionY, 0.0f, 1.0f);
+		mtxClip2Pixel = Matrix4x4.CreateViewportLeftHanded(0, 0, _resolutionX, _resolutionY, 0.0f, 1.0f);
 
-		mtxWorld2Pixel = mtxWorld2Clip * mtxViewport;
+		mtxWorld2Pixel = mtxWorld2Clip * mtxClip2Pixel;
 		Matrix4x4.Invert(mtxWorld2Pixel, out mtxPixel2World);
 	}
 

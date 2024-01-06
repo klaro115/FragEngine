@@ -412,7 +412,7 @@ namespace FragEngine3.Graphics.Stack
 						}
 
 						cmdList.Begin();
-						_camera.BeginFrame(cmdList!, RenderMode.Opaque, true, 0, out _, out _);
+						_camera.BeginFrame(cmdList!, RenderMode.Opaque, true, 0, out _);
 						_camera.EndFrame(cmdList!);
 						cmdList.End();
 
@@ -476,12 +476,12 @@ namespace FragEngine3.Graphics.Stack
 			bool success = true;
 
 			cmdList.Begin();
-			success &= _camera.BeginFrame(cmdList, RenderMode.Opaque, true, _activeLightCount, out GraphicsDrawContext drawCtx, out CameraContext cameraCtx);
+			success &= _camera.BeginFrame(cmdList, RenderMode.Opaque, true, _activeLightCount, out CameraContext cameraCtx);
 
 			// Draw list of renderers as-is:
 			foreach (IRenderer renderer in opaqueList.renderers)
 			{
-				FailedRendererCount += renderer.Draw(drawCtx, cameraCtx) ? 0 : 1;
+				FailedRendererCount += renderer.Draw(cameraCtx) ? 0 : 1;
 			}
 
 			success &= _camera.EndFrame(cmdList);
@@ -509,12 +509,12 @@ namespace FragEngine3.Graphics.Stack
 			zSortedList.renderers.Sort((a, b) => a.GetZSortingDepth(viewportPosition, cameraDirection).CompareTo(b.GetZSortingDepth(viewportPosition, cameraDirection)));
 			
 			cmdList.Begin();
-			success &= _camera.BeginFrame(cmdList, RenderMode.Transparent, false, _activeLightCount, out GraphicsDrawContext drawCtx, out CameraContext cameraCtx);
+			success &= _camera.BeginFrame(cmdList, RenderMode.Transparent, false, _activeLightCount, out CameraContext cameraCtx);
 
 			// Draw Z-sorted list of renderers:
 			foreach (IRenderer renderer in zSortedList.renderers)
 			{
-				FailedRendererCount += renderer.Draw(drawCtx, cameraCtx) ? 0 : 1;
+				FailedRendererCount += renderer.Draw(cameraCtx) ? 0 : 1;
 			}
 
 			success &= _camera.EndFrame(cmdList);
@@ -536,12 +536,12 @@ namespace FragEngine3.Graphics.Stack
 			bool success = true;
 
 			cmdList.Begin();
-			success &= _camera.BeginFrame(cmdList, RenderMode.UI, false, 0, out GraphicsDrawContext drawCtx, out CameraContext cameraCtx);
+			success &= _camera.BeginFrame(cmdList, RenderMode.UI, false, 0, out CameraContext cameraCtx);
 
 			// Draw list of renderers in strictly hierarchical order:
 			foreach (IRenderer renderer in uiList.renderers)
 			{
-				FailedRendererCount += renderer.Draw(drawCtx, cameraCtx) ? 0 : 1;
+				FailedRendererCount += renderer.Draw(cameraCtx) ? 0 : 1;
 			}
 
 			success &= _camera.EndFrame(cmdList);
@@ -567,7 +567,6 @@ namespace FragEngine3.Graphics.Stack
 			if (_camera.IsMainCamera)
 			{
 				Framebuffer backbuffer = core.Device.SwapchainFramebuffer;
-				//if (!_camera.SetOverrideRenderTargets(backbuffer, false))
 				if (!_camera.SetOverrideCameraTarget(backbuffer, false))
 				{
 					Logger.LogError("Failed to set override render targets for graphics stack's composition pass!");
@@ -576,9 +575,10 @@ namespace FragEngine3.Graphics.Stack
 			}
 
 			cmdList.Begin();
-			if (!_camera.BeginFrame(cmdList, RenderMode.Custom, false, _maxActiveLightCount, out GraphicsDrawContext drawCtx, out CameraContext cameraCtx))
+			if (!_camera.BeginFrame(cmdList, RenderMode.Custom, true, _maxActiveLightCount, out CameraContext cameraCtx))
 			{
 				Logger.LogError("Failed to begin frame on graphics stack's composition pass!");
+				_camera.SetOverrideCameraTarget(null);
 				return false;
 			}
 
@@ -629,12 +629,16 @@ namespace FragEngine3.Graphics.Stack
 			}
 
 			// Send draw calls for output composition:
-			success &= compositionRenderer.Draw(drawCtx, cameraCtx);
+			success &= compositionRenderer.Draw(cameraCtx);
 
+			// Finish drawing and submit command list to GPU:
 			success &= _camera.EndFrame(cmdList);
 			cmdList.End();
 
 			core.CommitCommandList(cmdList);
+
+			// Reset camera state:
+			_camera.SetOverrideCameraTarget(null);
 			return success;
 		}
 

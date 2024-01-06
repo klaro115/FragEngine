@@ -60,7 +60,7 @@ public sealed class CameraInstance : IDisposable
 	private Framebuffer? framebuffer = null;
 	private Framebuffer? overrideFramebuffer = null;
 
-	private Matrix4x4 mtxInvWorld = Matrix4x4.Identity;
+	private Matrix4x4 mtxWorld = Matrix4x4.Identity;
 	private CameraOutput output = new();
 	private CameraProjection projection = new();
 	private CameraClearing clearing = new();
@@ -77,16 +77,16 @@ public sealed class CameraInstance : IDisposable
 	{
 		get => new()
 		{
-			mtxInvWorld = mtxInvWorld,
+			mtxWorld = mtxWorld,
 			output = output,
 			projection = projection,
 			clearing = clearing,
 		};
 		set
 		{
-			if (value.mtxInvWorld != null)
+			if (value.mtxWorld != null)
 			{
-				mtxInvWorld = value.mtxInvWorld.Value;
+				mtxWorld = value.mtxWorld.Value;
 				MarkDirty(DirtyFlags.Transformation);
 			}
 			output = value.output;
@@ -96,12 +96,12 @@ public sealed class CameraInstance : IDisposable
 		}
 	}
 
-	public Matrix4x4 MtxInvWorld
+	public Matrix4x4 MtxWorld
 	{
-		get => mtxInvWorld;
+		get => mtxWorld;
 		set
 		{
-			mtxInvWorld = value;
+			mtxWorld = value;
 			MarkDirty(DirtyFlags.Transformation);
 		}
 	}
@@ -268,13 +268,8 @@ public sealed class CameraInstance : IDisposable
 			return false;
 		}
 
-		// Update values:
-		if (dirtyFlags.HasFlag(DirtyFlags.Projection) ||
-			dirtyFlags.HasFlag(DirtyFlags.Output) ||
-			dirtyFlags.HasFlag(DirtyFlags.Transformation))
-		{
-			projection.RecalculateAllMatrices(mtxInvWorld, output.resolutionY, output.resolutionY);
-		}
+		// Recalculate projection matrices: (each frame, because both parameters and pose can change)
+		projection.RecalculateAllMatrices(in mtxWorld, output.resolutionX, output.resolutionY);
 
 		// Output the most up-to-date projection matrix:
 		_outMtxWorld2Clip = projection.mtxWorld2Clip;
@@ -288,7 +283,6 @@ public sealed class CameraInstance : IDisposable
 		else if (!GetOrCreateFramebuffer(out activeFramebuffer, dirtyFlags.HasFlag(DirtyFlags.Output)))
 		{
 			Logger.LogError("Failed to acquire render targets for camera instance, cannot begin drawing!");
-			_outMtxWorld2Clip = Matrix4x4.Identity;
 			return false;
 		}
 
@@ -332,6 +326,38 @@ public sealed class CameraInstance : IDisposable
 
 		isDrawing = false;
 		return true;
+	}
+
+	/// <summary>
+	/// Transforms a position from world space to a pixel coordinate on the camera's render target.
+	/// </summary>
+	/// <param name="_worldPoint">A position in world space.</param>
+	/// <param name="_recalculateMatrices">Whether to recalculate projection matrices before transforming the point. When transforming a large number of
+	/// points in immediate succession and without touching the camera in-between, this can be set to false for all but the very first call.</param>
+	/// <returns>A coordinate in pixel space on the camera's render target.</returns>
+	public Vector3 TransformWorldPosition2PixelCoordinate(Vector3 _worldPoint, bool _recalculateMatrices)
+	{
+		if (_recalculateMatrices)
+		{
+			projection.RecalculateAllMatrices(in mtxWorld, output.resolutionX, output.resolutionY);
+		}
+		return Vector3.Transform(_worldPoint, projection.mtxWorld2Pixel);
+	}
+
+	/// <summary>
+	/// Transforms a pixel coordinate on the camera's render target to a position in world space.
+	/// </summary>
+	/// <param name="_screenCoord">A pixel coordinate (XY-axes) on the current render target. The Z-axis codes a depth value in the range [0..1].</param>
+	/// <param name="_recalculateMatrices">Whether to recalculate projection matrices before transforming the point. When transforming a large number of
+	/// points in immediate succession and without touching the camera in-between, this can be set to false for all but the very first call.</param>
+	/// <returns>A position in world space.</returns>
+	public Vector3 TransformPixelCoordinate2WorldPosition(Vector3 _screenCoord, bool _recalculateMatrices)
+	{
+		if (_recalculateMatrices)
+		{
+			projection.RecalculateAllMatrices(in mtxWorld, output.resolutionX, output.resolutionY);
+		}
+		return Vector3.Transform(_screenCoord, projection.mtxPixel2World);
 	}
 
 	#endregion

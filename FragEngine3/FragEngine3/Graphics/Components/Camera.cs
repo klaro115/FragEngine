@@ -9,6 +9,7 @@ using FragEngine3.Scenes.Data;
 using FragEngine3.Scenes.EventSystem;
 using FragEngine3.Utility.Serialization;
 using Veldrid;
+using static FragEngine3.Graphics.GraphicsSystem;
 
 namespace FragEngine3.Graphics.Components;
 
@@ -131,6 +132,8 @@ public sealed class Camera : Component
 		}
 	}
 
+	public void MarkDirty() => instance.MarkDirty();
+
 	public override void Refresh()
 	{
 		// Do not allow resetting after disposal or while actively drawing:
@@ -238,20 +241,17 @@ public sealed class Camera : Component
 		RenderMode _renderMode,
 		bool _clearRenderTargets,
 		uint _activeLightCount,
-		out GraphicsDrawContext _outDrawCtx,
 		out CameraContext _outCameraCtx)
 	{
 		if (IsDisposed)
 		{
 			Logger.LogError("Cannot begin frame on camera that is already drawing!");
-			_outDrawCtx = null!;
 			_outCameraCtx = null!;
 			return false;
 		}
 		if (IsDrawing)
 		{
 			Logger.LogError("Cannot begin frame on camera that is already drawing!");
-			_outDrawCtx = null!;
 			_outCameraCtx = null!;
 			return false;
 		}
@@ -259,7 +259,6 @@ public sealed class Camera : Component
 		// Create or resize light data buffer:
 		if (!UpdateLightDataBuffer(_activeLightCount))
 		{
-			_outDrawCtx = null!;
 			_outCameraCtx = null!;
 			return false;
 		}
@@ -273,7 +272,6 @@ public sealed class Camera : Component
 		else if (!GetOrCreateCameraTarget(_renderMode, out activeTarget))
 		{
 			Logger.LogError($"Failed to get or create camera target for render mode '{_renderMode}'!");
-			_outDrawCtx = null!;
 			_outCameraCtx = null!;
 			return false;
 		}
@@ -281,30 +279,27 @@ public sealed class Camera : Component
 		// Assign target's framebuffer as override to the camera instance:
 		if (!instance.SetOverrideFramebuffer(activeTarget.framebuffer, true))
 		{
-			_outDrawCtx = null!;
 			_outCameraCtx = null!;
 			return false;
 		}
 
 		// Finalize projection and camera parameters, and start drawing:
+		instance.MtxWorld = node.WorldTransformation.Matrix;
 		if (!instance.BeginDrawing(_cmdList, _clearRenderTargets, out Matrix4x4 mtxWorld2Clip))
 		{
 			Logger.LogError("Cannot begin frame on camera that is already drawing!");
 			_outCameraCtx = null!;
-			_outDrawCtx = null!;
 			return false;
 		}
 
 		if (!UpdateGlobalConstantBuffer(in mtxWorld2Clip, _activeLightCount))
 		{
 			Logger.LogError("Failed to allocate or update camera's global constant buffer!");
-			_outDrawCtx = null!;
 			_outCameraCtx = null!;
 			return false;
 		}
 
-		_outDrawCtx = new(instance.graphicsCore, _cmdList);
-		_outCameraCtx = new(this, globalConstantBuffer!, lightDataBuffer!, activeTarget.framebuffer.OutputDescription);
+		_outCameraCtx = new(this, _cmdList, globalConstantBuffer!, lightDataBuffer!, activeTarget.framebuffer.OutputDescription);
 		return true;
 	}
 
@@ -402,7 +397,7 @@ public sealed class Camera : Component
 		GlobalConstantBuffer cbData = new()
 		{
 			// Camera vectors & matrices:
-			mtxCamera = _mtxWorld2Clip,
+			mtxWorld2Clip = _mtxWorld2Clip,
 			cameraPosition = new Vector4(worldPose.position, 0),
 			cameraDirection = new Vector4(worldPose.Forward, 0),
 			

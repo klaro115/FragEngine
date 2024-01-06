@@ -11,7 +11,7 @@ namespace FragEngine3.Graphics.Components.ConstantBuffers
 		#region Fields
 
 		// Camera vectors & matrices:
-		public Matrix4x4 mtxCamera;         // Camera's full projection matrix, transforming from world space to viewport pixel coordinates.
+		public Matrix4x4 mtxWorld2Clip;		// Camera's full projection matrix, transforming from world space to viewport pixel coordinates.
 		public Vector4 cameraPosition;      // Camera position, in world space.
 		public Vector4 cameraDirection;     // Camera forward facing direction, in world space. (NOTE: This is a float4 because of CB packing rules; data must be packed in 4x4 byte vector blocks)
 

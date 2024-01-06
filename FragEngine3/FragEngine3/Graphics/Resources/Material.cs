@@ -256,8 +256,8 @@ namespace FragEngine3.Graphics.Resources
 						return false;
 					}
 
-					ShaderResource shaderRes = (_handle.GetResource(true, true) as ShaderResource)!;
-					if (!shaderRes.GetShaderProgram(_vertexDataFlags, out Shader? shader) || shader == null)
+					ShaderResource? shaderRes = _handle.GetResource(true, true) as ShaderResource;
+					if (shaderRes == null || !shaderRes.GetShaderProgram(_vertexDataFlags, out Shader? shader) || shader == null)
 					{
 						errorStages |= _stageFlag;
 						return false;

@@ -76,7 +76,7 @@ namespace FragEngine3.Scenes
 		/// </summary>
 		public Matrix4x4 Matrix
 		{
-			readonly get => Matrix4x4.CreateTranslation(position) * Matrix4x4.CreateFromQuaternion(rotation) * Matrix4x4.CreateScale(scale);
+			readonly get => Matrix4x4.CreateScale(scale) * Matrix4x4.CreateFromQuaternion(rotation) * Matrix4x4.CreateTranslation(position);
 			set => Matrix4x4.Decompose(value, out scale, out rotation, out position);
 		}
 

@@ -8,7 +8,7 @@ public sealed class CameraSettings
 {
 	#region Fields
 
-	public Matrix4x4? mtxInvWorld = null;
+	public Matrix4x4? mtxWorld = null;
 
 	public CameraOutput output = new();
 	public CameraProjection projection = new();
@@ -21,28 +21,28 @@ public sealed class CameraSettings
 
 	public Pose WorldPose
 	{
-		get => new(MtxWorld);
-		set => MtxWorld = value.Matrix;
+		get => mtxWorld != null ? new(mtxWorld.Value) : Pose.Identity;
+		set => mtxWorld = value.Matrix;
 	}
-	public Matrix4x4 MtxWorld
+	public Matrix4x4? MtxWorld
 	{
-		get => mtxInvWorld != null && Matrix4x4.Invert(mtxInvWorld.Value, out Matrix4x4 mtxWorld) ? mtxWorld : Matrix4x4.Identity;
+		get => mtxWorld;
+		set => mtxWorld = value;
+	}
+	public Matrix4x4 MtxCamera2World
+	{
+		get => mtxWorld != null && Matrix4x4.Invert(mtxWorld.Value, out Matrix4x4 mtxWorld2Camera) ? mtxWorld2Camera : Matrix4x4.Identity;
 		set
 		{
-			if (Matrix4x4.Invert(value, out Matrix4x4 mtxInvValue))
+			if (Matrix4x4.Invert(value, out Matrix4x4 newMtxWorld))
 			{
-				mtxInvWorld = mtxInvValue;
+				mtxWorld = newMtxWorld;
 			}
-			else if (mtxInvWorld != null)
+			else if (mtxWorld != null)
 			{
-				mtxInvWorld = Matrix4x4.Identity;
+				mtxWorld = Matrix4x4.Identity;
 			}
 		}
-	}
-	public Matrix4x4? MtxInvWorld
-	{
-		get => mtxInvWorld;
-		set => mtxInvWorld = value;
 	}
 
 	// OUTPUT:

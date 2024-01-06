@@ -239,7 +239,7 @@ namespace FragEngine3.Graphics.Components
 			return Vector3.DistanceSquared(posFront, _viewportPosition);
 		}
 
-		public bool Draw(GraphicsDrawContext _drawCtx, CameraContext _cameraCtx)
+		public bool Draw(CameraContext _cameraCtx)
 		{
 			// Check mesh and load it now if necessary:
 			if (Mesh == null || Mesh.IsDisposed)
@@ -292,7 +292,7 @@ namespace FragEngine3.Graphics.Components
 				return false;
 			}
 
-			UpdateObjectDataConstantBuffer(_drawCtx.cmdList);
+			UpdateObjectDataConstantBuffer(_cameraCtx.cmdList);
 
 			// Update (or recreate) pipeline for rendering this material and geometry combo:
 			if (!Material.IsPipelineUpToDate(in pipeline, rendererVersion))
@@ -308,23 +308,23 @@ namespace FragEngine3.Graphics.Components
 			UpdateResourceSet(Material, _cameraCtx);
 
 			// Throw pipeline and geometry buffers at the command list:
-			_drawCtx.cmdList.SetPipeline(pipeline.Value);
-			_drawCtx.cmdList.SetGraphicsResourceSet(0, defaultResourceSet.Value);
+			_cameraCtx.cmdList.SetPipeline(pipeline.Value);
+			_cameraCtx.cmdList.SetGraphicsResourceSet(0, defaultResourceSet.Value);
 
 			ResourceSet? boundResourceSet = overrideBoundResourceSet ?? Material.BoundResourceSet;
 			if (boundResourceSet != null && Material.BoundResourceLayout != null)
 			{
-				_drawCtx.cmdList.SetGraphicsResourceSet(1, boundResourceSet);
+				_cameraCtx.cmdList.SetGraphicsResourceSet(1, boundResourceSet);
 			}
 
 			for (uint i = 0; i < vertexBuffers.Length; ++i)
 			{
-				_drawCtx.cmdList.SetVertexBuffer(i, vertexBuffers[i]);
+				_cameraCtx.cmdList.SetVertexBuffer(i, vertexBuffers[i]);
 			}
-			_drawCtx.cmdList.SetIndexBuffer(indexBuffer, Mesh.IndexFormat);
+			_cameraCtx.cmdList.SetIndexBuffer(indexBuffer, Mesh.IndexFormat);
 
 			// Issue draw call:
-			_drawCtx.cmdList.DrawIndexed(Mesh.IndexCount);
+			_cameraCtx.cmdList.DrawIndexed(Mesh.IndexCount);
 
 			return true;
 		}
