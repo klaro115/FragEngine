@@ -10,7 +10,7 @@ namespace FragEngine3.Graphics.Components.ConstantBuffers
 	{
 		#region Fields
 
-		public Matrix4x4 mtxWorld;
+		public Matrix4x4 mtxLocal2World;
 		public Vector3 worldPosition;
 		public float boundingRadius;
 

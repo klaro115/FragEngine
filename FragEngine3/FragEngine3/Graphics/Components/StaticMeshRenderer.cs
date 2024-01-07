@@ -341,11 +341,10 @@ namespace FragEngine3.Graphics.Components
 			}
 
 			Pose worldPose = node.WorldTransformation;
-			//Pose worldPose = node.LocalTransformation;
 
 			ObjectDataConstantBuffer objectData = new()
 			{
-				mtxWorld = worldPose.Matrix,
+				mtxLocal2World = worldPose.Matrix,
 				worldPosition = worldPose.position,
 				boundingRadius = BoundingRadius,
 			};

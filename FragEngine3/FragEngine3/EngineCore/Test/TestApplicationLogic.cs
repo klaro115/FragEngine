@@ -71,6 +71,21 @@ namespace FragEngine3.EngineCore.Test
 
 		protected override bool BeginRunningState()
 		{
+			//TEST TEST TEST
+			Vector3 localPos = new(0, 0, 1);
+			Matrix4x4 mtxRot = Matrix4x4.CreateFromAxisAngle(Vector3.UnitY, MathF.PI / 2);  // rotate by 90 deg along Y.
+			Matrix4x4 mtxPos = Matrix4x4.CreateTranslation(0, 0, 1);                        // move by 1m along Z.
+			Matrix4x4 mtxSca = Matrix4x4.CreateScale(2, 2, 2);                              // double scale.
+
+			Matrix4x4 mtxSRT = mtxSca * mtxRot * mtxPos;
+			Matrix4x4 mtxTRS = mtxPos * mtxRot * mtxSca;
+			Vector3 worldPosSRT = Vector3.Transform(localPos, mtxSRT);
+			Vector3 worldPosTRS = Vector3.Transform(localPos, mtxTRS);
+			Vector3 worldPosRight = new(2, 0, 1);
+			Vector3 worldPosWrong = new(4, 0, 0);
+			//TEST TEST TEST
+
+
 			// Import 3D models:
 			if (Engine.ResourceManager.GetResource("Cube.obj", out ResourceHandle handle))
 			{
@@ -230,7 +245,7 @@ namespace FragEngine3.EngineCore.Test
 
 			//TEST
 			Pose p = Camera.MainCamera!.node.LocalTransformation;
-			p.Rotate(Quaternion.CreateFromAxisAngle(Vector3.UnitZ, 0.5f * (float)Engine.TimeManager.DeltaTime.TotalSeconds));
+			//p.Rotate(Quaternion.CreateFromAxisAngle(Vector3.UnitZ, 0.5f * (float)Engine.TimeManager.DeltaTime.TotalSeconds));
 			//p.position = new(MathF.Sin(0.5f * (float)Engine.TimeManager.DeltaTime.TotalSeconds) * 2, 0, 0);
 			Camera.MainCamera!.node.LocalTransformation = p;
 

@@ -22,7 +22,7 @@ cbuffer CBGlobal : register(b0)
 
 cbuffer CBObject : register(b1)
 {
-    float4x4 mtxWorld;          // Object world matrix, transforming vertices from model space to world space.
+    float4x4 mtxLocal2World;    // Object world matrix, transforming vertices from model space to world space.
     float3 worldPosition;       // World space position of the object.
     float boundingRadius;       // Bounding sphere radius of the object.
 };
@@ -75,10 +75,10 @@ struct VertexOutput_Extended
 
 void Main_Vertex(in VertexInput_Basic inputBasic, out VertexOutput_Basic outputBasic)
 {
-    float4 worldPos = mul(mtxWorld, float4(inputBasic.position, 1));
+    float4 worldPos = mul(mtxLocal2World, float4(inputBasic.position, 1));
     float4 clipPos = mul(mtxWorld2Clip, worldPos);
 
-    //float4x4 mtxModel2Camera = mul(mtxCamera, mtxWorld);
+    //float4x4 mtxModel2Camera = mul(mtxWorld2Clip, mtxWorld);
 
     //float4 projResult = mul(mtxModel2Camera, float4(inputBasic.position, 1) + float4(0, 0, 2, 0));
 
@@ -86,22 +86,22 @@ void Main_Vertex(in VertexInput_Basic inputBasic, out VertexOutput_Basic outputB
     //outputBasic.worldPosition = mul(mtxWorld, float4(inputBasic.position, 1)).xyz;
     outputBasic.position = clipPos;
     outputBasic.worldPosition = worldPos.xyz;
-    outputBasic.normal = mul(mtxWorld, float4(inputBasic.position, 0)).xyz;
+    outputBasic.normal = mul(mtxLocal2World, float4(inputBasic.position, 0)).xyz;
     outputBasic.uv = inputBasic.uv;
 }
 
 void Main_Vertex_Ext(in VertexInput_Basic inputBasic, in VertexInput_Extended inputExt, out VertexOutput_Basic outputBasic, out VertexOutput_Extended outputExt)
 {
-    float4x4 mtxModel2Camera = mul(mtxWorld2Clip, mtxWorld);
+    float4x4 mtxModel2Camera = mul(mtxWorld2Clip, mtxLocal2World);
 
     float4 projResult = mul(mtxModel2Camera, float4(inputBasic.position, 1));
 
     outputBasic.position = projResult / projResult.w;
-    outputBasic.worldPosition = mul(mtxWorld, float4(inputBasic.position, 1)).xyz;
+    outputBasic.worldPosition = mul(mtxLocal2World, float4(inputBasic.position, 1)).xyz;
     outputBasic.normal = mul(mtxModel2Camera, float4(inputBasic.position, 0)).xyz;
     outputBasic.uv = inputBasic.uv;
 
-    outputExt.tangent = mul(mtxWorld, float4(inputExt.tangent, 0)).xyz;
+    outputExt.tangent = mul(mtxLocal2World, float4(inputExt.tangent, 0)).xyz;
     outputExt.binormal = cross(outputBasic.normal, outputExt.tangent);
     outputExt.uv2 = inputExt.uv2;
 }

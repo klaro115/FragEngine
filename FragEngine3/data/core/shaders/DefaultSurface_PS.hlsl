@@ -22,7 +22,7 @@ cbuffer CBGlobal : register(b0)
 
 cbuffer CBObject : register(b1)
 {
-    float4x4 mtxWorld;          // Object world matrix, transforming vertices from model space to world space.
+    float4x4 mtxLocal2World;    // Object world matrix, transforming vertices from model space to world space.
     float3 worldPosition;       // World space position of the object.
     float boundingRadius;       // Bounding sphere radius of the object.
 };
