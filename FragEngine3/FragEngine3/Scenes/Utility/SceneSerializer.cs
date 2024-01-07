@@ -45,6 +45,13 @@ namespace FragEngine3.Scenes.Utility
 				_outProgress.Increment();
 			}
 
+			// Gather scene settings in serializable format:
+			if (!_scene.settings.SaveData(out SceneSettingsData settingsData))
+			{
+				Logger.Instance?.LogError("Failed to serialize scene settings!");
+				goto abort;
+			}
+
 			// Map out all of the scene's elements, and assign an ID to each one:
 			if (!GenerateSceneIdMap(
 				in _scene,
@@ -65,6 +72,7 @@ namespace FragEngine3.Scenes.Utility
 			{
 				Name = _scene.Name,
 				UpdatedInEngineStates = _scene.UpdatedInEngineStates,
+				Settings = settingsData,
 				Behaviours = new()
 				{
 					BehaviourCount = sceneBehaviours.Count,
@@ -266,9 +274,10 @@ namespace FragEngine3.Scenes.Utility
 				_outScene = null;
 				return false;
 			}
+			Logger logger = _engine.Logger;
 			if (_sceneData == null)
 			{
-				Logger.Instance?.LogError("Cannot load scene from null scene data!");
+				logger.LogError("Cannot load scene from null scene data!");
 				_outScene = null;
 				return false;
 			}
@@ -278,6 +287,12 @@ namespace FragEngine3.Scenes.Utility
 				UpdatedInEngineStates = _sceneData.UpdatedInEngineStates,
 			};
 
+			// Load scene settings:
+			if (_sceneData.Settings != null && !_outScene.settings.LoadData(_sceneData.Settings))
+			{
+				logger.LogError("Failed to load scene settings from data!");
+				goto abort;
+			}
 
 			// First, try to recreate the ID mapping of all elements in the scene:
 			if (!ReconstructSceneIdMap(
@@ -287,7 +302,7 @@ namespace FragEngine3.Scenes.Utility
 				out int totalComponentCount,
 				out int totalProgressTaskCount))
 			{
-				Logger.Instance?.LogError("Failed to reconstruct ID map from scene data!");
+				logger.LogError("Failed to reconstruct ID map from scene data!");
 				goto abort;
 			}
 
@@ -300,7 +315,7 @@ namespace FragEngine3.Scenes.Utility
 			// Recreate and reattach scene-wide behaviours to the scene: (loading happens after all elements have been spawned.)
 			if (!CreateSceneBehaviours(in _sceneData, idElementMap, _outScene, _outProgress))
 			{
-				Logger.Instance?.LogError("Failed to recreate scene-wide behaviours!");
+				logger.LogError("Failed to recreate scene-wide behaviours!");
 				goto abort;
 			}
 
@@ -318,7 +333,7 @@ namespace FragEngine3.Scenes.Utility
 				out Dictionary<int, SceneNode> nodeIdMap,
 				_outProgress))
 			{
-				Logger.Instance?.LogError("Failed to recreate and load scene hierarchy!");
+				logger.LogError("Failed to recreate and load scene hierarchy!");
 				goto abort;
 			}
 
@@ -333,7 +348,7 @@ namespace FragEngine3.Scenes.Utility
 				out List<Component> allComponents,
 				out List<ComponentData> allComponentData, _outProgress))
 			{
-				Logger.Instance?.LogError("Failed to recreate components!");
+				logger.LogError("Failed to recreate components!");
 				goto abort;
 			}
 
@@ -344,7 +359,7 @@ namespace FragEngine3.Scenes.Utility
 				in _outScene,
 				_outProgress))
 			{
-				Logger.Instance?.LogError("Failed to load scene-wide behaviours!");
+				logger.LogError("Failed to load scene-wide behaviours!");
 				goto abort;
 			}
 
@@ -355,7 +370,7 @@ namespace FragEngine3.Scenes.Utility
 				in idElementMap,
 				_outProgress))
 			{
-				Logger.Instance?.LogError("Failed to load component states!");
+				logger.LogError("Failed to load component states!");
 				goto abort;
 			}
 

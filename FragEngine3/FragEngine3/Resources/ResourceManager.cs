@@ -263,6 +263,19 @@ namespace FragEngine3.Resources
 		}
 
 		/// <summary>
+		/// Retrieve a resource handle for accessing and managing a specific resource, then immediately initiates loading if the resource wasn't already loaded.
+		/// </summary>
+		/// <param name="_resourceKey">The unique identifier for the resource and its handle.</param>
+		/// <param name="_loadImmediately">Whether to load the resource immediately on the current thread, if it wasn't loaded already. If false, it will be
+		/// queued up for asynchronous background loading instead.</param>
+		/// <param name="_outHandle">Outputs a resource handle through which the resource may be accessed and managed.</param>
+		/// <returns>True if the resource exists and could be found and loading was initiated, false if it wasn't found or if loading failed.</returns>
+		public bool GetAndLoadResource(string _resourceKey, bool _loadImmediately, out ResourceHandle _outHandle)
+		{
+			return GetResource(_resourceKey, out _outHandle) && _outHandle.Load(_loadImmediately);
+		}
+
+		/// <summary>
 		/// Registers a new resource, identified by its resource handle, with this resource manager.
 		/// </summary>
 		/// <param name="_handle">A handle identifying and describing the new resource. Must be non-null

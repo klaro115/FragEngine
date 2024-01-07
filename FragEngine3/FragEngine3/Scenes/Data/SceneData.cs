@@ -31,6 +31,7 @@ namespace FragEngine3.Scenes.Data
 		public string Name { get; set; } = string.Empty;
 		public EngineState UpdatedInEngineStates { get; set; } = EngineState.Running;
 
+		public SceneSettingsData Settings { get; set; } = new();
 		public BehaviourData Behaviours { get; set; } = new();
 		public HierarchyData Hierarchy { get; set; } = new();
 

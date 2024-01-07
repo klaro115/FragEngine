@@ -7,7 +7,7 @@ using namespace metal;
 struct CBGlobal
 {
     // Camera vectors & matrices:
-    float4x4 mtxCamera;         // Camera's full projection matrix, transforming from world space to clip space coordinates.
+    float4x4 mtxWorld2Clip;     // Camera's full projection matrix, transforming from world space to clip space coordinates.
     float4 cameraPosition;      // Camera position, in world space.
     float4 cameraDirection;     // Camera forward facing direction, in world space.
 
@@ -24,7 +24,7 @@ struct CBGlobal
 
 struct CBObject
 {
-    float4x4 mtxWorld;          // Object world matrix, transforming vertices from model space to world space.
+    float4x4 mtxLocal2World;    // Object world matrix, transforming vertices from model space to world space.
     float3 worldPosition;       // World space position of the object.
     float boundingRadius;       // Bounding sphere radius of the object.
 };
@@ -86,14 +86,14 @@ VertexOutput_Basic vertex Main_Vertex(
 
     const device VertexInput_Basic& inputBasic = pInputBasic[vertexId];
 
-    float4x4 mtxModel2Camera = cbGlobal.mtxCamera * cbObject.mtxWorld;
+    float4x4 mtxLocal2Clip = cbGlobal.mtxWorld2Clip * cbObject.mtxLocal2World;
 
-    float4 projResult = mtxModel2Camera * float4(inputBasic.position, 1);
+    float4 projResult = mtxLocal2Clip * float4(inputBasic.position, 1);
 
     VertexOutput_Basic outputBasic;
     outputBasic.position = projResult;
-    outputBasic.worldPosition = (cbObject.mtxWorld * float4(inputBasic.position, 1)).xyz;
-    outputBasic.normal = (cbObject.mtxWorld * float4(inputBasic.normal, 0)).xyz;
+    outputBasic.worldPosition = (cbObject.mtxLocal2World * float4(inputBasic.position, 1)).xyz;
+    outputBasic.normal = (cbObject.mtxLocal2World * float4(inputBasic.normal, 0)).xyz;
     outputBasic.uv = inputBasic.uv;
     return outputBasic;
 }

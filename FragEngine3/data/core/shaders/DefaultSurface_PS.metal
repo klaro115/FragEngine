@@ -7,7 +7,7 @@ using namespace metal;
 struct CBGlobal
 {
     // Camera vectors & matrices:
-    float4x4 mtxCamera;         // Camera's full projection matrix, transforming from world space to clip space coordinates.
+    float4x4 mtxWorld2Clip;     // Camera's full projection matrix, transforming from world space to clip space coordinates.
     float4 cameraPosition;      // Camera position, in world space.
     float4 cameraDirection;     // Camera forward facing direction, in world space.
 
@@ -24,7 +24,7 @@ struct CBGlobal
 
 struct CBObject
 {
-    float4x4 mtxWorld;          // Object world matrix, transforming vertices from model space to world space.
+    float4x4 mtxLocal2World;    // Object world matrix, transforming vertices from model space to world space.
     float3 worldPosition;       // World space position of the object.
     float boundingRadius;       // Bounding sphere radius of the object.
 };

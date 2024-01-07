@@ -392,7 +392,7 @@ public sealed class Camera : Component
 		}
 
 		Pose worldPose = node.WorldTransformation;
-		Vector3 ambientLight = new(0.2f, 0.2f, 0.2f);	//TEMP
+		Vector3 ambientLight = node.scene.settings.AmbientLightIntensity;
 		
 		GlobalConstantBuffer cbData = new()
 		{

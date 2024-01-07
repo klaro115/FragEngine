@@ -5,7 +5,7 @@ using FragEngine3.Scenes.SceneManagers;
 
 namespace FragEngine3.Scenes
 {
-    public sealed class Scene : IDisposable
+	public sealed class Scene : IDisposable
 	{
 		#region Constructors
 
@@ -33,6 +33,7 @@ namespace FragEngine3.Scenes
 
 		public readonly Engine engine;
 		public readonly SceneNode rootNode;
+		public readonly SceneSettings settings = new();
 
 		private readonly List<SceneBehaviour> sceneBehaviours = [];
 		private IGraphicsStack? graphicsStack = null;

@@ -71,49 +71,19 @@ namespace FragEngine3.EngineCore.Test
 
 		protected override bool BeginRunningState()
 		{
-			//TEST TEST TEST
-			Vector3 localPos = new(0, 0, 1);
-			Matrix4x4 mtxRot = Matrix4x4.CreateFromAxisAngle(Vector3.UnitY, MathF.PI / 2);  // rotate by 90 deg along Y.
-			Matrix4x4 mtxPos = Matrix4x4.CreateTranslation(0, 0, 1);                        // move by 1m along Z.
-			Matrix4x4 mtxSca = Matrix4x4.CreateScale(2, 2, 2);                              // double scale.
-
-			Matrix4x4 mtxSRT = mtxSca * mtxRot * mtxPos;
-			Matrix4x4 mtxTRS = mtxPos * mtxRot * mtxSca;
-			Vector3 worldPosSRT = Vector3.Transform(localPos, mtxSRT);
-			Vector3 worldPosTRS = Vector3.Transform(localPos, mtxTRS);
-			Vector3 worldPosRight = new(2, 0, 1);
-			Vector3 worldPosWrong = new(4, 0, 0);
-			//TEST TEST TEST
-
-
 			// Import 3D models:
-			if (Engine.ResourceManager.GetResource("Cube.obj", out ResourceHandle handle))
-			{
-				handle.Load(true);
-			}
-			if (Engine.ResourceManager.GetResource("Rabbit.obj", out handle))
-			{
-				handle.Load(true);
-			}
-			if (Engine.ResourceManager.GetResource("Mtl_DefaultSurface", out handle))
-			{
-				handle.Load(true);
-			}
-			if (Engine.ResourceManager.GetResource("Mtl_TestMaterial", out handle))
-			{
-				handle.Load(true);
-			}
-			if (Engine.ResourceManager.GetResource("ForwardPlusLight_Composition_PS", out handle))
-			{
-				handle.Load(true);
-			}
+			Engine.ResourceManager.GetAndLoadResource("Cube.obj", true, out _);
+			Engine.ResourceManager.GetAndLoadResource("Rabbit.obj", true, out _);
+			Engine.ResourceManager.GetAndLoadResource("Mtl_TestMaterial", true, out _);
+			Engine.ResourceManager.GetAndLoadResource("Mtl_DefaultSurface", true, out _);
+			Engine.ResourceManager.GetAndLoadResource("ForwardPlusLight_Composition_PS", true, out _);
 
 			Scene scene = Engine.SceneManager.MainScene!;
 
 			// Create a camera:
 			if (SceneSpawner.CreateCamera(scene, true, out Camera camera))
 			{
-				camera.node.LocalPosition = new Vector3(0, 0, 0);
+				camera.node.LocalPosition = new Vector3(0, 0, -5);
 				camera.node.LocalRotation = Quaternion.Identity;
 				camera.node.LocalScale = Vector3.One;
 
@@ -156,7 +126,6 @@ namespace FragEngine3.EngineCore.Test
 
 				rabbit.SetMesh("Rabbit.obj");
 				rabbit.SetMaterial("Mtl_DefaultSurface");
-				//rabbit.SetMaterial("Mtl_TestMaterial");
 			}
 
 			MeshPrimitiveFactory.CreateCubeMesh("Cube", Engine, new(1, 1, 1), false, out _, out _, out ResourceHandle cubeHandle);
@@ -164,15 +133,12 @@ namespace FragEngine3.EngineCore.Test
 			{
 				cube.node.Name = "Cube";
 				cube.node.LocalPosition = new Vector3(0, 0, 2);
-				//cube.node.LocalRotation = Quaternion.Identity;
 				cube.node.LocalRotation = Quaternion.CreateFromYawPitchRoll(0.5f, 0.5f, 0);
-				//cube.node.LocalRotation = Quaternion.CreateFromAxisAngle(Vector3.UnitY, 0.5f);
 				cube.node.LocalScale = Vector3.One;
 				//cube.node.SetEnabled(false);
 
 				cube.SetMesh(cubeHandle);
 				cube.SetMaterial("Mtl_DefaultSurface");
-				//cube.SetMaterial("Mtl_TestMaterial");
 			}
 
 			// Create two-sided quad:
@@ -194,7 +160,6 @@ namespace FragEngine3.EngineCore.Test
 					2, 1, 3,
 				],
 			};
-			quadData.TransformVertices(new Pose(new Vector3(0, 0, 2)));
 			StaticMesh quadMesh = new("Quad", Engine, false, out ResourceHandle quadHandle);
 			quadMesh.SetGeometry(in quadData);
 			if (SceneSpawner.CreateStaticMeshRenderer(scene, out StaticMeshRenderer quad))
