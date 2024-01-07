@@ -101,8 +101,8 @@ public sealed class CameraSettings
 	}
 	public float OrthographicSize
 	{
-		get => projection.othographicSize;
-		set => projection.othographicSize = Math.Clamp(value, 0.001f, 1000.0f);
+		get => projection.orthographicSize;
+		set => projection.orthographicSize = Math.Clamp(value, 0.001f, 1000.0f);
 	}
 
 	public Matrix4x4 MtxWorld2Pixel

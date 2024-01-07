@@ -96,7 +96,7 @@ half4 Main_Pixel(in VertexOutput_Basic inputBasic) : SV_Target0
         totalLightIntensity += lightIntens.xyz * lightDot;
     }
     albedo *= half4(totalLightIntensity, 1);
-
+    
     // Return final color:
     return albedo;
 };

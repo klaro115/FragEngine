@@ -302,7 +302,7 @@ namespace FragEngine3.Graphics.Stack
 				// Composite results:
 				success &= CompositeFinalOutput(camera, activeLightCount);
 			}
-			
+
 			isDrawing = false;
 			return success;
 		}
