@@ -56,7 +56,7 @@ namespace FragEngine3.Graphics.Resources.Import
 				// Open file stream:
 				if (!fileHandle.TryOpenDataStream(_resourceManager, _handle.dataOffset, _handle.dataSize, out stream, out _))
 				{
-					logger.LogError("Failed to open file stream for resource handle '{_handle}'!");
+					logger.LogError($"Failed to open file stream for resource handle '{_handle}'!");
 					_outSurfaceData = null;
 					return false;
 				}
@@ -64,7 +64,12 @@ namespace FragEngine3.Graphics.Resources.Import
 				// Import from stream, identifying file format from extension:
 				string formatExt = Path.GetExtension(fileHandle.dataFilePath);
 
-				return ImportModelData(stream, formatExt, out _outSurfaceData);
+				if (!ImportModelData(stream, formatExt, out _outSurfaceData))
+				{
+					logger.LogError($"Failed to import model data for resource handle '{_handle}'!");
+					_outSurfaceData = null;
+					return false;
+				}
 			}
 			catch (Exception ex)
 			{
@@ -76,6 +81,20 @@ namespace FragEngine3.Graphics.Resources.Import
 			{
 				stream?.Close();
 			}
+
+			// Check for further pre-processing instructions in import flags:
+			if (_outSurfaceData != null && !string.IsNullOrEmpty(_handle.importFlags))
+			{
+				// Flip triangle vertex order, optinally flip normals and tangents: (turns the surfaces inside-out)
+				if (_handle.importFlags.Contains("flipVertexOrder", StringComparison.Ordinal))
+				{
+					bool flipNormals = _handle.importFlags.Contains("flipNormals", StringComparison.Ordinal);
+					bool flipTangents = _handle.importFlags.Contains("flipTangents", StringComparison.Ordinal);
+
+					_outSurfaceData.ReverseVertexOrder(flipNormals, flipTangents);
+				}
+			}
+			return true;
 		}
 
 		public static bool ImportModelData(

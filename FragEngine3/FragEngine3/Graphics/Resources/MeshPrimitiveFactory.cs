@@ -321,6 +321,115 @@ namespace FragEngine3.Graphics.Resources
 			return _outMesh.SetGeometry(in _outMeshData);
 		}
 
+		/// <summary>
+		/// Creates surface geometry data for a simple plane.
+		/// </summary>
+		/// <param name="_size">The width and length of the plane.<para/>
+		/// NOTE: The mesh is created in the horizontal plane, with no extent along the vertical/Y axis. The size's Y-axis maps to the scene's "forward" axis, which is Z.</param>
+		/// <param name="_subdivisions">The number of vertices to insert between the corners along each side. May not be negative.<para/>
+		/// Example: 3 subdivisions corresponds to 3+2=5 vertices along each edge of the plane, resulting in 5x5 quads, i.e. 50 triangle faces in total.</param>
+		/// <param name="_useExtendedData">Whether to generate extended vertex data (tangents, secondary UVs) for this mesh.</param>
+		public static MeshSurfaceData CreatePlaneData(Vector2 _size, int _subdivisions, bool _useExtendedData)
+		{
+			// Geometry counts:
+			int vertsPerSide = Math.Max(_subdivisions + 2, 2);
+			int vertexCount = vertsPerSide * vertsPerSide;
+
+			int quadsPerSide = vertsPerSide - 1;
+			int quadCount = quadsPerSide * quadsPerSide;
+			int indexCount = 6 * quadCount;
+
+			// Data arrays:
+			BasicVertex[] verticesBasic = new BasicVertex[vertexCount];
+			ExtendedVertex[]? verticesExt = _useExtendedData ? new ExtendedVertex[vertexCount] : null;
+			ushort[] indices = new ushort[indexCount];
+
+			// Common math parameters:
+			float stepWidth = 1.0f / quadsPerSide;
+			Vector2 posOrigin = -0.5f * _size;
+
+			// Generate vertices:
+			for (int z = 0; z < vertsPerSide; ++z)
+			{
+				float kZ = z * stepWidth;
+				float posZ = posOrigin.Y + kZ * _size.Y;
+
+				for (int x = 0; x < vertsPerSide; ++x)
+				{
+					float kX = x * stepWidth;
+					float posX = posOrigin.X + kX * _size.X;
+					Vector2 uv = new(kX, kZ);
+
+					int vIndex = z * vertsPerSide + x;
+
+					verticesBasic[vIndex] = new(new(posX, 0, posZ), Vector3.UnitY, uv);
+					if (_useExtendedData)
+					{
+						verticesExt![vIndex] = new(Vector3.UnitZ, uv);
+					}
+				}
+			}
+
+			// Generate triangle indices:
+			for (int z = 0; z < quadsPerSide; ++z)
+			{
+				for (int x = 0; x < quadsPerSide; ++x)
+				{
+					int quadIdx = z * quadsPerSide + x;
+					int iStartIdx = 6 * quadIdx;
+					int vStartIdx = z * vertsPerSide + x;
+
+					indices[iStartIdx + 0] = (ushort)vStartIdx;
+					indices[iStartIdx + 1] = (ushort)(vStartIdx + vertsPerSide);
+					indices[iStartIdx + 2] = (ushort)(vStartIdx + 1);
+
+					indices[iStartIdx + 3] = (ushort)(vStartIdx + 1);
+					indices[iStartIdx + 4] = (ushort)(vStartIdx + vertsPerSide);
+					indices[iStartIdx + 5] = (ushort)(vStartIdx + vertsPerSide + 1);
+				}
+			}
+
+			return new MeshSurfaceData()
+			{
+				verticesBasic = verticesBasic,
+				verticesExt = verticesExt,
+				indices16 = indices,
+				indices32 = null,
+			};
+		}
+
+		public static bool CreatePlaneMesh(
+			string _resourceKey,
+			Engine _engine,
+			Vector2 _size, int _subdivisions,
+			bool _useExtendedData,
+			out MeshSurfaceData _outMeshData,
+			out StaticMesh _outMesh,
+			out ResourceHandle _outHandle)
+		{
+			if (string.IsNullOrEmpty(_resourceKey) || _engine == null || _engine.IsDisposed)
+			{
+				(_engine?.Logger ?? Logger.Instance)?.LogError("Cannot create plane mesh using null resource key or null engine!");
+				_outMeshData = null!;
+				_outMesh = null!;
+				_outHandle = ResourceHandle.None;
+				return false;
+			}
+
+			_outMeshData = CreatePlaneData(_size, _subdivisions, _useExtendedData);
+			if (!_outMeshData.IsValid)
+			{
+				_engine.Logger.LogError("Failed to create plane mesh data!");
+				_outMesh = null!;
+				_outHandle = ResourceHandle.None;
+				return false;
+			}
+
+			_outMesh = new(_resourceKey, _engine, _useExtendedData, out _outHandle);
+
+			return _outMesh.SetGeometry(in _outMeshData);
+		}
+
 		#endregion
 	}
 }

@@ -119,10 +119,10 @@ namespace FragEngine3.EngineCore.Test
 			if (SceneSpawner.CreateStaticMeshRenderer(scene, out StaticMeshRenderer rabbit))
 			{
 				rabbit.node.Name = "Rabbit";
-				rabbit.node.LocalPosition = new Vector3(0, -0.25f, 0);
+				rabbit.node.LocalPosition = new Vector3(0, -0.25f, 2);
 				rabbit.node.LocalRotation = Quaternion.Identity;
-				rabbit.node.LocalScale = Vector3.One * 5;
-				rabbit.node.SetEnabled(false);
+				rabbit.node.LocalScale = Vector3.One * 3;
+				//rabbit.node.SetEnabled(false);
 
 				rabbit.SetMesh("Rabbit.obj");
 				rabbit.SetMaterial("Mtl_DefaultSurface");
@@ -132,7 +132,7 @@ namespace FragEngine3.EngineCore.Test
 			if (SceneSpawner.CreateStaticMeshRenderer(scene, out StaticMeshRenderer cube))
 			{
 				cube.node.Name = "Cube";
-				cube.node.LocalPosition = new Vector3(2, 0, 2);
+				cube.node.LocalPosition = new Vector3(2.5f, 0, 2);
 				cube.node.SetRotationFromYawPitchRoll(45, 45, 0, true, true);
 				cube.node.LocalScale = Vector3.One;
 				//cube.node.SetEnabled(false);
@@ -141,17 +141,30 @@ namespace FragEngine3.EngineCore.Test
 				cube.SetMaterial("Mtl_DefaultSurface");
 			}
 
-			MeshPrimitiveFactory.CreateCylinderMesh("Cylinder", Engine, 1, 2, 32, false, out _, out _, out ResourceHandle cylinderHandle);
+			MeshPrimitiveFactory.CreateCylinderMesh("Cylinder", Engine, 0.5f, 2, 32, false, out _, out _, out ResourceHandle cylinderHandle);
 			if (SceneSpawner.CreateStaticMeshRenderer(scene, out StaticMeshRenderer cylinder))
 			{
 				cylinder.node.Name = "Cylinder";
-				cylinder.node.LocalPosition = new Vector3(0, 0, 2);
+				cylinder.node.LocalPosition = new Vector3(-2.5f, 0, 2);
 				cylinder.node.LocalRotation = Quaternion.Identity;
 				cylinder.node.LocalScale = Vector3.One;
 				//cylinder.node.SetEnabled(false);
 
 				cylinder.SetMesh(cylinderHandle);
 				cylinder.SetMaterial("Mtl_DefaultSurface");
+			}
+
+			MeshPrimitiveFactory.CreatePlaneMesh("Plane", Engine, new Vector2(5, 5), 6, false, out _, out _, out ResourceHandle planeHandle);
+			if (SceneSpawner.CreateStaticMeshRenderer(scene, out StaticMeshRenderer plane))
+			{
+				plane.node.Name = "Plane";
+				plane.node.LocalPosition = new Vector3(0, -1, 1);
+				plane.node.LocalRotation = Quaternion.Identity;
+				plane.node.LocalScale = Vector3.One;
+				//plane.node.SetEnabled(false);
+
+				plane.SetMesh(planeHandle);
+				plane.SetMaterial("Mtl_DefaultSurface");
 			}
 
 			// Create two-sided quad:
@@ -191,7 +204,8 @@ namespace FragEngine3.EngineCore.Test
 		public override bool UpdateRunningState()
 		{
 			if (Engine.InputManager.GetMouseButtonUp(MouseButton.Right) ||
-				Engine.InputManager.GetKeyUp(Key.Escape))
+				Engine.InputManager.GetKeyUp(Key.Escape) ||
+				Engine.InputManager.GetKeyUp(Key.Enter))
 			{
 				Engine.Exit();
 			}

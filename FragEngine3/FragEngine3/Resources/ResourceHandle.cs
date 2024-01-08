@@ -19,6 +19,7 @@ namespace FragEngine3.Resources
 
 			resourceKey = _data.ResourceKey ?? throw new ArgumentNullException(nameof(_data), "Resource key may not be null!");
 			resourceType = _data.ResourceType;
+			importFlags = _data.ImportFlags;
 
 			fileKey = _resourceFileKey ?? string.Empty;
 			dataOffset = _data.DataOffset;
@@ -54,6 +55,7 @@ namespace FragEngine3.Resources
 
 			resourceKey = _resource.resourceKey;
 			resourceType = _resource.ResourceType;
+			importFlags = null;
 
 			fileKey = string.Empty;
 			dataOffset = 0;
@@ -69,6 +71,7 @@ namespace FragEngine3.Resources
 
 			resourceKey = string.Empty;
 			resourceType = ResourceType.Unknown;
+			importFlags = string.Empty;
 
 			fileKey = string.Empty;
 			dataOffset = 0;
@@ -85,6 +88,7 @@ namespace FragEngine3.Resources
 
 		public readonly string resourceKey;
 		public readonly ResourceType resourceType;
+		public readonly string? importFlags;
 
 		public readonly string fileKey;
 		public readonly ulong dataOffset;
@@ -200,6 +204,7 @@ namespace FragEngine3.Resources
 			{
 				ResourceKey = resourceKey,
 				ResourceType = resourceType,
+				ImportFlags = importFlags,
 
 				DataOffset = dataOffset,
 				DataSize = dataSize,
@@ -218,7 +223,8 @@ namespace FragEngine3.Resources
 		{
 			const int maxFileKeyLength = 48;
 			string? fileKeyTrunc = fileKey != null && fileKey.Length > maxFileKeyLength ? "..." + fileKey[(fileKey.Length - maxFileKeyLength - 2)..] : fileKey;
-			return $"{resourceKey} ({resourceType}, {LoadState}) [@{fileKeyTrunc ?? "NULL"},{dataOffset},{dataSize}]";
+			string importFlagTxt = !string.IsNullOrEmpty(importFlags) ? $",Flags='{importFlags}'" : string.Empty;
+			return $"{resourceKey} ({resourceType}, {LoadState}) [@{fileKeyTrunc ?? "NULL"},{dataOffset},{dataSize}{importFlagTxt}]";
 		}
 
 		#endregion
