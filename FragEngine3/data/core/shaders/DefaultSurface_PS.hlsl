@@ -14,7 +14,7 @@ cbuffer CBGlobal : register(b0)
     uint resolutionY;           // Render target height, in pixels.
     float nearClipPlane;        // Camera's near clipping plane distance.
     float farClipPlane;         // Camera's far clipping plane distance.
-
+    
     // Lighting:
     float3 ambientLight;
     uint lightCount;
@@ -96,7 +96,7 @@ half4 Main_Pixel(in VertexOutput_Basic inputBasic) : SV_Target0
         totalLightIntensity += lightIntens.xyz * lightDot;
     }
     albedo *= half4(totalLightIntensity, 1);
-    
+
     // Return final color:
     return albedo;
 };

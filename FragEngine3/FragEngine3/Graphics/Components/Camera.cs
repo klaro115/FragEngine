@@ -9,7 +9,6 @@ using FragEngine3.Scenes.Data;
 using FragEngine3.Scenes.EventSystem;
 using FragEngine3.Utility.Serialization;
 using Veldrid;
-using static FragEngine3.Graphics.GraphicsSystem;
 
 namespace FragEngine3.Graphics.Components;
 
@@ -110,6 +109,11 @@ public sealed class Camera : Component
 	protected override void Dispose(bool _disposing)
 	{
 		base.Dispose(_disposing);
+
+		if (_disposing && mainCamera == this)
+		{
+			mainCamera = null;
+		}
 
 		foreach (var kvp in targetDict)
 		{
@@ -303,7 +307,7 @@ public sealed class Camera : Component
 		return true;
 	}
 
-	public bool EndFrame(CommandList _cmdList)
+	public bool EndFrame(CommandList _)
 	{
 		if (IsDisposed)
 		{

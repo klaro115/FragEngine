@@ -7,11 +7,12 @@ namespace FragEngine3.Graphics.Contexts
 	{
 		#region Fields
 
-		public readonly Camera camera = _camera;
+		public readonly Camera camera = _camera ?? throw new ArgumentNullException(nameof(_camera), "Camera may not be null!");
 		public readonly CommandList cmdList = _cmdList;
 		public readonly DeviceBuffer globalConstantBuffer = _globalConstantBuffer;
 		public readonly DeviceBuffer lightDataBuffer = _lightDataBuffer;
 		public readonly OutputDescription outputDesc = _outputDesc;
+		public readonly bool mirrorY = _camera.ProjectionSettings.mirrorY;
 
 		#endregion
 		#region Properties

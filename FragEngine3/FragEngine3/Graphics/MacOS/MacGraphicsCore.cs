@@ -21,6 +21,7 @@ namespace FragEngine3.Graphics.MacOS
 		#region Properties
 
 		public override EnginePlatformFlag ApiPlatformFlag => EnginePlatformFlag.GraphicsAPI_Metal;
+		public override bool DefaultMirrorY => true;
 
 		private Logger Logger => graphicsSystem.engine.Logger ?? Logger.Instance!;
 

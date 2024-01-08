@@ -91,18 +91,24 @@ public sealed class CameraSettings
 	}
 	public float FieldOfViewRadians
 	{
-		get => projection.fieldOfViewRad;
-		set => projection.fieldOfViewRad = Math.Clamp(value, 0.001f, MathF.PI);
+		get => projection.FieldOfViewRadians;
+		set => projection.FieldOfViewRadians = value;
 	}
 	public float FieldOfViewDegrees
 	{
-		get => projection.fieldOfViewRad * (180.0f / MathF.PI);
-		set => projection.fieldOfViewRad = Math.Clamp(value, 0.01f, 179.99f) * MathF.PI / 180.0f;
+		get => projection.FieldOfViewDegrees;
+		set => projection.FieldOfViewDegrees = value;
 	}
 	public float OrthographicSize
 	{
 		get => projection.orthographicSize;
 		set => projection.orthographicSize = Math.Clamp(value, 0.001f, 1000.0f);
+	}
+
+	public bool MirrorY
+	{
+		get => projection.mirrorY;
+		set => projection.mirrorY = value;
 	}
 
 	public Matrix4x4 MtxWorld2Pixel

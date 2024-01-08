@@ -154,6 +154,135 @@ namespace FragEngine3.Graphics.Resources
 			return _outMesh.SetGeometry(in _outMeshData);
 		}
 
+		public static MeshSurfaceData CreateCylinderData(float _radius, float _height, int _subdivisions, bool _useExtendedData)
+		{
+			// Geometry counts:
+			_subdivisions = Math.Max(_subdivisions, 3);
+			int quadCountShell = _subdivisions + 1;
+
+			int vertexCountShell = 2 * quadCountShell;
+			int vertexCountCap = _subdivisions;
+			int vertexCount = vertexCountShell + 2 * vertexCountCap;
+
+			int indexCountShell = 3 * 2 * quadCountShell;
+			int indexCountCap = 3 * (_subdivisions - 2);
+			int indexCount = indexCountShell + 2 * indexCountCap;
+
+			// Data arrays:
+			BasicVertex[] verticesBasic = new BasicVertex[vertexCount];
+			ExtendedVertex[]? verticesExt = _useExtendedData ? new ExtendedVertex[vertexCount] : null;
+			ushort[] indices = new ushort[indexCount];
+
+			// Start indices for caps:
+			int iStartIdxCapUp = indexCountShell;
+			int iStartIdxCapDown = indexCountShell + indexCountCap;
+			int vStartIdxCapUp = vertexCountShell;
+			int vStartIdxCapDown = vertexCountShell + vertexCountCap;
+
+			// Common math parameters:
+			float angleStepRad = 2 * MathF.PI / _subdivisions;
+			float uvStep = 1.0f / _subdivisions;
+			float y = _height / 2;
+
+			// Populate last 2 shell vertices right away:
+			verticesBasic[vertexCountShell - 2] = new(new(_radius, -y, 0), Vector3.UnitX, new(1, 0));
+			verticesBasic[vertexCountShell - 1] = new(new(_radius, -y, 0), Vector3.UnitX, new(1, 1));
+			if (_useExtendedData)
+			{
+				verticesExt![vertexCountShell - 2] = new(Vector3.UnitZ, new(1, 0));
+				verticesExt![vertexCountShell - 1] = new(Vector3.UnitZ, new(1, 1));
+			}
+
+			for (int i = 0; i < _subdivisions; ++i)
+			{
+				// Common math & geometry:
+				float angleRad = i * angleStepRad;
+				float c = MathF.Cos(angleRad);
+				float s = MathF.Sin(angleRad);
+				float posX = c * _radius;
+				float posZ = s * _radius;
+				Vector3 posDown = new(posX, -y, posZ);
+				Vector3 posUp = new(posX, y, posZ);
+
+				// Shell:
+				Vector3 normalShell = new(c, 0, s);
+				float uvShellX = i * uvStep;
+				Vector2 shellUvDown = new(uvShellX, 0);
+				Vector2 shellUvUp = new(uvShellX, 1);
+
+				int vStartIdxQuad = 2 * i;
+				verticesBasic[vStartIdxQuad + 0] = new(posDown, normalShell, shellUvDown);
+				verticesBasic[vStartIdxQuad + 1] = new(posUp, normalShell, shellUvUp);
+
+				int iStartIdxQuad = 6 * i;
+				indices[iStartIdxQuad + 0] = (ushort)(vStartIdxQuad + 0);
+				indices[iStartIdxQuad + 1] = (ushort)(vStartIdxQuad + 1);
+				indices[iStartIdxQuad + 2] = (ushort)(vStartIdxQuad + 2);
+
+				indices[iStartIdxQuad + 3] = (ushort)(vStartIdxQuad + 1);
+				indices[iStartIdxQuad + 4] = (ushort)(vStartIdxQuad + 3);
+				indices[iStartIdxQuad + 5] = (ushort)(vStartIdxQuad + 2);
+
+				// Caps:
+
+				//TODO
+
+				// Extended data:
+				if (_useExtendedData)
+				{
+					// Shell:
+					Vector3 tagentShell = new(s, 0, c);
+
+					verticesExt![2 * i + 0] = new(tagentShell, shellUvDown);
+					verticesExt![2 * i + 1] = new(tagentShell, shellUvUp);
+
+					// Caps:
+
+					//TODO
+				}
+			}
+
+			return new MeshSurfaceData()
+			{
+				verticesBasic = verticesBasic,
+				verticesExt = verticesExt,
+				indices16 = indices,
+				indices32 = null,
+			};
+		}
+
+		public static bool CreateCylinderMesh(
+			string _resourceKey,
+			Engine _engine,
+			float _radius, float _height, int _subdivisions,
+			bool _useExtendedData,
+			out MeshSurfaceData _outMeshData,
+			out StaticMesh _outMesh,
+			out ResourceHandle _outHandle)
+		{
+			if (string.IsNullOrEmpty(_resourceKey) || _engine == null || _engine.IsDisposed)
+			{
+				(_engine?.Logger ?? Logger.Instance)?.LogError("Cannot create cylinder mesh using null resource key or null engine!");
+				_outMeshData = null!;
+				_outMesh = null!;
+				_outHandle = ResourceHandle.None;
+				return false;
+			}
+
+			_outMeshData = CreateCylinderData(_radius, _height, _subdivisions, _useExtendedData);
+			if (!_outMeshData.IsValid)
+			{
+				_engine.Logger.LogError("Failed to create cylinder mesh data!");
+				_outMesh = null!;
+				_outHandle = ResourceHandle.None;
+				return false;
+			}
+
+			_outMesh = new(_resourceKey, _engine, _useExtendedData, out _outHandle);
+
+			return _outMesh.SetGeometry(in _outMeshData);
+		}
+
 		#endregion
 	}
 }

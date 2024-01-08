@@ -53,6 +53,7 @@ namespace FragEngine3.Graphics
 		public ResourceFactory MainFactory { get; protected set; } = null!;
 
 		public abstract EnginePlatformFlag ApiPlatformFlag { get; }
+		public abstract bool DefaultMirrorY { get; }
 
 		private Logger Logger => graphicsSystem.engine.Logger ?? Logger.Instance!;
 

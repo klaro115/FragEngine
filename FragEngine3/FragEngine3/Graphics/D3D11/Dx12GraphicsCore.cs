@@ -19,8 +19,9 @@ namespace FragEngine3.Graphics.D3D11
         #region Properties
 
         public override EnginePlatformFlag ApiPlatformFlag => EnginePlatformFlag.GraphicsAPI_D3D;
+		public override bool DefaultMirrorY => true;
 
-        private Logger Logger => graphicsSystem.engine.Logger ?? Logger.Instance!;
+		private Logger Logger => graphicsSystem.engine.Logger ?? Logger.Instance!;
 
 		#endregion
 		#region Methods

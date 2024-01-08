@@ -167,7 +167,7 @@ namespace FragEngine3.Graphics.Components
 				intensity = lightIntensity,
 				position = WorldPosition,
 				type = (uint)type,
-				direction = type == LightType.Spot ? Direction : Vector3.UnitZ,
+				direction = type != LightType.Point ? Direction : Vector3.UnitZ,
 				spotAngleAcos = type == LightType.Spot ? MathF.Acos(spotAngleRad * 0.5f) : 0,
 			};
 		}

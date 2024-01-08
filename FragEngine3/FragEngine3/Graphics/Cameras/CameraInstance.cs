@@ -27,6 +27,8 @@ public sealed class CameraInstance : IDisposable
 		graphicsCore = _graphicsCore ?? throw new ArgumentNullException(nameof(_graphicsCore));
 		hasOwnershipOfFramebuffer = true;
 
+		projection.mirrorY = graphicsCore.DefaultMirrorY;
+
 		if (_createFramebufferImmediately)
 		{
 			GetOrCreateFramebuffer(out _, true);

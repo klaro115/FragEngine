@@ -83,7 +83,7 @@ namespace FragEngine3.EngineCore.Test
 			// Create a camera:
 			if (SceneSpawner.CreateCamera(scene, true, out Camera camera))
 			{
-				camera.node.LocalPosition = new Vector3(0, 0, -5);
+				camera.node.LocalPosition = new Vector3(0, 0, -3);
 				camera.node.LocalRotation = Quaternion.Identity;
 				camera.node.LocalScale = Vector3.One;
 
@@ -113,7 +113,7 @@ namespace FragEngine3.EngineCore.Test
 			if (SceneSpawner.CreateLight(scene, Light.LightType.Directional, out Light light))
 			{
 				light.node.WorldPosition = new Vector3(0, 5, 0);
-				light.node.SetRotationFromYawPitchRoll(45, 45, 0, true, true);
+				light.node.SetRotationFromYawPitchRoll(22.5f, 45, 0, true, true);
 			}
 
 			if (SceneSpawner.CreateStaticMeshRenderer(scene, out StaticMeshRenderer rabbit))
@@ -132,13 +132,26 @@ namespace FragEngine3.EngineCore.Test
 			if (SceneSpawner.CreateStaticMeshRenderer(scene, out StaticMeshRenderer cube))
 			{
 				cube.node.Name = "Cube";
-				cube.node.LocalPosition = new Vector3(0, 0, 2);
-				cube.node.LocalRotation = Quaternion.CreateFromYawPitchRoll(0.5f, 0.5f, 0);
+				cube.node.LocalPosition = new Vector3(2, 0, 2);
+				cube.node.SetRotationFromYawPitchRoll(45, 45, 0, true, true);
 				cube.node.LocalScale = Vector3.One;
 				//cube.node.SetEnabled(false);
 
 				cube.SetMesh(cubeHandle);
 				cube.SetMaterial("Mtl_DefaultSurface");
+			}
+
+			MeshPrimitiveFactory.CreateCylinderMesh("Cylinder", Engine, 1, 2, 32, false, out _, out _, out ResourceHandle cylinderHandle);
+			if (SceneSpawner.CreateStaticMeshRenderer(scene, out StaticMeshRenderer cylinder))
+			{
+				cylinder.node.Name = "Cylinder";
+				cylinder.node.LocalPosition = new Vector3(0, 0, 2);
+				cylinder.node.LocalRotation = Quaternion.Identity;
+				cylinder.node.LocalScale = Vector3.One;
+				//cylinder.node.SetEnabled(false);
+
+				cylinder.SetMesh(cylinderHandle);
+				cylinder.SetMaterial("Mtl_DefaultSurface");
 			}
 
 			// Create two-sided quad:
@@ -155,9 +168,6 @@ namespace FragEngine3.EngineCore.Test
 				[
 					0, 2, 1,
 					2, 3, 1,
-
-					0, 1, 2,
-					2, 1, 3,
 				],
 			};
 			StaticMesh quadMesh = new("Quad", Engine, false, out ResourceHandle quadHandle);
@@ -187,15 +197,14 @@ namespace FragEngine3.EngineCore.Test
 			}
 
 			Scene scene = Engine.SceneManager.MainScene!;
-			
+
+			float deltaTime = (float)Engine.TimeManager.DeltaTime.TotalSeconds;
+
 			if (scene.FindNode("Rabbit", out SceneNode? rabbitNode) && rabbitNode != null)
 			{
 				float radPerSec = 2 * MathF.PI / 10;
-				float deltaTime = (float)Engine.TimeManager.DeltaTime.TotalSeconds;
-				//float time = (float)Engine.TimeManager.RunTime.TotalSeconds;
 			
 				Pose localPose = rabbitNode.LocalTransformation;
-				//localPose.position = new(0, -5, MathF.Sin(time) + 10);
 				localPose.Rotate(Quaternion.CreateFromAxisAngle(Vector3.UnitY, radPerSec * deltaTime));
 				//localPose.scale = Vector3.One * 0.01f;
 				rabbitNode.LocalTransformation = localPose;
@@ -203,24 +212,22 @@ namespace FragEngine3.EngineCore.Test
 
 			if (scene.FindNode("Cube", out SceneNode? cubeNode) && cubeNode != null)
 			{
-				float dt = (float)Engine.TimeManager.DeltaTime.TotalSeconds;
-				float rotSpeed = dt * 5;
+				float rotSpeed = deltaTime * 5;
 				Pose localPose = cubeNode.LocalTransformation;
 				Vector3 inputWASD = Engine.InputManager.GetKeyAxesSmoothed(InputAxis.WASD);
 				Vector3 inputIJKL = Engine.InputManager.GetKeyAxesSmoothed(InputAxis.IJKL);
-				localPose.position += new Vector3(inputIJKL.X, inputIJKL.Z, inputIJKL.Y) * dt;
+				localPose.position += new Vector3(inputIJKL.X, inputIJKL.Z, inputIJKL.Y) * deltaTime;
 				localPose.Rotate(Quaternion.CreateFromYawPitchRoll(inputWASD.X * rotSpeed, inputWASD.Y * rotSpeed, inputWASD.Z * rotSpeed));
 				cubeNode.LocalTransformation = localPose;
 			}
 
 			//TEST
+			if (Camera.MainCamera != null)
 			{
-				Pose p = Camera.MainCamera!.node.LocalTransformation;
+				Pose p = Camera.MainCamera.node.LocalTransformation;
 				Vector3 inputWASD = Engine.InputManager.GetKeyAxesSmoothed(InputAxis.ArrowKeys);
-				p.position += new Vector3(inputWASD.X, inputWASD.Z, inputWASD.Y) * (float)Engine.TimeManager.DeltaTime.TotalSeconds;
-				//p.Rotate(Quaternion.CreateFromAxisAngle(Vector3.UnitZ, 0.5f * (float)Engine.TimeManager.DeltaTime.TotalSeconds));
-				//p.position = new(MathF.Sin(0.5f * (float)Engine.TimeManager.DeltaTime.TotalSeconds) * 2, 0, 0);
-				Camera.MainCamera!.node.LocalTransformation = p;
+				p.position += new Vector3(inputWASD.X, inputWASD.Z, inputWASD.Y) * deltaTime;
+				Camera.MainCamera.node.LocalTransformation = p;
 			}
 
 			//const float DEG2RAD = MathF.PI / 180.0f;

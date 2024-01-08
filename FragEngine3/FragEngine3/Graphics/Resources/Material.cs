@@ -256,8 +256,9 @@ namespace FragEngine3.Graphics.Resources
 						return false;
 					}
 
-					ShaderResource? shaderRes = _handle.GetResource(true, true) as ShaderResource;
-					if (shaderRes == null || !shaderRes.GetShaderProgram(_vertexDataFlags, out Shader? shader) || shader == null)
+					if (_handle.GetResource(true, true) is not ShaderResource shaderRes ||
+						!shaderRes.GetShaderProgram(_vertexDataFlags, out Shader? shader) ||
+						shader == null)
 					{
 						errorStages |= _stageFlag;
 						return false;
@@ -380,9 +381,19 @@ namespace FragEngine3.Graphics.Resources
 						sd.writeMask,
 						sd.referenceValue);
 
-				RasterizerStateDescription rasterizerState = dsd.enableCulling
-					? RasterizerStateDescription.Default
-					: RasterizerStateDescription.CullNone;
+				RasterizerStateDescription rasterizerState;
+				if (dsd.enableCulling)
+				{
+					rasterizerState = RasterizerStateDescription.Default;
+					if (_cameraCtx.mirrorY)
+					{
+						rasterizerState.FrontFace = FrontFace.CounterClockwise;
+					}
+				}
+				else
+				{
+					rasterizerState = RasterizerStateDescription.CullNone;
+				}
 
 				ResourceLayout[] resourceLayouts = boundResourceLayout != null
 					? [ defaultResourceLayout.Value, boundResourceLayout ]
