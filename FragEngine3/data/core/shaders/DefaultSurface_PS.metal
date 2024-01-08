@@ -60,21 +60,21 @@ struct VertexOutput_Basic
 
 /******************* SHADERS: ******************/
 
-float4 fragment Main_Pixel(
+half4 fragment Main_Pixel(
     VertexOutput_Basic inputBasic       [[ stage_in ]],
     device const CBGlobal& cbGlobal     [[ buffer( 1 ) ]],
     device const CBObject& cbObject     [[ buffer( 2 ) ]],
     device const Light* BufLights       [[ buffer( 3 ) ]])
 {
-    float4 albedo = {1, 1, 1, 1};
+    half4 albedo = {1, 1, 1, 1};
 
     // Apply basic phong lighting:
-    float3 totalLightIntensity = cbGlobal.ambientLight;
+    half3 totalLightIntensity = (half3)cbGlobal.ambientLight;
     for (uint i = 0; i < cbGlobal.lightCount; ++i)
     {
         device const Light& light = BufLights[i];
 
-        float4 lightIntens = light.lightIntensity;
+        half3 lightIntens = (half3)(light.lightColor * light.lightIntensity);
         float3 lightRayDir;
 
         // Directional light:
@@ -86,20 +86,20 @@ float4 fragment Main_Pixel(
         else
         {
             float3 lightOffset = inputBasic.worldPosition - light.lightPosition;
-            lightIntens /= dot(lightOffset, lightOffset);
+            lightIntens /= (half)dot(lightOffset, lightOffset);
             lightRayDir = normalize(lightOffset);
 
             // Spot light angle:
             if (light.lightType == 1 && dot(light.lightDirection, lightRayDir) < light.lightSpotAngleAcos)
             {
-                lightIntens = float4(0, 0, 0, 0);
+                lightIntens = half3(0, 0, 0);
             }
         }
 
-        float lightDot = max(-dot(lightRayDir, inputBasic.normal), (float)0.0);
+        half lightDot = max(-(half)dot(lightRayDir, inputBasic.normal), (half)0.0);
         totalLightIntensity += lightIntens.xyz * lightDot;
     }
-    albedo *= float4(totalLightIntensity, 1);
+    albedo *= half4(totalLightIntensity, 1);
 
     // Return final color:
     return albedo;

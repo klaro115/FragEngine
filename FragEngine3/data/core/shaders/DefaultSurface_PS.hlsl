@@ -65,12 +65,12 @@ half4 Main_Pixel(in VertexOutput_Basic inputBasic) : SV_Target0
     half4 albedo = {1, 1, 1, 1};
 
     // Apply basic phong lighting:
-    half3 totalLightIntensity = ambientLight;
+    half3 totalLightIntensity = (half3)ambientLight;
     for (uint i = 0; i < lightCount; ++i)
     {
         Light light = BufLights[i];
 
-        half4 lightIntens = (half4)light.lightIntensity;
+        half3 lightIntens = (half3)(light.lightColor * light.lightIntensity);
         float3 lightRayDir;
 
         // Directional light:
@@ -88,11 +88,11 @@ half4 Main_Pixel(in VertexOutput_Basic inputBasic) : SV_Target0
             // Spot light angle:
             if (light.lightType == 1 && dot(light.lightDirection, lightRayDir) < light.lightSpotAngleAcos)
             {
-                lightIntens = float4(0, 0, 0, 0);
+                lightIntens = half3(0, 0, 0);
             }
         }
 
-        float lightDot = max(-dot(lightRayDir, inputBasic.normal), 0);
+        half lightDot = max(-(half)dot(lightRayDir, inputBasic.normal), 0.0);
         totalLightIntensity += lightIntens.xyz * lightDot;
     }
     albedo *= half4(totalLightIntensity, 1);
