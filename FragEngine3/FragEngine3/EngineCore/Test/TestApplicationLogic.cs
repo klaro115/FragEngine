@@ -178,7 +178,7 @@ namespace FragEngine3.EngineCore.Test
 				quad.node.LocalTransformation = Pose.Identity;
 				quad.node.LocalPosition = new(0, 0, 5);
 				quad.node.LocalScale = Vector3.One * 5;
-				//quad.node.SetEnabled(false);
+				quad.node.SetEnabled(false);
 
 				quad.SetMesh(quadHandle);
 				quad.SetMaterial("Mtl_DefaultSurface");
@@ -210,7 +210,7 @@ namespace FragEngine3.EngineCore.Test
 				rabbitNode.LocalTransformation = localPose;
 			}
 
-			if (scene.FindNode("Cube", out SceneNode? cubeNode) && cubeNode != null)
+			if (scene.FindNode("Cylinder", out SceneNode? cubeNode) && cubeNode != null)
 			{
 				float rotSpeed = deltaTime * 5;
 				Pose localPose = cubeNode.LocalTransformation;

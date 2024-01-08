@@ -9,6 +9,11 @@ namespace FragEngine3.Graphics.Resources
 	{
 		#region Methods
 
+		/// <summary>
+		/// Creates surface geometry data for a simple cube.
+		/// </summary>
+		/// <param name="_size">The size of the cube along all three axes.</param>
+		/// <param name="_useExtendedData">Whether to generate extended vertex data (tangents, secondary UVs) for this mesh.</param>
 		public static MeshSurfaceData CreateCubeData(Vector3 _size, bool _useExtendedData)
 		{
 			float x = _size.X * 0.5f;
@@ -154,18 +159,27 @@ namespace FragEngine3.Graphics.Resources
 			return _outMesh.SetGeometry(in _outMeshData);
 		}
 
+		/// <summary>
+		/// Creates surface geometry data for a simple cube.
+		/// </summary>
+		/// <param name="_radius">The radius of the cylinder.</param>
+		/// <param name="_height">The height of the cylinder, from its base to its upper edge</param>
+		/// <param name="_subdivisions">The number of vertices to place along the upper and lower edge of the cylinder. Must be 3 or more.<para/>
+		/// HINT: 32 subdivisions appear sufficiently round for most purposes, most people won't notice artifacts beyond that point.</param>
+		/// <param name="_useExtendedData">Whether to generate extended vertex data (tangents, secondary UVs) for this mesh.</param>
 		public static MeshSurfaceData CreateCylinderData(float _radius, float _height, int _subdivisions, bool _useExtendedData)
 		{
 			// Geometry counts:
 			_subdivisions = Math.Max(_subdivisions, 3);
 			int quadCountShell = _subdivisions + 1;
+			int triangleCountCap = _subdivisions - 2;
 
 			int vertexCountShell = 2 * quadCountShell;
 			int vertexCountCap = _subdivisions;
 			int vertexCount = vertexCountShell + 2 * vertexCountCap;
 
 			int indexCountShell = 3 * 2 * quadCountShell;
-			int indexCountCap = 3 * (_subdivisions - 2);
+			int indexCountCap = 3 * triangleCountCap;
 			int indexCount = indexCountShell + 2 * indexCountCap;
 
 			// Data arrays:
@@ -186,7 +200,7 @@ namespace FragEngine3.Graphics.Resources
 
 			// Populate last 2 shell vertices right away:
 			verticesBasic[vertexCountShell - 2] = new(new(_radius, -y, 0), Vector3.UnitX, new(1, 0));
-			verticesBasic[vertexCountShell - 1] = new(new(_radius, -y, 0), Vector3.UnitX, new(1, 1));
+			verticesBasic[vertexCountShell - 1] = new(new(_radius, y, 0), Vector3.UnitX, new(1, 1));
 			if (_useExtendedData)
 			{
 				verticesExt![vertexCountShell - 2] = new(Vector3.UnitZ, new(1, 0));
@@ -204,7 +218,7 @@ namespace FragEngine3.Graphics.Resources
 				Vector3 posDown = new(posX, -y, posZ);
 				Vector3 posUp = new(posX, y, posZ);
 
-				// Shell:
+				// Shell quads:
 				Vector3 normalShell = new(c, 0, s);
 				float uvShellX = i * uvStep;
 				Vector2 shellUvDown = new(uvShellX, 0);
@@ -223,23 +237,47 @@ namespace FragEngine3.Graphics.Resources
 				indices[iStartIdxQuad + 4] = (ushort)(vStartIdxQuad + 3);
 				indices[iStartIdxQuad + 5] = (ushort)(vStartIdxQuad + 2);
 
-				// Caps:
+				// Cap fans vertices:
+				Vector2 capUvUp = new Vector2(c + 1, s + 1) * 0.5f;
+				Vector2 capUvDown = new Vector2(1 - c, 1 - s) * 0.5f;
 
-				//TODO
+				int vStartIdxFanUp = vStartIdxCapUp + i;
+				int vStartIdxFanDown = vStartIdxCapDown + i;
+				verticesBasic[vStartIdxFanUp] = new(posUp, Vector3.UnitY, capUvUp);
+				verticesBasic[vStartIdxFanDown] = new(posDown, -Vector3.UnitY, capUvDown);
 
-				// Extended data:
+				// Extended vertex data:
 				if (_useExtendedData)
 				{
 					// Shell:
 					Vector3 tagentShell = new(s, 0, c);
 
-					verticesExt![2 * i + 0] = new(tagentShell, shellUvDown);
-					verticesExt![2 * i + 1] = new(tagentShell, shellUvUp);
+					verticesExt![vStartIdxQuad + 0] = new(tagentShell, shellUvDown);
+					verticesExt![vStartIdxQuad + 1] = new(tagentShell, shellUvUp);
 
 					// Caps:
-
-					//TODO
+					verticesExt![vStartIdxFanUp] = new(Vector3.UnitZ, capUvUp);
+					verticesExt![vStartIdxFanDown] = new(-Vector3.UnitZ, capUvDown);
 				}
+			}
+
+			// Cap fan indices:
+			for (int i = 0; i < triangleCountCap; ++i)
+			{
+				int vCurIdxFanUp = vStartIdxCapUp + i;
+				int vCurIdxFanDown = vStartIdxCapDown + i;
+				int iStartIdxFanUp = iStartIdxCapUp + 3 * i;
+				int iStartIdxFanDown = iStartIdxCapDown + 3 * i;
+
+				// Top:
+				indices[iStartIdxFanUp + 0] = (ushort)vStartIdxCapUp;
+				indices[iStartIdxFanUp + 1] = (ushort)(vCurIdxFanUp + 2);
+				indices[iStartIdxFanUp + 2] = (ushort)(vCurIdxFanUp + 1);
+
+				// Bottom:
+				indices[iStartIdxFanDown + 0] = (ushort)vStartIdxCapDown;
+				indices[iStartIdxFanDown + 1] = (ushort)(vCurIdxFanDown + 1);
+				indices[iStartIdxFanDown + 2] = (ushort)(vCurIdxFanDown + 2);
 			}
 
 			return new MeshSurfaceData()
