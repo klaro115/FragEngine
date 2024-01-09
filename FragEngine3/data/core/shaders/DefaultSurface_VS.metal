@@ -93,7 +93,7 @@ VertexOutput_Basic vertex Main_Vertex(
     VertexOutput_Basic outputBasic;
     outputBasic.position = projResult;
     outputBasic.worldPosition = (cbObject.mtxLocal2World * float4(inputBasic.position, 1)).xyz;
-    outputBasic.normal = (cbObject.mtxLocal2World * float4(inputBasic.normal, 0)).xyz;
+    outputBasic.normal = normalize((cbObject.mtxLocal2World * float4(inputBasic.normal, 0)).xyz);
     outputBasic.uv = inputBasic.uv;
     return outputBasic;
 }

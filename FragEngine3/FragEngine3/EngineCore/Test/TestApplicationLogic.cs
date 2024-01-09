@@ -121,7 +121,7 @@ namespace FragEngine3.EngineCore.Test
 				rabbit.node.Name = "Rabbit";
 				rabbit.node.LocalPosition = new Vector3(0, -0.25f, 2);
 				rabbit.node.LocalRotation = Quaternion.Identity;
-				rabbit.node.LocalScale = Vector3.One * 1;
+				rabbit.node.LocalScale = Vector3.One * 5;
 				//rabbit.node.SetEnabled(false);
 
 				rabbit.SetMesh("Rabbit.obj", true);

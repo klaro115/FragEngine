@@ -81,7 +81,7 @@ void Main_Vertex(in VertexInput_Basic inputBasic, out VertexOutput_Basic outputB
 
     outputBasic.position = projResult;
     outputBasic.worldPosition = mul(mtxLocal2World, float4(inputBasic.position, 1)).xyz;
-    outputBasic.normal = mul(mtxLocal2World, float4(inputBasic.normal, 0)).xyz;
+    outputBasic.normal = normalize(mul(mtxLocal2World, float4(inputBasic.normal, 0)).xyz);
     outputBasic.uv = inputBasic.uv;
 }
 
@@ -93,10 +93,10 @@ void Main_Vertex_Ext(in VertexInput_Basic inputBasic, in VertexInput_Extended in
 
     outputBasic.position = projResult;
     outputBasic.worldPosition = mul(mtxLocal2World, float4(inputBasic.position, 1)).xyz;
-    outputBasic.normal = mul(mtxLocal2World, float4(inputBasic.normal, 0)).xyz;
+    outputBasic.normal = normalize(mul(mtxLocal2World, float4(inputBasic.normal, 0)).xyz);
     outputBasic.uv = inputBasic.uv;
 
-    outputExt.tangent = mul(mtxLocal2World, float4(inputExt.tangent, 0)).xyz;
+    outputExt.tangent = normalize(mul(mtxLocal2World, float4(inputExt.tangent, 0)).xyz);
     outputExt.binormal = cross(outputBasic.normal, outputExt.tangent);
     outputExt.uv2 = inputExt.uv2;
 }
