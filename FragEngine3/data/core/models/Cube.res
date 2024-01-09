@@ -12,7 +12,6 @@
             "ResourceKey": "Cube.obj",
             "ResourceType": 7,
             "PlatformFlags": 0,
-            "ImportFlags": "flipVertexOrder",
             "DataOffset": 0,
             "DataSize": 0,
             "DependencyCount": 0,

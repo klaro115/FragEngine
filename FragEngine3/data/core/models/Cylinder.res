@@ -1,5 +1,5 @@
 {
-    "DataFilePath": "./Rabbit.obj",
+    "DataFilePath": "./Cylinder.obj",
     "DataFileType": 0,
     "DataFileSize": 0,
     "UncompressedFileSize": 0,
@@ -9,7 +9,7 @@
     "Resources":
     [
         {
-            "ResourceKey": "Rabbit.obj",
+            "ResourceKey": "Cylinder.obj",
             "ResourceType": 7,
             "PlatformFlags": 0,
             "DataOffset": 0,

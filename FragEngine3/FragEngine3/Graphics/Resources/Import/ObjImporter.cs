@@ -1,6 +1,7 @@
 ﻿using FragEngine3.EngineCore;
 using FragEngine3.Graphics.Resources.Data;
 using System.Globalization;
+using System.Linq;
 using System.Numerics;
 using System.Text;
 
@@ -68,6 +69,8 @@ namespace FragEngine3.Graphics.Resources.Import
 			public readonly List<VertexIndices> vertexIndices = new(256);
 			public readonly List<SubMesh> subMeshes = new(4);
 			public readonly List<string> subMeshMaterialNames = new(4);
+
+			public int MaxVertexElementCount => Math.Max(Math.Max(positions.Count, normals.Count), uvs.Count);
 		}
 
 		#endregion
@@ -115,75 +118,66 @@ namespace FragEngine3.Graphics.Resources.Import
 			}
 			while (!buffers.eof);
 
-
-			// Generate badic vertex data only for referenced vertices, and remap duplicate vertex indices:
-			Stack<BasicVertex> vertices = new(geometryData.positions.Count);		// Stack of all unique verts, in reverse order of use.
-			int[] mappedIndices = new int[geometryData.vertexIndices.Count];		// for each triangle idx, contains idx of first occurancee of duplicate vert.
-			int[] uniqueVertexIndices = new int[geometryData.vertexIndices.Count];	// for unique verts, contains idx of vertex on stack.
-
-			int posCount = geometryData.positions.Count;
+			// Remove duplicate vertex index permutations and generate indices:
+			//int posCount = geometryData.positions.Count;
 			int normCount = geometryData.normals.Count;
 			int uvCount = geometryData.uvs.Count;
-			int vertIdxCount = geometryData.vertexIndices.Count;
+			int indexCount = geometryData.vertexIndices.Count;
 
-			for (int i = vertIdxCount - 1; i >= 0 ; i--)
+			int[] indexRemapped = new int[indexCount];
+			Array.Fill(indexRemapped, -1);
+			List<BasicVertex> uniqueVertices = new(geometryData.MaxVertexElementCount);
+
+			for (int i = 0; i < indexCount; ++i)
 			{
-				VertexIndices viA = geometryData.vertexIndices[i];
-				int mappedIdx = i;
+				// If non-duplicate:
+				if (indexRemapped[i] != -1) continue;
 
-				// Check if this vertex is duplicate, remap it if so:
-				for (int j = 0; j < i; ++j)
+				// Assemble new vertex data:
+				VertexIndices newIndices = geometryData.vertexIndices[i];
+				Vector3 position	= geometryData.positions[newIndices.position];
+				Vector3 normal		= newIndices.normal >= 0 &&	newIndices.normal < normCount	? geometryData.normals[newIndices.normal]	: Vector3.UnitY;
+				Vector2 uv			= newIndices.uv >= 0 &&		newIndices.uv < uvCount			? geometryData.uvs[newIndices.uv]			: Vector2.Zero;
+
+				// Mark vertex as unique by updating its index:
+				int newVertexIndex = uniqueVertices.Count;
+				indexRemapped[i] = newVertexIndex;
+				uniqueVertices.Add(new BasicVertex(position, normal, uv));
+
+				// Find all other triangle indices that map to this same vertex definition:
+				for (int j = i + 1; j < indexCount; ++j)
 				{
-					VertexIndices viB = geometryData.vertexIndices[j];
-					if (viA == viB)
+					if (indexRemapped[j] != -1) continue;
+
+					VertexIndices otherIndices = geometryData.vertexIndices[j];
+					if (newIndices.Equals(otherIndices))
 					{
-						mappedIdx = j;
-						break;
+						indexRemapped[j] = newVertexIndex;
 					}
-				}
-				mappedIndices[i] = mappedIdx;
-
-				// If the vertex is unique, parse its geometry data now:
-				bool isUniqueVertex = i == mappedIdx;
-				if (isUniqueVertex)
-				{
-					uniqueVertexIndices[i] = vertices.Count;
-					vertices.Push(new BasicVertex()
-					{
-						position = viA.position >= 0	&& viA.position < posCount	? geometryData.positions[viA.position]	: Vector3.Zero,
-						normal   = viA.normal >= 0		&& viA.normal < normCount	? geometryData.normals[viA.normal]		: Vector3.UnitY,
-						uv       = viA.uv >= 0			&& viA.uv < uvCount			? geometryData.uvs[viA.uv]				: Vector2.Zero,
-					});
 				}
 			}
 
-			// Generate triangle indices using only unique vertices:
+			// Convert indices to an appropriately sized integer format: (16bit ot 32bit)
 			ushort[]? triangleIndices16 = null;
 			int[]? triangleIndices32 = null;
-
-			if (vertices.Count <= ushort.MaxValue)
+			if (indexRemapped.Length < ushort.MaxValue)
 			{
-				triangleIndices16 = new ushort[vertIdxCount];
-				for (int i = 0; i < vertIdxCount; ++i)
+				triangleIndices16 = new ushort[indexRemapped.Length];
+				for (int i = 0; i < indexRemapped.Length; ++i)
 				{
-					int mappedIdx = mappedIndices[i];
-					triangleIndices16[i] = (ushort)uniqueVertexIndices[mappedIdx];
+					triangleIndices16[i] = (ushort)indexRemapped[i];
 				}
 			}
 			else
 			{
-				triangleIndices32 = new int[vertIdxCount];
-				for (int i = 0; i < vertIdxCount; ++i)
-				{
-					int mappedIdx = mappedIndices[i];
-					triangleIndices32[i] = uniqueVertexIndices[mappedIdx];
-				}
+				triangleIndices32 = indexRemapped;
 			}
 
 			// Assemble mesh data and return success if valid:
 			_outMeshData = new()
 			{
-				verticesBasic = [.. vertices],
+				//verticesBasic = uniqueVertices[0..uniqueVertexCount],
+				verticesBasic = [.. uniqueVertices],
 				verticesExt = null,
 
 				indices16 = triangleIndices16,
@@ -214,6 +208,9 @@ namespace FragEngine3.Graphics.Resources.Import
 			{
 				_buffers.bytes[_buffers.byteLength++] = c;
 			}
+
+			// Skip lines that are too short to contain valid information:
+			if (_buffers.byteLength < 3) return false;
 
 			// Add null-terminator:
 			_buffers.bytes[_buffers.byteLength++] = 0;
@@ -381,7 +378,7 @@ namespace FragEngine3.Graphics.Resources.Import
 					for (; endIdx < _buffers.charLength; endIdx++)
 					{
 						c = _buffers.utf16[endIdx];
-						if (c == ' ' || c == '/' || c == '\n' || c == '\r' || c == '\0')
+						if (!char.IsAsciiDigit(c))
 						{
 							break;
 						}
@@ -418,7 +415,7 @@ namespace FragEngine3.Graphics.Resources.Import
 					}
 				}
 				// Advance to next vertex:
-				else if (c == ' ')
+				else if (c == ' ' || c == '\t')
 				{
 					curFaceIndices[vertexIdx++] = vi;
 					if (vertexIdx == 4) break;

@@ -72,8 +72,8 @@ namespace FragEngine3.EngineCore.Test
 		protected override bool BeginRunningState()
 		{
 			// Import 3D models:
-			Engine.ResourceManager.GetAndLoadResource("Cube.obj", true, out _);
-			Engine.ResourceManager.GetAndLoadResource("Rabbit.obj", true, out _);
+			//Engine.ResourceManager.GetAndLoadResource("Cube.obj", true, out _);
+			//Engine.ResourceManager.GetAndLoadResource("Rabbit.obj", true, out _);
 			Engine.ResourceManager.GetAndLoadResource("Mtl_TestMaterial", true, out _);
 			Engine.ResourceManager.GetAndLoadResource("Mtl_DefaultSurface", true, out _);
 			Engine.ResourceManager.GetAndLoadResource("ForwardPlusLight_Composition_PS", true, out _);
@@ -121,10 +121,10 @@ namespace FragEngine3.EngineCore.Test
 				rabbit.node.Name = "Rabbit";
 				rabbit.node.LocalPosition = new Vector3(0, -0.25f, 2);
 				rabbit.node.LocalRotation = Quaternion.Identity;
-				rabbit.node.LocalScale = Vector3.One * 3;
+				rabbit.node.LocalScale = Vector3.One * 1;
 				//rabbit.node.SetEnabled(false);
 
-				rabbit.SetMesh("Rabbit.obj");
+				rabbit.SetMesh("Rabbit.obj", true);
 				rabbit.SetMaterial("Mtl_DefaultSurface");
 			}
 
