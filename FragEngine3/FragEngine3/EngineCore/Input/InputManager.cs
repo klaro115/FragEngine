@@ -137,6 +137,15 @@ namespace FragEngine3.EngineCore.Input
 			long newInputStateUpdateTimeMs = stopwatch.ElapsedMilliseconds;
 			long inputDeltatimeMs = newInputStateUpdateTimeMs - lastInputStateUpdateTimeMs;
 
+			// Reset event states on idle mouse buttons:
+			for (int i = 0; i < mouseButtonStates.Length; ++i)
+			{
+				ref InputButtonState mouseButtonState = ref mouseButtonStates[i];
+				if (mouseButtonState.WasDown != mouseButtonState.IsDown)
+				{
+					mouseButtonStates[i].Update(mouseButtonState.IsDown);
+				}
+			}
 			// Update mouse button states and events:
 			foreach (MouseEvent mouseEvent in _snapshot.MouseEvents)
 			{
@@ -150,12 +159,22 @@ namespace FragEngine3.EngineCore.Input
 			MouseVelocity = MouseMovement / (1000.0f * inputDeltatimeMs);
 			MouseWheel = _snapshot.WheelDelta;
 
+			// Reset event states on idle keys:
+			for (int i = 0; i < keyStates.Length; ++i)
+			{
+				ref InputButtonState keyState = ref keyStates[i];
+				if (keyState.WasDown != keyState.IsDown)
+				{
+					keyStates[i].Update(keyState.IsDown);
+				}
+			}
 			// Update keyboard key states and events:
 			foreach (KeyEvent keyEvent in _snapshot.KeyEvents)
 			{
 				int keyIdx = (int)keyEvent.Key;
 				keyStates[keyIdx].Update(keyEvent.Down);
 			}
+
 
 			// Update keyboard input axes: (ex.: WASD)
 			float axisSmoothingDiff = Math.Clamp(keyAxisSmoothing * (inputDeltatimeMs * 1000), 0.0f, 1.0f);

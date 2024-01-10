@@ -15,6 +15,12 @@ namespace FragEngine3.EngineCore.Test
 {
 	public sealed class TestApplicationLogic : ApplicationLogic
 	{
+		#region Fields
+
+		private float cameraYaw = 0.0f;
+		private float cameraPitch = 0.0f;
+
+		#endregion
 		#region Methods
 
 		// STARTUP:
@@ -216,8 +222,7 @@ namespace FragEngine3.EngineCore.Test
 
 		public override bool UpdateRunningState()
 		{
-			if (Engine.InputManager.GetMouseButtonUp(MouseButton.Right) ||
-				Engine.InputManager.GetKeyUp(Key.Escape) ||
+			if (Engine.InputManager.GetKeyUp(Key.Escape) ||
 				Engine.InputManager.GetKeyUp(Key.Enter))
 			{
 				Engine.Exit();
@@ -241,7 +246,7 @@ namespace FragEngine3.EngineCore.Test
 			{
 				float rotSpeed = deltaTime * 5;
 				Pose localPose = cubeNode.LocalTransformation;
-				Vector3 inputWASD = Engine.InputManager.GetKeyAxesSmoothed(InputAxis.WASD);
+				Vector3 inputWASD = Engine.InputManager.GetKeyAxesSmoothed(InputAxis.ArrowKeys);
 				Vector3 inputIJKL = Engine.InputManager.GetKeyAxesSmoothed(InputAxis.IJKL);
 				localPose.position += new Vector3(inputIJKL.X, inputIJKL.Z, inputIJKL.Y) * deltaTime;
 				localPose.Rotate(Quaternion.CreateFromYawPitchRoll(inputWASD.X * rotSpeed, inputWASD.Y * rotSpeed, inputWASD.Z * rotSpeed));
@@ -252,8 +257,21 @@ namespace FragEngine3.EngineCore.Test
 			if (Camera.MainCamera != null)
 			{
 				Pose p = Camera.MainCamera.node.LocalTransformation;
-				Vector3 inputWASD = Engine.InputManager.GetKeyAxesSmoothed(InputAxis.ArrowKeys);
-				p.position += new Vector3(inputWASD.X, inputWASD.Z, inputWASD.Y) * deltaTime;
+				Vector3 inputWASD = Engine.InputManager.GetKeyAxesSmoothed(InputAxis.WASD);
+				Vector3 localMovement = new Vector3(inputWASD.X, inputWASD.Z, inputWASD.Y) * deltaTime;
+				Vector3 cameraMovement = p.TransformDirection(localMovement);
+				p.Translate(cameraMovement);
+
+				if (Engine.InputManager.GetMouseButton(MouseButton.Right))
+				{
+					const float DEG2RAD = MathF.PI / 180.0f;
+					const float mouseDegreesPerPixel = 0.1f;
+					Vector2 mouseMovement = Engine.InputManager.MouseMovement * mouseDegreesPerPixel;
+					cameraYaw += mouseMovement.X;
+					cameraPitch = Math.Clamp(cameraPitch + mouseMovement.Y, -89, 89);
+					p.rotation = Quaternion.CreateFromYawPitchRoll(cameraYaw * DEG2RAD, cameraPitch * DEG2RAD, 0);
+				}
+
 				Camera.MainCamera.node.LocalTransformation = p;
 			}
 
