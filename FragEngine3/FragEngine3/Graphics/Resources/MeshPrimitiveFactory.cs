@@ -457,8 +457,18 @@ namespace FragEngine3.Graphics.Resources
 			float slopeExternalAngle = MathF.PI / 2 - slopeAngleRad;
 			float normSideH = MathF.Cos(slopeExternalAngle);
 			float normSideV = MathF.Sin(slopeExternalAngle);
-			float uvStepWidth = 1.0f / _subdivisions;
 			Vector3 posTip = new(0, _height, 0);
+
+			float baseCircumference = 2 * MathF.PI * _radius;
+			float slopeLength = MathF.Sqrt(_radius * _radius + _height * _height);
+			float uvRelativeWidth = baseCircumference / slopeLength;
+			float uvRelativeHeight = 1.0f;
+			if (uvRelativeWidth > 1)
+			{
+				uvRelativeHeight /= uvRelativeWidth;
+				uvRelativeWidth = 1;
+			}
+			float uvStepWidth = uvRelativeWidth / _subdivisions;
 
 			// Generate vertices:
 			verticesBasic[vertexCountSides - 1] = new(new(_radius, 0, 0), new(normSideH, normSideV, 0), Vector2.Zero);
@@ -477,7 +487,7 @@ namespace FragEngine3.Graphics.Resources
 				Vector3 normSideB = new(cB * normSideH, normSideV, sB * normSideH);
 				Vector3 normSideT = new(cT * normSideH, normSideV, sT * normSideH);
 				Vector2 uvSideB = new(i * uvStepWidth, 0);
-				Vector2 uvSideT = new((i + 0.5f) * uvStepWidth, 0);
+				Vector2 uvSideT = new((i + 0.5f) * uvStepWidth, uvRelativeHeight);
 
 				uint vStartIdxSides = 2 * i;
 				verticesBasic[vStartIdxSides + 0] = new(posBase, normSideB, uvSideB);
@@ -519,8 +529,6 @@ namespace FragEngine3.Graphics.Resources
 				indices[iStartIdxBase + 1] = (ushort)(vCurIdxBase + 1);
 				indices[iStartIdxBase + 2] = (ushort)(vCurIdxBase + 2);
 			}
-
-			// Note: The UV layout for this is not great. In fact, it is quite awful and is in dire need of some better/proportional layouting.
 
 			return new MeshSurfaceData()
 			{
