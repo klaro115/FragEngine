@@ -29,7 +29,7 @@ namespace FragEngine3.Graphics.Components
 		#endregion
 		#region Properties
 
-		public bool IsVisible => !IsDisposed && node.IsEnabled && Mesh != null && !Mesh.IsDisposed;
+		public bool IsVisible => !IsDisposed && node.IsEnabled && (MeshHandle != null || (Mesh != null && !Mesh.IsDisposed));
 		public bool DontDrawUnlessFullyLoaded { get; set; } = false;
 
 		public RenderMode RenderMode => Material != null ? Material.RenderMode : RenderMode.Opaque;

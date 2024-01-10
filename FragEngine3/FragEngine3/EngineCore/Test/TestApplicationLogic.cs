@@ -119,12 +119,12 @@ namespace FragEngine3.EngineCore.Test
 			if (SceneSpawner.CreateStaticMeshRenderer(scene, out StaticMeshRenderer rabbit))
 			{
 				rabbit.node.Name = "Rabbit";
-				rabbit.node.LocalPosition = new Vector3(0, -0.25f, 2);
+				rabbit.node.LocalPosition = new Vector3(0, -1.5f, 2);
 				rabbit.node.LocalRotation = Quaternion.Identity;
-				rabbit.node.LocalScale = Vector3.One * 5;
+				rabbit.node.LocalScale = Vector3.One * 3;
 				//rabbit.node.SetEnabled(false);
 
-				rabbit.SetMesh("Rabbit.obj", true);
+				rabbit.SetMesh("Rabbit.obj");
 				rabbit.SetMaterial("Mtl_DefaultSurface");
 			}
 
@@ -154,11 +154,24 @@ namespace FragEngine3.EngineCore.Test
 				cylinder.SetMaterial("Mtl_DefaultSurface");
 			}
 
+			MeshPrimitiveFactory.CreateConeMesh("Cone", Engine, 1, 1.5f, 32, false, out _, out _, out ResourceHandle coneHandle);
+			if (SceneSpawner.CreateStaticMeshRenderer(scene, out StaticMeshRenderer cone))
+			{
+				cone.node.Name = "Cone";
+				cone.node.LocalPosition = new Vector3(0, 0, 2);
+				cone.node.LocalRotation = Quaternion.Identity;
+				cone.node.LocalScale = Vector3.One;
+				//cone.node.SetEnabled(false);
+
+				cone.SetMesh(coneHandle);
+				cone.SetMaterial("Mtl_DefaultSurface");
+			}
+
 			MeshPrimitiveFactory.CreatePlaneMesh("Plane", Engine, new Vector2(5, 5), 6, false, out _, out _, out ResourceHandle planeHandle);
 			if (SceneSpawner.CreateStaticMeshRenderer(scene, out StaticMeshRenderer plane))
 			{
 				plane.node.Name = "Plane";
-				plane.node.LocalPosition = new Vector3(0, -1, 1);
+				plane.node.LocalPosition = new Vector3(0, -1.5f, 2);
 				plane.node.LocalRotation = Quaternion.Identity;
 				plane.node.LocalScale = Vector3.One;
 				//plane.node.SetEnabled(false);
@@ -191,11 +204,11 @@ namespace FragEngine3.EngineCore.Test
 				quad.node.LocalTransformation = Pose.Identity;
 				quad.node.LocalPosition = new(0, 0, 5);
 				quad.node.LocalScale = Vector3.One * 5;
-				quad.node.SetEnabled(false);
+				//quad.node.SetEnabled(false);
 
 				quad.SetMesh(quadHandle);
 				quad.SetMaterial("Mtl_DefaultSurface");
-				//quad.SetMaterial("Mtl_TestMaterial");
+				quad.SetMaterial("Mtl_TestMaterial");
 			}
 
 			return true;
@@ -224,7 +237,7 @@ namespace FragEngine3.EngineCore.Test
 				rabbitNode.LocalTransformation = localPose;
 			}
 
-			if (scene.FindNode("Cylinder", out SceneNode? cubeNode) && cubeNode != null)
+			if (scene.FindNode("Cone", out SceneNode? cubeNode) && cubeNode != null)
 			{
 				float rotSpeed = deltaTime * 5;
 				Pose localPose = cubeNode.LocalTransformation;

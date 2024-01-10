@@ -167,20 +167,20 @@ namespace FragEngine3.Graphics.Resources
 		/// <param name="_subdivisions">The number of vertices to place along the upper and lower edge of the cylinder. Must be 3 or more.<para/>
 		/// HINT: 32 subdivisions appear sufficiently round for most purposes, most people won't notice artifacts beyond that point.</param>
 		/// <param name="_useExtendedData">Whether to generate extended vertex data (tangents, secondary UVs) for this mesh.</param>
-		public static MeshSurfaceData CreateCylinderData(float _radius, float _height, int _subdivisions, bool _useExtendedData)
+		public static MeshSurfaceData CreateCylinderData(float _radius, float _height, uint _subdivisions, bool _useExtendedData)
 		{
 			// Geometry counts:
 			_subdivisions = Math.Max(_subdivisions, 3);
-			int quadCountShell = _subdivisions + 1;
-			int triangleCountCap = _subdivisions - 2;
+			uint quadCountShell = _subdivisions + 1;
+			uint triangleCountCap = _subdivisions - 2;
 
-			int vertexCountShell = 2 * quadCountShell;
-			int vertexCountCap = _subdivisions;
-			int vertexCount = vertexCountShell + 2 * vertexCountCap;
+			uint vertexCountShell = 2 * quadCountShell;
+			uint vertexCountCap = _subdivisions;
+			uint vertexCount = vertexCountShell + 2 * vertexCountCap;
 
-			int indexCountShell = 3 * 2 * quadCountShell;
-			int indexCountCap = 3 * triangleCountCap;
-			int indexCount = indexCountShell + 2 * indexCountCap;
+			uint indexCountShell = 3 * 2 * quadCountShell;
+			uint indexCountCap = 3 * triangleCountCap;
+			uint indexCount = indexCountShell + 2 * indexCountCap;
 
 			// Data arrays:
 			BasicVertex[] verticesBasic = new BasicVertex[vertexCount];
@@ -188,10 +188,10 @@ namespace FragEngine3.Graphics.Resources
 			ushort[] indices = new ushort[indexCount];
 
 			// Start indices for caps:
-			int iStartIdxCapUp = indexCountShell;
-			int iStartIdxCapDown = indexCountShell + indexCountCap;
-			int vStartIdxCapUp = vertexCountShell;
-			int vStartIdxCapDown = vertexCountShell + vertexCountCap;
+			uint iStartIdxCapUp = indexCountShell;
+			uint iStartIdxCapDown = indexCountShell + indexCountCap;
+			uint vStartIdxCapUp = vertexCountShell;
+			uint vStartIdxCapDown = vertexCountShell + vertexCountCap;
 
 			// Common math parameters:
 			float angleStepRad = 2 * MathF.PI / _subdivisions;
@@ -207,7 +207,7 @@ namespace FragEngine3.Graphics.Resources
 				verticesExt![vertexCountShell - 1] = new(Vector3.UnitZ, new(1, 1));
 			}
 
-			for (int i = 0; i < _subdivisions; ++i)
+			for (uint i = 0; i < _subdivisions; ++i)
 			{
 				// Common math & geometry:
 				float angleRad = i * angleStepRad;
@@ -224,11 +224,11 @@ namespace FragEngine3.Graphics.Resources
 				Vector2 shellUvDown = new(uvShellX, 0);
 				Vector2 shellUvUp = new(uvShellX, 1);
 
-				int vStartIdxQuad = 2 * i;
+				uint vStartIdxQuad = 2 * i;
 				verticesBasic[vStartIdxQuad + 0] = new(posDown, normalShell, shellUvDown);
 				verticesBasic[vStartIdxQuad + 1] = new(posUp, normalShell, shellUvUp);
 
-				int iStartIdxQuad = 6 * i;
+				uint iStartIdxQuad = 6 * i;
 				indices[iStartIdxQuad + 0] = (ushort)(vStartIdxQuad + 0);
 				indices[iStartIdxQuad + 1] = (ushort)(vStartIdxQuad + 1);
 				indices[iStartIdxQuad + 2] = (ushort)(vStartIdxQuad + 2);
@@ -241,8 +241,8 @@ namespace FragEngine3.Graphics.Resources
 				Vector2 capUvUp = new Vector2(c + 1, s + 1) * 0.5f;
 				Vector2 capUvDown = new Vector2(1 - c, 1 - s) * 0.5f;
 
-				int vStartIdxFanUp = vStartIdxCapUp + i;
-				int vStartIdxFanDown = vStartIdxCapDown + i;
+				uint vStartIdxFanUp = vStartIdxCapUp + i;
+				uint vStartIdxFanDown = vStartIdxCapDown + i;
 				verticesBasic[vStartIdxFanUp] = new(posUp, Vector3.UnitY, capUvUp);
 				verticesBasic[vStartIdxFanDown] = new(posDown, -Vector3.UnitY, capUvDown);
 
@@ -262,12 +262,12 @@ namespace FragEngine3.Graphics.Resources
 			}
 
 			// Cap fan indices:
-			for (int i = 0; i < triangleCountCap; ++i)
+			for (uint i = 0; i < triangleCountCap; ++i)
 			{
-				int vCurIdxFanUp = vStartIdxCapUp + i;
-				int vCurIdxFanDown = vStartIdxCapDown + i;
-				int iStartIdxFanUp = iStartIdxCapUp + 3 * i;
-				int iStartIdxFanDown = iStartIdxCapDown + 3 * i;
+				uint vCurIdxFanUp = vStartIdxCapUp + i;
+				uint vCurIdxFanDown = vStartIdxCapDown + i;
+				uint iStartIdxFanUp = iStartIdxCapUp + 3 * i;
+				uint iStartIdxFanDown = iStartIdxCapDown + 3 * i;
 
 				// Top:
 				indices[iStartIdxFanUp + 0] = (ushort)vStartIdxCapUp;
@@ -292,7 +292,7 @@ namespace FragEngine3.Graphics.Resources
 		public static bool CreateCylinderMesh(
 			string _resourceKey,
 			Engine _engine,
-			float _radius, float _height, int _subdivisions,
+			float _radius, float _height, uint _subdivisions,
 			bool _useExtendedData,
 			out MeshSurfaceData _outMeshData,
 			out StaticMesh _outMesh,
@@ -329,15 +329,15 @@ namespace FragEngine3.Graphics.Resources
 		/// <param name="_subdivisions">The number of vertices to insert between the corners along each side. May not be negative.<para/>
 		/// Example: 3 subdivisions corresponds to 3+2=5 vertices along each edge of the plane, resulting in 5x5 quads, i.e. 50 triangle faces in total.</param>
 		/// <param name="_useExtendedData">Whether to generate extended vertex data (tangents, secondary UVs) for this mesh.</param>
-		public static MeshSurfaceData CreatePlaneData(Vector2 _size, int _subdivisions, bool _useExtendedData)
+		public static MeshSurfaceData CreatePlaneData(Vector2 _size, uint _subdivisions, bool _useExtendedData)
 		{
 			// Geometry counts:
-			int vertsPerSide = Math.Max(_subdivisions + 2, 2);
-			int vertexCount = vertsPerSide * vertsPerSide;
+			uint vertsPerSide = Math.Max(_subdivisions + 2, 2);
+			uint vertexCount = vertsPerSide * vertsPerSide;
 
-			int quadsPerSide = vertsPerSide - 1;
-			int quadCount = quadsPerSide * quadsPerSide;
-			int indexCount = 6 * quadCount;
+			uint quadsPerSide = vertsPerSide - 1;
+			uint quadCount = quadsPerSide * quadsPerSide;
+			uint indexCount = 6 * quadCount;
 
 			// Data arrays:
 			BasicVertex[] verticesBasic = new BasicVertex[vertexCount];
@@ -349,18 +349,18 @@ namespace FragEngine3.Graphics.Resources
 			Vector2 posOrigin = -0.5f * _size;
 
 			// Generate vertices:
-			for (int z = 0; z < vertsPerSide; ++z)
+			for (uint z = 0; z < vertsPerSide; ++z)
 			{
 				float kZ = z * stepWidth;
 				float posZ = posOrigin.Y + kZ * _size.Y;
 
-				for (int x = 0; x < vertsPerSide; ++x)
+				for (uint x = 0; x < vertsPerSide; ++x)
 				{
 					float kX = x * stepWidth;
 					float posX = posOrigin.X + kX * _size.X;
 					Vector2 uv = new(kX, kZ);
 
-					int vIndex = z * vertsPerSide + x;
+					uint vIndex = z * vertsPerSide + x;
 
 					verticesBasic[vIndex] = new(new(posX, 0, posZ), Vector3.UnitY, uv);
 					if (_useExtendedData)
@@ -371,13 +371,13 @@ namespace FragEngine3.Graphics.Resources
 			}
 
 			// Generate triangle indices:
-			for (int z = 0; z < quadsPerSide; ++z)
+			for (uint z = 0; z < quadsPerSide; ++z)
 			{
-				for (int x = 0; x < quadsPerSide; ++x)
+				for (uint x = 0; x < quadsPerSide; ++x)
 				{
-					int quadIdx = z * quadsPerSide + x;
-					int iStartIdx = 6 * quadIdx;
-					int vStartIdx = z * vertsPerSide + x;
+					uint quadIdx = z * quadsPerSide + x;
+					uint iStartIdx = 6 * quadIdx;
+					uint vStartIdx = z * vertsPerSide + x;
 
 					indices[iStartIdx + 0] = (ushort)vStartIdx;
 					indices[iStartIdx + 1] = (ushort)(vStartIdx + vertsPerSide);
@@ -401,7 +401,7 @@ namespace FragEngine3.Graphics.Resources
 		public static bool CreatePlaneMesh(
 			string _resourceKey,
 			Engine _engine,
-			Vector2 _size, int _subdivisions,
+			Vector2 _size, uint _subdivisions,
 			bool _useExtendedData,
 			out MeshSurfaceData _outMeshData,
 			out StaticMesh _outMesh,
@@ -420,6 +420,139 @@ namespace FragEngine3.Graphics.Resources
 			if (!_outMeshData.IsValid)
 			{
 				_engine.Logger.LogError("Failed to create plane mesh data!");
+				_outMesh = null!;
+				_outHandle = ResourceHandle.None;
+				return false;
+			}
+
+			_outMesh = new(_resourceKey, _engine, _useExtendedData, out _outHandle);
+
+			return _outMesh.SetGeometry(in _outMeshData);
+		}
+
+		public static MeshSurfaceData CreateConeData(float _radius, float _height, uint _subdivisions, bool _useExtendedData)
+		{
+			// Geometry counts:
+			_radius = Math.Max(_radius, 0.001f);
+			_height = Math.Max(_height, 0);
+			_subdivisions = Math.Max(_subdivisions, 3);
+			uint vertexCountSides = 2 * _subdivisions + 1;	// +1 from tip
+			uint vertexCountBase = _subdivisions;
+			uint vertexCount = vertexCountSides + vertexCountBase;
+
+			uint triangleCountSides = _subdivisions;
+			uint triangleCountBase = _subdivisions - 2;
+			uint triangleCount = triangleCountSides + triangleCountBase;
+			uint indexCountSides = 3 * triangleCountSides;
+			uint indexCount = 3 * triangleCount;
+
+			// Data arrays:
+			BasicVertex[] verticesBasic = new BasicVertex[vertexCount];
+			ExtendedVertex[]? verticesExt = _useExtendedData ? new ExtendedVertex[vertexCount] : null;
+			ushort[] indices = new ushort[indexCount];
+
+			// Common math parameters:
+			float angleStepWidth = 2.0f * MathF.PI / _subdivisions;
+			float slopeAngleRad = MathF.Atan(_height / _radius);
+			float slopeExternalAngle = MathF.PI / 2 - slopeAngleRad;
+			float normSideH = MathF.Cos(slopeExternalAngle);
+			float normSideV = MathF.Sin(slopeExternalAngle);
+			float uvStepWidth = 1.0f / _subdivisions;
+			Vector3 posTip = new(0, _height, 0);
+
+			// Generate vertices:
+			verticesBasic[vertexCountSides - 1] = new(new(_radius, 0, 0), new(normSideH, normSideV, 0), Vector2.Zero);
+
+			for (uint i = 0; i < _subdivisions; ++i)
+			{
+				float angleB = i * angleStepWidth;
+				float angleT = (i + 0.5f) * angleStepWidth;
+				float cB = MathF.Cos(angleB);
+				float sB = MathF.Sin(angleB);
+				float cT = MathF.Cos(angleT);
+				float sT = MathF.Sin(angleT);
+				Vector3 posBase = new(cB * _radius, 0, sB * _radius);
+
+				// Vertices sides:
+				Vector3 normSideB = new(cB * normSideH, normSideV, sB * normSideH);
+				Vector3 normSideT = new(cT * normSideH, normSideV, sT * normSideH);
+				Vector2 uvSideB = new(i * uvStepWidth, 0);
+				Vector2 uvSideT = new((i + 0.5f) * uvStepWidth, 0);
+
+				uint vStartIdxSides = 2 * i;
+				verticesBasic[vStartIdxSides + 0] = new(posBase, normSideB, uvSideB);
+				verticesBasic[vStartIdxSides + 1] = new(posTip, normSideT, uvSideT);
+
+				// Vertices base:
+				Vector2 uvBase = new Vector2(cB + 1, sB + 1) * 0.5f;
+
+				uint vStartIdxBase = vertexCountSides + i;
+				verticesBasic[vStartIdxBase + 0] = new(posBase, -Vector3.UnitY, uvBase);
+
+				// Indices base:
+				uint iStartIdxSides = 3 * i;
+				indices[iStartIdxSides + 0] = (ushort)vStartIdxSides;
+				indices[iStartIdxSides + 1] = (ushort)(vStartIdxSides + 1);
+				indices[iStartIdxSides + 2] = (ushort)(vStartIdxSides + 2);
+
+				if (_useExtendedData)
+				{
+					// Sides:
+					Vector3 tanSideB = new(sB, 0, cB);
+					Vector3 tanSideT = new(sT, 0, cT);
+
+					verticesExt![vStartIdxSides + 0] = new(tanSideB, uvSideB);
+					verticesExt![vStartIdxSides + 1] = new(tanSideT, uvSideT);
+
+					// Base:
+					verticesExt![vStartIdxBase] = new(-Vector3.UnitZ, uvBase);
+				}
+			}
+
+			// Indices base fan:
+			for (uint i = 0; i < triangleCountBase; ++i)
+			{
+				uint vCurIdxBase = vertexCountSides + i;
+				uint iStartIdxBase = indexCountSides + 3 * i;
+				
+				indices[iStartIdxBase + 0] = (ushort)vertexCountSides;
+				indices[iStartIdxBase + 1] = (ushort)(vCurIdxBase + 1);
+				indices[iStartIdxBase + 2] = (ushort)(vCurIdxBase + 2);
+			}
+
+			// Note: The UV layout for this is not great. In fact, it is quite awful and is in dire need of some better/proportional layouting.
+
+			return new MeshSurfaceData()
+			{
+				verticesBasic = verticesBasic,
+				verticesExt = verticesExt,
+				indices16 = indices,
+				indices32 = null,
+			};
+		}
+
+		public static bool CreateConeMesh(
+			string _resourceKey,
+			Engine _engine,
+			float _radius, float _height, uint _subdivisions,
+			bool _useExtendedData,
+			out MeshSurfaceData _outMeshData,
+			out StaticMesh _outMesh,
+			out ResourceHandle _outHandle)
+		{
+			if (string.IsNullOrEmpty(_resourceKey) || _engine == null || _engine.IsDisposed)
+			{
+				(_engine?.Logger ?? Logger.Instance)?.LogError("Cannot create cone mesh using null resource key or null engine!");
+				_outMeshData = null!;
+				_outMesh = null!;
+				_outHandle = ResourceHandle.None;
+				return false;
+			}
+
+			_outMeshData = CreateConeData(_radius, _height, _subdivisions, _useExtendedData);
+			if (!_outMeshData.IsValid)
+			{
+				_engine.Logger.LogError("Failed to create cone mesh data!");
 				_outMesh = null!;
 				_outHandle = ResourceHandle.None;
 				return false;
