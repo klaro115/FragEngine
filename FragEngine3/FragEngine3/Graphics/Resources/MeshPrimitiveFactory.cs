@@ -617,15 +617,21 @@ namespace FragEngine3.Graphics.Resources
 			// Common math:
 			const float angle5thCircle = 2 * MathF.PI / 5;
 			float sideLength;
+			float ringHeight;
 			{
 				Vector2 p0 = new(_radius, 0);
 				Vector2 p1 = new(
 					p0.X * MathF.Cos(angle5thCircle),
 					p0.X * MathF.Sin(angle5thCircle));
 				sideLength = Vector2.Distance(p0, p1);
+				const float angle10thCircle = angle5thCircle / 2;
+				Vector2 p2 = new(
+					p0.X * MathF.Cos(angle10thCircle),
+					p0.X * MathF.Sin(angle10thCircle));
+				float ringDistSq02 = Vector2.DistanceSquared(p0, p2);
+				ringHeight = MathF.Sqrt(sideLength * sideLength - ringDistSq02);
 			}
-			float faceHeight = MathF.Sqrt(sideLength * sideLength * 0.75f);
-			float halfRingHeight = faceHeight / 2;
+			float halfRingHeight = ringHeight / 2;
 			float topHeight = halfRingHeight + MathF.Sqrt(sideLength * sideLength - _radius * _radius);
 
 			// Vertex positions:
@@ -667,6 +673,8 @@ namespace FragEngine3.Graphics.Resources
 			ExtendedVertex[]? verticesExt = _useExtendedData ? new ExtendedVertex[triangleCount] : null;
 			ushort[] indices = new ushort[indexCount];
 
+			// Sqrt(L^2 * 3/4)
+
 			for (uint i = 0; i < triangleCount; ++i)
 			{
 				uint iTriangleStartIdx = 3 * i;
@@ -678,12 +686,18 @@ namespace FragEngine3.Graphics.Resources
 				Vector3 pos1 = vertexPositions[rawIdx1];
 				Vector3 pos2 = vertexPositions[rawIdx2];
 				Vector3 normal = Vector3.Normalize(Vector3.Cross(pos1 - pos0, pos2 - pos0));
-				Vector2 uv = Vector2.Zero;		//TEMP: UV is not currently calculated! No proper layout available rn, so will probably layout faces individually in a grid at some point.
+
+				uint uvGridX = i % 5;
+				uint uvGridY = i / 5;
+				Vector2 uvGridOrigin = 0.2f * new Vector2(uvGridX, uvGridY);
+				Vector2 uv0 = uvGridOrigin + new Vector2(0, 0);
+				Vector2 uv1 = uvGridOrigin + new Vector2(1, 0) * 0.2f;
+				Vector2 uv2 = uvGridOrigin + new Vector2(0.5f, 0.866025f) * 0.2f;
 
 				uint vTriangleStartIdx = iTriangleStartIdx;
-				verticesBasic[vTriangleStartIdx + 0] = new(pos0, normal, uv);
-				verticesBasic[vTriangleStartIdx + 1] = new(pos1, normal, uv);
-				verticesBasic[vTriangleStartIdx + 2] = new(pos2, normal, uv);
+				verticesBasic[vTriangleStartIdx + 0] = new(pos0, normal, uv0);
+				verticesBasic[vTriangleStartIdx + 1] = new(pos1, normal, uv1);
+				verticesBasic[vTriangleStartIdx + 2] = new(pos2, normal, uv2);
 
 				indices[iTriangleStartIdx + 0] = (ushort)vTriangleStartIdx;
 				indices[iTriangleStartIdx + 1] = (ushort)(vTriangleStartIdx + 1);
@@ -692,9 +706,9 @@ namespace FragEngine3.Graphics.Resources
 				if (_useExtendedData)
 				{
 					Vector3 tangent = Vector3.Normalize(Vector3.Cross(normal, Vector3.UnitY));
-					verticesExt![vTriangleStartIdx + 0] = new(tangent, uv);
-					verticesExt![vTriangleStartIdx + 1] = new(tangent, uv);
-					verticesExt![vTriangleStartIdx + 2] = new(tangent, uv);
+					verticesExt![vTriangleStartIdx + 0] = new(tangent, uv0);
+					verticesExt![vTriangleStartIdx + 1] = new(tangent, uv1);
+					verticesExt![vTriangleStartIdx + 2] = new(tangent, uv2);
 				}
 			}
 
