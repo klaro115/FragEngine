@@ -22,7 +22,9 @@ namespace FragEngine3.Graphics.Components.ConstantBuffers
 		public float farClipPlane;          // Camera's far clipping plane distance.
 
 		// Lighting:
-		public Vector3 ambientLight;		// Ambient light color and intensity.
+		public RgbaFloat ambientLightLow;	// Ambient light color and intensity, coming from the bottom (i.e. along Y-axis).
+		public RgbaFloat ambientLightMid;	// Ambient light color and intensity, coming equally from sides (i.e. X- and Z-axex).
+		public RgbaFloat ambientLightHigh;	// Ambient light color and intensity, coming from the bottom (i.e. against Y-axis).
 		public uint lightCount;             // Number of lights in the camera's light source data buffer.
 
 		#endregion
@@ -33,10 +35,10 @@ namespace FragEngine3.Graphics.Components.ConstantBuffers
 			2 * 4 * sizeof(float) + // camera pos+dir
 			2 * sizeof(uint) +      // resolution
 			2 * sizeof(float) +     // clipping planes
-			3 * sizeof(float) +     // ambient light
-			1 * sizeof(uint);       // light count		= 128 bytes
+			3 * 4 * sizeof(float) +	// ambient light
+			1 * sizeof(uint);       // light count		= 164 bytes
 
-		public const int packedByteSize = 128;
+		public const int packedByteSize = 176;
 
 		public static readonly ResourceLayoutElementDescription ResourceLayoutElementDesc = new("CBGlobal", ResourceKind.UniformBuffer, ShaderStages.Vertex | ShaderStages.Fragment);
 

@@ -16,7 +16,9 @@ cbuffer CBGlobal : register(b0)
     float farClipPlane;         // Camera's far clipping plane distance.
     
     // Lighting:
-    float3 ambientLight;
+    float4 ambientLightLow;
+    float4 ambientLightMid;
+    float4 ambientLightHigh;
     uint lightCount;
 };
 
@@ -60,12 +62,21 @@ struct VertexOutput_Extended
 
 /******************* SHADERS: ******************/
 
+half3 CalculateAmbientLight(float3 _normal)
+{
+    half dotY = (half)dot(_normal, float3(0, 1, 0));
+    half wLow = max(-dotY, 0);
+    half wHigh = max(dotY, 0);
+    half wMid = 1.0 - wHigh - wLow;
+    return (wLow * (half4)ambientLightLow + wHigh * (half4)ambientLightHigh + wMid * (half4)ambientLightMid).xyz;
+}
+
 half4 Main_Pixel(in VertexOutput_Basic inputBasic) : SV_Target0
 {
     half4 albedo = {1, 1, 1, 1};
 
     // Apply basic phong lighting:
-    half3 totalLightIntensity = (half3)ambientLight;
+    half3 totalLightIntensity = CalculateAmbientLight(inputBasic.normal);
     for (uint i = 0; i < lightCount; ++i)
     {
         Light light = BufLights[i];

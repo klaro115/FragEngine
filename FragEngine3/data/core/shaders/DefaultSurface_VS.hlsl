@@ -16,7 +16,9 @@ cbuffer CBGlobal : register(b0)
     float farClipPlane;         // Camera's far clipping plane distance.
 
     // Lighting:
-    float3 ambientLight;
+    float4 ambientLightLow;
+    float4 ambientLightMid;
+    float4 ambientLightHigh;
     uint lightCount;
 };
 

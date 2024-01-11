@@ -78,13 +78,16 @@ namespace FragEngine3.EngineCore.Test
 		protected override bool BeginRunningState()
 		{
 			// Import 3D models:
-			//Engine.ResourceManager.GetAndLoadResource("Cube.obj", true, out _);
-			//Engine.ResourceManager.GetAndLoadResource("Rabbit.obj", true, out _);
 			Engine.ResourceManager.GetAndLoadResource("Mtl_TestMaterial", true, out _);
 			Engine.ResourceManager.GetAndLoadResource("Mtl_DefaultSurface", true, out _);
 			Engine.ResourceManager.GetAndLoadResource("ForwardPlusLight_Composition_PS", true, out _);
 
 			Scene scene = Engine.SceneManager.MainScene!;
+			
+			// Set ambient lighting:
+			scene.settings.AmbientLightIntensityLow = new(0.18f, 0.16f, 0.12f);
+			scene.settings.AmbientLightIntensityMid = new(0.13f, 0.14f, 0.17f);
+			scene.settings.AmbientLightIntensityHigh = new(0.17f, 0.17f, 0.25f);
 
 			// Create a camera:
 			if (SceneSpawner.CreateCamera(scene, true, out Camera camera))
@@ -120,6 +123,7 @@ namespace FragEngine3.EngineCore.Test
 			{
 				light.node.WorldPosition = new Vector3(0, 5, 0);
 				light.node.SetRotationFromYawPitchRoll(22.5f, 45, 0, true, true);
+				//light.node.SetEnabled(false);
 			}
 
 			if (SceneSpawner.CreateStaticMeshRenderer(scene, out StaticMeshRenderer rabbit))
@@ -164,7 +168,7 @@ namespace FragEngine3.EngineCore.Test
 			if (SceneSpawner.CreateStaticMeshRenderer(scene, out StaticMeshRenderer cone))
 			{
 				cone.node.Name = "Cone";
-				cone.node.LocalPosition = new Vector3(0, 0, 2);
+				cone.node.LocalPosition = new Vector3(0, 1.5f, 2);
 				cone.node.LocalRotation = Quaternion.Identity;
 				cone.node.LocalScale = Vector3.One;
 				//cone.node.SetEnabled(false);
@@ -173,11 +177,11 @@ namespace FragEngine3.EngineCore.Test
 				cone.SetMaterial("Mtl_DefaultSurface");
 			}
 
-			MeshPrimitiveFactory.CreateIcosahedronMesh("Icosahedron", Engine, 0.5f, false, out _, out _, out ResourceHandle d20Handle);
+			MeshPrimitiveFactory.CreateIcosahedronMesh("Icosahedron", Engine, 0.75f, false, out _, out _, out ResourceHandle d20Handle);
 			if (SceneSpawner.CreateStaticMeshRenderer(scene, out StaticMeshRenderer d20))
 			{
 				d20.node.Name = "D20";
-				d20.node.LocalPosition = new Vector3(0, 0, 0);
+				d20.node.LocalPosition = new Vector3(0, 0, 2);
 				d20.node.LocalRotation = Quaternion.Identity;
 				d20.node.LocalScale = Vector3.One;
 				//d20.node.SetEnabled(false);

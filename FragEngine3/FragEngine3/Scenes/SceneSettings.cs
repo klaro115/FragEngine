@@ -7,7 +7,9 @@ namespace FragEngine3.Scenes
 	{
 		#region Fields
 
-		private Vector3 ambientLightIntensity = new(0.1f, 0.1f, 0.1f);
+		private Vector3 ambientLightIntensityLow = new(0.1f, 0.1f, 0.1f);
+		private Vector3 ambientLightIntensityMid = new(0.1f, 0.1f, 0.1f);
+		private Vector3 ambientLightIntensityHigh = new(0.1f, 0.1f, 0.1f);
 		//...
 
 		#endregion
@@ -18,8 +20,30 @@ namespace FragEngine3.Scenes
 		/// </summary>
 		public Vector3 AmbientLightIntensity
 		{
-			get => ambientLightIntensity;
-			set => ambientLightIntensity = Vector3.Clamp(value, Vector3.Zero, new(100.0f, 100.0f, 100.0f));
+			get => 0.3333f * (ambientLightIntensityLow + ambientLightIntensityMid + ambientLightIntensityHigh);
+			set
+			{
+				Vector3 clampedValue = Vector3.Clamp(value, Vector3.Zero, new(100.0f, 100.0f, 100.0f));
+				ambientLightIntensityLow = clampedValue;
+				ambientLightIntensityMid = clampedValue;
+				ambientLightIntensityHigh = clampedValue;
+			}
+		}
+
+		public Vector3 AmbientLightIntensityLow
+		{
+			get => ambientLightIntensityLow;
+			set => ambientLightIntensityLow = Vector3.Clamp(value, Vector3.Zero, new(100.0f, 100.0f, 100.0f));
+		}
+		public Vector3 AmbientLightIntensityMid
+		{
+			get => ambientLightIntensityMid;
+			set => ambientLightIntensityMid = Vector3.Clamp(value, Vector3.Zero, new(100.0f, 100.0f, 100.0f));
+		}
+		public Vector3 AmbientLightIntensityHigh
+		{
+			get => ambientLightIntensityHigh;
+			set => ambientLightIntensityHigh = Vector3.Clamp(value, Vector3.Zero, new(100.0f, 100.0f, 100.0f));
 		}
 
 		#endregion
@@ -29,7 +53,9 @@ namespace FragEngine3.Scenes
 		{
 			if (_data == null) return false;
 
-			AmbientLightIntensity = _data.AmbientLightIntensity;
+			AmbientLightIntensityLow = _data.AmbientLightIntensityLow;
+			AmbientLightIntensityMid = _data.AmbientLightIntensityLow;
+			AmbientLightIntensityHigh = _data.AmbientLightIntensityLow;
 			//...
 
 			return true;
@@ -38,7 +64,9 @@ namespace FragEngine3.Scenes
 		{
 			_outData = new()
 			{
-				AmbientLightIntensity = ambientLightIntensity,
+				AmbientLightIntensityLow = ambientLightIntensityLow,
+				AmbientLightIntensityMid = ambientLightIntensityMid,
+				AmbientLightIntensityHigh = ambientLightIntensityHigh,
 				//...
 			};
 			return true;

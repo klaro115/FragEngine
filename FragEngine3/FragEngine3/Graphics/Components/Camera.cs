@@ -396,8 +396,10 @@ public sealed class Camera : Component
 		}
 
 		Pose worldPose = node.WorldTransformation;
-		Vector3 ambientLight = node.scene.settings.AmbientLightIntensity;
-		
+		Vector3 ambientLightLow = node.scene.settings.AmbientLightIntensityLow;
+		Vector3 ambientLightMid = node.scene.settings.AmbientLightIntensityMid;
+		Vector3 ambientLightHigh = node.scene.settings.AmbientLightIntensityHigh;
+
 		GlobalConstantBuffer cbData = new()
 		{
 			// Camera vectors & matrices:
@@ -412,7 +414,9 @@ public sealed class Camera : Component
 			farClipPlane = instance.ProjectionSettings.farClipPlane,
 
 			// Lighting:
-			ambientLight = ambientLight,
+			ambientLightLow = new RgbaFloat(new(ambientLightLow, 0)),
+			ambientLightMid = new RgbaFloat(new(ambientLightMid, 0)),
+			ambientLightHigh = new RgbaFloat(new(ambientLightHigh, 0)),
 			lightCount = _activeLightCount,
 		};
 		
