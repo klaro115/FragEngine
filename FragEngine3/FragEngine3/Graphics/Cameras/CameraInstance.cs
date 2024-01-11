@@ -362,5 +362,55 @@ public sealed class CameraInstance : IDisposable
 		return Vector3.Transform(_screenCoord, projection.mtxPixel2World);
 	}
 
+	/// <summary>
+	/// Try to create a new camera instance with all parameters set up for the rendering of shadow maps.
+	/// </summary>
+	/// <param name="_graphicsCore">The graphics core for which to create this camera instance. May not be null.</param>
+	/// <param name="_outInstance">Outputs the newly created camera instance, or null, if creation has failed.</param>
+	/// <returns>True if a new camera instance was created successfully, false otherwise.</returns>
+	public static bool CreateShadowMapCamera(GraphicsCore _graphicsCore, out CameraInstance _outInstance)
+	{
+		try
+		{
+			_outInstance = new CameraInstance(_graphicsCore, false)
+			{
+				MtxWorld = Matrix4x4.Identity,
+				OutputSettings = new CameraOutput()
+				{
+					resolutionX = 1024,
+					resolutionY = 1024,
+					colorFormat = _graphicsCore.DefaultColorTargetPixelFormat,
+					depthFormat = _graphicsCore.DefaultShadowMapDepthTargetFormat,
+					hasDepth = true,
+					hasStencil = false,
+				},
+				ProjectionSettings = new CameraProjection()
+				{
+					projectionType = CameraProjectionType.Orthographic,
+					nearClipPlane = 0.01f,
+					farClipPlane = 100.0f,
+					orthographicSize = 100,
+					mirrorY = _graphicsCore.DefaultMirrorY,
+				},
+				ClearingSettings = new()
+				{
+					clearColor = false,
+					clearColorValue = new RgbaFloat(0, 0, 0, 0),
+					clearDepth = true,
+					clearDepthValue = (float)Half.MaxValue,
+					clearStencil = false,
+					clearStencilValue = 0,
+				},
+			};
+			return true;
+		}
+		catch (Exception ex)
+		{
+			_graphicsCore.graphicsSystem.engine.Logger.LogException("Failed to create camera instance for shadow map rendering!", ex);
+			_outInstance = null!;
+			return false;
+		}
+	}
+
 	#endregion
 }

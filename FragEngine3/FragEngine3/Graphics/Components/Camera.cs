@@ -242,6 +242,7 @@ public sealed class Camera : Component
 
 	public bool BeginFrame(
 		CommandList _cmdList,
+		Texture _shadowMapArray,
 		RenderMode _renderMode,
 		bool _clearRenderTargets,
 		uint _activeLightCount,
@@ -256,6 +257,12 @@ public sealed class Camera : Component
 		if (IsDrawing)
 		{
 			Logger.LogError("Cannot begin frame on camera that is already drawing!");
+			_outCameraCtx = null!;
+			return false;
+		}
+		if (_cmdList == null || _cmdList.IsDisposed)
+		{
+			Logger.LogError("Cannot begin frame on camera using null or disposed command list!");
 			_outCameraCtx = null!;
 			return false;
 		}
@@ -303,7 +310,7 @@ public sealed class Camera : Component
 			return false;
 		}
 
-		_outCameraCtx = new(this, _cmdList, globalConstantBuffer!, lightDataBuffer!, activeTarget.framebuffer.OutputDescription);
+		_outCameraCtx = new(instance, _cmdList, globalConstantBuffer!, lightDataBuffer!, _shadowMapArray!, activeTarget.framebuffer.OutputDescription);;
 		return true;
 	}
 

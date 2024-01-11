@@ -30,8 +30,14 @@ namespace FragEngine3.Graphics.Components
 			public uint type;
 			public Vector3 direction;
 			public float spotAngleAcos;
+			public uint shadowMapIdx;       // default=0, map at index 0 is always a 'blank' placeholder.
+			public float shadowDistance;
 
-			public const int byteSize = 3 * 3 * sizeof(float) + 2 * sizeof(float) + sizeof(uint);	// 48 bytes
+			public const int byteSize = 3 * 3 * sizeof(float) + 3 * sizeof(float) + 2 * sizeof(uint);   // 56 bytes
+			public const int packedByteSize = 64;
+
+			public static readonly ResourceLayoutElementDescription ResourceLayoutElementDescLightBuffer = new("BufLights", ResourceKind.StructuredBufferReadOnly, ShaderStages.Fragment);
+			public static readonly ResourceLayoutElementDescription ResourceLayoutElementDescShadowMaps = new("TexShadowMaps", ResourceKind.TextureReadOnly, ShaderStages.Fragment);
 		}
 
 		#endregion

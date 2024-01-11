@@ -41,6 +41,8 @@ struct Light
     uint lightType;
     float3 lightDirection;
     float lightSpotAngleAcos;
+    uint shadowMapIdx;
+    float shadowDistance;
 };
 
 /**************** VERTEX OUTPUT: ***************/

@@ -39,9 +39,13 @@ struct Light
     uint lightType;
     float3 lightDirection;
     float lightSpotAngleAcos;
+    uint shadowMapIdx;
+    float shadowDistance;
 };
 
 StructuredBuffer<Light> BufLights : register(ps, t0);   // Buffer containing an array of light source data. Number of lights is given in 'CBGlobal.lightCount'.
+
+Texture2DArray<half> TexShadowMaps : register(ps, t1);
 
 /**************** VERTEX OUTPUT: ***************/
 

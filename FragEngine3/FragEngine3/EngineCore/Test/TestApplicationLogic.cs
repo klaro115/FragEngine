@@ -125,6 +125,12 @@ namespace FragEngine3.EngineCore.Test
 				light.node.SetRotationFromYawPitchRoll(22.5f, 45, 0, true, true);
 				//light.node.SetEnabled(false);
 			}
+			if (SceneSpawner.CreateLight(scene, Light.LightType.Directional, out light))
+			{
+				light.node.WorldPosition = new Vector3(0, 5, 0);
+				light.node.SetRotationFromYawPitchRoll(-70, -30, 0, true, true);
+				light.node.SetEnabled(false);
+			}
 
 			if (SceneSpawner.CreateStaticMeshRenderer(scene, out StaticMeshRenderer rabbit))
 			{
@@ -136,6 +142,7 @@ namespace FragEngine3.EngineCore.Test
 
 				rabbit.SetMesh("Rabbit.obj");
 				rabbit.SetMaterial("Mtl_DefaultSurface");
+				rabbit.DontDrawUnlessFullyLoaded = true;
 			}
 
 			MeshPrimitiveFactory.CreateCubeMesh("Cube", Engine, new(1, 1, 1), false, out _, out _, out ResourceHandle cubeHandle);
@@ -255,7 +262,6 @@ namespace FragEngine3.EngineCore.Test
 			
 				Pose localPose = rabbitNode.LocalTransformation;
 				localPose.Rotate(Quaternion.CreateFromAxisAngle(Vector3.UnitY, radPerSec * deltaTime));
-				//localPose.scale = Vector3.One * 0.01f;
 				rabbitNode.LocalTransformation = localPose;
 			}
 
@@ -270,7 +276,7 @@ namespace FragEngine3.EngineCore.Test
 				cubeNode.LocalTransformation = localPose;
 			}
 
-			//TEST
+			// Camera controls:
 			if (Camera.MainCamera != null)
 			{
 				Pose p = Camera.MainCamera.node.LocalTransformation;
@@ -295,16 +301,6 @@ namespace FragEngine3.EngineCore.Test
 
 				Camera.MainCamera.node.LocalTransformation = p;
 			}
-
-			//const float DEG2RAD = MathF.PI / 180.0f;
-			//const float radius = 2;
-			//float angle = (float)Engine.TimeManager.RunTime.TotalSeconds * 90 * DEG2RAD;
-			//SceneNode camNode = Camera.MainCamera!.node;
-			//camNode.LocalPosition = new(MathF.Cos(angle) * radius, 0, -5);
-			//camNode.LocalPosition = new(MathF.Cos(angle) * radius, 0, MathF.Sin(angle) * radius);
-			//camNode.LocalRotation = Quaternion.CreateFromAxisAngle(Vector3.UnitY, angle);
-			//Matrix4x4 mtxLookAt = Matrix4x4.CreateLookAtLeftHanded(camNode.LocalPosition, Vector3.Zero, Vector3.UnitY);
-			//camNode.LocalRotation = Quaternion.CreateFromRotationMatrix(mtxLookAt);
 
 			return true;
 		}

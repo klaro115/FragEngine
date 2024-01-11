@@ -305,7 +305,7 @@ namespace FragEngine3.Graphics.Components
 				}
 			}
 
-			UpdateResourceSet(Material, _cameraCtx);
+			UpdateDefaultResourceSet(Material, _cameraCtx);
 
 			// Throw pipeline and geometry buffers at the command list:
 			_cameraCtx.cmdList.SetPipeline(pipeline.Value);
@@ -354,7 +354,7 @@ namespace FragEngine3.Graphics.Components
 			return true;
 		}
 
-		private bool UpdateResourceSet(Material _material, CameraContext _cameraCtx)
+		private bool UpdateDefaultResourceSet(Material _material, CameraContext _cameraCtx)		// TODO [refactor]: This does not change across objects and is camera-dependent! Ownership and updating should be moved to camera component por some utility class!
 		{
 			if (!defaultResourceSet.GetValue(rendererVersion, out ResourceSet? rs) || rs == null || rs.IsDisposed)
 			{
@@ -364,7 +364,8 @@ namespace FragEngine3.Graphics.Components
 					_material.ResourceLayout,
 					_cameraCtx.globalConstantBuffer,
 					objectDataConstantBuffer,
-					_cameraCtx.lightDataBuffer);
+					_cameraCtx.lightDataBuffer,
+					_cameraCtx.shadowMapArray);
 
 				rs = core.MainFactory.CreateResourceSet(ref resourceSetDesc);
 				rs.Name = $"ResSet_Default_{_material.resourceKey}";
