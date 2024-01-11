@@ -7,6 +7,41 @@ namespace FragEngine3.Graphics.Resources
 {
 	public static class MeshPrimitiveFactory
 	{
+		#region Fields
+
+		// Index data array:
+		private static readonly ushort[] icoPositionIndices =
+		[
+			// Ring pointing up:
+			0, 5, 1,
+			1, 6, 2,
+			2, 7, 3,
+			3, 8, 4,
+			0, 4, 9,
+
+			// Ring pointing down:
+			1, 5, 6,
+			2, 6, 7,
+			3, 7, 8,
+			4, 8, 9,
+			0, 9, 5,
+
+			// Top:
+			5, 11, 6,
+			6, 11, 7,
+			7, 11, 8,
+			8, 11, 9,
+			9, 11, 5,
+
+			// Bottom:
+			0, 1, 10,
+			1, 2, 10,
+			2, 3, 10,
+			3, 4, 10,
+			4, 0, 10,
+		];
+
+		#endregion
 		#region Methods
 
 		/// <summary>
@@ -561,6 +596,140 @@ namespace FragEngine3.Graphics.Resources
 			if (!_outMeshData.IsValid)
 			{
 				_engine.Logger.LogError("Failed to create cone mesh data!");
+				_outMesh = null!;
+				_outHandle = ResourceHandle.None;
+				return false;
+			}
+
+			_outMesh = new(_resourceKey, _engine, _useExtendedData, out _outHandle);
+
+			return _outMesh.SetGeometry(in _outMeshData);
+		}
+
+		public static MeshSurfaceData CreateIcosahedronData(float _radius, bool _useExtendedData)
+		{
+			// Geometry counts:
+			_radius = Math.Max(_radius, 0.0001f);
+			const uint triangleCount = 20;
+			const uint indexCount = 3 * triangleCount;
+			const uint vertexCount = 3 * triangleCount;
+
+			// Common math:
+			const float angle5thCircle = 2 * MathF.PI / 5;
+			float sideLength;
+			{
+				Vector2 p0 = new(_radius, 0);
+				Vector2 p1 = new(
+					p0.X * MathF.Cos(angle5thCircle),
+					p0.X * MathF.Sin(angle5thCircle));
+				sideLength = Vector2.Distance(p0, p1);
+			}
+			float faceHeight = MathF.Sqrt(sideLength * sideLength * 0.75f);
+			float halfRingHeight = faceHeight / 2;
+			float topHeight = halfRingHeight + MathF.Sqrt(sideLength * sideLength - _radius * _radius);
+
+			// Vertex positions:
+			Vector3[] vertexPositions = new Vector3[12];
+			for (int i = 0; i < 5; ++i)
+			{
+				float angleL = i * angle5thCircle;
+				float angleH = (i + 0.5f) * angle5thCircle;
+				float cL = MathF.Cos(angleL);
+				float sL = MathF.Sin(angleL);
+				float cH = MathF.Cos(angleH);
+				float sH = MathF.Sin(angleH);
+
+				vertexPositions[i] = new(cL * _radius, -halfRingHeight, sL * _radius);
+				vertexPositions[i + 5] = new(cH * _radius, halfRingHeight, sH * _radius);
+			}
+			vertexPositions[10] = new(0, -topHeight, 0);
+			vertexPositions[11] = new(0, topHeight, 0);
+
+			/* Top:
+			 *			11
+			 * 
+			 * High:
+			 *		  9   5
+			 *		8		6
+			 *			7
+			 * 
+			 * Low:
+			 *			0
+			 *		4		1
+			 *		  3   2
+			 * 
+			 * Bottom:
+			 *			10
+			 */
+
+			// Data arrays:
+			BasicVertex[] verticesBasic = new BasicVertex[vertexCount];
+			ExtendedVertex[]? verticesExt = _useExtendedData ? new ExtendedVertex[triangleCount] : null;
+			ushort[] indices = new ushort[indexCount];
+
+			for (uint i = 0; i < triangleCount; ++i)
+			{
+				uint iTriangleStartIdx = 3 * i;
+				uint rawIdx0 = icoPositionIndices[iTriangleStartIdx + 0];
+				uint rawIdx1 = icoPositionIndices[iTriangleStartIdx + 1];
+				uint rawIdx2 = icoPositionIndices[iTriangleStartIdx + 2];
+
+				Vector3 pos0 = vertexPositions[rawIdx0];
+				Vector3 pos1 = vertexPositions[rawIdx1];
+				Vector3 pos2 = vertexPositions[rawIdx2];
+				Vector3 normal = Vector3.Normalize(Vector3.Cross(pos1 - pos0, pos2 - pos0));
+				Vector2 uv = Vector2.Zero;		//TEMP: UV is not currently calculated! No proper layout available rn, so will probably layout faces individually in a grid at some point.
+
+				uint vTriangleStartIdx = iTriangleStartIdx;
+				verticesBasic[vTriangleStartIdx + 0] = new(pos0, normal, uv);
+				verticesBasic[vTriangleStartIdx + 1] = new(pos1, normal, uv);
+				verticesBasic[vTriangleStartIdx + 2] = new(pos2, normal, uv);
+
+				indices[iTriangleStartIdx + 0] = (ushort)vTriangleStartIdx;
+				indices[iTriangleStartIdx + 1] = (ushort)(vTriangleStartIdx + 1);
+				indices[iTriangleStartIdx + 2] = (ushort)(vTriangleStartIdx + 2);
+
+				if (_useExtendedData)
+				{
+					Vector3 tangent = Vector3.Normalize(Vector3.Cross(normal, Vector3.UnitY));
+					verticesExt![vTriangleStartIdx + 0] = new(tangent, uv);
+					verticesExt![vTriangleStartIdx + 1] = new(tangent, uv);
+					verticesExt![vTriangleStartIdx + 2] = new(tangent, uv);
+				}
+			}
+
+			return new MeshSurfaceData()
+			{
+				verticesBasic = verticesBasic,
+				verticesExt = verticesExt,
+				indices16 = indices,
+				indices32 = null,
+			};
+		}
+
+		public static bool CreateIcosahedronMesh(
+			string _resourceKey,
+			Engine _engine,
+			float _radius,
+			bool _useExtendedData,
+			out MeshSurfaceData _outMeshData,
+			out StaticMesh _outMesh,
+			out ResourceHandle _outHandle)
+		{
+			if (string.IsNullOrEmpty(_resourceKey) || _engine == null || _engine.IsDisposed)
+			{
+				// crit fail on creating d20.
+				(_engine?.Logger ?? Logger.Instance)?.LogError("Cannot create icosahedron mesh using null resource key or null engine!");
+				_outMeshData = null!;
+				_outMesh = null!;
+				_outHandle = ResourceHandle.None;
+				return false;
+			}
+
+			_outMeshData = CreateIcosahedronData(_radius, _useExtendedData);
+			if (!_outMeshData.IsValid)
+			{
+				_engine.Logger.LogError("Failed to create icosahedron mesh data!");
 				_outMesh = null!;
 				_outHandle = ResourceHandle.None;
 				return false;

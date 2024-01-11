@@ -160,7 +160,7 @@ namespace FragEngine3.EngineCore.Test
 				cylinder.SetMaterial("Mtl_DefaultSurface");
 			}
 
-			MeshPrimitiveFactory.CreateConeMesh("Cone", Engine, 1, 1.5f, 32, false, out _, out _, out ResourceHandle coneHandle);
+			MeshPrimitiveFactory.CreateConeMesh("Cone", Engine, 0.75f, 1, 32, false, out _, out _, out ResourceHandle coneHandle);
 			if (SceneSpawner.CreateStaticMeshRenderer(scene, out StaticMeshRenderer cone))
 			{
 				cone.node.Name = "Cone";
@@ -171,6 +171,19 @@ namespace FragEngine3.EngineCore.Test
 
 				cone.SetMesh(coneHandle);
 				cone.SetMaterial("Mtl_DefaultSurface");
+			}
+
+			MeshPrimitiveFactory.CreateIcosahedronMesh("Icosahedron", Engine, 0.5f, false, out _, out _, out ResourceHandle d20Handle);
+			if (SceneSpawner.CreateStaticMeshRenderer(scene, out StaticMeshRenderer d20))
+			{
+				d20.node.Name = "D20";
+				d20.node.LocalPosition = new Vector3(0, 0, 0);
+				d20.node.LocalRotation = Quaternion.Identity;
+				d20.node.LocalScale = Vector3.One;
+				//d20.node.SetEnabled(false);
+
+				d20.SetMesh(d20Handle);
+				d20.SetMaterial("Mtl_DefaultSurface");
 			}
 
 			MeshPrimitiveFactory.CreatePlaneMesh("Plane", Engine, new Vector2(5, 5), 6, false, out _, out _, out ResourceHandle planeHandle);
@@ -242,7 +255,7 @@ namespace FragEngine3.EngineCore.Test
 				rabbitNode.LocalTransformation = localPose;
 			}
 
-			if (scene.FindNode("Cone", out SceneNode? cubeNode) && cubeNode != null)
+			if (scene.FindNode("D20", out SceneNode? cubeNode) && cubeNode != null)
 			{
 				float rotSpeed = deltaTime * 5;
 				Pose localPose = cubeNode.LocalTransformation;
@@ -259,6 +272,10 @@ namespace FragEngine3.EngineCore.Test
 				Pose p = Camera.MainCamera.node.LocalTransformation;
 				Vector3 inputWASD = Engine.InputManager.GetKeyAxesSmoothed(InputAxis.WASD);
 				Vector3 localMovement = new Vector3(inputWASD.X, inputWASD.Z, inputWASD.Y) * deltaTime;
+				if (Engine.InputManager.GetKey(Key.ShiftLeft))
+				{
+					localMovement *= 3;
+				}
 				Vector3 cameraMovement = p.TransformDirection(localMovement);
 				p.Translate(cameraMovement);
 

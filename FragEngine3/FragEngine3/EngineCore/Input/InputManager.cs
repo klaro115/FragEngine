@@ -117,7 +117,7 @@ namespace FragEngine3.EngineCore.Input
 
 		/// <summary>
 		/// Update all input states for the current frame.<para/>
-		/// NOTE: This should only ever be called from the main window's message loop via '<see cref="Graphics.IGraphicsDevices.UpdateMessageLoop(out bool)"/>'.
+		/// NOTE: This should only ever be called from the main window's message loop via '<see cref="Graphics.GraphicsCore.UpdateMessageLoop(out bool)"/>'.
 		/// </summary>
 		/// <param name="_snapshot">A snapshot of the current input events and states, as recorded by the main window procedure..</param>
 		/// <returns>True if states were updated, false if snapshot was null or an error occurred.</returns>
