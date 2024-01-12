@@ -1,6 +1,6 @@
 ﻿using FragEngine3.Containers;
-using FragEngine3.Graphics.Components.ConstantBuffers;
 using FragEngine3.Graphics.Components.Data;
+using FragEngine3.Graphics.Components.Utility;
 using FragEngine3.Graphics.Contexts;
 using FragEngine3.Graphics.Resources;
 using FragEngine3.Resources;
@@ -21,7 +21,7 @@ namespace FragEngine3.Graphics.Components
 		private uint rendererVersion = 1;
 
 		private DeviceBuffer? objectDataConstantBuffer = null;
-		private VersionedMember<ResourceSet?> defaultResourceSet = new(null, 0);
+		private ResourceSet? defaultResourceSet = null;
 		private VersionedMember<Pipeline> pipeline = new(null!, 0);
 
 		private ResourceSet? overrideBoundResourceSet = null;
@@ -292,7 +292,11 @@ namespace FragEngine3.Graphics.Components
 				return false;
 			}
 
-			UpdateObjectDataConstantBuffer(_cameraCtx.cmdList);
+			// Update or (re)create the constant buffer containing object data:
+			if (!MeshRendererUtility.UpdateObjectDataConstantBuffer(in core, in node, BoundingRadius, ref objectDataConstantBuffer, _cameraCtx.cmdList))
+			{
+				return false;
+			}
 
 			// Update (or recreate) pipeline for rendering this material and geometry combo:
 			if (!Material.IsPipelineUpToDate(in pipeline, rendererVersion))
@@ -305,11 +309,15 @@ namespace FragEngine3.Graphics.Components
 				}
 			}
 
-			UpdateDefaultResourceSet(Material, _cameraCtx);
+			// Ensure the default resource set is assigned:
+			if (!MeshRendererUtility.UpdateDefaultResourceSet(Material, in _cameraCtx, in objectDataConstantBuffer!, ref defaultResourceSet))
+			{
+				return false;
+			}
 
 			// Throw pipeline and geometry buffers at the command list:
 			_cameraCtx.cmdList.SetPipeline(pipeline.Value);
-			_cameraCtx.cmdList.SetGraphicsResourceSet(0, defaultResourceSet.Value);
+			_cameraCtx.cmdList.SetGraphicsResourceSet(0, defaultResourceSet);
 
 			ResourceSet? boundResourceSet = overrideBoundResourceSet ?? Material.BoundResourceSet;
 			if (boundResourceSet != null && Material.BoundResourceLayout != null)
@@ -326,52 +334,6 @@ namespace FragEngine3.Graphics.Components
 			// Issue draw call:
 			_cameraCtx.cmdList.DrawIndexed(Mesh.IndexCount);
 
-			return true;
-		}
-
-		private bool UpdateObjectDataConstantBuffer(CommandList _cmdList)
-		{
-			if (objectDataConstantBuffer == null || objectDataConstantBuffer.IsDisposed)
-			{
-				BufferDescription constantBufferDesc = new(ObjectDataConstantBuffer.packedByteSize, BufferUsage.UniformBuffer | BufferUsage.Dynamic);
-
-				objectDataConstantBuffer = core.MainFactory.CreateBuffer(ref constantBufferDesc);
-				objectDataConstantBuffer.Name = "CBObject";
-				rendererVersion++;
-			}
-
-			Pose worldPose = node.WorldTransformation;
-
-			ObjectDataConstantBuffer objectData = new()
-			{
-				mtxLocal2World = worldPose.Matrix,
-				worldPosition = worldPose.position,
-				boundingRadius = BoundingRadius,
-			};
-
-			_cmdList.UpdateBuffer(objectDataConstantBuffer, 0, ref objectData, ObjectDataConstantBuffer.byteSize);
-
-			return true;
-		}
-
-		private bool UpdateDefaultResourceSet(Material _material, CameraContext _cameraCtx)		// TODO [refactor]: This does not change across objects and is camera-dependent! Ownership and updating should be moved to camera component por some utility class!
-		{
-			if (!defaultResourceSet.GetValue(rendererVersion, out ResourceSet? rs) || rs == null || rs.IsDisposed)
-			{
-				defaultResourceSet.DisposeValue();
-
-				ResourceSetDescription resourceSetDesc = new(
-					_material.ResourceLayout,
-					_cameraCtx.globalConstantBuffer,
-					objectDataConstantBuffer,
-					_cameraCtx.lightDataBuffer,
-					_cameraCtx.shadowMapArray);
-
-				rs = core.MainFactory.CreateResourceSet(ref resourceSetDesc);
-				rs.Name = $"ResSet_Default_{_material.resourceKey}";
-				defaultResourceSet.UpdateValue(rendererVersion, rs);
-			}
-			
 			return true;
 		}
 
