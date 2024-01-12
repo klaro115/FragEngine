@@ -46,20 +46,6 @@ namespace FragEngine3.Graphics.Stack
 		bool Reset();
 
 		/// <summary>
-		/// Retrieve the render targets drawn to by this stack.<para/>
-		/// NOTE: It is possible to fetch and draw straight onto the swapchain's backbuffer,
-		/// but this may conflict with other scenes attempting to do the same. If multiple
-		/// scenes are active and rendering, consider rendering each to their own framebuffers
-		/// and then compositing them afterwards.
-		/// </summary>
-		/// <param name="_outRenderTargets">Outputs the render targets drawn to by this stack.
-		/// The render targets used here may be the backbuffer of the main swapchain. Null if
-		/// the stack is not operational.</param>
-		/// <returns>True if the stack is operational and a framebuffer was assigned, false
-		/// otherwise.</returns>
-		public bool GetRenderTargets(out Framebuffer? _outRenderTargets);
-
-		/// <summary>
 		/// Draw all renderers within a scene.
 		/// </summary>
 		/// <param name="_scene">The scene which we want to render, may not be null.</param>

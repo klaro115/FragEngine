@@ -16,15 +16,42 @@ namespace FragEngine3.Graphics.Stack
 	{
 		#region Types
 
-		private sealed class RendererList(RenderMode _mode, int _initialCapacity)	//TODO: Move this and command list management to camera class! Multiple cameras are not currently possible!
+		private sealed class RendererList(int _initialCapacity) : IDisposable		// TODO: Move this to camera if possible. Having to juggle and reassign these, while pushing renderers in the correct lists is too slow right now!
 		{
-			public readonly RenderMode mode = _mode;
-			public readonly List<IRenderer> renderers = new(_initialCapacity);
+			~RendererList()
+			{
+				Dispose(false);
+			}
+
+			public readonly List<IRenderer> renderersOpaque = new(_initialCapacity);
+			public readonly List<IRenderer> renderersTransparent = new(_initialCapacity);
+			public readonly List<IRenderer> renderersUI = new(_initialCapacity);
 			public CommandList? cmdList = null;
 
-			public bool HasRenderers => renderers.Count != 0;
+			public bool HasRenderers => renderersOpaque.Count != 0 || renderersTransparent.Count != 0;
 
-			public void Clear() => renderers.Clear();
+			public void Dispose()
+			{
+				GC.SuppressFinalize(this);
+				Dispose(true);
+			}
+			private void Dispose(bool _disposing)
+			{
+				cmdList?.Dispose();
+
+				if (_disposing)
+				{
+					cmdList = null;
+					Clear();
+				}
+			}
+
+			public void Clear()
+			{
+				renderersOpaque.Clear();
+				renderersTransparent.Clear();
+				renderersUI.Clear();
+			}
 		}
 
 		#endregion
@@ -43,24 +70,8 @@ namespace FragEngine3.Graphics.Stack
 		private bool isInitialized = false;
 		private bool isDrawing = false;
 
-		private static readonly int[] rendererModeIndices =
-		[
-			0,		// RenderMode.Compute
-			1,		// RenderMode.Opaque
-			2,		// RenderMode.Transparent
-			-1,		// RenderMode.Volumetric
-			-1,		// RenderMode.PostProcessing
-			3,		// RenderMode.UI
-			4,		// RenderMode.Custom
-		];
-		private readonly RendererList[] rendererLists =
-		[
-			new(RenderMode.Compute, 4),
-			new(RenderMode.Opaque, 128),
-			new(RenderMode.Transparent, 32),
-			new(RenderMode.UI, 32),
-			new(RenderMode.Custom, 1),
-		];
+		private readonly Stack<RendererList> rendererListPool = new(5);
+		private readonly Stack<RendererList> rendererListBusyStack = new(5);
 
 		private readonly List<Light> cameraLightBuffer = new(64);
 		private Light.LightSourceData[] lightSourceDataBuffer = new Light.LightSourceData[32];
@@ -115,9 +126,18 @@ namespace FragEngine3.Graphics.Stack
 			IsDisposed = true;
 
 			emptyShadowMapArray?.Dispose();
-
 			compositionResourceSet?.Dispose();
-			//...
+
+			foreach (RendererList rendererList in rendererListPool)
+			{
+				rendererList.Dispose();
+			}
+			foreach (RendererList rendererList in rendererListBusyStack)
+			{
+				rendererList.Dispose();
+			}
+			rendererListPool.Clear();
+			rendererListBusyStack.Clear();
 		}
 
 		public bool Initialize(Scene _scene)
@@ -223,10 +243,16 @@ namespace FragEngine3.Graphics.Stack
 
 				cameraLightBuffer.Clear();
 
-				foreach (RendererList rendererList in rendererLists)
+				foreach (RendererList rendererList in rendererListPool)
 				{
-					rendererList.Clear();
+					rendererList.Dispose();
 				}
+				foreach (RendererList rendererList in rendererListBusyStack)
+				{
+					rendererList.Dispose();
+				}
+				rendererListPool.Clear();
+				rendererListBusyStack.Clear();
 
 				VisibleRendererCount = 0;
 				SkippedRendererCount = 0;
@@ -264,11 +290,6 @@ namespace FragEngine3.Graphics.Stack
 			return Initialize(Scene!);
 		}
 
-		public bool GetRenderTargets(out Framebuffer? _outRenderTargets)
-		{
-			throw new NotImplementedException();		//TODO
-		}
-
 		public bool DrawStack(Scene _scene, List<IRenderer> _renderers, in IList<Camera> _cameras, in IList<Light> _lights)
 		{
 			if (!IsInitialized)
@@ -293,6 +314,13 @@ namespace FragEngine3.Graphics.Stack
 			}
 
 			cameraLightBuffer.Clear();
+
+			// Return renderer used list to pool for re-use this frame:
+			foreach (RendererList rendererList in rendererListBusyStack)
+			{
+				rendererListPool.Push(rendererList);
+			}
+			rendererListBusyStack.Clear();
 
 			// Skip rendering if there are no cameras in the scene:
 			if (_cameras.Count == 0)
@@ -352,6 +380,29 @@ namespace FragEngine3.Graphics.Stack
 			}
 		}
 
+		private bool GetRendererList(out RendererList _outRendererList)
+		{
+			if (!rendererListPool.TryPop(out RendererList? rendererList))
+			{
+				rendererList = new(32);
+			}
+			_outRendererList = rendererList;
+
+			if (_outRendererList.cmdList == null || _outRendererList.cmdList.IsDisposed)
+			{
+				if (!_core.CreateCommandList(out _outRendererList.cmdList) || _outRendererList.cmdList == null)
+				{
+					Logger.LogError($"Failed to create command list for renderer list!");
+					_outRendererList.Dispose();
+					return false;
+				}
+				_outRendererList.cmdList.Name = $"CmdList_{nameof(ForwardPlusLightsStack)}";
+			}
+
+			_outRendererList.Clear();
+			return true;
+		}
+
 		private bool TryRenderCamera(Scene _scene, List<IRenderer> _renderers, Camera _camera, uint _maxActiveLightCount, out uint _outActiveLightCount)
 		{
 			try
@@ -377,11 +428,7 @@ namespace FragEngine3.Graphics.Stack
 					ReadOnlySpan<Light.LightSourceData> lightSourceDataSpan = new(lightSourceDataBuffer, 0, (int)_outActiveLightCount);
 					core.Device.UpdateBuffer(lightDataBuffer, 0, lightSourceDataSpan);
 
-					// Clear out all renderer lists for the upcoming frame:
-					foreach (RendererList rendererList in rendererLists)
-					{
-						rendererList.Clear();
-					}
+					GetRendererList(out RendererList rendererList);
 					VisibleRendererCount = 0;
 					SkippedRendererCount = 0;
 
@@ -397,30 +444,36 @@ namespace FragEngine3.Graphics.Stack
 						if (renderer.IsVisible && (renderer.LayerFlags & _camera.layerMask) != 0)
 						{
 							// Skip any renderers that cannot be mapped to any of the supported modes:
-							if (!GetRendererListForMode(renderer.RenderMode, out RendererList? rendererList))
+							List<IRenderer>? modeList = renderer.RenderMode switch
+							{
+								RenderMode.Opaque =>		rendererList.renderersOpaque,
+								RenderMode.Transparent =>	rendererList.renderersTransparent,
+								RenderMode.UI =>			rendererList.renderersUI,
+								_ =>						null,
+							};
+							if (modeList != null)
+							{
+								// Add the renderer to its mode's corresponding list:
+								modeList.Add(renderer);
+								VisibleRendererCount++;
+							}
+							else
 							{
 								SkippedRendererCount++;
-								continue;
 							}
-
-							// Add the renderer to its mode's corresponding list:
-							rendererList!.renderers.Add(renderer);
-
-							VisibleRendererCount++;
 						}
 					}
+
+					rendererList.cmdList!.Begin();
 
 					if (VisibleRendererCount != 0)
 					{
 						bool success = true;
 
 						// Issue draw calls for each renderer list:
-						success &= DrawRenderers(_camera, RenderMode.Opaque, _outActiveLightCount, true, false);
-						success &= DrawRenderers(_camera, RenderMode.Transparent, _outActiveLightCount, false, true);
-						success &= DrawRenderers(_camera, RenderMode.UI, 0, false, false);
-						// ^NOTE: Different command lists are used for the above steps, since issuing of their draw calls may be
-						// multi-threaded at a later point or if there is a huge number of objects in either or all categories. 
-
+						success &= DrawRenderers(_camera, rendererList.renderersOpaque,			rendererList.cmdList!, RenderMode.Opaque,		_outActiveLightCount,	true, false);
+						success &= DrawRenderers(_camera, rendererList.renderersTransparent,	rendererList.cmdList!, RenderMode.Transparent,	_outActiveLightCount,	false, true);
+						success &= DrawRenderers(_camera, rendererList.renderersUI,				rendererList.cmdList!, RenderMode.UI,			0,						false, false);
 						if (!success)
 						{
 							return false;
@@ -429,18 +482,16 @@ namespace FragEngine3.Graphics.Stack
 					else
 					{
 						// If no renderers, just allow clearing of render targets, to ensure backbuffer contents aren't undefined:
-						if (!GetRendererListForMode(RenderMode.Opaque, out RendererList? opaqueList) || opaqueList?.cmdList == null)
-						{
-							return false;
-						}
-
-						opaqueList.cmdList.Begin();
-						_camera.BeginFrame(opaqueList.cmdList!, emptyShadowMapArray!, RenderMode.Opaque, true, 0, out _);
-						_camera.EndFrame(opaqueList.cmdList!);
-						opaqueList.cmdList.End();
-
-						core.CommitCommandList(opaqueList.cmdList);
+						_camera.BeginFrame(rendererList.cmdList!, emptyShadowMapArray!, RenderMode.Opaque, true, 0, out _);
+						_camera.EndFrame(rendererList.cmdList!);
 					}
+
+					core.CommitCommandList(rendererList.cmdList);
+					rendererList.cmdList.End();
+
+					// Clear renderer list and return it to pool for later re-use:
+					rendererList.Clear();
+					rendererListBusyStack.Push(rendererList);
 				}
 
 				cameraLightBuffer.Clear();
@@ -454,39 +505,8 @@ namespace FragEngine3.Graphics.Stack
 			}
 		}
 
-		private bool GetRendererListForMode(RenderMode _mode, out RendererList? _outRendererList)
+		private bool DrawRenderers(Camera _camera, List<IRenderer> _renderers, CommandList _cmdList, RenderMode _renderMode, uint _activeLightCount, bool _clearRenderTargets, bool _useZSorting)
 		{
-			int modeIdx = (int)_mode;
-			int rendererListIdx = rendererModeIndices[modeIdx];
-
-			if (rendererListIdx >= 0)
-			{
-				_outRendererList = rendererLists[rendererListIdx];
-
-				if (_outRendererList.cmdList == null || _outRendererList.cmdList.IsDisposed)
-				{
-					if (!_core.CreateCommandList(out _outRendererList.cmdList) || _outRendererList.cmdList == null)
-					{
-						Logger.LogError($"Failed to create command list for {_mode} renderer list!");
-						_outRendererList.cmdList?.Dispose();
-						_outRendererList.cmdList = null;
-						return false;
-					}
-					_outRendererList.cmdList.Name = $"CmdList_{_mode}";
-				}
-				return true;
-			}
-			_outRendererList = null;
-			return false;
-		}
-
-		private bool DrawRenderers(Camera _camera, RenderMode _renderMode, uint _activeLightCount, bool _clearRenderTargets, bool _useZSorting)
-		{
-			if (!GetRendererListForMode(_renderMode, out RendererList? rendererList) || rendererList?.cmdList == null)
-			{
-				return false;
-			}
-
 			bool success = true;
 
 			// If required, sort all renderers by their Z-depth: (aka distance to camera)
@@ -495,31 +515,28 @@ namespace FragEngine3.Graphics.Stack
 				Vector3 viewportPosition = _camera.node.WorldPosition;
 				Vector3 cameraDirection = Vector3.Transform(Vector3.UnitZ, _camera.node.WorldRotation);
 
-				rendererList.renderers.Sort((a, b) => a.GetZSortingDepth(viewportPosition, cameraDirection).CompareTo(b.GetZSortingDepth(viewportPosition, cameraDirection)));
+				_renderers.Sort((a, b) => a.GetZSortingDepth(viewportPosition, cameraDirection).CompareTo(b.GetZSortingDepth(viewportPosition, cameraDirection)));
 			}
 
-			rendererList.cmdList.Begin();
-			success &= _camera.BeginFrame(rendererList.cmdList, emptyShadowMapArray!, _renderMode, _clearRenderTargets, _activeLightCount, out CameraContext cameraCtx);
+			success &= _camera.BeginFrame(_cmdList, emptyShadowMapArray!, _renderMode, _clearRenderTargets, _activeLightCount, out CameraContext cameraCtx);
 
 			// Draw list of renderers:
-			if (rendererList.HasRenderers)
+			if (_renderers.Count != 0)
 			{
-				foreach (IRenderer renderer in rendererList.renderers)
+				foreach (IRenderer renderer in _renderers)
 				{
 					FailedRendererCount += renderer.Draw(cameraCtx) ? 0 : 1;
 				}
 			}
 
-			success &= _camera.EndFrame(rendererList.cmdList);
-			rendererList.cmdList.End();
+			success &= _camera.EndFrame(_cmdList);
 
-			core.CommitCommandList(rendererList.cmdList);
 			return success;
 		}
 
 		private bool CompositeFinalOutput(Camera _camera, uint _maxActiveLightCount)
 		{
-			if (!GetRendererListForMode(RenderMode.Custom, out RendererList? customList) || customList?.cmdList == null)
+			if (!GetRendererList(out RendererList? rendererList) || rendererList?.cmdList == null)
 			{
 				return false;
 			}
@@ -540,8 +557,8 @@ namespace FragEngine3.Graphics.Stack
 				}
 			}
 
-			customList.cmdList.Begin();
-			if (!_camera.BeginFrame(customList.cmdList, emptyShadowMapArray!, RenderMode.Custom, true, _maxActiveLightCount, out CameraContext cameraCtx))
+			rendererList.cmdList.Begin();
+			if (!_camera.BeginFrame(rendererList.cmdList, emptyShadowMapArray!, RenderMode.Custom, true, _maxActiveLightCount, out CameraContext cameraCtx))
 			{
 				Logger.LogError("Failed to begin frame on graphics stack's composition pass!");
 				_camera.SetOverrideCameraTarget(null);
@@ -598,13 +615,17 @@ namespace FragEngine3.Graphics.Stack
 			success &= compositionRenderer.Draw(cameraCtx);
 
 			// Finish drawing and submit command list to GPU:
-			success &= _camera.EndFrame(customList.cmdList);
-			customList.cmdList.End();
+			success &= _camera.EndFrame(rendererList.cmdList);
+			rendererList.cmdList.End();
 
-			core.CommitCommandList(customList.cmdList);
+			core.CommitCommandList(rendererList.cmdList);
 
 			// Reset camera state:
 			_camera.SetOverrideCameraTarget(null);
+
+			// Return renderer list for re-use:
+			rendererList.Clear();
+			rendererListBusyStack.Push(rendererList);
 			return success;
 		}
 
