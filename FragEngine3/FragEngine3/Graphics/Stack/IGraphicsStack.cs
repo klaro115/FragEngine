@@ -27,6 +27,8 @@ namespace FragEngine3.Graphics.Stack
 		/// </summary>
 		bool IsDrawing { get; }
 
+		GraphicsCore Core { get; }
+
 		#endregion
 		#region Methods
 

@@ -22,6 +22,7 @@ struct CBGlobal
     float4 ambientLightMid;
     float4 ambientLightHigh;
     uint lightCount;
+    float shadowFadeStart;      // Percentage of the shadow distance in projection space where they start fading out.
 };
 
 struct CBObject
@@ -43,7 +44,6 @@ struct Light
     float lightSpotAngleAcos;
     float4x4 mtxShadowWorld2Uv;
     uint shadowMapIdx;
-    float shadowDistance;
 };
 
 /**************** VERTEX OUTPUT: ***************/

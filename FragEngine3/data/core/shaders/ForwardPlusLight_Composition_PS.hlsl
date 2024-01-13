@@ -20,6 +20,7 @@ cbuffer CBGlobal : register(b0)
     float4 ambientLightMid;
     float4 ambientLightHigh;
     uint lightCount;
+    float shadowFadeStart;      // Percentage of the shadow distance in projection space where they start fading out.
 };
 
 /**************** VERTEX OUTPUT: ***************/

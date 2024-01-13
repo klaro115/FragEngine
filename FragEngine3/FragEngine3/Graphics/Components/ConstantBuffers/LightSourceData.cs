@@ -18,14 +18,11 @@ namespace FragEngine3.Graphics.Components.ConstantBuffers
 		public float spotAngleAcos;				// Arc-cosine of the light angle of a spot light.
 		public Matrix4x4 mtxShadowWorld2Uv;		// Projection matrix, transforming world space position to UV coordinates on a shadow map.
 		public uint shadowMapIdx;				// Index of the shadow map in texture array. Default=0, map at index 0 is always a 'blank' placeholder.
-		public float shadowDistance;			// Maximum distance out to which a shadow may reach.
-
-		//TODO: Consider including shadow distance in projection matrix, with fade-out always applied between normalized depth/distance 0.9f-1.0f.
 
 		#endregion
 		#region Constants
 
-		public const int byteSize = 3 * 3 * sizeof(float) + 3 * sizeof(float) + 2 * sizeof(uint) + 16 * sizeof(float);   // 120 bytes
+		public const int byteSize = 3 * 3 * sizeof(float) + 2 * sizeof(float) + 2 * sizeof(uint) + 16 * sizeof(float);   // 116 bytes
 		public const int packedByteSize = 128;
 		
 		public static readonly ResourceLayoutElementDescription ResourceLayoutElementDescLightBuffer = new("BufLights", ResourceKind.StructuredBufferReadOnly, ShaderStages.Fragment);

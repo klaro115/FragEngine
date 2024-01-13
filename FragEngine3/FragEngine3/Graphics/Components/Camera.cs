@@ -268,7 +268,11 @@ public sealed class Camera : Component
 		}
 
 		// Create or resize light data buffer:
-		if (!UpdateLightDataBuffer(_activeLightCount))
+		if (!CameraUtility.VerifyOrCreateLightDataBuffer(
+			in instance.graphicsCore,
+			_activeLightCount,
+			ref lightDataBuffer,
+			ref lightDataBufferCapacity))
 		{
 			_outCameraCtx = null!;
 			return false;
@@ -296,14 +300,22 @@ public sealed class Camera : Component
 
 		// Finalize projection and camera parameters, and start drawing:
 		instance.MtxWorld = node.WorldTransformation.Matrix;
-		if (!instance.BeginDrawing(_cmdList, _clearRenderTargets, out Matrix4x4 mtxWorld2Clip))
+		if (!instance.BeginDrawing(_cmdList, _clearRenderTargets, true, out Matrix4x4 mtxWorld2Clip))
 		{
 			Logger.LogError("Cannot begin frame on camera that is already drawing!");
 			_outCameraCtx = null!;
 			return false;
 		}
 
-		if (!UpdateGlobalConstantBuffer(in mtxWorld2Clip, _activeLightCount))
+		Pose worldPose = node.WorldTransformation;
+
+		if (!CameraUtility.UpdateGlobalConstantBuffer(
+			in node.scene,
+			in instance,
+			in worldPose,
+			in mtxWorld2Clip,
+			_activeLightCount,
+			ref globalConstantBuffer))
 		{
 			Logger.LogError("Failed to allocate or update camera's global constant buffer!");
 			_outCameraCtx = null!;
@@ -338,97 +350,16 @@ public sealed class Camera : Component
 			return false;
 		}
 
-		if (!UpdateLightDataBuffer(_maxActiveLightCount))
+		if (!CameraUtility.VerifyOrCreateLightDataBuffer(
+			in instance.graphicsCore,
+			_maxActiveLightCount,
+			ref lightDataBuffer,
+			ref lightDataBufferCapacity))
 		{
 			_outLightDataBuffer = null;
 			return false;
 		}
 		_outLightDataBuffer = lightDataBuffer;
-		return true;
-	}
-
-	private bool UpdateLightDataBuffer(uint _maxActiveLightCount)
-	{
-		_maxActiveLightCount = Math.Max(_maxActiveLightCount, 1);
-		uint byteSize = LightSourceData.byteSize * _maxActiveLightCount;
-
-		// Create a new buffer if there is none or if the previous one was too small:
-		if (lightDataBuffer == null || lightDataBuffer.IsDisposed || lightDataBufferCapacity < byteSize)
-		{
-			// Purge any previously allocated buffer:
-			lightDataBuffer?.Dispose();
-			lightDataBuffer = null;
-
-			try
-			{
-				BufferDescription bufferDesc = new(
-					byteSize,
-					BufferUsage.StructuredBufferReadOnly | BufferUsage.Dynamic,
-					LightSourceData.byteSize);
-
-				lightDataBuffer = instance.graphicsCore.MainFactory.CreateBuffer(ref bufferDesc);
-				lightDataBuffer.Name = $"BufLights_Capacity={_maxActiveLightCount}";
-				lightDataBufferCapacity = byteSize;
-				return true;
-			}
-			catch (Exception ex)
-			{
-				Logger.LogException("Failed to create camera's light data buffer!", ex);
-				lightDataBuffer?.Dispose();
-				lightDataBufferCapacity = 0;
-				return false;
-			}
-		}
-		return true;
-	}
-
-	private bool UpdateGlobalConstantBuffer(in Matrix4x4 _mtxWorld2Clip, uint _activeLightCount)
-	{
-		// Ensure the buffer is allocated:
-		if (globalConstantBuffer == null || globalConstantBuffer.IsDisposed)
-		{
-			try
-			{
-				BufferDescription bufferDesc = new(GlobalConstantBuffer.packedByteSize, BufferUsage.UniformBuffer | BufferUsage.Dynamic);
-
-				globalConstantBuffer = instance.graphicsCore.MainFactory.CreateBuffer(ref bufferDesc);
-				globalConstantBuffer.Name = "CBGlobal";
-				return true;
-			}
-			catch (Exception ex)
-			{
-				Logger.LogException("Failed to create camera's global constant buffer!", ex);
-				return false;
-			}
-		}
-
-		Pose worldPose = node.WorldTransformation;
-		Vector3 ambientLightLow = node.scene.settings.AmbientLightIntensityLow;
-		Vector3 ambientLightMid = node.scene.settings.AmbientLightIntensityMid;
-		Vector3 ambientLightHigh = node.scene.settings.AmbientLightIntensityHigh;
-
-		GlobalConstantBuffer cbData = new()
-		{
-			// Camera vectors & matrices:
-			mtxWorld2Clip = _mtxWorld2Clip,
-			cameraPosition = new Vector4(worldPose.position, 0),
-			cameraDirection = new Vector4(worldPose.Forward, 0),
-			
-			// Camera parameters:
-			resolutionX = instance.OutputSettings.resolutionX,
-			resolutionY = instance.OutputSettings.resolutionY,
-			nearClipPlane = instance.ProjectionSettings.nearClipPlane,
-			farClipPlane = instance.ProjectionSettings.farClipPlane,
-
-			// Lighting:
-			ambientLightLow = new RgbaFloat(new(ambientLightLow, 0)),
-			ambientLightMid = new RgbaFloat(new(ambientLightMid, 0)),
-			ambientLightHigh = new RgbaFloat(new(ambientLightHigh, 0)),
-			lightCount = _activeLightCount,
-		};
-		
-		instance.graphicsCore.Device.UpdateBuffer(globalConstantBuffer, 0, ref cbData, GlobalConstantBuffer.byteSize);
-
 		return true;
 	}
 

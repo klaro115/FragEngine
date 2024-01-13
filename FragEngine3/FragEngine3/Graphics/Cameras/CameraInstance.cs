@@ -249,7 +249,7 @@ public sealed class CameraInstance : IDisposable
 		return !output.HaveSettingsChanged(in _framebuffer);
 	}
 
-	public bool BeginDrawing(CommandList _cmdList, bool _clearRenderTargets, out Matrix4x4 _outMtxWorld2Clip)
+	public bool BeginDrawing(CommandList _cmdList, bool _clearRenderTargets, bool _allowRecalculateMatrices, out Matrix4x4 _outMtxWorld2Clip)
 	{
 		if (_cmdList == null || _cmdList.IsDisposed)
 		{
@@ -270,8 +270,11 @@ public sealed class CameraInstance : IDisposable
 			return false;
 		}
 
-		// Recalculate projection matrices: (each frame, because both parameters and pose can change)
-		projection.RecalculateAllMatrices(in mtxWorld, output.resolutionX, output.resolutionY);
+		// Recalculate projection matrices: (each frame by default, because both parameters and pose can change)
+		if (_allowRecalculateMatrices)
+		{
+			projection.RecalculateAllMatrices(in mtxWorld, output.resolutionX, output.resolutionY);
+		}
 
 		// Output the most up-to-date projection matrix:
 		_outMtxWorld2Clip = projection.mtxWorld2Clip;
@@ -282,7 +285,7 @@ public sealed class CameraInstance : IDisposable
 		{
 			activeFramebuffer = overrideFramebuffer!;
 		}
-		else if (!GetOrCreateFramebuffer(out activeFramebuffer, dirtyFlags.HasFlag(DirtyFlags.Output)))
+		else if (!GetOrCreateFramebuffer(out activeFramebuffer, dirtyFlags.HasFlag(DirtyFlags.Output) && hasOwnershipOfFramebuffer))
 		{
 			Logger.LogError("Failed to acquire render targets for camera instance, cannot begin drawing!");
 			return false;
@@ -368,6 +371,7 @@ public sealed class CameraInstance : IDisposable
 	/// <param name="_graphicsCore">The graphics core for which to create this camera instance. May not be null.</param>
 	/// <param name="_outInstance">Outputs the newly created camera instance, or null, if creation has failed.</param>
 	/// <returns>True if a new camera instance was created successfully, false otherwise.</returns>
+	[Obsolete("No longer needed, handled by Light component now.")]
 	public static bool CreateShadowMapCamera(GraphicsCore _graphicsCore, out CameraInstance _outInstance)
 	{
 		try
@@ -397,7 +401,7 @@ public sealed class CameraInstance : IDisposable
 					clearColor = false,
 					clearColorValue = new RgbaFloat(0, 0, 0, 0),
 					clearDepth = true,
-					clearDepthValue = (float)Half.MaxValue,
+					clearDepthValue = 1.0f,
 					clearStencil = false,
 					clearStencilValue = 0,
 				},

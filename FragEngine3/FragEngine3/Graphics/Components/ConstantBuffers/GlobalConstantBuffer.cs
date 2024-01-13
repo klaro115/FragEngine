@@ -26,6 +26,7 @@ namespace FragEngine3.Graphics.Components.ConstantBuffers
 		public RgbaFloat ambientLightMid;	// Ambient light color and intensity, coming equally from sides (i.e. X- and Z-axex).
 		public RgbaFloat ambientLightHigh;	// Ambient light color and intensity, coming from the bottom (i.e. against Y-axis).
 		public uint lightCount;             // Number of lights in the camera's light source data buffer.
+		public float shadowFadeStart;       // Percentage of the shadow distance in projection space where they start fading out.
 
 		#endregion
 		#region Constants
@@ -35,8 +36,9 @@ namespace FragEngine3.Graphics.Components.ConstantBuffers
 			2 * 4 * sizeof(float) + // camera pos+dir
 			2 * sizeof(uint) +      // resolution
 			2 * sizeof(float) +     // clipping planes
-			3 * 4 * sizeof(float) +	// ambient light
-			1 * sizeof(uint);       // light count		= 164 bytes
+			3 * 4 * sizeof(float) + // ambient light
+			1 * sizeof(uint) +      // light count
+			1 * sizeof(float);		// shadow fade = 168 bytes
 
 		public const int packedByteSize = 176;
 

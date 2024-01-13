@@ -20,6 +20,7 @@ cbuffer CBGlobal : register(b0)
     float4 ambientLightMid;
     float4 ambientLightHigh;
     uint lightCount;
+    float shadowFadeStart;      // Percentage of the shadow distance in projection space where they start fading out.
 };
 
 cbuffer CBObject : register(b1)
@@ -41,7 +42,6 @@ struct Light
     float lightSpotAngleAcos;
     float4x4 mtxShadowWorld2Uv;
     uint shadowMapIdx;
-    float shadowDistance;
 };
 
 StructuredBuffer<Light> BufLights : register(ps, t0);   // Buffer containing an array of light source data. Number of lights is given in 'CBGlobal.lightCount'.
