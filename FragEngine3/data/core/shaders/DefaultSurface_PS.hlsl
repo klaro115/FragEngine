@@ -39,6 +39,7 @@ struct Light
     uint lightType;
     float3 lightDirection;
     float lightSpotAngleAcos;
+    float4x4 mtxShadowWorld2Uv;
     uint shadowMapIdx;
     float shadowDistance;
 };

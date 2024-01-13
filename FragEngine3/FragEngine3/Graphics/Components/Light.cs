@@ -1,4 +1,5 @@
-﻿using FragEngine3.Graphics.Components.Data;
+﻿using FragEngine3.Graphics.Components.ConstantBuffers;
+using FragEngine3.Graphics.Components.Data;
 using FragEngine3.Scenes;
 using FragEngine3.Scenes.Data;
 using FragEngine3.Scenes.EventSystem;
@@ -18,26 +19,6 @@ namespace FragEngine3.Graphics.Components
 			Point			= 0,
 			Spot,
 			Directional,
-		}
-
-		[Serializable]
-		[StructLayout(LayoutKind.Sequential, Pack = 4, Size = byteSize)]
-		public struct LightSourceData
-		{
-			public Vector3 color;
-			public float intensity;
-			public Vector3 position;
-			public uint type;
-			public Vector3 direction;
-			public float spotAngleAcos;
-			public uint shadowMapIdx;       // default=0, map at index 0 is always a 'blank' placeholder.
-			public float shadowDistance;
-
-			public const int byteSize = 3 * 3 * sizeof(float) + 3 * sizeof(float) + 2 * sizeof(uint);   // 56 bytes
-			public const int packedByteSize = 64;
-
-			public static readonly ResourceLayoutElementDescription ResourceLayoutElementDescLightBuffer = new("BufLights", ResourceKind.StructuredBufferReadOnly, ShaderStages.Fragment);
-			public static readonly ResourceLayoutElementDescription ResourceLayoutElementDescShadowMaps = new("TexShadowMaps", ResourceKind.TextureReadOnly, ShaderStages.Fragment);
 		}
 
 		#endregion
@@ -175,6 +156,9 @@ namespace FragEngine3.Graphics.Components
 				type = (uint)type,
 				direction = type != LightType.Point ? Direction : Vector3.UnitZ,
 				spotAngleAcos = type == LightType.Spot ? MathF.Acos(spotAngleRad * 0.5f) : 0,
+
+				//TODO 1: Add shadow map index and shadow distance!
+				//TODO 2: Calculate shadow projection matrix (relative to active camera)!
 			};
 		}
 

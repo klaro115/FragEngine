@@ -72,10 +72,10 @@ namespace FragEngine3.Graphics
 
 		public static readonly ResourceLayoutElementDescription[] DEFAULT_SURFACE_RESOURCE_LAYOUT_DESC =
 		[
-			GlobalConstantBuffer.ResourceLayoutElementDesc,							// Global constant buffer, CBGlobal
-			ObjectDataConstantBuffer.ResourceLayoutElementDesc,						// Object constant buffer, CBObject
-			Components.Light.LightSourceData.ResourceLayoutElementDescLightBuffer,	// Light data buffer, BufLights
-			Components.Light.LightSourceData.ResourceLayoutElementDescShadowMaps,	// Shadow map texture array, TexShadowMaps
+			GlobalConstantBuffer.ResourceLayoutElementDesc,			// Global constant buffer, CBGlobal
+			ObjectDataConstantBuffer.ResourceLayoutElementDesc,		// Object constant buffer, CBObject
+			LightSourceData.ResourceLayoutElementDescLightBuffer,	// Light data buffer, BufLights
+			LightSourceData.ResourceLayoutElementDescShadowMaps,	// Shadow map texture array, TexShadowMaps
 		];
 
 		/// <summary>

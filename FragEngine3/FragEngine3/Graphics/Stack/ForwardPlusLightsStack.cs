@@ -1,6 +1,7 @@
 ﻿using FragEngine3.EngineCore;
 using FragEngine3.Graphics.Cameras;
 using FragEngine3.Graphics.Components;
+using FragEngine3.Graphics.Components.ConstantBuffers;
 using FragEngine3.Graphics.Components.Internal;
 using FragEngine3.Graphics.Contexts;
 using FragEngine3.Graphics.Resources;
@@ -74,7 +75,7 @@ namespace FragEngine3.Graphics.Stack
 		private readonly Stack<RendererList> rendererListBusyStack = new(5);
 
 		private readonly List<Light> cameraLightBuffer = new(64);
-		private Light.LightSourceData[] lightSourceDataBuffer = new Light.LightSourceData[32];
+		private LightSourceData[] lightSourceDataBuffer = new LightSourceData[32];
 
 		private CameraInstance? shadowMapCamera = null;
 		private Texture? emptyShadowMapArray = null;
@@ -418,14 +419,14 @@ namespace FragEngine3.Graphics.Stack
 					}
 					if (lightSourceDataBuffer.Length < _outActiveLightCount)
 					{
-						lightSourceDataBuffer = new Light.LightSourceData[_outActiveLightCount];
+						lightSourceDataBuffer = new LightSourceData[_outActiveLightCount];
 					}
 					// Upload light data to GPU buffer:
 					for (int i = 0; i < _outActiveLightCount; i++)
 					{
 						lightSourceDataBuffer[i] = cameraLightBuffer[i].GetLightSourceData();
 					}
-					ReadOnlySpan<Light.LightSourceData> lightSourceDataSpan = new(lightSourceDataBuffer, 0, (int)_outActiveLightCount);
+					ReadOnlySpan<LightSourceData> lightSourceDataSpan = new(lightSourceDataBuffer, 0, (int)_outActiveLightCount);
 					core.Device.UpdateBuffer(lightDataBuffer, 0, lightSourceDataSpan);
 
 					GetRendererList(out RendererList rendererList);

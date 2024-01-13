@@ -350,7 +350,7 @@ public sealed class Camera : Component
 	private bool UpdateLightDataBuffer(uint _maxActiveLightCount)
 	{
 		_maxActiveLightCount = Math.Max(_maxActiveLightCount, 1);
-		uint byteSize = Light.LightSourceData.byteSize * _maxActiveLightCount;
+		uint byteSize = LightSourceData.byteSize * _maxActiveLightCount;
 
 		// Create a new buffer if there is none or if the previous one was too small:
 		if (lightDataBuffer == null || lightDataBuffer.IsDisposed || lightDataBufferCapacity < byteSize)
@@ -364,7 +364,7 @@ public sealed class Camera : Component
 				BufferDescription bufferDesc = new(
 					byteSize,
 					BufferUsage.StructuredBufferReadOnly | BufferUsage.Dynamic,
-					Light.LightSourceData.byteSize);
+					LightSourceData.byteSize);
 
 				lightDataBuffer = instance.graphicsCore.MainFactory.CreateBuffer(ref bufferDesc);
 				lightDataBuffer.Name = $"BufLights_Capacity={_maxActiveLightCount}";
