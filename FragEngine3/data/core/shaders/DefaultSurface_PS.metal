@@ -64,13 +64,15 @@ struct VertexOutput_Basic
 
 /******************* SHADERS: ******************/
 
-half3 CalculateAmbientLight(float3 _normal)
+half3 CalculateAmbientLight(
+    device const CBGlobal& cbGlobal,
+    float3 _normal)
 {
     half dotY = (half)dot(_normal, float3(0, 1, 0));
-    half wLow = max(-dotY, 0);
-    half wHigh = max(dotY, 0);
-    half wMid = 1.0 - wHigh - wLow;
-    return (wLow * (half4)ambientLightLow + wHigh * (half4)ambientLightHigh + wMid * (half4)ambientLightMid).xyz;
+    half wLow = max(-dotY, (half)0);
+    half wHigh = max(dotY, (half)0);
+    half wMid = 1 - wHigh - wLow;
+    return (wLow * (half4)cbGlobal.ambientLightLow + wHigh * (half4)cbGlobal.ambientLightHigh + wMid * (half4)cbGlobal.ambientLightMid).xyz;
 }
 
 half4 fragment Main_Pixel(
@@ -82,7 +84,7 @@ half4 fragment Main_Pixel(
     half4 albedo = {1, 1, 1, 1};
 
     // Apply basic phong lighting:
-    half3 totalLightIntensity = CalculateAmbientLight(inputBasic.normal);
+    half3 totalLightIntensity = CalculateAmbientLight(cbGlobal, inputBasic.normal);
     for (uint i = 0; i < cbGlobal.lightCount; ++i)
     {
         device const Light& light = BufLights[i];
