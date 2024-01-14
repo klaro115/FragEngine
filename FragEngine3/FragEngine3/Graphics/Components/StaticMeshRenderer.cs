@@ -24,6 +24,7 @@ namespace FragEngine3.Graphics.Components
 		private Material? shadowMaterial = null;
 
 		private DeviceBuffer? objectDataConstantBuffer = null;
+		private DeviceBuffer? shadowObjectDataConstantBuffer = null;
 		private ResourceSet? defaultResourceSet = null;
 		private VersionedMember<Pipeline> pipeline = new(null!, 0);
 		private VersionedMember<Pipeline> shadowPipeline = new(null!, 0);
@@ -66,13 +67,16 @@ namespace FragEngine3.Graphics.Components
 			base.Dispose(_disposing);
 
 			objectDataConstantBuffer?.Dispose();
-			objectDataConstantBuffer = null;
+			shadowObjectDataConstantBuffer?.Dispose();
 
 			pipeline.DisposeValue();
 			shadowPipeline.DisposeValue();
 
 			if (_disposing)
 			{
+				objectDataConstantBuffer = null;
+				shadowObjectDataConstantBuffer = null;
+
 				MeshHandle = null;
 				Mesh = null;
 				MaterialHandle = null;
@@ -246,67 +250,43 @@ namespace FragEngine3.Graphics.Components
 			return Vector3.DistanceSquared(posFront, _viewportPosition);
 		}
 
-		private bool VerifyOrLoadMaterial(ResourceHandle? _materialHandle, ref Material? _material)
-		{
-			// Check material and load it now if necessary:
-			if (_material == null || _material.IsDisposed)
-			{
-				if (_materialHandle == null || !_materialHandle.IsValid || _materialHandle.resourceType != ResourceType.Material)
-				{
-					return false;
-				}
-				// Abort drawing until material is ready, queue it up for background loading:
-				if (DontDrawUnlessFullyLoaded && !_materialHandle.IsLoaded)
-				{
-					if (_materialHandle.LoadState == ResourceLoadState.NotLoaded) _materialHandle.Load(false);
-					return true;
-				}
-
-				if (_materialHandle.GetResource(true, true) is not Material material || !material.IsLoaded)
-				{
-					Logger.LogError($"Failed to load material resource from handle '{_materialHandle}'!");
-					return false;
-				}
-				_material = material;
-			}
-			return true;
-		}
-
 		public bool Draw(CameraContext _cameraCtx)
 		{
 			// Ensure main material is loaded:
-			if (!VerifyOrLoadMaterial(MaterialHandle, ref material))
+			if (!ResourceLoadUtility.EnsureResourceIsLoaded(MaterialHandle, ref material, DontDrawUnlessFullyLoaded, out bool materialIsReady))
 			{
 				return false;
 			}
+			if (!materialIsReady) return true;
 
 			// Draw material if it's fully loaded, quietly quit otherwise:
-			return material == null || Draw(_cameraCtx, Material!, ref pipeline);
+			return material == null || Draw(_cameraCtx, Material!, ref pipeline, ref objectDataConstantBuffer);
 		}
 
 		public bool DrawShadowMap(CameraContext _cameraCtx)
 		{
 			// Ensure main material is loaded:
-			if (!VerifyOrLoadMaterial(MaterialHandle, ref material))
+			if (!ResourceLoadUtility.EnsureResourceIsLoaded(MaterialHandle, ref material, DontDrawUnlessFullyLoaded, out bool materialIsReady))
 			{
 				return false;
 			}
+			if (!materialIsReady) return true;
 
 			// Ensure shadow material is assigned and loaded:
 			if (!Material!.HasShadowMapMaterialVersion)
 			{
 				return true;
 			}
-			if (!VerifyOrLoadMaterial(Material.ShadowMapMaterialVersion, ref shadowMaterial))
+			if (!ResourceLoadUtility.EnsureResourceIsLoaded(Material.ShadowMapMaterialVersion, ref shadowMaterial, DontDrawUnlessFullyLoaded, out materialIsReady))
 			{
 				return false;
 			}
 
 			// Draw shadow material if it's fully loaded, quietly quit otherwise:
-			return Draw(_cameraCtx, shadowMaterial!, ref shadowPipeline);
+			return !materialIsReady || Draw(_cameraCtx, shadowMaterial!, ref shadowPipeline, ref shadowObjectDataConstantBuffer);
 		}
 
-		private bool Draw(CameraContext _cameraCtx, Material _overrideMaterial, ref VersionedMember<Pipeline> _pipeline)
+		private bool Draw(CameraContext _cameraCtx, Material _currentMaterial, ref VersionedMember<Pipeline> _currentPipeline, ref DeviceBuffer? _currentObjectDataConstantBuffer)
 		{
 			// Check mesh and load it now if necessary:
 			if (Mesh == null || Mesh.IsDisposed)
@@ -339,34 +319,34 @@ namespace FragEngine3.Graphics.Components
 			}
 
 			// Update or (re)create the constant buffer containing object data:
-			if (!MeshRendererUtility.UpdateObjectDataConstantBuffer(in core, in node, BoundingRadius, ref objectDataConstantBuffer, _cameraCtx.cmdList))
+			if (!MeshRendererUtility.UpdateObjectDataConstantBuffer(in core, in node, BoundingRadius, ref _currentObjectDataConstantBuffer, _cameraCtx.cmdList))
 			{
 				return false;
 			}
 
 			// Update (or recreate) pipeline for rendering this material and geometry combo:
-			if (!_overrideMaterial.IsPipelineUpToDate(in _pipeline, rendererVersion))
+			if (!_currentMaterial.IsPipelineUpToDate(in _currentPipeline, rendererVersion))
 			{
-				_pipeline.DisposeValue();
-				if (!_overrideMaterial.CreatePipeline(_cameraCtx, rendererVersion, vertexDataFlags, out _pipeline))
+				_currentPipeline.DisposeValue();
+				if (!_currentMaterial.CreatePipeline(_cameraCtx, rendererVersion, vertexDataFlags, out _currentPipeline))
 				{
-					Logger.LogError($"Failed to retrieve pipeline description for material '{_overrideMaterial}'!");
+					Logger.LogError($"Failed to retrieve pipeline description for material '{_currentMaterial}'!");
 					return false;
 				}
 			}
 
 			// Ensure the default resource set is assigned:
-			if (!MeshRendererUtility.UpdateDefaultResourceSet(_overrideMaterial, in _cameraCtx, in objectDataConstantBuffer!, ref defaultResourceSet))
+			if (!MeshRendererUtility.UpdateDefaultResourceSet(_currentMaterial, in _cameraCtx, in _currentObjectDataConstantBuffer!, ref defaultResourceSet))
 			{
 				return false;
 			}
 
 			// Throw pipeline and geometry buffers at the command list:
-			_cameraCtx.cmdList.SetPipeline(_pipeline.Value);
+			_cameraCtx.cmdList.SetPipeline(_currentPipeline.Value);
 			_cameraCtx.cmdList.SetGraphicsResourceSet(0, defaultResourceSet);
 
-			ResourceSet? boundResourceSet = overrideBoundResourceSet ?? _overrideMaterial.BoundResourceSet;
-			if (boundResourceSet != null && _overrideMaterial.BoundResourceLayout != null)
+			ResourceSet? boundResourceSet = overrideBoundResourceSet ?? _currentMaterial.BoundResourceSet;
+			if (boundResourceSet != null && _currentMaterial.BoundResourceLayout != null)
 			{
 				_cameraCtx.cmdList.SetGraphicsResourceSet(1, boundResourceSet);
 			}
