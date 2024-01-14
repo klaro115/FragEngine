@@ -80,7 +80,7 @@ namespace FragEngine3.Graphics.Components
 		// Shadow maps:
 		private CameraInstance? shadowCameraInstance = null;
 		private Framebuffer? shadowMapFrameBuffer = null;
-		private DeviceBuffer? shadowGlobalConstantBuffer = null;
+		private DeviceBuffer? shadowCbCamera = null;
 		private Matrix4x4 mtxShadowWorld2Clip = Matrix4x4.Identity;
 		private Matrix4x4 mtxShadowWorld2Uv = Matrix4x4.Identity;
 		private uint shadowMapIdx = 0;
@@ -138,10 +138,10 @@ namespace FragEngine3.Graphics.Components
 
 					shadowCameraInstance?.Dispose();
 					shadowMapFrameBuffer?.Dispose();
-					shadowGlobalConstantBuffer?.Dispose();
+					shadowCbCamera?.Dispose();
 					shadowCameraInstance = null;
 					shadowMapFrameBuffer = null;
-					shadowGlobalConstantBuffer = null;
+					shadowCbCamera = null;
 				}
 			}
 		}
@@ -203,7 +203,7 @@ namespace FragEngine3.Graphics.Components
 
 			shadowCameraInstance?.Dispose();
 			shadowMapFrameBuffer?.Dispose();
-			shadowGlobalConstantBuffer?.Dispose();
+			shadowCbCamera?.Dispose();
 		}
 
 		public override void ReceiveSceneEvent(SceneEventType _eventType, object? _eventData)
@@ -307,21 +307,28 @@ namespace FragEngine3.Graphics.Components
 			}
 
 			// Update or create global constant buffer with scene and camera information for the shaders:
-			if (!CameraUtility.UpdateGlobalConstantBuffer(
-				in node.scene,
-				shadowCameraInstance!,
+			if (!CameraUtility.UpdateConstantBuffer_CBCamera(
+				in shadowCameraInstance!,
 				node.WorldTransformation,
 				in mtxShadowWorld2Clip,
 				0,
-				ref shadowGlobalConstantBuffer))
+				0,
+				ref shadowCbCamera))
 			{
-				Logger.LogError("Failed to update global constant buffer for drawing light component's shadow map!");
+				Logger.LogError("Failed to update camera constant buffer for drawing light component's shadow map!");
 				_outCameraCtx = null!;
 				return false;
 			}
 
 			// Assemble context object for renderers to reference when issuing draw calls:
-			_outCameraCtx = new(shadowCameraInstance!, _cmdList, shadowGlobalConstantBuffer!, _dummyLightDataBuffer, _texShadowMapArray, shadowMapFrameBuffer.OutputDescription);
+			_outCameraCtx = new(
+				shadowCameraInstance!,
+				_cmdList,
+				shadowCbCamera!,
+				shadowMapFrameBuffer,
+				_dummyLightDataBuffer,
+				_texShadowMapArray,
+				shadowMapFrameBuffer.OutputDescription);
 
 			// Bind framebuffers and clear targets:
 			if (!shadowCameraInstance!.BeginDrawing(_cmdList, true, false, out _))
@@ -377,6 +384,18 @@ namespace FragEngine3.Graphics.Components
 
 			Matrix4x4 mtxClip2Uv = Matrix4x4.CreateViewportLeftHanded(0, 0, 1, 1, 0, 1);
 			mtxShadowWorld2Uv = mtxShadowWorld2Clip * mtxClip2Uv;
+		}
+
+		/// <summary>
+		/// Check whether light emitted by this light source has any chance of being seen by a given camera.
+		/// </summary>
+		/// <param name="_camera">The camera whose pixels may or may not be illuminated by this light source.</param>
+		/// <returns>True if this instance's light could possible be seen by the camera, false otherwise.</returns>
+		public bool CheckVisibilityByCamera(in Camera _camera)
+		{
+			if (_camera == null) return false;
+
+			return true;	//TEMP / TODO [later]
 		}
 
 		public override bool LoadFromData(in ComponentData _componentData, in Dictionary<int, ISceneElement> _idDataMap)

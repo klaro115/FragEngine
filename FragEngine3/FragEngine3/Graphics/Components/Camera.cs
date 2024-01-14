@@ -33,7 +33,7 @@ public sealed class Camera : Component
 	public uint layerMask = 0xFFFFu;
 
 	// Scene & Lighting:
-	private DeviceBuffer? globalConstantBuffer = null;
+	private DeviceBuffer? cbCamera = null;
 	private DeviceBuffer? lightDataBuffer = null;
 	private uint lightDataBufferCapacity = 0;
 
@@ -122,7 +122,7 @@ public sealed class Camera : Component
 
 		instance.Dispose();
 
-		globalConstantBuffer?.Dispose();
+		cbCamera?.Dispose();
 		lightDataBuffer?.Dispose();
 
 		if (_disposing)
@@ -130,7 +130,7 @@ public sealed class Camera : Component
 			targetDict.Clear();
 			overrideTarget = null;
 
-			globalConstantBuffer = null;
+			cbCamera = null;
 			lightDataBuffer = null;
 			lightDataBufferCapacity = 0;
 		}
@@ -246,6 +246,7 @@ public sealed class Camera : Component
 		RenderMode _renderMode,
 		bool _clearRenderTargets,
 		uint _activeLightCount,
+		uint _shadowMappedLightCount,
 		out CameraContext _outCameraCtx)
 	{
 		if (IsDisposed)
@@ -291,8 +292,10 @@ public sealed class Camera : Component
 			return false;
 		}
 
+		Framebuffer activeFramebuffer = activeTarget.framebuffer;
+
 		// Assign target's framebuffer as override to the camera instance:
-		if (!instance.SetOverrideFramebuffer(activeTarget.framebuffer, true))
+		if (!instance.SetOverrideFramebuffer(activeFramebuffer, true))
 		{
 			_outCameraCtx = null!;
 			return false;
@@ -309,24 +312,33 @@ public sealed class Camera : Component
 
 		Pose worldPose = node.WorldTransformation;
 
-		if (!CameraUtility.UpdateGlobalConstantBuffer(
-			in node.scene,
+		if (!CameraUtility.UpdateConstantBuffer_CBCamera(
 			in instance,
 			in worldPose,
 			in mtxWorld2Clip,
 			_activeLightCount,
-			ref globalConstantBuffer))
+			_shadowMappedLightCount,
+			ref cbCamera))
 		{
 			Logger.LogError("Failed to allocate or update camera's global constant buffer!");
 			_outCameraCtx = null!;
 			return false;
 		}
 
-		_outCameraCtx = new(instance, _cmdList, globalConstantBuffer!, lightDataBuffer!, _shadowMapArray!, activeTarget.framebuffer.OutputDescription);;
+		// Assemble camera context for rendering:
+		_outCameraCtx = new(
+			instance,
+			_cmdList,
+			cbCamera!,
+			activeFramebuffer,
+			lightDataBuffer!,
+			_shadowMapArray,
+			activeFramebuffer.OutputDescription);
+
 		return true;
 	}
 
-	public bool EndFrame(CommandList _)
+	public bool EndFrame()
 	{
 		if (IsDisposed)
 		{

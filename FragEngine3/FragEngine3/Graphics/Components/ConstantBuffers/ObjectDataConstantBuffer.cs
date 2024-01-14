@@ -4,6 +4,7 @@ using Veldrid;
 
 namespace FragEngine3.Graphics.Components.ConstantBuffers
 {
+	[Obsolete($"Replaced by {nameof(CBObject)}!")]
 	[Serializable]
 	[StructLayout(LayoutKind.Sequential, Pack = 4, Size = byteSize)]
 	public struct ObjectDataConstantBuffer

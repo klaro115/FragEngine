@@ -4,6 +4,7 @@ using Veldrid;
 
 namespace FragEngine3.Graphics.Components.ConstantBuffers
 {
+	[Obsolete($"Replaced by {nameof(CBScene)} and {nameof(CBCamera)}!")]
 	[Serializable]
 	[StructLayout(LayoutKind.Sequential, Size = byteSize)]
 	public struct GlobalConstantBuffer

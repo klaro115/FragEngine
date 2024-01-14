@@ -6,18 +6,20 @@ namespace FragEngine3.Graphics.Contexts
 	public sealed class CameraContext(
 		CameraInstance _camera,
 		CommandList _cmdList,
-		DeviceBuffer _globalConstantBuffer,
+		DeviceBuffer _cbCamera,
+		Framebuffer _activeFramebuffer,
 		DeviceBuffer _lightDataBuffer,
-		Texture _shadowMapArray,
+		Texture _texShadowMaps,
 		OutputDescription _outputDesc)
 	{
 		#region Fields
 
 		public readonly CameraInstance camera = _camera ?? throw new ArgumentNullException(nameof(_camera), "Camera instance may not be null!");
-		public readonly CommandList cmdList = _cmdList;
-		public readonly DeviceBuffer globalConstantBuffer = _globalConstantBuffer;
+		public readonly CommandList cmdList = _cmdList ?? throw new ArgumentNullException(nameof(_cmdList), "Command list may not be null!");
+		public readonly DeviceBuffer cbCamera = _cbCamera;
+		public readonly Framebuffer activeFramebuffer = _activeFramebuffer;
 		public readonly DeviceBuffer lightDataBuffer = _lightDataBuffer;
-		public readonly Texture shadowMapArray = _shadowMapArray;
+		public readonly Texture texShadowMaps = _texShadowMaps;
 		public readonly OutputDescription outputDesc = _outputDesc;
 		public readonly bool mirrorY = _camera.ProjectionSettings.mirrorY;
 
@@ -30,8 +32,10 @@ namespace FragEngine3.Graphics.Contexts
 		public bool IsValid =>
 			camera != null && !camera.IsDisposed &&
 			cmdList != null && !cmdList.IsDisposed &&
-			globalConstantBuffer != null && !globalConstantBuffer.IsDisposed &&
-			lightDataBuffer != null && !lightDataBuffer.IsDisposed;
+			cbCamera != null && !cbCamera.IsDisposed &&
+			activeFramebuffer != null && !activeFramebuffer.IsDisposed &&
+			lightDataBuffer != null && !lightDataBuffer.IsDisposed &&
+			texShadowMaps != null && !texShadowMaps.IsDisposed;
 
 		#endregion
 	}

@@ -2,25 +2,24 @@
 
 /****************** CONSTANTS: *****************/
 
-cbuffer CBGlobal : register(b0)
+// Constant buffer containing all settings that apply for everything drawn by currently active camera:
+cbuffer CBCamera : register(b1)
 {
-	// Camera vectors & matrices:
-    float4x4 mtxCamera;         // Camera's full projection matrix, transforming from world space to clip space coordinates.
-    float4 cameraPosition;      // Camera position, in world space.
-    float4 cameraDirection;     // Camera forward facing direction, in world space.
+    // Camera vectors & matrices:
+    float4x4 mtxWorld2Clip;         // Camera's full projection matrix, transforming from world space to clip space coordinates.
+    float4 cameraPosition;          // Camera position, in world space.
+    float4 cameraDirection;         // Camera forward facing direction, in world space.
 
 	// Camera parameters:
-    uint resolutionX;           // Render target width, in pixels.
-    uint resolutionY;           // Render target height, in pixels.
-    float nearClipPlane;        // Camera's near clipping plane distance.
-    float farClipPlane;         // Camera's far clipping plane distance.
+    uint cameraIdx;                 // Index of the currently drawing camera.
+    uint resolutionX;               // Render target width, in pixels.
+    uint resolutionY;               // Render target height, in pixels.
+    float nearClipPlane;            // Camera's near clipping plane distance.
+    float farClipPlane;             // Camera's far clipping plane distance.
 
-    // Lighting:
-    float4 ambientLightLow;
-    float4 ambientLightMid;
-    float4 ambientLightHigh;
-    uint lightCount;
-    float shadowFadeStart;      // Percentage of the shadow distance in projection space where they start fading out.
+    // Per-camera lighting:
+    uint lightCount;                // Total number of lights affecting this camera.
+    uint shadowMappedLightCount;    // Total number of lights that have a layer of the shadow map texture array assigned.
 };
 
 /**************** VERTEX OUTPUT: ***************/

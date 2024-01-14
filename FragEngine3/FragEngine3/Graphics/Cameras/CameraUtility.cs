@@ -10,6 +10,7 @@ namespace FragEngine3.Graphics.Cameras
 	{
 		#region Methods
 
+		[Obsolete("CB types replaced")]
 		public static bool UpdateGlobalConstantBuffer(
 			in Scene _scene,
 			in CameraInstance _cameraInstance,
@@ -62,6 +63,96 @@ namespace FragEngine3.Graphics.Cameras
 			};
 
 			_cameraInstance.graphicsCore.Device.UpdateBuffer(_globalConstantBuffer, 0, ref cbData, GlobalConstantBuffer.byteSize);
+
+			return true;
+		}
+
+		public static bool UpdateConstantBuffer_CBScene(
+			in GraphicsCore _graphicsCore,
+			in SceneSettings _sceneSettings,
+			ref DeviceBuffer? _cbScene)
+		{
+			// Ensure the buffer is allocated:
+			if (_cbScene == null || _cbScene.IsDisposed)
+			{
+				try
+				{
+					BufferDescription bufferDesc = new(CBScene.packedByteSize, BufferUsage.UniformBuffer | BufferUsage.Dynamic);
+
+					_cbScene = _graphicsCore.MainFactory.CreateBuffer(ref bufferDesc);
+					_cbScene.Name = CBScene.NAME_IN_SHADER;
+					return true;
+				}
+				catch (Exception ex)
+				{
+					_graphicsCore.graphicsSystem.engine.Logger.LogException("Failed to create camera's global constant buffer!", ex);
+					return false;
+				}
+			}
+
+			Vector3 ambientLightLow = _sceneSettings.AmbientLightIntensityLow;
+			Vector3 ambientLightMid = _sceneSettings.AmbientLightIntensityMid;
+			Vector3 ambientLightHigh = _sceneSettings.AmbientLightIntensityHigh;
+
+			CBScene cbData = new()
+			{
+				// Scene lighting:
+				ambientLightLow = new RgbaFloat(new(ambientLightLow, 0)),
+				ambientLightMid = new RgbaFloat(new(ambientLightMid, 0)),
+				ambientLightHigh = new RgbaFloat(new(ambientLightHigh, 0)),
+				shadowFadeStart = 0.9f,
+			};
+
+			_graphicsCore.Device.UpdateBuffer(_cbScene, 0, ref cbData, CBScene.byteSize);
+
+			return true;
+		}
+
+		public static bool UpdateConstantBuffer_CBCamera(
+			in CameraInstance _cameraInstance,
+			in Pose _cameraWorldPose,
+			in Matrix4x4 _mtxWorld2Clip,
+			uint _activeLightCount,
+			uint _shadowMappedLightCount,
+			ref DeviceBuffer? _cbCamera)
+		{
+			// Ensure the buffer is allocated:
+			if (_cbCamera == null || _cbCamera.IsDisposed)
+			{
+				try
+				{
+					BufferDescription bufferDesc = new(CBCamera.packedByteSize, BufferUsage.UniformBuffer | BufferUsage.Dynamic);
+
+					_cbCamera = _cameraInstance.graphicsCore.MainFactory.CreateBuffer(ref bufferDesc);
+					_cbCamera.Name = CBCamera.NAME_IN_SHADER;
+					return true;
+				}
+				catch (Exception ex)
+				{
+					_cameraInstance.graphicsCore.graphicsSystem.engine.Logger.LogException("Failed to create camera's global constant buffer!", ex);
+					return false;
+				}
+			}
+
+			CBCamera cbData = new()
+			{
+				// Camera vectors & matrices:
+				mtxWorld2Clip = _mtxWorld2Clip,
+				cameraPosition = new Vector4(_cameraWorldPose.position, 0),
+				cameraDirection = new Vector4(_cameraWorldPose.Forward, 0),
+
+				// Camera parameters:
+				resolutionX = _cameraInstance.OutputSettings.resolutionX,
+				resolutionY = _cameraInstance.OutputSettings.resolutionY,
+				nearClipPlane = _cameraInstance.ProjectionSettings.nearClipPlane,
+				farClipPlane = _cameraInstance.ProjectionSettings.farClipPlane,
+
+				// Per-camera lighting:
+				lightCount = _activeLightCount,
+				shadowMappedLightCount = Math.Min(_shadowMappedLightCount, _activeLightCount),
+			};
+
+			_cameraInstance.graphicsCore.Device.UpdateBuffer(_cbCamera, 0, ref cbData, CBCamera.byteSize);
 
 			return true;
 		}

@@ -23,8 +23,8 @@ namespace FragEngine3.Graphics.Components
 		private Material? material = null;
 		private Material? shadowMaterial = null;
 
-		private DeviceBuffer? objectDataConstantBuffer = null;
-		private DeviceBuffer? shadowObjectDataConstantBuffer = null;
+		private DeviceBuffer? cbObject = null;
+		private DeviceBuffer? shadowCbObject = null;
 		private ResourceSet? defaultResourceSet = null;
 		private VersionedMember<Pipeline> pipeline = new(null!, 0);
 		private VersionedMember<Pipeline> shadowPipeline = new(null!, 0);
@@ -66,16 +66,16 @@ namespace FragEngine3.Graphics.Components
 		{
 			base.Dispose(_disposing);
 
-			objectDataConstantBuffer?.Dispose();
-			shadowObjectDataConstantBuffer?.Dispose();
+			cbObject?.Dispose();
+			shadowCbObject?.Dispose();
 
 			pipeline.DisposeValue();
 			shadowPipeline.DisposeValue();
 
 			if (_disposing)
 			{
-				objectDataConstantBuffer = null;
-				shadowObjectDataConstantBuffer = null;
+				cbObject = null;
+				shadowCbObject = null;
 
 				MeshHandle = null;
 				Mesh = null;
@@ -250,7 +250,7 @@ namespace FragEngine3.Graphics.Components
 			return Vector3.DistanceSquared(posFront, _viewportPosition);
 		}
 
-		public bool Draw(CameraContext _cameraCtx)
+		public bool Draw(SceneContext _sceneCtx, CameraContext _cameraCtx)
 		{
 			// Ensure main material is loaded:
 			if (!ResourceLoadUtility.EnsureResourceIsLoaded(MaterialHandle, ref material, DontDrawUnlessFullyLoaded, out bool materialIsReady))
@@ -260,10 +260,10 @@ namespace FragEngine3.Graphics.Components
 			if (!materialIsReady) return true;
 
 			// Draw material if it's fully loaded, quietly quit otherwise:
-			return material == null || Draw(_cameraCtx, Material!, ref pipeline, ref objectDataConstantBuffer);
+			return material == null || Draw(_sceneCtx, _cameraCtx, Material!, ref pipeline, ref cbObject);
 		}
 
-		public bool DrawShadowMap(CameraContext _cameraCtx)
+		public bool DrawShadowMap(SceneContext _sceneCtx, CameraContext _cameraCtx)
 		{
 			// Ensure main material is loaded:
 			if (!ResourceLoadUtility.EnsureResourceIsLoaded(MaterialHandle, ref material, DontDrawUnlessFullyLoaded, out bool materialIsReady))
@@ -283,10 +283,10 @@ namespace FragEngine3.Graphics.Components
 			}
 
 			// Draw shadow material if it's fully loaded, quietly quit otherwise:
-			return !materialIsReady || Draw(_cameraCtx, shadowMaterial!, ref shadowPipeline, ref shadowObjectDataConstantBuffer);
+			return !materialIsReady || Draw(_sceneCtx, _cameraCtx, shadowMaterial!, ref shadowPipeline, ref shadowCbObject);
 		}
 
-		private bool Draw(CameraContext _cameraCtx, Material _currentMaterial, ref VersionedMember<Pipeline> _currentPipeline, ref DeviceBuffer? _currentObjectDataConstantBuffer)
+		private bool Draw(SceneContext _sceneCtx, CameraContext _cameraCtx, Material _currentMaterial, ref VersionedMember<Pipeline> _currentPipeline, ref DeviceBuffer? _cbObject)
 		{
 			// Check mesh and load it now if necessary:
 			if (Mesh == null || Mesh.IsDisposed)
@@ -319,7 +319,12 @@ namespace FragEngine3.Graphics.Components
 			}
 
 			// Update or (re)create the constant buffer containing object data:
-			if (!MeshRendererUtility.UpdateObjectDataConstantBuffer(in core, in node, BoundingRadius, ref _currentObjectDataConstantBuffer, _cameraCtx.cmdList))
+			if (!MeshRendererUtility.UpdateConstantBuffer_CBObject(
+				in core,
+				in node,
+				BoundingRadius,
+				ref _cbObject,
+				_cameraCtx.cmdList))
 			{
 				return false;
 			}
@@ -336,7 +341,12 @@ namespace FragEngine3.Graphics.Components
 			}
 
 			// Ensure the default resource set is assigned:
-			if (!MeshRendererUtility.UpdateDefaultResourceSet(_currentMaterial, in _cameraCtx, in _currentObjectDataConstantBuffer!, ref defaultResourceSet))
+			if (!MeshRendererUtility.UpdateDefaultResourceSet(
+				_currentMaterial,
+				in _sceneCtx,
+				in _cameraCtx,
+				in _cbObject!,
+				ref defaultResourceSet))
 			{
 				return false;
 			}

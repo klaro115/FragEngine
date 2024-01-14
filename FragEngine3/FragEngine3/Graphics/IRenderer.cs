@@ -65,7 +65,7 @@ namespace FragEngine3.Graphics
 		/// <param name="_cameraCtx">Context object for drawing stuff. This includes the command list that
 		/// draw calls should be written into.</param>
 		/// <returns>True if draw calls were issued, false otherwise.</returns>
-		bool Draw(CameraContext _cameraCtx);
+		bool Draw(SceneContext _sceneCtx, CameraContext _cameraCtx);
 		/// <summary>
 		/// Requests the renderer to generate draw calls by writing them into the given command list,
 		/// but specialized for drawing shadow maps.<para/>
@@ -73,7 +73,7 @@ namespace FragEngine3.Graphics
 		/// </summary>
 		/// <param name="_cameraCtx"></param>
 		/// <returns>True if draw calls were issued (or if shadow casting is not supported), false otherwise.</returns>
-		bool DrawShadowMap(CameraContext _cameraCtx);
+		bool DrawShadowMap(SceneContext _sceneCtx, CameraContext _cameraCtx);
 
 		#endregion
 	}

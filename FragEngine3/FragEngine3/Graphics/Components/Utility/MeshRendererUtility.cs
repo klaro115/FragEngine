@@ -10,6 +10,7 @@ namespace FragEngine3.Graphics.Components.Utility
 	{
 		#region Methods
 
+		[Obsolete("Replaced after CBObject was introduced.")]
 		public static bool UpdateObjectDataConstantBuffer(
 			in GraphicsCore _core,
 			in SceneNode _node,
@@ -47,10 +48,48 @@ namespace FragEngine3.Graphics.Components.Utility
 			return true;
 		}
 
+		public static bool UpdateConstantBuffer_CBObject(
+			in GraphicsCore _core,
+			in SceneNode _node,
+			float _boundingRadius,
+			ref DeviceBuffer? _cbObject,
+			CommandList _cmdList)
+		{
+			if (_cbObject == null || _cbObject.IsDisposed)
+			{
+				BufferDescription constantBufferDesc = new(CBObject.packedByteSize, BufferUsage.UniformBuffer | BufferUsage.Dynamic);
+
+				try
+				{
+					_cbObject = _core.MainFactory.CreateBuffer(ref constantBufferDesc);
+					_cbObject.Name = CBObject.NAME_IN_SHADER;
+				}
+				catch (Exception ex)
+				{
+					_core.graphicsSystem.engine.Logger.LogException($"Failed to recreate object data constant buffer for renderer of node '{_node.Name}'!", ex);
+					return false;
+				}
+			}
+
+			Pose worldPose = _node.WorldTransformation;
+
+			CBObject objectData = new()
+			{
+				mtxLocal2World = worldPose.Matrix,
+				worldPosition = worldPose.position,
+				boundingRadius = _boundingRadius,
+			};
+
+			_cmdList.UpdateBuffer(_cbObject, 0, ref objectData, CBObject.byteSize);
+
+			return true;
+		}
+
 		public static bool UpdateDefaultResourceSet(
 			in Material _material,
+			in SceneContext _sceneCtx,
 			in CameraContext _cameraCtx,
-			in DeviceBuffer _objectDataConstantBuffer,
+			in DeviceBuffer _cbObject,
 			ref ResourceSet? _defaultResourceSet)
 		{
 			if (_defaultResourceSet == null || _defaultResourceSet.IsDisposed)
@@ -60,10 +99,11 @@ namespace FragEngine3.Graphics.Components.Utility
 
 				ResourceSetDescription resourceSetDesc = new(
 					_material.ResourceLayout,
-					_cameraCtx.globalConstantBuffer,
-					_objectDataConstantBuffer,
+					_sceneCtx.cbScene,
+					_cameraCtx.cbCamera,
+					_cbObject,
 					_cameraCtx.lightDataBuffer,
-					_cameraCtx.shadowMapArray);
+					_cameraCtx.texShadowMaps);
 
 				try
 				{
