@@ -628,14 +628,14 @@ namespace FragEngine3.Graphics.Resources
 					EnableDepthWrite = dsd.enableDepthWrite,
 
 					EnableStencil = dsd.enableStencil,
-					StencilFront = new()
+					StencilFront = new MaterialData.StencilBehaviourData()
 					{
 						Fail = dsd.stencilBehaviour.stencilFront.Fail,
 						Pass = dsd.stencilBehaviour.stencilFront.Pass,
 						DepthFail = dsd.stencilBehaviour.stencilFront.DepthFail,
 						ComparisonKind = dsd.stencilBehaviour.stencilFront.Comparison,
 					},
-					StencilBack = new()
+					StencilBack = new MaterialData.StencilBehaviourData()
 					{
 						Fail = dsd.stencilBehaviour.stencilBack.Fail,
 						Pass = dsd.stencilBehaviour.stencilBack.Pass,
@@ -652,7 +652,7 @@ namespace FragEngine3.Graphics.Resources
 					ZSortingBias = rmd.zSortingBias,
 				},
 
-				Shaders = new()
+				Shaders = new MaterialData.ShaderData()
 				{
 					IsSurfaceMaterial = true,
 					Compute = string.Empty,
@@ -663,18 +663,25 @@ namespace FragEngine3.Graphics.Resources
 					Pixel = pixelShader.resourceKey,
 				},
 
-				Replacements = new()
+				Replacements = new MaterialData.ReplacementData()
 				{
 					SimplifiedVersion = SimplifiedMaterialVersion?.resourceKey ?? string.Empty,
 					ShadowMap = ShadowMapMaterialVersion?.resourceKey ?? string.Empty,
 				},
 
-				Resources = new()
+				Resources = new MaterialData.ResourceData()
 				{
 					// TODO
 				},
 			};
 			return _outData.IsValid();
+		}
+
+		public override string ToString()
+		{
+			string simplifiedVersionTxt = HasSimplifiedMaterialVersion ? $", Simplified={SimplifiedMaterialVersion!.resourceKey}" : string.Empty;
+			string shadowVersionTxt = HasShadowMapMaterialVersion ? $", Shadow={ShadowMapMaterialVersion!.resourceKey}" : string.Empty;
+			return $"{resourceKey}{simplifiedVersionTxt}{shadowVersionTxt}";
 		}
 
 		#endregion

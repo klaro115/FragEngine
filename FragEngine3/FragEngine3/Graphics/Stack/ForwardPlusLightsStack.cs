@@ -75,6 +75,7 @@ namespace FragEngine3.Graphics.Stack
 		private readonly List<Camera> activeCameras = new(2);
 		private readonly List<Light> activeLights = new(10);
 		private readonly List<Light> activeLightsShadowMapped = new(5);
+		private LightSourceData[] activeLightData = [];
 
 		private readonly List<IRenderer> activeRenderersOpaque = new(128);
 		private readonly List<IRenderer> activeRenderersTransparent = new(128);
@@ -227,6 +228,16 @@ namespace FragEngine3.Graphics.Stack
 				}
 			}
 
+			if (texShadowMaps == null || texShadowMaps.IsDisposed || texShadowMapsCapacity == 0)
+			{
+				if (!core.CreateShadowMapArray(1024, 1024, 1, out texShadowMaps))
+				{
+					Logger.LogError("Failed to create initial shadow map texture array for graphics stack!");
+					return false;
+				}
+				texShadowMapsCapacity = 1;
+			}
+
 			Logger.LogMessage($"Initialized graphics stack of type '{nameof(ForwardPlusLightsStack)}' for scene '{Scene.Name}'.");
 
 			isDrawing = false;
@@ -365,7 +376,8 @@ namespace FragEngine3.Graphics.Stack
 
 			// Draw each active camera component in the scene, and composite output:
 			success &= DrawSceneCameras(
-				in sceneCtx);
+				in sceneCtx,
+				maxActiveLightCount);
 
 			isDrawing = false;
 			return success;
@@ -404,6 +416,16 @@ namespace FragEngine3.Graphics.Stack
 						break;
 					}
 				}
+			}
+
+			// Gather light data for each active light source:
+			if (activeLightData.Length < activeLights.Count)
+			{
+				activeLightData = new LightSourceData[activeLights.Count];
+			}
+			for (int i = 0; i < activeLights.Count; ++i)
+			{
+				activeLightData[i] = activeLights[i].GetLightSourceData();
 			}
 
 			// Identify only visible renderers:
@@ -541,7 +563,7 @@ namespace FragEngine3.Graphics.Stack
 			return success;
 		}
 
-		private bool DrawSceneCameras(in SceneContext _sceneCtx)
+		private bool DrawSceneCameras(in SceneContext _sceneCtx, uint _maxActiveLightCount)
 		{
 			bool success = true;
 
@@ -556,9 +578,17 @@ namespace FragEngine3.Graphics.Stack
 
 			foreach (Camera camera in activeCameras)
 			{
+				uint activeLightCount = (uint)activeLights.Count;
+				if (!camera.GetLightDataBuffer(activeLightCount, out DeviceBuffer? lightDataBuffer))
+				{
+					success = false;
+					continue;
+				}
+
 				bool result = true;
 
-				camera.SetOverrideCameraTarget(null);
+				result &= camera.SetOverrideCameraTarget(null);
+				result &= CameraUtility.UpdateLightDataBuffer(in core, in lightDataBuffer!, in activeLightData, activeLightCount, _maxActiveLightCount);
 
 				result &= DrawSceneRenderers(in _sceneCtx, cmdList, camera, RenderMode.Opaque, activeRenderersOpaque, true);
 				result &= DrawSceneRenderers(in _sceneCtx, cmdList, camera, RenderMode.Transparent, activeRenderersTransparent, false);

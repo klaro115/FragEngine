@@ -196,6 +196,28 @@ namespace FragEngine3.Graphics.Cameras
 			return true;
 		}
 
+		public static bool UpdateLightDataBuffer(
+			in GraphicsCore _graphicsCore,
+			in DeviceBuffer _lightDataBuffer,
+			in LightSourceData[] _lightData,
+			uint _lightDataBufferCapacity,
+			uint _maxActiveLightCount)
+		{
+			uint maxLightCount = Math.Min(_lightDataBufferCapacity, _maxActiveLightCount);
+			int copyCount = Math.Min(_lightData.Length, (int)maxLightCount);
+
+			if (copyCount == _lightData.Length)
+			{
+				_graphicsCore.Device.UpdateBuffer(_lightDataBuffer, 0, _lightData);
+			}
+			else
+			{
+				ReadOnlySpan<LightSourceData> lightDataSpan = new(_lightData, 0, copyCount);
+				_graphicsCore.Device.UpdateBuffer(_lightDataBuffer, 0, lightDataSpan);
+			}
+			return true;
+		}
+
 		public static bool UpdateOrCreateShadowMapCameraInstance(
 			in GraphicsCore _graphicsCore,
 			in Framebuffer _shadowMapFramebuffer,
