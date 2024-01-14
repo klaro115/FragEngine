@@ -45,13 +45,11 @@ namespace FragEngine3.Graphics.Resources
 		{
 			public RenderMode renderMode;
 			public float zSortingBias;
-			public bool castShadows;
 
 			public static RenderModeDesc Default => new()
 			{
 				renderMode = RenderMode.Opaque,
 				zSortingBias = 0.0f,
-				castShadows = true,
 			};
 		}
 
@@ -411,8 +409,15 @@ namespace FragEngine3.Graphics.Resources
 				Pipeline pipeline = core.MainFactory.CreateGraphicsPipeline(ref pipelineDesc);
 				uint newPipelineVersion = materialVersion ^ _rendererVersion;
 
-				PixelFormat colorFormat = _cameraCtx.outputDesc.ColorAttachments[0].Format;
-				pipeline.Name = $"{resourceKey}_{colorFormat}";
+				if (_cameraCtx.outputDesc.ColorAttachments != null && _cameraCtx.outputDesc.ColorAttachments.Length != 0)
+				{
+					PixelFormat colorFormat = _cameraCtx.outputDesc.ColorAttachments[0].Format;
+					pipeline.Name = $"{resourceKey}_{colorFormat}";
+				}
+				else
+				{
+					pipeline.Name = $"{resourceKey}_DepthOnly";
+				}
 
 				_outPipeline = new(pipeline, newPipelineVersion);
 				return true;
@@ -578,7 +583,6 @@ namespace FragEngine3.Graphics.Resources
 				{
 					renderMode = data.States.RenderMode,
 					zSortingBias = data.States.ZSortingBias,
-					castShadows = data.States.CastShadows,
 				}, 0),
 
 				UseExternalBoundResources = useExternalBoundResources,
@@ -646,7 +650,6 @@ namespace FragEngine3.Graphics.Resources
 
 					RenderMode = rmd.renderMode,
 					ZSortingBias = rmd.zSortingBias,
-					CastShadows = rmd.castShadows,
 				},
 
 				Shaders = new()

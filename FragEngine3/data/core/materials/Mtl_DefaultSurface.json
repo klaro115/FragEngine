@@ -23,8 +23,7 @@
 
         "EnableCulling": true,
         "RenderMode": 1,
-        "ZSortingBias": 0.0,
-        "CastShadows": true
+        "ZSortingBias": 0.0
     },
     "Shaders":
     {
@@ -39,7 +38,7 @@
     "Replacements":
     {
         "SimplifiedVersion": "",
-        "ShadowMap": ""
+        "ShadowMap": "Mtl_DefaultShadow"
     },
     "Resources":
     {

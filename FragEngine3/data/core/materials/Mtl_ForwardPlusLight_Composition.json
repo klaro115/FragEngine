@@ -23,8 +23,7 @@
 
         "EnableCulling": false,
         "RenderMode": 4,
-        "ZSortingBias": 0.0,
-        "CastShadows": false
+        "ZSortingBias": 0.0
     },
     "Shaders":
     {

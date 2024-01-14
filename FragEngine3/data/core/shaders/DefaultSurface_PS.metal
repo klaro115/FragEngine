@@ -77,10 +77,11 @@ half3 CalculateAmbientLight(
 }
 
 half4 fragment Main_Pixel(
-    VertexOutput_Basic inputBasic       [[ stage_in ]],
-    device const CBGlobal& cbGlobal     [[ buffer( 1 ) ]],
-    device const CBObject& cbObject     [[ buffer( 2 ) ]],
-    device const Light* BufLights       [[ buffer( 3 ) ]])
+    VertexOutput_Basic inputBasic                       [[ stage_in ]],
+    device const CBGlobal& cbGlobal                     [[ buffer( 1 ) ]],
+    device const CBObject& cbObject                     [[ buffer( 2 ) ]],
+    device const Light* BufLights                       [[ buffer( 3 ) ]],
+    texture2d_array<half, access::sample> TexShadowMaps [[ texture( 0 ) ]])
 {
     half4 albedo = {1, 1, 1, 1};
 

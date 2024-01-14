@@ -38,7 +38,7 @@ struct VertexOutput_Basic
 struct PixelOutput
 {
     half4 color : SV_Target0;
-    //float depth : SV_Depth;
+    float depth : SV_Depth;
 };
 
 /****************** TEXTURES: ******************/
@@ -83,6 +83,6 @@ PixelOutput Main_Pixel(in VertexOutput_Basic inputBasic)
     // Assemble final output:
     PixelOutput o;
     o.color = colFinal;
-    //o.depth = depthFinal;
+    o.depth = depthFinal;
     return o;
 }

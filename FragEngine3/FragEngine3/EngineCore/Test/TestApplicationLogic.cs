@@ -86,7 +86,7 @@ namespace FragEngine3.EngineCore.Test
 			
 			// Set ambient lighting:
 			scene.settings.AmbientLightIntensityLow = new(0.18f, 0.16f, 0.12f);
-			scene.settings.AmbientLightIntensityMid = new(0.13f, 0.14f, 0.17f);
+			scene.settings.AmbientLightIntensityMid = new(0.15f, 0.15f, 0.15f);
 			scene.settings.AmbientLightIntensityHigh = new(0.17f, 0.17f, 0.25f);
 
 			// Create a camera:

@@ -1,5 +1,5 @@
 {
-    "Key": "Mtl_TestMaterial",
+    "Key": "Mtl_DefaultShadow",
     "States":
     {
         "EnableDepthTest": true,
@@ -29,11 +29,11 @@
     {
         "IsSurfaceMaterial": true,
         "Compute": "",
-        "Vertex": "Test_VS",
+        "Vertex": "DefaultSurface_VS",
         "Geometry": "",
         "TesselationCtrl": "",
         "TesselationEval": "",
-        "Pixel": "Test_PS"
+        "Pixel": "DefaultShadow_PS"
     },
     "Replacements":
     {

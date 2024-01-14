@@ -1,4 +1,5 @@
 ﻿using FragEngine3.EngineCore;
+using FragEngine3.Graphics.Cameras;
 using FragEngine3.Graphics.Components;
 using FragEngine3.Graphics.Components.ConstantBuffers;
 using FragEngine3.Graphics.Components.Internal;
@@ -79,6 +80,7 @@ namespace FragEngine3.Graphics.Stack
 
 		// Shadow maps:
 		private Texture? texShadowMapArray = null;
+		private DeviceBuffer? dummyLightDataBuffer = null;
 
 		// Output composition:
 		private ResourceSet? compositionResourceSet = null;
@@ -130,6 +132,7 @@ namespace FragEngine3.Graphics.Stack
 			IsDisposed = true;
 
 			texShadowMapArray?.Dispose();
+			dummyLightDataBuffer?.Dispose();
 			compositionResourceSet?.Dispose();
 
 			foreach (RendererList rendererList in rendererListPool)
@@ -216,6 +219,9 @@ namespace FragEngine3.Graphics.Stack
 				// This 'empty' placeholder array is populated with only a tiny 8x8 placeholder.
 			}
 
+			uint dummyLightDataBufferCapacity = 0;
+			CameraUtility.VerifyOrCreateLightDataBuffer(in core, 1, ref dummyLightDataBuffer, ref dummyLightDataBufferCapacity);
+
 			Logger.LogMessage($"Initialized graphics stack of type '{nameof(ForwardPlusLightsStack)}' for scene '{Scene.Name}'.");
 
 			isDrawing = false;
@@ -235,6 +241,8 @@ namespace FragEngine3.Graphics.Stack
 					compositionRenderer = null;
 				}
 
+				texShadowMapArray?.Dispose();
+				dummyLightDataBuffer?.Dispose();
 				compositionResourceSet?.Dispose();
 
 				cameraLightBuffer.Clear();
@@ -333,7 +341,7 @@ namespace FragEngine3.Graphics.Stack
 			uint maxActiveLightCount = Math.Max(core.graphicsSystem.Settings.MaxActiveLightCount, 1);
 
 			// Identify (main) camera focal point:
-			float cameraFocalRadius;
+			float renderFocalRadius;
 			Vector3 renderFocalPoint;
 			{
 				Camera mainCamera = Camera.MainCamera ?? _cameras[0];
@@ -343,49 +351,17 @@ namespace FragEngine3.Graphics.Stack
 
 				float cameraFarClipPlane = mainCamera.ProjectionSettings.farClipPlane;
 				Pose cameraWorldPose = mainCamera.node.WorldTransformation;
-				cameraFocalRadius = cameraFarClipPlane * renderFocalRadiusFraction;
+				renderFocalRadius = cameraFarClipPlane * renderFocalRadiusFraction;
 				renderFocalPoint = cameraWorldPose.position + cameraWorldPose.Forward * cameraFarClipPlane * renderFocalPointLocus;
 			}
 
 			// Draw shadow maps for all shadow-casting light sources:
+			success &= DrawShadowMaps(in _renderers, in _lights, renderFocalPoint, renderFocalRadius);
+			if (!success)
 			{
-				//TODO 1: Move shadow map rendering to its own function.
-				//TODO 2: Consider gathering list of active/relevant shadow-casting lights first.
-				//TODO 3: Resize shadow map texture array as needed to match active/valid shadow-casting lights count. (plus 1 layer for default/empty map)
-
-				GetRendererList(out RendererList lightList);
-
-				uint lightArrayIdx = 0;
-
-				lightList.cmdList.Begin();
-
-				foreach (Light light in _lights)
-				{
-					if (light.layerMask != 0 && light.CastShadows && light.node.IsEnabledInHierarchy())
-					{
-						success &= light.BeginDrawShadowMap(
-							in lightList.cmdList,
-							in texShadowMapArray!,
-							renderFocalPoint,
-							cameraFocalRadius,
-							lightArrayIdx);
-						if (!success) continue;
-
-						//TODO 1: Move renderer draw calls and render mode logic to its own method, so it may be accessed by shadow map rendering and scene rendering!
-						//TODO 2: Draw shadow-receiving scene renderers.
-
-						success &= light.EndDrawShadowMap();
-						lightArrayIdx++;
-					}
-				}
-
-				lightList.cmdList.End();
-				if (lightArrayIdx == 1)
-				{
-					core.CommitCommandList(lightList.cmdList);
-				}
+				return false;
 			}
-
+			
 			// Draw scene for each of the scene's active cameras:
 			for (int i = 0; i < _cameras.Count; ++i)
 			{
@@ -461,6 +437,53 @@ namespace FragEngine3.Graphics.Stack
 
 			_outRendererList.Clear();
 			return true;
+		}
+
+		private bool DrawShadowMaps(in List<IRenderer> _renderers, in IList<Light> _lights, Vector3 renderFocalPoint, float renderFocalRadius)
+		{
+			bool success = true;
+
+			//TODO 1: Consider gathering list containing only active/relevant shadow-casting lights first.
+			//TODO 2: Resize shadow map texture array as needed to match active/valid shadow-casting lights count. (plus 1 layer for default/empty map)
+
+			// Use an incremental ID counter to map texture array layers to lights:
+			uint lightArrayIdx = 0;			//TODO: Use more persistent per-instance IDs to map same layer to same light, or use override framebuffers in lights after mapping to different ID/layer.
+
+			GetRendererList(out RendererList lightList);
+			lightList.cmdList.Begin();
+
+			foreach (Light light in _lights)
+			{
+				if (light.layerMask == 0 || !light.CastShadows || !light.node.IsEnabledInHierarchy()) continue;
+
+				success &= light.BeginDrawShadowMap(
+					in lightList.cmdList,
+					in texShadowMapArray!,
+					in dummyLightDataBuffer!,
+					renderFocalPoint,
+					renderFocalRadius,
+					lightArrayIdx,
+					out CameraContext lightCtx);
+
+				// Draw list of renderers:
+				if (_renderers.Count != 0)
+				{
+					foreach (IRenderer renderer in _renderers)
+					{
+						FailedRendererCount += renderer.DrawShadowMap(lightCtx) ? 0 : 1;
+					}
+				}
+
+				success &= light.EndDrawShadowMap();
+				lightArrayIdx++;
+			}
+
+			lightList.cmdList.End();
+			if (lightArrayIdx == 1)
+			{
+				core.CommitCommandList(lightList.cmdList);
+			}
+			return success;
 		}
 
 		private bool TryRenderCamera(Scene _scene, List<IRenderer> _renderers, Camera _camera, uint _maxActiveLightCount, out uint _outActiveLightCount)

@@ -80,6 +80,7 @@ namespace FragEngine3.Graphics.Components
 		// Shadow maps:
 		private CameraInstance? shadowCameraInstance = null;
 		private Framebuffer? shadowMapFrameBuffer = null;
+		private DeviceBuffer? shadowGlobalConstantBuffer = null;
 		private Matrix4x4 mtxShadowWorld2Clip = Matrix4x4.Identity;
 		private Matrix4x4 mtxShadowWorld2Uv = Matrix4x4.Identity;
 		private uint shadowMapIdx = 0;
@@ -136,9 +137,11 @@ namespace FragEngine3.Graphics.Components
 					shadowMapIdx = 0;
 
 					shadowCameraInstance?.Dispose();
-					shadowCameraInstance = null;
 					shadowMapFrameBuffer?.Dispose();
+					shadowGlobalConstantBuffer?.Dispose();
+					shadowCameraInstance = null;
 					shadowMapFrameBuffer = null;
+					shadowGlobalConstantBuffer = null;
 				}
 			}
 		}
@@ -200,6 +203,7 @@ namespace FragEngine3.Graphics.Components
 
 			shadowCameraInstance?.Dispose();
 			shadowMapFrameBuffer?.Dispose();
+			shadowGlobalConstantBuffer?.Dispose();
 		}
 
 		public override void ReceiveSceneEvent(SceneEventType _eventType, object? _eventData)
@@ -229,15 +233,30 @@ namespace FragEngine3.Graphics.Components
 			};
 		}
 
-		public bool BeginDrawShadowMap(in CommandList _cmdList, in Texture _texShadowMapArray, Vector3 _shadingFocalPoint, float _shadingFocalPointRadius, uint _newShadowMapIdx)
+		public bool BeginDrawShadowMap(
+			in CommandList _cmdList,
+			in Texture _texShadowMapArray,
+			in DeviceBuffer _dummyLightDataBuffer,
+			Vector3 _shadingFocalPoint,
+			float _shadingFocalPointRadius,
+			uint _newShadowMapIdx,
+			out CameraContext _outCameraCtx)
 		{
+			if (IsDisposed)
+			{
+				_outCameraCtx = null!;
+				Logger.LogError("Can't begin drawing shadow map for disposed light source!");
+				return false;
+			}
 			if (!CastShadows)
 			{
+				_outCameraCtx = null!;
 				return false;
 			}
 			if (_texShadowMapArray == null || _texShadowMapArray.IsDisposed)
 			{
 				Logger.LogError("Can't begin drawing shadow map using null shadow map texture array!");
+				_outCameraCtx = null!;
 				return false;
 			}
 
@@ -264,6 +283,7 @@ namespace FragEngine3.Graphics.Components
 					shadowMapFrameBuffer?.Dispose();
 					shadowMapFrameBuffer = null;
 					Logger.LogException("Failed to create framebuffer for drawing light component's shadow map!", ex);
+				_outCameraCtx = null!;
 					return false;
 				}
 			}
@@ -281,9 +301,27 @@ namespace FragEngine3.Graphics.Components
 					spotAngleRad,
 					ref shadowCameraInstance))
 				{
+					_outCameraCtx = null!;
 					return false;
 				}
 			}
+
+			// Update or create global constant buffer with scene and camera information for the shaders:
+			if (!CameraUtility.UpdateGlobalConstantBuffer(
+				in node.scene,
+				shadowCameraInstance!,
+				node.WorldTransformation,
+				in mtxShadowWorld2Clip,
+				0,
+				ref shadowGlobalConstantBuffer))
+			{
+				Logger.LogError("Failed to update global constant buffer for drawing light component's shadow map!");
+				_outCameraCtx = null!;
+				return false;
+			}
+
+			// Assemble context object for renderers to reference when issuing draw calls:
+			_outCameraCtx = new(shadowCameraInstance!, _cmdList, shadowGlobalConstantBuffer!, _dummyLightDataBuffer, _texShadowMapArray, shadowMapFrameBuffer.OutputDescription);
 
 			// Bind framebuffers and clear targets:
 			if (!shadowCameraInstance!.BeginDrawing(_cmdList, true, false, out _))

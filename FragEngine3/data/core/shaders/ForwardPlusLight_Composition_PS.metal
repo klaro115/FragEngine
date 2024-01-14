@@ -49,11 +49,11 @@ struct VertexOutput_Basic
 half4 fragment Main_Pixel(
     VertexOutput_Basic inputBasic                       [[ stage_in ]],
     device const CBGlobal& cbGlobal                     [[ buffer( 1 ) ]],
-    texture2d<half, access::read> TexOpaqueColor        [[ texture( 0 ) ]],
-    texture2d<float, access::read> TexOpaqueDepth       [[ texture( 1 ) ]],
-    texture2d<half, access::read> TexTransparentColor   [[ texture( 2 ) ]],
-    texture2d<float, access::read> TexTransparentDepth  [[ texture( 3 ) ]],
-    texture2d<half, access::read> TexUIColor            [[ texture( 4 ) ]])
+    texture2d<half, access::read> TexOpaqueColor        [[ texture( 1 ) ]],     // texture slot 0 occupied by shadow maps
+    texture2d<float, access::read> TexOpaqueDepth       [[ texture( 2 ) ]],
+    texture2d<half, access::read> TexTransparentColor   [[ texture( 3 ) ]],
+    texture2d<float, access::read> TexTransparentDepth  [[ texture( 4 ) ]],
+    texture2d<half, access::read> TexUIColor            [[ texture( 5 ) ]])
 {
     // Determine source pixel location from fullscreen quad's UV:
     uint2 posPixel = (uint2)(inputBasic.uv * float2(cbGlobal.resolutionX, cbGlobal.resolutionY));

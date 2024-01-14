@@ -20,9 +20,13 @@ namespace FragEngine3.Graphics.Components
 
 		private uint rendererVersion = 1;
 
+		private Material? material = null;
+		private Material? shadowMaterial = null;
+
 		private DeviceBuffer? objectDataConstantBuffer = null;
 		private ResourceSet? defaultResourceSet = null;
 		private VersionedMember<Pipeline> pipeline = new(null!, 0);
+		private VersionedMember<Pipeline> shadowPipeline = new(null!, 0);
 
 		private ResourceSet? overrideBoundResourceSet = null;
 
@@ -41,7 +45,8 @@ namespace FragEngine3.Graphics.Components
 		/// Gets a handle to the material resource that is used to draw this renderer's mesh. A material provides shaders, texture, and lighting instructions.
 		/// </summary>
 		public ResourceHandle? MaterialHandle { get; private set; } = null;
-		public Material? Material { get; private set; } = null;
+		public Material? Material => material;
+		public Material? ShadowMaterial => shadowMaterial;
 
 		/// <summary>
 		/// Gets a handle to mesh resource that is drawn by this renderer. A mesh provides the surface geometry of a 3D model.
@@ -64,13 +69,15 @@ namespace FragEngine3.Graphics.Components
 			objectDataConstantBuffer = null;
 
 			pipeline.DisposeValue();
+			shadowPipeline.DisposeValue();
 
 			if (_disposing)
 			{
 				MeshHandle = null;
 				Mesh = null;
 				MaterialHandle = null;
-				Material = null;
+				material = null;
+				shadowMaterial = null;
 			}
 		}
 
@@ -171,13 +178,13 @@ namespace FragEngine3.Graphics.Components
 			}
 
 			// If the material is already loaded, assign it right away:
-			if (_materialHandle.GetResource(_loadImmediatelyIfNotReady) is Material material && !material.IsDisposed)
+			if (_materialHandle.GetResource(_loadImmediatelyIfNotReady) is Material newMaterial && !newMaterial.IsDisposed)
 			{
-				Material = material;
+				material = newMaterial;
 			}
 			else
 			{
-				Material = null;
+				material = null;
 			}
 
 			// Assign handle:
@@ -206,7 +213,7 @@ namespace FragEngine3.Graphics.Components
 			}
 
 			// Assign material:
-			Material = _material;
+			material = _material;
 			rendererVersion++;
 			return true;
 		}
@@ -239,7 +246,67 @@ namespace FragEngine3.Graphics.Components
 			return Vector3.DistanceSquared(posFront, _viewportPosition);
 		}
 
+		private bool VerifyOrLoadMaterial(ResourceHandle? _materialHandle, ref Material? _material)
+		{
+			// Check material and load it now if necessary:
+			if (_material == null || _material.IsDisposed)
+			{
+				if (_materialHandle == null || !_materialHandle.IsValid || _materialHandle.resourceType != ResourceType.Material)
+				{
+					return false;
+				}
+				// Abort drawing until material is ready, queue it up for background loading:
+				if (DontDrawUnlessFullyLoaded && !_materialHandle.IsLoaded)
+				{
+					if (_materialHandle.LoadState == ResourceLoadState.NotLoaded) _materialHandle.Load(false);
+					return true;
+				}
+
+				if (_materialHandle.GetResource(true, true) is not Material material || !material.IsLoaded)
+				{
+					Logger.LogError($"Failed to load material resource from handle '{_materialHandle}'!");
+					return false;
+				}
+				_material = material;
+			}
+			return true;
+		}
+
 		public bool Draw(CameraContext _cameraCtx)
+		{
+			// Ensure main material is loaded:
+			if (!VerifyOrLoadMaterial(MaterialHandle, ref material))
+			{
+				return false;
+			}
+
+			// Draw material if it's fully loaded, quietly quit otherwise:
+			return material == null || Draw(_cameraCtx, Material!, ref pipeline);
+		}
+
+		public bool DrawShadowMap(CameraContext _cameraCtx)
+		{
+			// Ensure main material is loaded:
+			if (!VerifyOrLoadMaterial(MaterialHandle, ref material))
+			{
+				return false;
+			}
+
+			// Ensure shadow material is assigned and loaded:
+			if (!Material!.HasShadowMapMaterialVersion)
+			{
+				return true;
+			}
+			if (!VerifyOrLoadMaterial(Material.ShadowMapMaterialVersion, ref shadowMaterial))
+			{
+				return false;
+			}
+
+			// Draw shadow material if it's fully loaded, quietly quit otherwise:
+			return Draw(_cameraCtx, shadowMaterial!, ref shadowPipeline);
+		}
+
+		private bool Draw(CameraContext _cameraCtx, Material _overrideMaterial, ref VersionedMember<Pipeline> _pipeline)
 		{
 			// Check mesh and load it now if necessary:
 			if (Mesh == null || Mesh.IsDisposed)
@@ -263,28 +330,7 @@ namespace FragEngine3.Graphics.Components
 				Mesh = mesh;
 				BoundingRadius = Mesh.BoundingRadius;
 			}
-			// Check material and load it now if necessary:
-			if (Material == null || Material.IsDisposed)
-			{
-				if (MaterialHandle == null || !MaterialHandle.IsValid)
-				{
-					return false;
-				}
-				// Abort drawing until material is ready, queue it up for background loading:
-				if (DontDrawUnlessFullyLoaded && !MaterialHandle.IsLoaded)
-				{
-					if (MaterialHandle.LoadState == ResourceLoadState.NotLoaded) MaterialHandle.Load(false);
-					return true;
-				}
-
-				if (MaterialHandle.GetResource(true, true) is not Material material || !material.IsLoaded)
-				{
-					Logger.LogError($"Failed to load material resource from handle '{MaterialHandle}'!");
-					return false;
-				}
-				Material = material;
-			}
-
+			
 			// Fetch geometry buffers:
 			if (!Mesh.GetGeometryBuffers(out DeviceBuffer[] vertexBuffers, out DeviceBuffer indexBuffer, out MeshVertexDataFlags vertexDataFlags))
 			{
@@ -299,28 +345,28 @@ namespace FragEngine3.Graphics.Components
 			}
 
 			// Update (or recreate) pipeline for rendering this material and geometry combo:
-			if (!Material.IsPipelineUpToDate(in pipeline, rendererVersion))
+			if (!_overrideMaterial.IsPipelineUpToDate(in _pipeline, rendererVersion))
 			{
-				pipeline.DisposeValue();
-				if (!Material.CreatePipeline(_cameraCtx, rendererVersion, vertexDataFlags, out pipeline))
+				_pipeline.DisposeValue();
+				if (!_overrideMaterial.CreatePipeline(_cameraCtx, rendererVersion, vertexDataFlags, out _pipeline))
 				{
-					Logger.LogError($"Failed to retrieve pipeline description for material '{Material}'!");
+					Logger.LogError($"Failed to retrieve pipeline description for material '{_overrideMaterial}'!");
 					return false;
 				}
 			}
 
 			// Ensure the default resource set is assigned:
-			if (!MeshRendererUtility.UpdateDefaultResourceSet(Material, in _cameraCtx, in objectDataConstantBuffer!, ref defaultResourceSet))
+			if (!MeshRendererUtility.UpdateDefaultResourceSet(_overrideMaterial, in _cameraCtx, in objectDataConstantBuffer!, ref defaultResourceSet))
 			{
 				return false;
 			}
 
 			// Throw pipeline and geometry buffers at the command list:
-			_cameraCtx.cmdList.SetPipeline(pipeline.Value);
+			_cameraCtx.cmdList.SetPipeline(_pipeline.Value);
 			_cameraCtx.cmdList.SetGraphicsResourceSet(0, defaultResourceSet);
 
-			ResourceSet? boundResourceSet = overrideBoundResourceSet ?? Material.BoundResourceSet;
-			if (boundResourceSet != null && Material.BoundResourceLayout != null)
+			ResourceSet? boundResourceSet = overrideBoundResourceSet ?? _overrideMaterial.BoundResourceSet;
+			if (boundResourceSet != null && _overrideMaterial.BoundResourceLayout != null)
 			{
 				_cameraCtx.cmdList.SetGraphicsResourceSet(1, boundResourceSet);
 			}
@@ -356,7 +402,7 @@ namespace FragEngine3.Graphics.Components
 
 			// Reset all resource references:
 			MaterialHandle = null;
-			Material = null;
+			material = null;
 			MeshHandle = null;
 			Mesh = null;
 
@@ -372,7 +418,7 @@ namespace FragEngine3.Graphics.Components
 					return false;
 				}
 				MaterialHandle = handle;
-				Material = handle.GetResource(false) as Material;
+				material = handle.GetResource(false, false) as Material;
 			}
 			if (!string.IsNullOrEmpty(data.Mesh))
 			{
