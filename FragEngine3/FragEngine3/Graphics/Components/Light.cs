@@ -311,6 +311,7 @@ namespace FragEngine3.Graphics.Components
 				in shadowCameraInstance!,
 				node.WorldTransformation,
 				in mtxShadowWorld2Clip,
+				shadowMapIdx,
 				0,
 				0,
 				ref shadowCbCamera))

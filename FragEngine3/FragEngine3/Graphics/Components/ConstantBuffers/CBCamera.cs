@@ -4,7 +4,7 @@ using Veldrid;
 
 namespace FragEngine3.Graphics.Components.ConstantBuffers;
 
-[StructLayout(LayoutKind.Sequential, Pack = 16, Size = byteSize)]
+[StructLayout(LayoutKind.Sequential, Pack = 4, Size = byteSize)]
 public struct CBCamera
 {
 	#region Fields

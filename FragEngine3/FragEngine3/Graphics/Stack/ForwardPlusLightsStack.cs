@@ -496,7 +496,7 @@ namespace FragEngine3.Graphics.Stack
 			return true;
 		}
 
-		private bool DrawShadowMaps(in SceneContext _sceneCtx, Vector3 _renderFocalPoint, float _renderFocalRadius, uint _maxActiveLightCount)
+		private bool DrawShadowMaps(in SceneContext _sceneCtx, Vector3 _renderFocalPoint, float _renderFocalRadius, uint _maxActiveLightCount)						// TODO [important]: This doesn't work, incorrect target or projection! Objects appear missing!
 		{
 			// No visible shadow-casting light? We're done here:
 			if (activeLightsShadowMapped.Count == 0)
@@ -576,8 +576,9 @@ namespace FragEngine3.Graphics.Stack
 			}
 			cmdList.Begin();
 
-			foreach (Camera camera in activeCameras)
+			for (uint i = 0; i < activeCameras.Count; ++i)
 			{
+				Camera camera = activeCameras[(int)i];
 				uint activeLightCount = (uint)activeLights.Count;
 				if (!camera.GetLightDataBuffer(activeLightCount, out DeviceBuffer? lightDataBuffer))
 				{
@@ -590,13 +591,13 @@ namespace FragEngine3.Graphics.Stack
 				result &= camera.SetOverrideCameraTarget(null);
 				result &= CameraUtility.UpdateLightDataBuffer(in core, in lightDataBuffer!, in activeLightData, activeLightCount, _maxActiveLightCount);
 
-				result &= DrawSceneRenderers(in _sceneCtx, cmdList, camera, RenderMode.Opaque, activeRenderersOpaque, true);
-				result &= DrawSceneRenderers(in _sceneCtx, cmdList, camera, RenderMode.Transparent, activeRenderersTransparent, false);
-				result &= DrawSceneRenderers(in _sceneCtx, cmdList, camera, RenderMode.UI, activeRenderersUI, false);
+				result &= DrawSceneRenderers(in _sceneCtx, cmdList, camera, RenderMode.Opaque, activeRenderersOpaque, true, i);
+				//result &= DrawSceneRenderers(in _sceneCtx, cmdList, camera, RenderMode.Transparent, activeRenderersTransparent, false, i);
+				//result &= DrawSceneRenderers(in _sceneCtx, cmdList, camera, RenderMode.UI, activeRenderersUI, false, i);
 
 				if (result)
 				{
-					result &= CompositeFinalOutput(in _sceneCtx, camera);
+					result &= CompositeFinalOutput(in _sceneCtx, camera, i);
 				}
 				success &= result;
 			}
@@ -608,13 +609,14 @@ namespace FragEngine3.Graphics.Stack
 			return success;
 		}
 
-		private bool DrawSceneRenderers(in SceneContext _sceneCtx, in CommandList _cmdList, Camera _camera, RenderMode _renderMode, in List<IRenderer> _renderers, bool _clearRenderTargets)
+		private bool DrawSceneRenderers(in SceneContext _sceneCtx, in CommandList _cmdList, Camera _camera, RenderMode _renderMode, in List<IRenderer> _renderers, bool _clearRenderTargets, uint _cameraIdx)
 		{
 			if (!_camera.BeginFrame(
 				_cmdList,
 				texShadowMaps!,
 				_renderMode,
 				_clearRenderTargets,
+				_cameraIdx,
 				(uint)activeLights.Count,
 				(uint)activeLightsShadowMapped.Count,
 				out CameraContext cameraCtx))
@@ -633,7 +635,7 @@ namespace FragEngine3.Graphics.Stack
 			return success;
 		}
 
-		private bool CompositeFinalOutput(in SceneContext _sceneCtx, Camera _camera)
+		private bool CompositeFinalOutput(in SceneContext _sceneCtx, Camera _camera, uint _cameraIdx)
 		{
 			if (!GetOrCreateCommandList(out CommandList cmdList))
 			{
@@ -662,6 +664,7 @@ namespace FragEngine3.Graphics.Stack
 				texShadowMaps!,
 				RenderMode.Custom,
 				true,
+				_cameraIdx,
 				0, 0,
 				out CameraContext cameraCtx))
 			{

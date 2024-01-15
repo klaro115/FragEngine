@@ -112,6 +112,7 @@ namespace FragEngine3.Graphics.Cameras
 			in CameraInstance _cameraInstance,
 			in Pose _cameraWorldPose,
 			in Matrix4x4 _mtxWorld2Clip,
+			uint _cameraIdx,
 			uint _activeLightCount,
 			uint _shadowMappedLightCount,
 			ref DeviceBuffer? _cbCamera)
@@ -142,6 +143,7 @@ namespace FragEngine3.Graphics.Cameras
 				cameraDirection = new Vector4(_cameraWorldPose.Forward, 0),
 
 				// Camera parameters:
+				cameraIdx = _cameraIdx,
 				resolutionX = _cameraInstance.OutputSettings.resolutionX,
 				resolutionY = _cameraInstance.OutputSettings.resolutionY,
 				nearClipPlane = _cameraInstance.ProjectionSettings.nearClipPlane,
@@ -152,7 +154,7 @@ namespace FragEngine3.Graphics.Cameras
 				shadowMappedLightCount = Math.Min(_shadowMappedLightCount, _activeLightCount),
 			};
 
-			_cameraInstance.graphicsCore.Device.UpdateBuffer(_cbCamera, 0, ref cbData, CBCamera.byteSize);
+			_cameraInstance.graphicsCore.Device.UpdateBuffer(_cbCamera, 0, ref cbData, CBCamera.packedByteSize);
 
 			return true;
 		}

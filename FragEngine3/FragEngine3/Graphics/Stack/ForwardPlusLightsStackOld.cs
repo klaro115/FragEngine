@@ -602,6 +602,7 @@ namespace FragEngine3.Graphics.Stack
 				texShadowMapArray!,
 				_renderMode,
 				_clearRenderTargets,
+				0,
 				_activeLightCount,
 				0,
 				out CameraContext cameraCtx);

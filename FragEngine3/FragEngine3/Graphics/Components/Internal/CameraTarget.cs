@@ -86,6 +86,7 @@ namespace FragEngine3.Graphics.Components.Internal
 		public readonly Texture texColorTarget;
 		public readonly Texture texDepthTarget;
 		public readonly Framebuffer framebuffer;
+		public DeviceBuffer? cbCamera = null;
 
 		public readonly uint resolutionX;
 		public readonly uint resolutionY;
@@ -117,6 +118,8 @@ namespace FragEngine3.Graphics.Components.Internal
 		private void Dispose(bool _)
 		{
 			IsDisposed = true;
+
+			cbCamera?.Dispose();
 
 			if (hasOwnershipOfResources)
 			{

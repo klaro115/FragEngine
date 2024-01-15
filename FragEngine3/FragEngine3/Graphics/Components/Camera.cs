@@ -1,6 +1,5 @@
 ﻿using System.Numerics;
 using FragEngine3.Graphics.Cameras;
-using FragEngine3.Graphics.Components.ConstantBuffers;
 using FragEngine3.Graphics.Components.Data;
 using FragEngine3.Graphics.Components.Internal;
 using FragEngine3.Graphics.Contexts;
@@ -33,13 +32,13 @@ public sealed class Camera : Component
 	public uint layerMask = 0xFFFFu;
 
 	// Scene & Lighting:
-	private DeviceBuffer? cbCamera = null;
 	private DeviceBuffer? lightDataBuffer = null;
 	private uint lightDataBufferCapacity = 0;
 
 	// Render targets:
 	private readonly Dictionary<RenderMode, CameraTarget> targetDict = new(4);
 	private CameraTarget? overrideTarget = null;
+	private DeviceBuffer? overrideTargetCbCamera = null;
 
 	private static Camera? mainCamera = null;
 	private static readonly object mainCameraLockObj = new();
@@ -115,22 +114,22 @@ public sealed class Camera : Component
 			mainCamera = null;
 		}
 
+		instance.Dispose();
+
 		foreach (var kvp in targetDict)
 		{
 			kvp.Value.Dispose();
 		}
+		overrideTargetCbCamera?.Dispose();
 
-		instance.Dispose();
-
-		cbCamera?.Dispose();
 		lightDataBuffer?.Dispose();
 
 		if (_disposing)
 		{
 			targetDict.Clear();
 			overrideTarget = null;
+			overrideTargetCbCamera = null;
 
-			cbCamera = null;
 			lightDataBuffer = null;
 			lightDataBufferCapacity = 0;
 		}
@@ -202,7 +201,7 @@ public sealed class Camera : Component
 		_outTarget = new(
 			instance.graphicsCore,
 			_renderMode,
-			outputSettings.resolutionX,
+			outputSettings.resolutionX,								// TODO [important]: When assigning a new target several times per frame per camera, a new target is created each time. Don't. Also, maybe pool CBCamera buffer.
 			outputSettings.resolutionY,
 			outputSettings.colorFormat,
 			outputSettings.hasDepth);
@@ -213,6 +212,12 @@ public sealed class Camera : Component
 
 	public bool SetOverrideCameraTarget(Framebuffer? _newOverrideTarget, bool _hasOwnershipOfFramebuffer = false)
 	{
+		// If the override target is bound to change, retrieve its camera-tied objects:
+		if (overrideTarget != null && _newOverrideTarget != overrideTarget.framebuffer)
+		{
+			overrideTarget.cbCamera = null;
+		}
+
 		// If null, unassign override slot:
 		if (_newOverrideTarget == null)
 		{
@@ -237,6 +242,11 @@ public sealed class Camera : Component
 			texDepth!,
 			_newOverrideTarget,
 			_hasOwnershipOfFramebuffer);
+
+		if (overrideTargetCbCamera != null && !overrideTargetCbCamera.IsDisposed)				// TODO: This is a mess and needs to be handled differently!
+		{
+			overrideTarget.cbCamera = overrideTargetCbCamera;
+		}
 		return true;
 	}
 
@@ -245,6 +255,7 @@ public sealed class Camera : Component
 		Texture _shadowMapArray,
 		RenderMode _renderMode,
 		bool _clearRenderTargets,
+		uint _cameraIdx_,
 		uint _activeLightCount,
 		uint _shadowMappedLightCount,
 		out CameraContext _outCameraCtx)
@@ -316,20 +327,25 @@ public sealed class Camera : Component
 			in instance,
 			in worldPose,
 			in mtxWorld2Clip,
+			_cameraIdx_,
 			_activeLightCount,
 			_shadowMappedLightCount,
-			ref cbCamera))
+			ref activeTarget.cbCamera))
 		{
 			Logger.LogError("Failed to allocate or update camera's global constant buffer!");
 			_outCameraCtx = null!;
 			return false;
+		}
+		if (activeTarget == overrideTarget)
+		{
+			overrideTargetCbCamera = activeTarget.cbCamera;
 		}
 
 		// Assemble camera context for rendering:
 		_outCameraCtx = new(
 			instance,
 			_cmdList,
-			cbCamera!,
+			activeTarget.cbCamera!,
 			activeFramebuffer,
 			lightDataBuffer!,
 			_shadowMapArray,
