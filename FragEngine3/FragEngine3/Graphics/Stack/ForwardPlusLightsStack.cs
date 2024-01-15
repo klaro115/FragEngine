@@ -586,19 +586,26 @@ namespace FragEngine3.Graphics.Stack
 					continue;
 				}
 
+				if (!camera.BeginFrame(activeLightCount))
+				{
+					success = false;
+					continue;
+				}
+
 				bool result = true;
 
 				result &= camera.SetOverrideCameraTarget(null);
 				result &= CameraUtility.UpdateLightDataBuffer(in core, in lightDataBuffer!, in activeLightData, activeLightCount, _maxActiveLightCount);
 
 				result &= DrawSceneRenderers(in _sceneCtx, cmdList, camera, RenderMode.Opaque, activeRenderersOpaque, true, i);
-				//result &= DrawSceneRenderers(in _sceneCtx, cmdList, camera, RenderMode.Transparent, activeRenderersTransparent, false, i);
-				//result &= DrawSceneRenderers(in _sceneCtx, cmdList, camera, RenderMode.UI, activeRenderersUI, false, i);
+				result &= DrawSceneRenderers(in _sceneCtx, cmdList, camera, RenderMode.Transparent, activeRenderersTransparent, false, i);
+				result &= DrawSceneRenderers(in _sceneCtx, cmdList, camera, RenderMode.UI, activeRenderersUI, false, i);
 
 				if (result)
 				{
 					result &= CompositeFinalOutput(in _sceneCtx, camera, i);
 				}
+				result &= camera.EndFrame();
 				success &= result;
 			}
 
@@ -611,7 +618,7 @@ namespace FragEngine3.Graphics.Stack
 
 		private bool DrawSceneRenderers(in SceneContext _sceneCtx, in CommandList _cmdList, Camera _camera, RenderMode _renderMode, in List<IRenderer> _renderers, bool _clearRenderTargets, uint _cameraIdx)
 		{
-			if (!_camera.BeginFrame(
+			if (!_camera.BeginPass(
 				_cmdList,
 				texShadowMaps!,
 				_renderMode,
@@ -631,7 +638,7 @@ namespace FragEngine3.Graphics.Stack
 				success &= renderer.Draw(_sceneCtx, cameraCtx);
 			}
 
-			success &= _camera.EndFrame();
+			success &= _camera.EndPass();
 			return success;
 		}
 
@@ -659,7 +666,7 @@ namespace FragEngine3.Graphics.Stack
 			}
 
 			cmdList.Begin();
-			if (!_camera.BeginFrame(
+			if (!_camera.BeginPass(
 				cmdList,
 				texShadowMaps!,
 				RenderMode.Custom,
@@ -723,7 +730,7 @@ namespace FragEngine3.Graphics.Stack
 			success &= compositionRenderer.Draw(_sceneCtx, cameraCtx);
 
 			// Finish drawing and submit command list to GPU:
-			success &= _camera.EndFrame();
+			success &= _camera.EndPass();
 			cmdList.End();
 
 			core.CommitCommandList(cmdList);

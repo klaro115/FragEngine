@@ -10,63 +10,6 @@ namespace FragEngine3.Graphics.Cameras
 	{
 		#region Methods
 
-		[Obsolete("CB types replaced")]
-		public static bool UpdateGlobalConstantBuffer(
-			in Scene _scene,
-			in CameraInstance _cameraInstance,
-			in Pose _cameraWorldPose,
-			in Matrix4x4 _mtxWorld2Clip,
-			uint _activeLightCount,
-			ref DeviceBuffer? _globalConstantBuffer)
-		{
-			// Ensure the buffer is allocated:
-			if (_globalConstantBuffer == null || _globalConstantBuffer.IsDisposed)
-			{
-				try
-				{
-					BufferDescription bufferDesc = new(GlobalConstantBuffer.packedByteSize, BufferUsage.UniformBuffer | BufferUsage.Dynamic);
-
-					_globalConstantBuffer = _cameraInstance.graphicsCore.MainFactory.CreateBuffer(ref bufferDesc);
-					_globalConstantBuffer.Name = "CBGlobal";
-					return true;
-				}
-				catch (Exception ex)
-				{
-					_cameraInstance.graphicsCore.graphicsSystem.engine.Logger.LogException("Failed to create camera's global constant buffer!", ex);
-					return false;
-				}
-			}
-
-			Vector3 ambientLightLow = _scene.settings.AmbientLightIntensityLow;
-			Vector3 ambientLightMid = _scene.settings.AmbientLightIntensityMid;
-			Vector3 ambientLightHigh = _scene.settings.AmbientLightIntensityHigh;
-
-			GlobalConstantBuffer cbData = new()
-			{
-				// Camera vectors & matrices:
-				mtxWorld2Clip = _mtxWorld2Clip,
-				cameraPosition = new Vector4(_cameraWorldPose.position, 0),
-				cameraDirection = new Vector4(_cameraWorldPose.Forward, 0),
-
-				// Camera parameters:
-				resolutionX = _cameraInstance.OutputSettings.resolutionX,
-				resolutionY = _cameraInstance.OutputSettings.resolutionY,
-				nearClipPlane = _cameraInstance.ProjectionSettings.nearClipPlane,
-				farClipPlane = _cameraInstance.ProjectionSettings.farClipPlane,
-
-				// Lighting:
-				ambientLightLow = new RgbaFloat(new(ambientLightLow, 0)),
-				ambientLightMid = new RgbaFloat(new(ambientLightMid, 0)),
-				ambientLightHigh = new RgbaFloat(new(ambientLightHigh, 0)),
-				lightCount = _activeLightCount,
-				shadowFadeStart = 0.9f,
-			};
-
-			_cameraInstance.graphicsCore.Device.UpdateBuffer(_globalConstantBuffer, 0, ref cbData, GlobalConstantBuffer.byteSize);
-
-			return true;
-		}
-
 		public static bool UpdateConstantBuffer_CBScene(
 			in GraphicsCore _graphicsCore,
 			in SceneSettings _sceneSettings,
@@ -85,7 +28,7 @@ namespace FragEngine3.Graphics.Cameras
 				}
 				catch (Exception ex)
 				{
-					_graphicsCore.graphicsSystem.engine.Logger.LogException("Failed to create camera's global constant buffer!", ex);
+					_graphicsCore.graphicsSystem.engine.Logger.LogException("Failed to create scene constant buffer (CBScene)!", ex);
 					return false;
 				}
 			}
@@ -108,6 +51,26 @@ namespace FragEngine3.Graphics.Cameras
 			return true;
 		}
 
+		public static bool CreateConstantBuffer_CBCamera(
+			in GraphicsCore _graphicsCore,
+			out DeviceBuffer _outCbCamera)
+		{
+			try
+			{
+				BufferDescription bufferDesc = new(CBCamera.packedByteSize, BufferUsage.UniformBuffer | BufferUsage.Dynamic);
+
+				_outCbCamera = _graphicsCore.MainFactory.CreateBuffer(ref bufferDesc);
+				_outCbCamera.Name = CBCamera.NAME_IN_SHADER;
+				return true;
+			}
+			catch (Exception ex)
+			{
+				_graphicsCore.graphicsSystem.engine.Logger.LogException("Failed to create camera constant buffer (CBCamera)!", ex);
+				_outCbCamera = null!;
+				return false;
+			}
+		}
+
 		public static bool UpdateConstantBuffer_CBCamera(
 			in CameraInstance _cameraInstance,
 			in Pose _cameraWorldPose,
@@ -120,17 +83,8 @@ namespace FragEngine3.Graphics.Cameras
 			// Ensure the buffer is allocated:
 			if (_cbCamera == null || _cbCamera.IsDisposed)
 			{
-				try
+				if (!CreateConstantBuffer_CBCamera(in _cameraInstance.graphicsCore, out _cbCamera))
 				{
-					BufferDescription bufferDesc = new(CBCamera.packedByteSize, BufferUsage.UniformBuffer | BufferUsage.Dynamic);
-
-					_cbCamera = _cameraInstance.graphicsCore.MainFactory.CreateBuffer(ref bufferDesc);
-					_cbCamera.Name = CBCamera.NAME_IN_SHADER;
-					return true;
-				}
-				catch (Exception ex)
-				{
-					_cameraInstance.graphicsCore.graphicsSystem.engine.Logger.LogException("Failed to create camera's global constant buffer!", ex);
 					return false;
 				}
 			}

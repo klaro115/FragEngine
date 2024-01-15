@@ -569,7 +569,7 @@ namespace FragEngine3.Graphics.Stack
 				{
 					// If no renderers, just allow clearing of render targets, to ensure backbuffer contents aren't undefined:
 					//_camera.BeginFrame(rendererList.cmdList!, texShadowMapArray!, RenderMode.Opaque, true, 0, out _);
-					_camera.EndFrame();
+					_camera.EndPass();
 				}
 
 				core.CommitCommandList(rendererList.cmdList);
@@ -597,7 +597,7 @@ namespace FragEngine3.Graphics.Stack
 				_renderers.Sort((a, b) => a.GetZSortingDepth(viewportPosition, cameraDirection).CompareTo(b.GetZSortingDepth(viewportPosition, cameraDirection)));
 			}
 
-			success &= _camera.BeginFrame(
+			success &= _camera.BeginPass(
 				_cmdList,
 				texShadowMapArray!,
 				_renderMode,
@@ -616,7 +616,7 @@ namespace FragEngine3.Graphics.Stack
 				}
 			}
 
-			success &= _camera.EndFrame();
+			success &= _camera.EndPass();
 
 			return success;
 		}
@@ -702,7 +702,7 @@ namespace FragEngine3.Graphics.Stack
 			//success &= compositionRenderer.Draw(cameraCtx);
 
 			// Finish drawing and submit command list to GPU:
-			success &= _camera.EndFrame();
+			success &= _camera.EndPass();
 			rendererList.cmdList.End();
 
 			core.CommitCommandList(rendererList.cmdList);

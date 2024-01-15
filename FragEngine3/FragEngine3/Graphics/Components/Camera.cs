@@ -38,8 +38,11 @@ public sealed class Camera : Component
 	// Render targets:
 	private readonly Dictionary<RenderMode, CameraTarget> targetDict = new(4);
 	private CameraTarget? overrideTarget = null;
-	private DeviceBuffer? overrideTargetCbCamera = null;
 
+	private readonly Stack<DeviceBuffer> cbCameraPool = new(4);
+	private readonly Stack<DeviceBuffer> cbCameraInUse = new(4);
+
+	// Main camera:
 	private static Camera? mainCamera = null;
 	private static readonly object mainCameraLockObj = new();
 
@@ -59,6 +62,9 @@ public sealed class Camera : Component
 
 	public bool IsDrawing => !IsDisposed && instance.IsDrawing;
 	public bool HasOverrideFramebuffer => overrideTarget != null && !overrideTarget.IsDisposed;
+
+	public uint FrameCounter { get; private set; } = 0;
+	public uint PassCounter { get; private set; } = 0;
 
 	public CameraSettings Settings
 	{
@@ -120,7 +126,15 @@ public sealed class Camera : Component
 		{
 			kvp.Value.Dispose();
 		}
-		overrideTargetCbCamera?.Dispose();
+
+		foreach (DeviceBuffer cbCamera in cbCameraPool)
+		{
+			cbCamera.Dispose();
+		}
+		foreach (DeviceBuffer cbCamera in cbCameraInUse)
+		{
+			cbCamera.Dispose();
+		}
 
 		lightDataBuffer?.Dispose();
 
@@ -128,7 +142,8 @@ public sealed class Camera : Component
 		{
 			targetDict.Clear();
 			overrideTarget = null;
-			overrideTargetCbCamera = null;
+			cbCameraPool.Clear();
+			cbCameraInUse.Clear();
 
 			lightDataBuffer = null;
 			lightDataBufferCapacity = 0;
@@ -156,6 +171,17 @@ public sealed class Camera : Component
 			kvp.Value.Dispose();
 		}
 		targetDict.Clear();
+
+		foreach (DeviceBuffer cbCamera in cbCameraPool)
+		{
+			cbCamera.Dispose();
+		}
+		foreach (DeviceBuffer cbCamera in cbCameraInUse)
+		{
+			cbCamera.Dispose();
+		}
+		cbCameraPool.Clear();
+		cbCameraInUse.Clear();
 
 		// Reset camera instance and its external references:
 		instance.SetOverrideFramebuffer(null, false);
@@ -201,7 +227,7 @@ public sealed class Camera : Component
 		_outTarget = new(
 			instance.graphicsCore,
 			_renderMode,
-			outputSettings.resolutionX,								// TODO [important]: When assigning a new target several times per frame per camera, a new target is created each time. Don't. Also, maybe pool CBCamera buffer.
+			outputSettings.resolutionX,
 			outputSettings.resolutionY,
 			outputSettings.colorFormat,
 			outputSettings.hasDepth);
@@ -210,14 +236,22 @@ public sealed class Camera : Component
 		return true;
 	}
 
-	public bool SetOverrideCameraTarget(Framebuffer? _newOverrideTarget, bool _hasOwnershipOfFramebuffer = false)
+	private bool GetOrCreateCameraConstantBuffer(out DeviceBuffer _outCbCamera)
 	{
-		// If the override target is bound to change, retrieve its camera-tied objects:
-		if (overrideTarget != null && _newOverrideTarget != overrideTarget.framebuffer)
+		if (!cbCameraPool.TryPop(out _outCbCamera!))
 		{
-			overrideTarget.cbCamera = null;
+			if (!CameraUtility.CreateConstantBuffer_CBCamera(in instance.graphicsCore, out _outCbCamera))
+			{
+				return false;
+			}
 		}
 
+		cbCameraInUse.Push(_outCbCamera);
+		return true;
+	}
+
+	public bool SetOverrideCameraTarget(Framebuffer? _newOverrideTarget, bool _hasOwnershipOfFramebuffer = false)
+	{
 		// If null, unassign override slot:
 		if (_newOverrideTarget == null)
 		{
@@ -242,15 +276,64 @@ public sealed class Camera : Component
 			texDepth!,
 			_newOverrideTarget,
 			_hasOwnershipOfFramebuffer);
-
-		if (overrideTargetCbCamera != null && !overrideTargetCbCamera.IsDisposed)				// TODO: This is a mess and needs to be handled differently!
-		{
-			overrideTarget.cbCamera = overrideTargetCbCamera;
-		}
 		return true;
 	}
 
-	public bool BeginFrame(
+	public bool BeginFrame(uint _activeLightCount)
+	{
+		if (IsDisposed)
+		{
+			Logger.LogError("Cannot begin frame on camera that is already drawing!");
+			return false;
+		}
+		if (IsDrawing)
+		{
+			Logger.LogError("Cannot begin frame on camera that is already drawing!");
+			return false;
+		}
+
+		// Create or resize light data buffer:
+		if (!CameraUtility.VerifyOrCreateLightDataBuffer(
+			in instance.graphicsCore,
+			_activeLightCount,
+			ref lightDataBuffer,
+			ref lightDataBufferCapacity))
+		{
+			return false;
+		}
+
+		// Reset pass counter:
+		PassCounter = 0;
+		return true;
+	}
+
+	public bool EndFrame()
+	{
+		if (IsDisposed)
+		{
+			Logger.LogError("Cannot end frame on camera that has been disposed!");
+			return false;
+		}
+		if (IsDrawing)
+		{
+			Logger.LogError("Cannot end frame on camera that is still drawing!");
+			return false;
+		}
+
+		// Return constant buffers to pool for re-use next frame:
+		foreach (DeviceBuffer cbCamera in cbCameraInUse)
+		{
+			cbCameraPool.Push(cbCamera);
+		}
+		cbCameraInUse.Clear();
+
+		// Update counters:
+		PassCounter = 0;
+		FrameCounter++;
+		return true;
+	}
+
+	public bool BeginPass(
 		CommandList _cmdList,
 		Texture _shadowMapArray,
 		RenderMode _renderMode,
@@ -262,30 +345,19 @@ public sealed class Camera : Component
 	{
 		if (IsDisposed)
 		{
-			Logger.LogError("Cannot begin frame on camera that is already drawing!");
+			Logger.LogError("Cannot begin pass on camera that is already drawing!");
 			_outCameraCtx = null!;
 			return false;
 		}
 		if (IsDrawing)
 		{
-			Logger.LogError("Cannot begin frame on camera that is already drawing!");
+			Logger.LogError("Cannot begin pass on camera that is already drawing!");
 			_outCameraCtx = null!;
 			return false;
 		}
 		if (_cmdList == null || _cmdList.IsDisposed)
 		{
-			Logger.LogError("Cannot begin frame on camera using null or disposed command list!");
-			_outCameraCtx = null!;
-			return false;
-		}
-
-		// Create or resize light data buffer:
-		if (!CameraUtility.VerifyOrCreateLightDataBuffer(
-			in instance.graphicsCore,
-			_activeLightCount,
-			ref lightDataBuffer,
-			ref lightDataBufferCapacity))
-		{
+			Logger.LogError("Cannot begin pass on camera using null or disposed command list!");
 			_outCameraCtx = null!;
 			return false;
 		}
@@ -312,11 +384,17 @@ public sealed class Camera : Component
 			return false;
 		}
 
+		if (!GetOrCreateCameraConstantBuffer(out DeviceBuffer cbCamera))
+		{
+			_outCameraCtx = null!;
+			return false;
+		}
+
 		// Finalize projection and camera parameters, and start drawing:
 		instance.MtxWorld = node.WorldTransformation.Matrix;
 		if (!instance.BeginDrawing(_cmdList, _clearRenderTargets, true, out Matrix4x4 mtxWorld2Clip))
 		{
-			Logger.LogError("Cannot begin frame on camera that is already drawing!");
+			Logger.LogError("Camera instance failed to begin pass!");
 			_outCameraCtx = null!;
 			return false;
 		}
@@ -330,22 +408,18 @@ public sealed class Camera : Component
 			_cameraIdx_,
 			_activeLightCount,
 			_shadowMappedLightCount,
-			ref activeTarget.cbCamera))
+			ref cbCamera!))
 		{
 			Logger.LogError("Failed to allocate or update camera's global constant buffer!");
 			_outCameraCtx = null!;
 			return false;
-		}
-		if (activeTarget == overrideTarget)
-		{
-			overrideTargetCbCamera = activeTarget.cbCamera;
 		}
 
 		// Assemble camera context for rendering:
 		_outCameraCtx = new(
 			instance,
 			_cmdList,
-			activeTarget.cbCamera!,
+			cbCamera!,
 			activeFramebuffer,
 			lightDataBuffer!,
 			_shadowMapArray,
@@ -354,7 +428,7 @@ public sealed class Camera : Component
 		return true;
 	}
 
-	public bool EndFrame()
+	public bool EndPass()
 	{
 		if (IsDisposed)
 		{
@@ -366,6 +440,8 @@ public sealed class Camera : Component
 			Logger.LogError("Cannot end frame on a camera that is not currently drawing!");
 			return false;
 		}
+
+		PassCounter++;
 
 		return instance.EndDrawing();
 	}
