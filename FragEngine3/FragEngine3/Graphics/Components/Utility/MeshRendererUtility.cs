@@ -10,44 +10,6 @@ namespace FragEngine3.Graphics.Components.Utility
 	{
 		#region Methods
 
-		[Obsolete("Replaced after CBObject was introduced.")]
-		public static bool UpdateObjectDataConstantBuffer(
-			in GraphicsCore _core,
-			in SceneNode _node,
-			float _boundingRadius,
-			ref DeviceBuffer? objectDataConstantBuffer,
-			CommandList _cmdList)
-		{
-			if (objectDataConstantBuffer == null || objectDataConstantBuffer.IsDisposed)
-			{
-				BufferDescription constantBufferDesc = new(ObjectDataConstantBuffer.packedByteSize, BufferUsage.UniformBuffer | BufferUsage.Dynamic);
-
-				try
-				{
-					objectDataConstantBuffer = _core.MainFactory.CreateBuffer(ref constantBufferDesc);
-					objectDataConstantBuffer.Name = "CBObject";
-				}
-				catch (Exception ex)
-				{
-					_core.graphicsSystem.engine.Logger.LogException($"Failed to recreate object data constant buffer for renderer of node '{_node.Name}'!", ex);
-					return false;
-				}
-			}
-
-			Pose worldPose = _node.WorldTransformation;
-
-			ObjectDataConstantBuffer objectData = new()
-			{
-				mtxLocal2World = worldPose.Matrix,
-				worldPosition = worldPose.position,
-				boundingRadius = _boundingRadius,
-			};
-
-			_cmdList.UpdateBuffer(objectDataConstantBuffer, 0, ref objectData, ObjectDataConstantBuffer.byteSize);
-
-			return true;
-		}
-
 		public static bool UpdateConstantBuffer_CBObject(
 			in GraphicsCore _core,
 			in SceneNode _node,
