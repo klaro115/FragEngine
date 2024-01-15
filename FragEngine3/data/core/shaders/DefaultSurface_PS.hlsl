@@ -57,6 +57,7 @@ struct Light
 StructuredBuffer<Light> BufLights : register(ps, t0);   // Buffer containing an array of light source data. Number of lights is given in 'CBGlobal.lightCount'.
 
 Texture2DArray<half> TexShadowMaps : register(ps, t1);
+SamplerState SamplerStateShadowMaps : register(ps, s0);
 
 /**************** VERTEX OUTPUT: ***************/
 
@@ -75,7 +76,7 @@ struct VertexOutput_Extended
     float2 uv2 : TEXCOORD1;
 };
 
-/******************* SHADERS: ******************/
+/****************** LIGHTING: ******************/
 
 half3 CalculateAmbientLight(float3 _normal)
 {
@@ -86,41 +87,71 @@ half3 CalculateAmbientLight(float3 _normal)
     return (wLow * (half4)ambientLightLow + wHigh * (half4)ambientLightHigh + wMid * (half4)ambientLightMid).xyz;
 }
 
+half3 CalculatePhongLighting(in Light _light, in float3 _worldPosition, in float3 _worldNormal)
+{
+    half3 lightIntens = (half3)(_light.lightColor * _light.lightIntensity);
+    float3 lightRayDir;
+
+    // Directional light:
+    if (_light.lightType == 2)
+    {
+        lightRayDir = _light.lightDirection;
+    }
+    // Point or Spot light:
+    else
+    {
+        float3 lightOffset = _worldPosition - _light.lightPosition;
+        lightIntens /= (half)dot(lightOffset, lightOffset);
+        lightRayDir = normalize(lightOffset);
+
+        // Spot light angle:
+        if (_light.lightType == 1 && dot(_light.lightDirection, lightRayDir) < _light.lightSpotAngleAcos)
+        {
+            lightIntens = half3(0, 0, 0);
+        }
+    }
+
+    half lightDot = max(-(half)dot(lightRayDir, _worldNormal), 0.0);
+    return lightIntens.xyz * lightDot;
+}
+
+half3 CalculateTotalLightIntensity(in float3 _worldPosition, in float3 _worldNormal)
+{
+    half3 totalLightIntensity = CalculateAmbientLight(_worldNormal);
+
+    // Shadow-casting light sources:
+    for (uint i = 0; i < shadowMappedLightCount; ++i)
+    {
+        Light light = BufLights[i];
+
+        half3 lightIntensity = CalculatePhongLighting(light, _worldPosition, _worldNormal);
+
+        float4 shadowProj = mul(light.mtxShadowWorld2Uv, float4(_worldPosition, 1));
+        float3 shadowUv = float3(shadowProj.xy, light.shadowMapIdx);
+
+        half shadowDepth = TexShadowMaps.Sample(SamplerStateShadowMaps, shadowUv);
+        
+
+        totalLightIntensity += lightIntensity;
+    }
+    // Simple light sources:
+    for (i = shadowMappedLightCount; i < lightCount; ++i)
+    {
+        totalLightIntensity += CalculatePhongLighting(BufLights[i], _worldPosition, _worldNormal);
+    }
+
+    return totalLightIntensity;
+}
+
+/******************* SHADERS: ******************/
+
 half4 Main_Pixel(in VertexOutput_Basic inputBasic) : SV_Target0
 {
     half4 albedo = {1, 1, 1, 1};
 
     // Apply basic phong lighting:
-    half3 totalLightIntensity = CalculateAmbientLight(inputBasic.normal);
-    for (uint i = 0; i < lightCount; ++i)
-    {
-        Light light = BufLights[i];
+    half3 totalLightIntensity = CalculateTotalLightIntensity(inputBasic.worldPosition, inputBasic.normal);
 
-        half3 lightIntens = (half3)(light.lightColor * light.lightIntensity);
-        float3 lightRayDir;
-
-        // Directional light:
-        if (light.lightType == 2)
-        {
-            lightRayDir = light.lightDirection;
-        }
-        // Point or Spot light:
-        else
-        {
-            float3 lightOffset = inputBasic.worldPosition - light.lightPosition;
-            lightIntens /= (half)dot(lightOffset, lightOffset);
-            lightRayDir = normalize(lightOffset);
-
-            // Spot light angle:
-            if (light.lightType == 1 && dot(light.lightDirection, lightRayDir) < light.lightSpotAngleAcos)
-            {
-                lightIntens = half3(0, 0, 0);
-            }
-        }
-
-        half lightDot = max(-(half)dot(lightRayDir, inputBasic.normal), 0.0);
-        totalLightIntensity += lightIntens.xyz * lightDot;
-    }
     albedo *= half4(totalLightIntensity, 1);
 
     // Return final color:
