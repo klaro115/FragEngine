@@ -174,70 +174,63 @@ namespace FragEngine3.Graphics.Cameras
 			return true;
 		}
 
-		public static bool UpdateOrCreateShadowMapCameraInstance(
+		public static bool VerifyOrCreateDefaultCameraResourceLayout(
 			in GraphicsCore _graphicsCore,
-			in Framebuffer _shadowMapFramebuffer,
-			in Matrix4x4 _mtxShadowWorld2Clip,
-			in Matrix4x4 _mtxShadowWorld2Uv,
-			bool _isDirectional,
-			float _farClipPlane,
-			float _spotAngleRad,
-			ref CameraInstance? _cameraInstance)
+			ref ResourceLayout? _defaultCameraResLayout)
 		{
-			CameraProjection projectionSettings = new()
-			{
-				projectionType = _isDirectional
-					? CameraProjectionType.Orthographic
-					: CameraProjectionType.Perspective,
-				nearClipPlane = 0.01f,
-				farClipPlane = _farClipPlane,
-				FieldOfViewRadians = _spotAngleRad,
-				mirrorY = true,
-
-				mtxWorld2Clip = _mtxShadowWorld2Clip,
-				mtxWorld2Pixel = _mtxShadowWorld2Uv,
-			};
-
-			if (_cameraInstance == null || _cameraInstance.IsDisposed)
+			if (_defaultCameraResLayout == null || _defaultCameraResLayout.IsDisposed)
 			{
 				try
 				{
-					_cameraInstance = new(_graphicsCore, _shadowMapFramebuffer, false)
-					{
-						OutputSettings = new CameraOutput()
-						{
-							resolutionX = 1024,
-							resolutionY = 1024,
-							
-							colorFormat = _graphicsCore.DefaultColorTargetPixelFormat,
-							depthFormat = _graphicsCore.DefaultShadowMapDepthTargetFormat,
-							hasDepth = true,
-							hasStencil = false,
-						},
-						ClearingSettings = new CameraClearing()
-						{
-							clearColor = false,
-							clearColorValue = new RgbaFloat(0, 0, 0, 0),
+					ResourceLayoutDescription resLayoutDesc = new(GraphicsConstants.DEFAULT_CAMERA_RESOURCE_LAYOUT_DESC);
 
-							clearDepth = true,
-							clearDepthValue = 1.0f,
-
-							clearStencil = false,
-							clearStencilValue = 0x00,
-						},
-						MtxWorld = Matrix4x4.Identity,
-					};
+					_defaultCameraResLayout = _graphicsCore.MainFactory.CreateResourceLayout(ref resLayoutDesc);
+					_defaultCameraResLayout.Name = "ResLayout_DefaultCamera";
 				}
 				catch (Exception ex)
 				{
-					_cameraInstance = null!;
-					Logger? logger = _graphicsCore?.graphicsSystem.engine.Logger ?? Logger.Instance;
-					logger?.LogException("Failed to create camera instance for shadow map rendering!", ex);
+					_graphicsCore.graphicsSystem.engine.Logger.LogException("Failed to crate default camera resource layout!", ex);
+					_defaultCameraResLayout = null;
 					return false;
 				}
 			}
+			return true;
+		}
 
-			_cameraInstance.ProjectionSettings = projectionSettings;
+		public static bool UpdateOrCreateDefaultCameraResourceSet(
+			in GraphicsCore _graphicsCore,
+			in ResourceLayout _defaultCameraResLayout,
+			in DeviceBuffer _cbScene,
+			in DeviceBuffer _cbCamera,
+			in DeviceBuffer _lightDataBuffer,
+			in Texture _texShadowMaps,
+			in Sampler _samplerShadowMaps,
+			ref ResourceSet? _defaultCameraResSet,
+			bool _forceRecreate = false)
+		{
+			if (_forceRecreate || _defaultCameraResSet == null || _defaultCameraResSet.IsDisposed)
+			{
+				_defaultCameraResSet?.Dispose();
+
+				try
+				{
+					ResourceSetDescription resSetDesc = new(
+						_defaultCameraResLayout,
+						_cbScene,
+						_cbCamera,
+						_lightDataBuffer,
+						_texShadowMaps,
+						_samplerShadowMaps);
+
+					_defaultCameraResSet = _graphicsCore.MainFactory.CreateResourceSet(ref resSetDesc);
+				}
+				catch (Exception ex)
+				{
+					_graphicsCore.graphicsSystem.engine.Logger.LogException("Failed to crate default camera resource set!", ex);
+					_defaultCameraResSet = null;
+					return false;
+				}
+			}
 			return true;
 		}
 

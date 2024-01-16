@@ -6,6 +6,7 @@ using FragEngine3.Graphics.Components.Internal;
 using FragEngine3.Graphics.Contexts;
 using FragEngine3.Graphics.Resources;
 using FragEngine3.Graphics.Resources.Data;
+using FragEngine3.Graphics.Utility;
 using FragEngine3.Resources;
 using FragEngine3.Scenes;
 using System.Numerics;
@@ -85,11 +86,13 @@ namespace FragEngine3.Graphics.Stack
 		private DeviceBuffer? cbScene = null;
 		private readonly Stack<CommandList> commandListPool = new();
 		private readonly Stack<CommandList> commandListsInUse = new();
+		private ResourceLayout? resLayoutCamera = null;
 
 		// Shadow maps:
 		private Texture? texShadowMaps = null;
 		private uint texShadowMapsCapacity = 0;
 		private DeviceBuffer? dummyLightDataBuffer = null;
+		private Sampler? samplerShadowMaps = null;
 
 		// Output composition:
 		private ResourceSet? compositionResourceSet = null;
@@ -138,9 +141,12 @@ namespace FragEngine3.Graphics.Stack
 			IsDisposed = true;
 
 			cbScene?.Dispose();
-			texShadowMaps?.Dispose();
-			dummyLightDataBuffer?.Dispose();
+			resLayoutCamera?.Dispose();
 			compositionResourceSet?.Dispose();
+			dummyLightDataBuffer?.Dispose();
+			texShadowMaps?.Dispose();
+			texShadowMapsCapacity = 0;
+			samplerShadowMaps?.Dispose();
 
 			foreach (CommandList cmdList in commandListPool)
 			{
@@ -178,7 +184,44 @@ namespace FragEngine3.Graphics.Stack
 			SkippedRendererCount = 0;
 			FailedRendererCount = 0;
 
-			//...
+			// GLOBAL RESOURCES:
+
+			if (!CameraUtility.VerifyOrCreateDefaultCameraResourceLayout(in core, ref resLayoutCamera))
+			{
+				Logger.LogError("Failed to create default camera resource layout for graphics stack!");
+				return false;
+			}
+
+			// SHADOW MAPPING:
+
+			if (dummyLightDataBuffer == null || dummyLightDataBuffer.IsDisposed)
+			{
+				uint dummyLightDataBufferCap = 0;
+				if (!CameraUtility.VerifyOrCreateLightDataBuffer(in core, 1, ref dummyLightDataBuffer, ref dummyLightDataBufferCap))
+				{
+					Logger.LogError("Failed to create dummy light data buffer for graphics stack!");
+					return false;
+				}
+			}
+
+			if (texShadowMaps == null || texShadowMaps.IsDisposed || texShadowMapsCapacity == 0)
+			{
+				if (!ShadowMapUtility.CreateShadowMapArray(in core, 1024, 1024, 1, out texShadowMaps))
+				{
+					Logger.LogError("Failed to create initial shadow map texture array for graphics stack!");
+					return false;
+				}
+				texShadowMapsCapacity = 1;
+			}
+
+			if (samplerShadowMaps == null || samplerShadowMaps.IsDisposed)
+			{
+				if (!ShadowMapUtility.CreateShadowSampler(in core, out samplerShadowMaps))
+				{
+					Logger.LogError("Failed to create shadow map sampler for graphics stack!");
+					return false;
+				}
+			}
 
 			// OUTPUT COMPOSITION:
 
@@ -215,29 +258,7 @@ namespace FragEngine3.Graphics.Stack
 					compositionRenderer.LayerFlags = COMPOSITION_LAYER_MASK;
 				}
 			}
-
-			// SHADOW MAPPING:
-
-			if (dummyLightDataBuffer == null || dummyLightDataBuffer.IsDisposed)
-			{
-				uint dummyLightDataBufferCap = 0;
-				if (!CameraUtility.VerifyOrCreateLightDataBuffer(in core, 1, ref dummyLightDataBuffer, ref dummyLightDataBufferCap))
-				{
-					Logger.LogError("Failed to create dummy light data buffer for graphics stack!");
-					return false;
-				}
-			}
-
-			if (texShadowMaps == null || texShadowMaps.IsDisposed || texShadowMapsCapacity == 0)
-			{
-				if (!core.CreateShadowMapArray(1024, 1024, 1, out texShadowMaps))
-				{
-					Logger.LogError("Failed to create initial shadow map texture array for graphics stack!");
-					return false;
-				}
-				texShadowMapsCapacity = 1;
-			}
-
+			
 			Logger.LogMessage($"Initialized graphics stack of type '{nameof(ForwardPlusLightsStack)}' for scene '{Scene.Name}'.");
 
 			isDrawing = false;
@@ -256,10 +277,12 @@ namespace FragEngine3.Graphics.Stack
 			}
 
 			cbScene?.Dispose();
+			resLayoutCamera?.Dispose();
+			compositionResourceSet?.Dispose();
+			dummyLightDataBuffer?.Dispose();
 			texShadowMaps?.Dispose();
 			texShadowMapsCapacity = 0;
-			dummyLightDataBuffer?.Dispose();
-			compositionResourceSet?.Dispose();
+			samplerShadowMaps?.Dispose();
 
 			foreach (CommandList cmdList in commandListPool)
 			{
@@ -478,7 +501,11 @@ namespace FragEngine3.Graphics.Stack
 				return false;
 			}
 
-			_outSceneCtx = new(Scene, cbScene!);
+			_outSceneCtx = new(
+				Scene,
+				cbScene!,
+				resLayoutCamera!,
+				samplerShadowMaps!);
 			return _outSceneCtx.IsValid;
 		}
 
@@ -510,7 +537,8 @@ namespace FragEngine3.Graphics.Stack
 			{
 				texShadowMaps?.Dispose();
 
-				if (!core.CreateShadowMapArray(
+				if (!ShadowMapUtility.CreateShadowMapArray(
+					in core,
 					1024,
 					1024,
 					lightCountShadowMapped,
@@ -534,7 +562,15 @@ namespace FragEngine3.Graphics.Stack
 			uint shadowMapIdx = 0;
 			foreach (Light light in activeLightsShadowMapped)
 			{
-				success &= light.BeginDrawShadowMap(in cmdList, in texShadowMaps, in dummyLightDataBuffer!, _renderFocalPoint, _renderFocalRadius, shadowMapIdx, out CameraContext lightCtx);
+				success &= light.BeginDrawShadowMap(
+					in _sceneCtx,
+					in cmdList,
+					in texShadowMaps,
+					in dummyLightDataBuffer!,
+					_renderFocalPoint,
+					_renderFocalRadius,
+					shadowMapIdx,
+					out CameraContext lightCtx);
 				if (!success) break;
 
 				//TODO [later]: Exclude renderers that are entirely outside of point/spot lights' maximum range.
@@ -619,6 +655,7 @@ namespace FragEngine3.Graphics.Stack
 		private bool DrawSceneRenderers(in SceneContext _sceneCtx, in CommandList _cmdList, Camera _camera, RenderMode _renderMode, in List<IRenderer> _renderers, bool _clearRenderTargets, uint _cameraIdx)
 		{
 			if (!_camera.BeginPass(
+				in _sceneCtx,
 				_cmdList,
 				texShadowMaps!,
 				_renderMode,
@@ -667,6 +704,7 @@ namespace FragEngine3.Graphics.Stack
 
 			cmdList.Begin();
 			if (!_camera.BeginPass(
+				in _sceneCtx,
 				cmdList,
 				texShadowMaps!,
 				RenderMode.Custom,

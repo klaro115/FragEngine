@@ -139,8 +139,8 @@ namespace FragEngine3.Graphics
 			}
 
 			string applicationPath = engine.ResourceManager.fileGatherer.applicationPath;
-			string settingsDirPath = Path.Combine(applicationPath, GraphicsContants.SETTINGS_ROOT_DIR_REL_PATH);
-			string filePath = Path.GetFullPath(Path.Combine(settingsDirPath, GraphicsContants.SETTINGS_FILE_NAME));
+			string settingsDirPath = Path.Combine(applicationPath, GraphicsConstants.SETTINGS_ROOT_DIR_REL_PATH);
+			string filePath = Path.GetFullPath(Path.Combine(settingsDirPath, GraphicsConstants.SETTINGS_FILE_NAME));
 
 			if (!File.Exists(filePath))
 			{
@@ -175,8 +175,8 @@ namespace FragEngine3.Graphics
 			}
 
 			string applicationPath = engine.ResourceManager.fileGatherer.applicationPath;
-			string settingsDirPath = Path.Combine(applicationPath, GraphicsContants.SETTINGS_ROOT_DIR_REL_PATH);
-			string filePath = Path.GetFullPath(Path.Combine(settingsDirPath, GraphicsContants.SETTINGS_FILE_NAME));
+			string settingsDirPath = Path.Combine(applicationPath, GraphicsConstants.SETTINGS_ROOT_DIR_REL_PATH);
+			string filePath = Path.GetFullPath(Path.Combine(settingsDirPath, GraphicsConstants.SETTINGS_FILE_NAME));
 
 			return Serializer.SerializeJsonToFile(settings, filePath);
 		}

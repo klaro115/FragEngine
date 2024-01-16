@@ -60,7 +60,7 @@ namespace FragEngine3.Graphics.Resources
 		{
 			core = _core ?? throw new ArgumentNullException(nameof(_core), "Graphics core may not be null!");
 
-			CreateDefaultResourceLayout(0);
+			CreateObjectResourceLayout(0);
 		}
 
 		#endregion
@@ -76,7 +76,7 @@ namespace FragEngine3.Graphics.Resources
 		private ResourceHandle? tesselationShaderEval = null;
 		private ResourceHandle pixelShader = ResourceHandle.None;
 
-		private VersionedMember<ResourceLayout> defaultResourceLayout = new(null!, 0);
+		private VersionedMember<ResourceLayout> objectResourceLayout = new(null!, 0);
 		private VersionedMember<ShaderSetDescription> shaderSetDesc = new(default, 0);
 
 		private ResourceLayout? boundResourceLayout = null;
@@ -92,7 +92,7 @@ namespace FragEngine3.Graphics.Resources
 		public override ResourceType ResourceType => ResourceType.Material;
 
 		public bool UseExternalBoundResources { get; private set; } = false;
-		public ResourceLayout ResourceLayout => defaultResourceLayout.Value;
+		public ResourceLayout ObjectResourceLayout => objectResourceLayout.Value;
 		public ResourceLayout? BoundResourceLayout => boundResourceLayout;
 		public ResourceSet? BoundResourceSet => boundResourceSet.Value;
 
@@ -139,7 +139,7 @@ namespace FragEngine3.Graphics.Resources
 		{
 			base.Dispose(_disposing);
 
-			defaultResourceLayout.DisposeValue();
+			objectResourceLayout.DisposeValue();
 			boundResourceLayout?.Dispose();
 			boundResourceSet.DisposeValue();
 		}
@@ -154,24 +154,24 @@ namespace FragEngine3.Graphics.Resources
 			return newestPipelineVersion == _pipeline.Version;
 		}
 
-		private bool CreateDefaultResourceLayout(uint _newVersion)
+		private bool CreateObjectResourceLayout(uint _newVersion)										//TODO: We can probably make this a scene-wide variable as well, and pass it via SceneContext.
 		{
 			try
 			{
-				defaultResourceLayout.DisposeValue();
+				objectResourceLayout.DisposeValue();
 
-				ResourceLayoutDescription resLayoutDesc = new(GraphicsContants.DEFAULT_SURFACE_RESOURCE_LAYOUT_DESC);
+				ResourceLayoutDescription resLayoutDesc = new(GraphicsConstants.DEFAULT_OBJECT_RESOURCE_LAYOUT_DESC);
 
 				ResourceLayout resLayout = core.MainFactory.CreateResourceLayout(ref resLayoutDesc);
-				resLayout.Name = $"ResLayout_Default_{resourceKey}";
+				resLayout.Name = $"ResLayout_Object_{resourceKey}";
 
-				defaultResourceLayout.UpdateValue(_newVersion, resLayout);
+				objectResourceLayout.UpdateValue(_newVersion, resLayout);
 				return true;
 			}
 			catch (Exception ex)
 			{
-				Logger.LogException($"Failed to create resource layout for material '{resourceKey}'!", ex);
-				defaultResourceLayout.DisposeValue();
+				Logger.LogException($"Failed to create object resource layout for material '{resourceKey}'!", ex);
+				objectResourceLayout.DisposeValue();
 				return false;
 			}
 		}
@@ -318,7 +318,7 @@ namespace FragEngine3.Graphics.Resources
 			}
 		}
 
-		internal bool CreatePipeline(CameraContext _cameraCtx, uint _rendererVersion, MeshVertexDataFlags _vertexDataFlags, out VersionedMember<Pipeline> _outPipeline)
+		internal bool CreatePipeline(SceneContext _sceneCtx, CameraContext _cameraCtx, uint _rendererVersion, MeshVertexDataFlags _vertexDataFlags, out VersionedMember<Pipeline> _outPipeline)
 		{
 			if (_cameraCtx == null || !_cameraCtx.IsValid)
 			{
@@ -331,7 +331,7 @@ namespace FragEngine3.Graphics.Resources
 				uint newestVersion = materialVersion;
 
 				newestVersion = Math.Max(newestVersion, depthStencilDesc.Version);
-				newestVersion = Math.Max(newestVersion, defaultResourceLayout.Version);
+				newestVersion = Math.Max(newestVersion, objectResourceLayout.Version);
 				newestVersion = Math.Max(newestVersion, shaderSetDesc.Version);
 				newestVersion = Math.Max(newestVersion, boundResourceSet.Version);
 
@@ -346,7 +346,7 @@ namespace FragEngine3.Graphics.Resources
 			{
 				depthStencilDesc.UpdateValue(materialVersion, depthStencilDesc.Value);
 			}
-			if (defaultResourceLayout.Version != materialVersion && !CreateDefaultResourceLayout(materialVersion))
+			if (objectResourceLayout.Version != materialVersion && !CreateObjectResourceLayout(materialVersion))
 			{
 				_outPipeline = new(null!, 0);
 				return false;
@@ -394,8 +394,8 @@ namespace FragEngine3.Graphics.Resources
 				}
 
 				ResourceLayout[] resourceLayouts = boundResourceLayout != null
-					? [ defaultResourceLayout.Value, boundResourceLayout ]
-					: [ defaultResourceLayout.Value ];
+					? [ _sceneCtx.resLayoutCamera, objectResourceLayout.Value, boundResourceLayout ]
+					: [ _sceneCtx.resLayoutCamera, objectResourceLayout.Value ];
 
 				GraphicsPipelineDescription pipelineDesc = new(
 					BlendStateDescription.SingleAlphaBlend,

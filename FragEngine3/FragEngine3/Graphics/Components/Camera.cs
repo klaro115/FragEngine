@@ -39,8 +39,8 @@ public sealed class Camera : Component
 	private readonly Dictionary<RenderMode, CameraTarget> targetDict = new(4);
 	private CameraTarget? overrideTarget = null;
 
-	private readonly Stack<DeviceBuffer> cbCameraPool = new(4);
-	private readonly Stack<DeviceBuffer> cbCameraInUse = new(4);
+	private readonly Stack<CameraPassResources> passResourcePool = new(4);
+	private readonly Stack<CameraPassResources> passResourcesInUse = new(4);
 
 	// Main camera:
 	private static Camera? mainCamera = null;
@@ -127,13 +127,13 @@ public sealed class Camera : Component
 			kvp.Value.Dispose();
 		}
 
-		foreach (DeviceBuffer cbCamera in cbCameraPool)
+		foreach (CameraPassResources passRes in passResourcePool)
 		{
-			cbCamera.Dispose();
+			passRes.Dispose();
 		}
-		foreach (DeviceBuffer cbCamera in cbCameraInUse)
+		foreach (CameraPassResources passRes in passResourcesInUse)
 		{
-			cbCamera.Dispose();
+			passRes.Dispose();
 		}
 
 		lightDataBuffer?.Dispose();
@@ -142,8 +142,8 @@ public sealed class Camera : Component
 		{
 			targetDict.Clear();
 			overrideTarget = null;
-			cbCameraPool.Clear();
-			cbCameraInUse.Clear();
+			passResourcePool.Clear();
+			passResourcesInUse.Clear();
 
 			lightDataBuffer = null;
 			lightDataBufferCapacity = 0;
@@ -172,16 +172,16 @@ public sealed class Camera : Component
 		}
 		targetDict.Clear();
 
-		foreach (DeviceBuffer cbCamera in cbCameraPool)
+		foreach (CameraPassResources passRes in passResourcePool)
 		{
-			cbCamera.Dispose();
+			passRes.Dispose();
 		}
-		foreach (DeviceBuffer cbCamera in cbCameraInUse)
+		foreach (CameraPassResources passRes in passResourcesInUse)
 		{
-			cbCamera.Dispose();
+			passRes.Dispose();
 		}
-		cbCameraPool.Clear();
-		cbCameraInUse.Clear();
+		passResourcePool.Clear();
+		passResourcesInUse.Clear();
 
 		// Reset camera instance and its external references:
 		instance.SetOverrideFramebuffer(null, false);
@@ -236,17 +236,19 @@ public sealed class Camera : Component
 		return true;
 	}
 
-	private bool GetOrCreateCameraConstantBuffer(out DeviceBuffer _outCbCamera)
+	private bool GetOrCreateCameraPassResources(out CameraPassResources _outPassResources)
 	{
-		if (!cbCameraPool.TryPop(out _outCbCamera!))
+		if (!passResourcePool.TryPop(out _outPassResources!))
 		{
-			if (!CameraUtility.CreateConstantBuffer_CBCamera(in instance.graphicsCore, out _outCbCamera))
-			{
-				return false;
-			}
+			_outPassResources = new();
 		}
 
-		cbCameraInUse.Push(_outCbCamera);
+		if (!CameraUtility.CreateConstantBuffer_CBCamera(in instance.graphicsCore, out _outPassResources.cbCamera))
+		{
+			return false;
+		}
+
+		passResourcesInUse.Push(_outPassResources);
 		return true;
 	}
 
@@ -320,12 +322,12 @@ public sealed class Camera : Component
 			return false;
 		}
 
-		// Return constant buffers to pool for re-use next frame:
-		foreach (DeviceBuffer cbCamera in cbCameraInUse)
+		// Return resources to pool for re-use next frame:
+		foreach (CameraPassResources passRes in passResourcesInUse)
 		{
-			cbCameraPool.Push(cbCamera);
+			passResourcePool.Push(passRes);
 		}
-		cbCameraInUse.Clear();
+		passResourcesInUse.Clear();
 
 		// Update counters:
 		PassCounter = 0;
@@ -334,8 +336,9 @@ public sealed class Camera : Component
 	}
 
 	public bool BeginPass(
+		in SceneContext _sceneCtx,
 		CommandList _cmdList,
-		Texture _shadowMapArray,
+		Texture _texShadowMaps,
 		RenderMode _renderMode,
 		bool _clearRenderTargets,
 		uint _cameraIdx_,
@@ -362,6 +365,13 @@ public sealed class Camera : Component
 			return false;
 		}
 
+		// Fetch or prepare a reusable set of resources to use for this pass:
+		if (!GetOrCreateCameraPassResources(out CameraPassResources passResources))
+		{
+			_outCameraCtx = null!;
+			return false;
+		}
+
 		// Get or create the active camera target:
 		CameraTarget activeTarget;
 		if (HasOverrideFramebuffer)
@@ -384,12 +394,6 @@ public sealed class Camera : Component
 			return false;
 		}
 
-		if (!GetOrCreateCameraConstantBuffer(out DeviceBuffer cbCamera))
-		{
-			_outCameraCtx = null!;
-			return false;
-		}
-
 		// Finalize projection and camera parameters, and start drawing:
 		instance.MtxWorld = node.WorldTransformation.Matrix;
 		if (!instance.BeginDrawing(_cmdList, _clearRenderTargets, true, out Matrix4x4 mtxWorld2Clip))
@@ -401,6 +405,7 @@ public sealed class Camera : Component
 
 		Pose worldPose = node.WorldTransformation;
 
+		// Camera data constant buffer:
 		if (!CameraUtility.UpdateConstantBuffer_CBCamera(
 			in instance,
 			in worldPose,
@@ -408,9 +413,25 @@ public sealed class Camera : Component
 			_cameraIdx_,
 			_activeLightCount,
 			_shadowMappedLightCount,
-			ref cbCamera!))
+			ref passResources.cbCamera!))
 		{
-			Logger.LogError("Failed to allocate or update camera's global constant buffer!");
+			Logger.LogError("Failed to allocate or update camera constant buffer!");
+			_outCameraCtx = null!;
+			return false;
+		}
+
+		// Camera's default resource set:
+		if (!CameraUtility.UpdateOrCreateDefaultCameraResourceSet(
+			in instance.graphicsCore,
+			in _sceneCtx.resLayoutCamera,
+			in _sceneCtx.cbScene,
+			in passResources.cbCamera,
+			in lightDataBuffer!,
+			in _texShadowMaps,
+			in _sceneCtx.samplerShadowMaps,
+			ref passResources.defaultCameraResourceSet))
+		{
+			Logger.LogError("Failed to allocate or update camera's default resource set!");
 			_outCameraCtx = null!;
 			return false;
 		}
@@ -419,10 +440,13 @@ public sealed class Camera : Component
 		_outCameraCtx = new(
 			instance,
 			_cmdList,
-			cbCamera!,
+
+			passResources.defaultCameraResourceSet!,
+			passResources.cbCamera!,
 			activeFramebuffer,
 			lightDataBuffer!,
-			_shadowMapArray,
+			_texShadowMaps,
+
 			activeFramebuffer.OutputDescription);
 
 		return true;

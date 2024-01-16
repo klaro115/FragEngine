@@ -26,7 +26,8 @@ namespace FragEngine3.Graphics.Components.ConstantBuffers
 		public const int packedByteSize = 128;
 		
 		public static readonly ResourceLayoutElementDescription ResourceLayoutElementDescLightBuffer = new("BufLights", ResourceKind.StructuredBufferReadOnly, ShaderStages.Fragment);
-		public static readonly ResourceLayoutElementDescription ResourceLayoutElementDescShadowMaps = new("TexShadowMaps", ResourceKind.TextureReadOnly, ShaderStages.Fragment);
+		public static readonly ResourceLayoutElementDescription ResourceLayoutElementDescTexShadowMaps = new("TexShadowMaps", ResourceKind.TextureReadOnly, ShaderStages.Fragment);
+		public static readonly ResourceLayoutElementDescription ResourceLayoutElementDescSamplerShadowMaps = new("SamplerShadowMaps", ResourceKind.Sampler, ShaderStages.Fragment);
 
 		#endregion
 	}

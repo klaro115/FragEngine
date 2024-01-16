@@ -2,6 +2,7 @@
 using FragEngine3.Graphics.Components.ConstantBuffers;
 using FragEngine3.Graphics.Components.Data;
 using FragEngine3.Graphics.Contexts;
+using FragEngine3.Graphics.Utility;
 using FragEngine3.Scenes;
 using FragEngine3.Scenes.Data;
 using FragEngine3.Scenes.EventSystem;
@@ -11,7 +12,7 @@ using Veldrid;
 
 namespace FragEngine3.Graphics.Components
 {
-	public sealed class Light : Component
+    public sealed class Light : Component
 	{
 		#region Types
 
@@ -81,6 +82,7 @@ namespace FragEngine3.Graphics.Components
 		private CameraInstance? shadowCameraInstance = null;
 		private Framebuffer? shadowMapFrameBuffer = null;
 		private DeviceBuffer? shadowCbCamera = null;
+		private ResourceSet? cameraResourceSet = null;
 		private Matrix4x4 mtxShadowWorld2Clip = Matrix4x4.Identity;
 		private Matrix4x4 mtxShadowWorld2Uv = Matrix4x4.Identity;
 		private uint shadowMapIdx = 0;
@@ -204,6 +206,7 @@ namespace FragEngine3.Graphics.Components
 			shadowCameraInstance?.Dispose();
 			shadowMapFrameBuffer?.Dispose();
 			shadowCbCamera?.Dispose();
+			cameraResourceSet?.Dispose();
 		}
 
 		public override void ReceiveSceneEvent(SceneEventType _eventType, object? _eventData)
@@ -234,6 +237,7 @@ namespace FragEngine3.Graphics.Components
 		}
 
 		public bool BeginDrawShadowMap(
+			in SceneContext _sceneCtx,
 			in CommandList _cmdList,
 			in Texture _texShadowMapArray,
 			in DeviceBuffer _dummyLightDataBuffer,
@@ -291,7 +295,7 @@ namespace FragEngine3.Graphics.Components
 			// Ensure a camera instance is ready for drawing the scene:
 			if (shadowCameraInstance == null || shadowCameraInstance.IsDisposed)
 			{
-				if (!CameraUtility.UpdateOrCreateShadowMapCameraInstance(
+				if (!ShadowMapUtility.UpdateOrCreateShadowMapCameraInstance(
 					in core,
 					in shadowMapFrameBuffer,
 					in mtxShadowWorld2Clip,
@@ -321,14 +325,33 @@ namespace FragEngine3.Graphics.Components
 				return false;
 			}
 
+			// Camera's default resource set:
+			if (!CameraUtility.UpdateOrCreateDefaultCameraResourceSet(
+				in core,
+				in _sceneCtx.resLayoutCamera,
+				in _sceneCtx.cbScene,
+				in shadowCbCamera!,
+				in _dummyLightDataBuffer!,
+				in _texShadowMapArray,
+				in _sceneCtx.samplerShadowMaps,
+				ref cameraResourceSet))
+			{
+				Logger.LogError("Failed to allocate or update camera's default resource set!");
+				_outCameraCtx = null!;
+				return false;
+			}
+
 			// Assemble context object for renderers to reference when issuing draw calls:
 			_outCameraCtx = new(
 				shadowCameraInstance!,
 				_cmdList,
+
+				cameraResourceSet!,
 				shadowCbCamera!,
 				shadowMapFrameBuffer,
 				_dummyLightDataBuffer,
 				_texShadowMapArray,
+
 				shadowMapFrameBuffer.OutputDescription);
 
 			// Bind framebuffers and clear targets:

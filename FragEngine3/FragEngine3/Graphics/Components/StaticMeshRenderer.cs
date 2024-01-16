@@ -1,8 +1,8 @@
 ﻿using FragEngine3.Containers;
 using FragEngine3.Graphics.Components.Data;
-using FragEngine3.Graphics.Components.Utility;
 using FragEngine3.Graphics.Contexts;
 using FragEngine3.Graphics.Resources;
+using FragEngine3.Graphics.Utility;
 using FragEngine3.Resources;
 using FragEngine3.Scenes;
 using FragEngine3.Scenes.Data;
@@ -25,7 +25,7 @@ namespace FragEngine3.Graphics.Components
 
 		private DeviceBuffer? cbObject = null;
 		private DeviceBuffer? shadowCbObject = null;
-		private ResourceSet? defaultResourceSet = null;
+		private ResourceSet? objectResourceSet = null;
 		private VersionedMember<Pipeline> pipeline = new(null!, 0);
 		private VersionedMember<Pipeline> shadowPipeline = new(null!, 0);
 
@@ -333,7 +333,7 @@ namespace FragEngine3.Graphics.Components
 			if (!_currentMaterial.IsPipelineUpToDate(in _currentPipeline, rendererVersion))
 			{
 				_currentPipeline.DisposeValue();
-				if (!_currentMaterial.CreatePipeline(_cameraCtx, rendererVersion, vertexDataFlags, out _currentPipeline))
+				if (!_currentMaterial.CreatePipeline(_sceneCtx, _cameraCtx, rendererVersion, vertexDataFlags, out _currentPipeline))
 				{
 					Logger.LogError($"Failed to retrieve pipeline description for material '{_currentMaterial}'!");
 					return false;
@@ -341,24 +341,23 @@ namespace FragEngine3.Graphics.Components
 			}
 
 			// Ensure the default resource set is assigned:
-			if (!MeshRendererUtility.UpdateDefaultResourceSet(
+			if (!MeshRendererUtility.UpdateObjectResourceSet(
 				_currentMaterial,
-				in _sceneCtx,
-				in _cameraCtx,
 				in _cbObject!,
-				ref defaultResourceSet))
+				ref objectResourceSet))
 			{
 				return false;
 			}
 
 			// Throw pipeline and geometry buffers at the command list:
 			_cameraCtx.cmdList.SetPipeline(_currentPipeline.Value);
-			_cameraCtx.cmdList.SetGraphicsResourceSet(0, defaultResourceSet);
+			_cameraCtx.cmdList.SetGraphicsResourceSet(0, _cameraCtx.cameraResourceSet);
+			_cameraCtx.cmdList.SetGraphicsResourceSet(1, objectResourceSet);
 
 			ResourceSet? boundResourceSet = overrideBoundResourceSet ?? _currentMaterial.BoundResourceSet;
 			if (boundResourceSet != null && _currentMaterial.BoundResourceLayout != null)
 			{
-				_cameraCtx.cmdList.SetGraphicsResourceSet(1, boundResourceSet);
+				_cameraCtx.cmdList.SetGraphicsResourceSet(2, boundResourceSet);
 			}
 
 			for (uint i = 0; i < vertexBuffers.Length; ++i)
