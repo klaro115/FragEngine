@@ -81,6 +81,7 @@ namespace FragEngine3.Graphics.Stack
 		private readonly List<IRenderer> activeRenderersOpaque = new(128);
 		private readonly List<IRenderer> activeRenderersTransparent = new(128);
 		private readonly List<IRenderer> activeRenderersUI = new(128);
+		private readonly List<IRenderer> activeShadowCasters = new(128);
 
 		// Global resources:
 		private DeviceBuffer? cbScene = null;
@@ -276,6 +277,14 @@ namespace FragEngine3.Graphics.Stack
 				compositionRenderer = null;
 			}
 
+			activeCameras.Clear();
+			activeLights.Clear();
+			activeLightsShadowMapped.Clear();
+			activeRenderersOpaque.Clear();
+			activeRenderersTransparent.Clear();
+			activeRenderersUI.Clear();
+			activeShadowCasters.Clear();
+
 			cbScene?.Dispose();
 			resLayoutCamera?.Dispose();
 			compositionResourceSet?.Dispose();
@@ -408,8 +417,16 @@ namespace FragEngine3.Graphics.Stack
 
 		private bool BeginDrawScene(in List<IRenderer> _renderers, in IList<Camera> _cameras, in IList<Light> _lights, out SceneContext _outSceneCtx, out Vector3 _outRenderFocalPoint, out float _outRenderFocalRadius)
 		{
-			// Identify only active cameras and visible light sources:
+			// Clear all lists for new frame:
 			activeCameras.Clear();
+			activeLights.Clear();
+			activeLightsShadowMapped.Clear();
+			activeRenderersOpaque.Clear();
+			activeRenderersTransparent.Clear();
+			activeRenderersUI.Clear();
+			activeShadowCasters.Clear();
+
+			// Identify only active cameras and visible light sources:
 			foreach (Camera camera in _cameras)
 			{
 				if (!camera.IsDisposed && camera.layerMask != 0 && camera.node.IsEnabledInHierarchy())
@@ -418,8 +435,6 @@ namespace FragEngine3.Graphics.Stack
 				}
 			}
 
-			activeLights.Clear();
-			activeLightsShadowMapped.Clear();
 			foreach (Light light in _lights)
 			{
 				// Skip disabled and overly dim light sources:
@@ -465,6 +480,8 @@ namespace FragEngine3.Graphics.Stack
 				};
 				rendererList?.Add(renderer);
 			}
+			activeShadowCasters.AddRange(activeRenderersOpaque);
+			activeShadowCasters.AddRange(activeRenderersTransparent);
 
 			// Return command lists used in last frame to pool:
 			foreach (CommandList cmdList in commandListsInUse)
@@ -576,13 +593,12 @@ namespace FragEngine3.Graphics.Stack
 				//TODO [later]: Exclude renderers that are entirely outside of point/spot lights' maximum range.
 
 				// Draw renderers for opaque and tranparent geometry, ignore UI:
-				foreach (IRenderer renderer in activeRenderersOpaque)
+				foreach (IRenderer renderer in activeShadowCasters)
 				{
-					success &= renderer.DrawShadowMap(_sceneCtx, lightCtx);
-				}
-				foreach (IRenderer renderer in activeRenderersTransparent)
-				{
-					success &= renderer.DrawShadowMap(_sceneCtx, lightCtx);
+					if ((light.layerMask & renderer.LayerFlags) != 0)
+					{
+						success &= renderer.DrawShadowMap(_sceneCtx, lightCtx);
+					}
 				}
 
 				success &= light.EndDrawShadowMap();
@@ -672,7 +688,10 @@ namespace FragEngine3.Graphics.Stack
 
 			foreach (IRenderer renderer in _renderers)
 			{
-				success &= renderer.Draw(_sceneCtx, cameraCtx);
+				if ((_camera.layerMask & renderer.LayerFlags) != 0)
+				{
+					success &= renderer.Draw(_sceneCtx, cameraCtx);
+				}
 			}
 
 			success &= _camera.EndPass();

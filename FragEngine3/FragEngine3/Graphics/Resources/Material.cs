@@ -180,6 +180,9 @@ namespace FragEngine3.Graphics.Resources
 		{
 			shaderSetDesc.DisposeValue();
 
+			// If a fitting vertex data variant is unavailable for one of the later stages, try using basic variant instead:
+			bool enableFallackToBasic = _vertexDataFlags != MeshVertexDataFlags.BasicSurfaceData;
+
 			GraphicsCapabilities capabilities = core.GetCapabilities();
 
 			// VERTEX DEFINITIONS:
@@ -218,17 +221,17 @@ namespace FragEngine3.Graphics.Resources
 				i = 0;
 				ShaderStages errorStages = 0;
 
-				bool success = AddShaderVariant(vertexShader, ShaderStages.Vertex);
+				bool success = AddShaderVariant(vertexShader, ShaderStages.Vertex, false);
 				if (hasGeometryShader)
 				{
-					success &= AddShaderVariant(geometryShader, ShaderStages.Geometry);
+					success &= AddShaderVariant(geometryShader, ShaderStages.Geometry, false);
 				}
 				if (hasTesselationShader)
 				{
-					success &= AddShaderVariant(tesselationShaderCtrl, ShaderStages.TessellationControl);
-					success &= AddShaderVariant(tesselationShaderEval, ShaderStages.TessellationEvaluation);
+					success &= AddShaderVariant(tesselationShaderCtrl, ShaderStages.TessellationControl, enableFallackToBasic);
+					success &= AddShaderVariant(tesselationShaderEval, ShaderStages.TessellationEvaluation, enableFallackToBasic);
 				}
-				success &= AddShaderVariant(pixelShader, ShaderStages.Fragment);
+				success &= AddShaderVariant(pixelShader, ShaderStages.Fragment, enableFallackToBasic);
 
 				if (!success || errorStages != 0)
 				{
@@ -246,7 +249,7 @@ namespace FragEngine3.Graphics.Resources
 
 
 				// Local helper method for fetching and loading a shader variant:
-				bool AddShaderVariant(ResourceHandle? _handle, ShaderStages _stageFlag)
+				bool AddShaderVariant(ResourceHandle? _handle, ShaderStages _stageFlag, bool _fallbackToBasic)
 				{
 					if (_handle == null || !_handle.IsValid)
 					{
@@ -254,12 +257,18 @@ namespace FragEngine3.Graphics.Resources
 						return false;
 					}
 
-					if (_handle.GetResource(true, true) is not ShaderResource shaderRes ||
-						!shaderRes.GetShaderProgram(_vertexDataFlags, out Shader? shader) ||
-						shader == null)
+					if (_handle.GetResource(true, true) is not ShaderResource shaderRes)
 					{
 						errorStages |= _stageFlag;
 						return false;
+					}
+					if (!shaderRes.GetShaderProgram(_vertexDataFlags, out Shader? shader) || shader == null)
+					{
+						if (!_fallbackToBasic || shaderRes.GetShaderProgram(MeshVertexDataFlags.BasicSurfaceData, out shader) || shader == null)
+						{
+							errorStages |= _stageFlag;
+							return false;
+						}
 					}
 
 					shaders[i++] = shader;
