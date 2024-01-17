@@ -243,7 +243,6 @@ namespace FragEngine3.Graphics.Components
 		public bool BeginDrawShadowMap(
 			in SceneContext _sceneCtx,
 			in CommandList _cmdList,
-			in Texture _texShadowMapArray,
 			in DeviceBuffer _dummyBufLights,
 			Vector3 _shadingFocalPoint,
 			float _shadingFocalPointRadius,
@@ -263,7 +262,7 @@ namespace FragEngine3.Graphics.Components
 				_outCameraPassCtx = null!;
 				return false;
 			}
-			if (_texShadowMapArray == null || _texShadowMapArray.IsDisposed)
+			if (_sceneCtx.texShadowMaps == null || _sceneCtx.texShadowMaps.IsDisposed)
 			{
 				Logger.LogError("Can't begin drawing shadow map using null shadow map texture array!");
 				_outCameraPassCtx = null!;
@@ -282,7 +281,7 @@ namespace FragEngine3.Graphics.Components
 				shadowCameraInstance?.Dispose();
 				shadowCameraInstance = null;
 
-				FramebufferAttachmentDescription depthTargetDesc = new(_texShadowMapArray, shadowMapIdx, 0);
+				FramebufferAttachmentDescription depthTargetDesc = new(_sceneCtx.texShadowMaps, shadowMapIdx, 0);
 				FramebufferDescription shadowMapFrameBufferDesc = new(depthTargetDesc, []);
 
 				try
@@ -316,6 +315,10 @@ namespace FragEngine3.Graphics.Components
 					return false;
 				}
 			}
+			if (_texShadowMapsHasChanged)
+			{
+				shadowCameraInstance!.SetOverrideFramebuffer(shadowMapFrameBuffer, true);
+			}
 
 			// Update or create global constant buffer with scene and camera information for the shaders:
 			if (!CameraUtility.UpdateConstantBuffer_CBCamera(
@@ -337,12 +340,9 @@ namespace FragEngine3.Graphics.Components
 			// Camera's default resource set:
 			if (!CameraUtility.UpdateOrCreateCameraResourceSet(
 				in core,
-				in _sceneCtx.resLayoutCamera,
-				in _sceneCtx.cbScene,
+				in _sceneCtx,
 				in shadowCbCamera!,
 				in _dummyBufLights!,
-				in _texShadowMapArray,
-				in _sceneCtx.samplerShadowMaps,
 				ref shadowResSetCamera,
 				_rebuildResSetCamera))
 			{

@@ -607,7 +607,6 @@ namespace FragEngine3.Graphics.Stack
 				success &= light.BeginDrawShadowMap(
 					in _sceneCtx,
 					in cmdList,
-					in texShadowMaps,
 					in dummyBufLights!,
 					_renderFocalPoint,
 					_renderFocalRadius,
@@ -709,7 +708,6 @@ namespace FragEngine3.Graphics.Stack
 			if (!_camera.BeginPass(
 				in _sceneCtx,
 				_cmdList,
-				texShadowMaps!,
 				_renderMode,
 				_clearRenderTargets,
 				_cameraIdx,
@@ -762,7 +760,6 @@ namespace FragEngine3.Graphics.Stack
 			if (!_camera.BeginPass(
 				in _sceneCtx,
 				cmdList,
-				texShadowMaps!,
 				RenderMode.Custom,
 				true,
 				_cameraIdx,

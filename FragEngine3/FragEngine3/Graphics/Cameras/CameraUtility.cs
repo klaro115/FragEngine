@@ -1,4 +1,5 @@
 ﻿using FragEngine3.Graphics.Components.ConstantBuffers;
+using FragEngine3.Graphics.Contexts;
 using FragEngine3.Scenes;
 using System.Numerics;
 using Veldrid;
@@ -153,7 +154,7 @@ namespace FragEngine3.Graphics.Cameras
 
 		public static bool UpdateLightDataBuffer(				// called once per camera frame.
 			in GraphicsCore _graphicsCore,
-			in DeviceBuffer _lightDataBuffer,
+			in DeviceBuffer _bufLights,
 			in LightSourceData[] _lightData,
 			uint _lightDataBufferCapacity,
 			uint _maxActiveLightCount)
@@ -163,12 +164,12 @@ namespace FragEngine3.Graphics.Cameras
 
 			if (copyCount == _lightData.Length)
 			{
-				_graphicsCore.Device.UpdateBuffer(_lightDataBuffer, 0, _lightData);
+				_graphicsCore.Device.UpdateBuffer(_bufLights, 0, _lightData);
 			}
 			else
 			{
 				ReadOnlySpan<LightSourceData> lightDataSpan = new(_lightData, 0, copyCount);
-				_graphicsCore.Device.UpdateBuffer(_lightDataBuffer, 0, lightDataSpan);
+				_graphicsCore.Device.UpdateBuffer(_bufLights, 0, lightDataSpan);
 			}
 			return true;
 		}
@@ -195,12 +196,9 @@ namespace FragEngine3.Graphics.Cameras
 
 		public static bool UpdateOrCreateCameraResourceSet(		// called once per camera pass.
 			in GraphicsCore _graphicsCore,
-			in ResourceLayout _defaultCameraResLayout,
-			in DeviceBuffer _cbScene,
+			in SceneContext _sceneCtx,
 			in DeviceBuffer _cbCamera,
 			in DeviceBuffer _lightDataBuffer,
-			in Texture _texShadowMaps,
-			in Sampler _samplerShadowMaps,
 			ref ResourceSet? _resSetCamera,
 			bool _forceRecreate = false)
 		{
@@ -211,12 +209,12 @@ namespace FragEngine3.Graphics.Cameras
 				try
 				{
 					ResourceSetDescription resSetDesc = new(
-						_defaultCameraResLayout,
-						_cbScene,
+						_sceneCtx.resLayoutCamera,
+						_sceneCtx.cbScene,
 						_cbCamera,
 						_lightDataBuffer,
-						_texShadowMaps,
-						_samplerShadowMaps);
+						_sceneCtx.texShadowMaps,
+						_sceneCtx.samplerShadowMaps);
 
 					_resSetCamera = _graphicsCore.MainFactory.CreateResourceSet(ref resSetDesc);
 				}

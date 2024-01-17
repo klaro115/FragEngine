@@ -349,7 +349,6 @@ public sealed class Camera : Component
 	public bool BeginPass(
 		in SceneContext _sceneCtx,
 		CommandList _cmdList,
-		Texture _texShadowMaps,
 		RenderMode _renderMode,
 		bool _clearRenderTargets,
 		uint _cameraIdx_,
@@ -425,12 +424,9 @@ public sealed class Camera : Component
 		// Update ResSetCamera:
 		if (!CameraUtility.UpdateOrCreateCameraResourceSet(
 			in instance.graphicsCore,
-			in _sceneCtx.resLayoutCamera,
-			in _sceneCtx.cbScene,
+			in _sceneCtx,
 			in passResources.cbCamera,
 			in bufLights!,
-			in _texShadowMaps,
-			in _sceneCtx.samplerShadowMaps,
 			ref passResources.resSetCamera,
 			_rebuildResSetCamera))
 		{
