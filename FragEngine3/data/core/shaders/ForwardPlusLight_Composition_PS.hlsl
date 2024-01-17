@@ -54,8 +54,8 @@ Texture2D<float2> TexTransparentDepth : register(ps, t5);
 Texture2D<half4> TexUIColor : register(ps, t6);
 
 //TEST TEST TEST
-Texture2DArray<half> TexShadowMaps : register(ps, t1);
-SamplerState SamplerShadowMaps : register(ps, s0);
+//Texture2DArray<half> TexShadowMaps : register(ps, t1);
+//SamplerState SamplerShadowMaps : register(ps, s0);
 //TEST TEST TEST
 
 /******************* SHADERS: ******************/
@@ -85,12 +85,12 @@ PixelOutput Main_Pixel(in VertexOutput_Basic inputBasic)
     float depthFinal = colUI.w <= 0.001 ? depthGeometry : 0;
 
     //TEST TEST TEST
-    if (inputBasic.uv.x < 0.5 && inputBasic.uv.y < 0.5)
-    {
-        float4 shadowUv = float4(inputBasic.uv.x * 2, inputBasic.uv.y * 2, 0, 0);
-        half shadowDepth = TexShadowMaps.Sample(SamplerShadowMaps, shadowUv.xyz);
-        colFinal = lerp(float4(0, 0, 0, 1), float4(1, 1, 1, 1), abs(sin((float)shadowDepth * 100)));
-    }
+    //if (inputBasic.uv.x < 0.5 && inputBasic.uv.y < 0.5)
+    //{
+    //    float4 shadowUv = float4(inputBasic.uv.x * 2, inputBasic.uv.y * 2, 0, 0);
+    //    half shadowDepth = TexShadowMaps.Sample(SamplerShadowMaps, shadowUv.xyz);
+    //    colFinal = lerp(float4(0, 0, 0, 1), float4(1, 1, 1, 1), abs(sin((float)shadowDepth * 100)));
+    //}
     //TEST TEST TEST
     
     // Assemble final output:

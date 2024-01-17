@@ -349,10 +349,12 @@ namespace FragEngine3.Graphics.Stack
 				in _renderers,
 				in _cameras,
 				in _lights,
+				maxActiveLightCount,
 				out SceneContext sceneCtx,
 				out Vector3 renderFocalPoint,
 				out float renderFocalRadius,
-				out bool rebuildResSetCamera);
+				out bool rebuildResSetCamera,
+				out bool texShadowMapsHasChanged);
 			if (!success)
 			{
 				Logger.LogError("Graphics stack failed to begin drawing scene!");
@@ -374,7 +376,8 @@ namespace FragEngine3.Graphics.Stack
 				renderFocalPoint,
 				renderFocalRadius,
 				maxActiveLightCount,
-				rebuildResSetCamera);
+				rebuildResSetCamera,
+				texShadowMapsHasChanged);
 
 			// Draw each active camera component in the scene, and composite output:
 			success &= DrawSceneCameras(
@@ -390,10 +393,12 @@ namespace FragEngine3.Graphics.Stack
 			in List<IRenderer> _renderers,
 			in IList<Camera> _cameras,
 			in IList<Light> _lights,
+			uint _maxActiveLightCount,
 			out SceneContext _outSceneCtx,
 			out Vector3 _outRenderFocalPoint,
 			out float _outRenderFocalRadius,
-			out bool _outRebuildResSetCamera)
+			out bool _outRebuildResSetCamera,
+			out bool _outTexShadowsHasChanged)
 		{
 			// Clear all lists for new frame:
 			activeCameras.Clear();
@@ -497,9 +502,32 @@ namespace FragEngine3.Graphics.Stack
 			{
 				Logger.LogError("Failed to create or update scene constant buffer!");
 				_outSceneCtx = null!;
-				_outRenderFocalPoint = Vector3.Zero;
-				_outRenderFocalRadius = 1.0f;
+				_outTexShadowsHasChanged = false;
 				return false;
+			}
+
+			// Resize shadow map texture array to reflect maximum number of shadow-casting lights:
+			_outTexShadowsHasChanged = false;
+			uint lightCountShadowMapped = Math.Min((uint)activeLightsShadowMapped.Count, _maxActiveLightCount);
+			if (texShadowMaps == null || texShadowMaps.IsDisposed || texShadowMapsCapacity < lightCountShadowMapped)
+			{
+				_outRebuildResSetCamera = true;
+				_outTexShadowsHasChanged = true;
+				texShadowMaps?.Dispose();
+
+				if (!ShadowMapUtility.CreateShadowMapArray(
+					in core,
+					1024,
+					1024,
+					lightCountShadowMapped,
+					out texShadowMaps))
+				{
+					Logger.LogError("Failed to create shadow map texture array for graphics stack!");
+					_outSceneCtx = null!;
+					_outTexShadowsHasChanged = false;
+					return false;
+				}
+				texShadowMapsCapacity = lightCountShadowMapped;
 			}
 
 			_outSceneCtx = new(
@@ -528,33 +556,12 @@ namespace FragEngine3.Graphics.Stack
 			return true;
 		}
 
-		private bool DrawShadowMaps(in SceneContext _sceneCtx, Vector3 _renderFocalPoint, float _renderFocalRadius, uint _maxActiveLightCount, bool _rebuildResSetCamera)
+		private bool DrawShadowMaps(in SceneContext _sceneCtx, Vector3 _renderFocalPoint, float _renderFocalRadius, uint _maxActiveLightCount, bool _rebuildResSetCamera, bool _texShadowsHasChanged)
 		{
 			// No visible shadow-casting light? We're done here:
 			if (activeLightsShadowMapped.Count == 0)
 			{
 				return true;
-			}
-
-			// Resize shadow map texture array to reflect maximum number of shadow-casting lights:
-			bool texShadowMapsHasChanged = false;
-			uint lightCountShadowMapped = Math.Min((uint)activeLightsShadowMapped.Count, _maxActiveLightCount);
-			if (texShadowMaps == null || texShadowMaps.IsDisposed || texShadowMapsCapacity < lightCountShadowMapped)
-			{
-				texShadowMapsHasChanged = true;
-				texShadowMaps?.Dispose();
-
-				if (!ShadowMapUtility.CreateShadowMapArray(
-					in core,
-					1024,
-					1024,
-					lightCountShadowMapped,
-					out texShadowMaps))
-				{
-					Logger.LogError("Failed to create shadow map texture array for graphics stack!");
-					return false;
-				}
-				texShadowMapsCapacity = lightCountShadowMapped;
 			}
 
 			// Fetch or create a command list for shadow rendering:
@@ -567,33 +574,44 @@ namespace FragEngine3.Graphics.Stack
 			bool success = true;
 
 			uint shadowMapIdx = 0;
-			foreach (Light light in activeLightsShadowMapped)
+			int shadowMappedLightCount = Math.Min(activeLightsShadowMapped.Count, (int)_maxActiveLightCount);
+
+			try
 			{
-				success &= light.BeginDrawShadowMap(
-					in _sceneCtx,
-					in cmdList,
-					in dummyBufLights!,
-					_renderFocalPoint,
-					_renderFocalRadius,
-					shadowMapIdx,
-					out CameraPassContext lightCtx,
-					_rebuildResSetCamera,
-					texShadowMapsHasChanged);
-				if (!success) break;
-
-				//TODO [later]: Exclude renderers that are entirely outside of point/spot lights' maximum range.
-
-				// Draw renderers for opaque and tranparent geometry, ignore UI:
-				foreach (IRenderer renderer in activeShadowCasters)
+				for (int i = 0; i < shadowMappedLightCount; ++i)
 				{
-					if ((light.layerMask & renderer.LayerFlags) != 0)
-					{
-						success &= renderer.DrawShadowMap(_sceneCtx, lightCtx);
-					}
-				}
+					Light light = activeLightsShadowMapped[i];
+					success &= light.BeginDrawShadowMap(
+						in _sceneCtx,
+						in cmdList,
+						in dummyBufLights!,
+						_renderFocalPoint,
+						_renderFocalRadius,
+						shadowMapIdx,
+						out CameraPassContext lightCtx,
+						_rebuildResSetCamera,
+						_texShadowsHasChanged);
+					if (!success) break;
 
-				success &= light.EndDrawShadowMap();
-				shadowMapIdx++;
+					//TODO [later]: Exclude renderers that are entirely outside of point/spot lights' maximum range.
+
+					// Draw renderers for opaque and tranparent geometry, ignore UI:
+					foreach (IRenderer renderer in activeShadowCasters)
+					{
+						if ((light.layerMask & renderer.LayerFlags) != 0)
+						{
+							success &= renderer.DrawShadowMap(_sceneCtx, lightCtx);
+						}
+					}
+
+					success &= light.EndDrawShadowMap();
+					shadowMapIdx++;
+				}
+			}
+			catch (Exception ex)
+			{
+				Logger.LogException($"An unhandled exception was caught while drawing shadow maps, around shadow map index {shadowMapIdx}!", ex);
+				success = false;
 			}
 
 			// If any shadows maps were rendered, submit command list for execution:
@@ -621,36 +639,45 @@ namespace FragEngine3.Graphics.Stack
 
 			for (uint i = 0; i < activeCameras.Count; ++i)
 			{
-				Camera camera = activeCameras[(int)i];
-				uint activeLightCount = (uint)activeLights.Count;
-				if (!camera.GetLightDataBuffer(activeLightCount, out DeviceBuffer? lightDataBuffer, out bool bufLightsChanged))
+				try
 				{
+					Camera camera = activeCameras[(int)i];
+					uint activeLightCount = (uint)activeLights.Count;
+					if (!camera.GetLightDataBuffer(activeLightCount, out DeviceBuffer? lightDataBuffer, out bool bufLightsChanged))
+					{
+						success = false;
+						continue;
+					}
+					bool rebuildResSetCamera = _rebuildAllResSetCamera || bufLightsChanged;
+
+					if (!camera.BeginFrame(activeLightCount, false, out _))
+					{
+						success = false;
+						continue;
+					}
+
+					bool result = true;
+
+					result &= camera.SetOverrideCameraTarget(null);
+					result &= CameraUtility.UpdateLightDataBuffer(in core, in lightDataBuffer!, in activeLightData, activeLightCount, _maxActiveLightCount);
+
+					result &= DrawSceneRenderers(in _sceneCtx, cmdList, camera, RenderMode.Opaque, activeRenderersOpaque, true, rebuildResSetCamera, i);
+					result &= DrawSceneRenderers(in _sceneCtx, cmdList, camera, RenderMode.Transparent, activeRenderersTransparent, false, rebuildResSetCamera, i);
+					result &= DrawSceneRenderers(in _sceneCtx, cmdList, camera, RenderMode.UI, activeRenderersUI, false, rebuildResSetCamera, i);
+
+					if (result)
+					{
+						result &= CompositeFinalOutput(in _sceneCtx, camera, rebuildResSetCamera, i);
+					}
+					result &= camera.EndFrame();
+					success &= result;
+				}
+				catch (Exception ex)
+				{
+					Logger.LogException($"An unhandled exception was caught while drawing scene camera {i}!", ex);
 					success = false;
-					continue;
+					break;
 				}
-				bool rebuildResSetCamera = _rebuildAllResSetCamera || bufLightsChanged;
-
-				if (!camera.BeginFrame(activeLightCount, false, out _))
-				{
-					success = false;
-					continue;
-				}
-
-				bool result = true;
-
-				result &= camera.SetOverrideCameraTarget(null);
-				result &= CameraUtility.UpdateLightDataBuffer(in core, in lightDataBuffer!, in activeLightData, activeLightCount, _maxActiveLightCount);
-
-				result &= DrawSceneRenderers(in _sceneCtx, cmdList, camera, RenderMode.Opaque,		activeRenderersOpaque,		true,	rebuildResSetCamera, i);
-				result &= DrawSceneRenderers(in _sceneCtx, cmdList, camera, RenderMode.Transparent,	activeRenderersTransparent,	false,	rebuildResSetCamera, i);
-				result &= DrawSceneRenderers(in _sceneCtx, cmdList, camera, RenderMode.UI,			activeRenderersUI,			false,	rebuildResSetCamera, i);
-
-				if (result)
-				{
-					result &= CompositeFinalOutput(in _sceneCtx, camera, rebuildResSetCamera, i);
-				}
-				result &= camera.EndFrame();
-				success &= result;
 			}
 
 			// If any shadows maps were rendered, submit command list for execution:

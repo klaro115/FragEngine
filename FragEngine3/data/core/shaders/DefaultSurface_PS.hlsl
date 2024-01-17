@@ -80,7 +80,7 @@ struct VertexOutput_Extended
 /****************** LIGHTING: ******************/
 
 static const float LIGHT_NEAR_CLIP_PLANE = 0.001;
-static const float LIGHT_BIAS = -0.03;
+static const float LIGHT_BIAS = -0.07;
 
 half3 CalculateAmbientLight(float3 _normal)
 {
