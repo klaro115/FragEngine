@@ -245,7 +245,8 @@ namespace FragEngine3.Graphics.Components
 			float _shadingFocalPointRadius,
 			uint _newShadowMapIdx,
 			out CameraPassContext _outCameraPassCtx,
-			bool _rebuildResSetCamera = false)
+			bool _rebuildResSetCamera = false,
+			bool _texShadowMapsHasChanged = false)
 		{
 			if (IsDisposed)
 			{
@@ -270,8 +271,10 @@ namespace FragEngine3.Graphics.Components
 			shadowMapIdx = _newShadowMapIdx;
 
 			// Ensure render targets are created and assigned:
-			if (shadowMapFrameBuffer == null || shadowMapFrameBuffer.IsDisposed)
+			if (_texShadowMapsHasChanged || shadowMapFrameBuffer == null || shadowMapFrameBuffer.IsDisposed)
 			{
+				_rebuildResSetCamera = true;
+
 				shadowCameraInstance?.Dispose();
 				shadowCameraInstance = null;
 

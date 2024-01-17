@@ -9,7 +9,7 @@ using Veldrid;
 
 namespace FragEngine3.Graphics.Resources
 {
-	public class Material : Resource
+	public class Material(GraphicsCore _core, ResourceHandle _handle) : Resource(_handle)
 	{
 		#region Types
 
@@ -54,17 +54,9 @@ namespace FragEngine3.Graphics.Resources
 		}
 
 		#endregion
-		#region Constructors
-
-		public Material(GraphicsCore _core, ResourceHandle _handle) : base(_handle)
-		{
-			core = _core ?? throw new ArgumentNullException(nameof(_core), "Graphics core may not be null!");
-		}
-
-		#endregion
 		#region Fields
 
-		public GraphicsCore core;
+		public GraphicsCore core = _core ?? throw new ArgumentNullException(nameof(_core), "Graphics core may not be null!");
 
 		private uint materialVersion = 1000;
 

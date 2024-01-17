@@ -125,7 +125,7 @@ namespace FragEngine3.EngineCore.Test
 				light.node.SetRotationFromYawPitchRoll(22.5f, 45, 0, true, true);
 				//light.node.SetEnabled(false);
 
-				light.CastShadows = false;
+				light.CastShadows = true;
 			}
 			if (SceneSpawner.CreateLight(scene, Light.LightType.Directional, out light))
 			{

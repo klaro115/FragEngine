@@ -572,9 +572,11 @@ namespace FragEngine3.Graphics.Stack
 			}
 
 			// Resize shadow map texture array to reflect maximum number of shadow-casting lights:
+			bool texShadowMapsHasChanged = false;
 			uint lightCountShadowMapped = Math.Min((uint)activeLightsShadowMapped.Count, _maxActiveLightCount);
 			if (texShadowMaps == null || texShadowMaps.IsDisposed || texShadowMapsCapacity < lightCountShadowMapped)
 			{
+				texShadowMapsHasChanged = true;
 				texShadowMaps?.Dispose();
 
 				if (!ShadowMapUtility.CreateShadowMapArray(
@@ -611,7 +613,8 @@ namespace FragEngine3.Graphics.Stack
 					_renderFocalRadius,
 					shadowMapIdx,
 					out CameraPassContext lightCtx,
-					_rebuildResSetCamera);
+					_rebuildResSetCamera,
+					texShadowMapsHasChanged);
 				if (!success) break;
 
 				//TODO [later]: Exclude renderers that are entirely outside of point/spot lights' maximum range.
