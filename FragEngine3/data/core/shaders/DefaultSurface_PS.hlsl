@@ -140,7 +140,7 @@ half3 CalculateTotalLightIntensity(in float3 _worldPosition, in float3 _worldNor
         half lightWeight = shadowDepth > shadowProj.z ? 1 : 0;
 
         // Fade shadows out above 90% maximum shadow distance:
-        lightWeight *= clamp((shadowProj.z - 0.9) * 10, 0, 1);
+        //lightWeight *= clamp((shadowProj.z - 0.9) * 10, 0, 1);
 
         totalLightIntensity += lightIntensity * lightWeight;
     }

@@ -9,7 +9,8 @@ namespace FragEngine3.Graphics.Utility
 	{
 		#region Constants
 
-		public const uint shadowResolution = 512;
+		public const uint shadowResolution = 1024;
+		public const float directionalLightSize = 30;		//TEMP
 
 		#endregion
 		#region Methods

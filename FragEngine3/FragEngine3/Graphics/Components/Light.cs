@@ -12,7 +12,7 @@ using Veldrid;
 
 namespace FragEngine3.Graphics.Components
 {
-    public sealed class Light : Component
+	public sealed class Light : Component
 	{
 		#region Types
 
@@ -409,11 +409,17 @@ namespace FragEngine3.Graphics.Components
 					break;
 				case LightType.Directional:
 					{
+						const float maxDirectionalRange = ShadowMapUtility.directionalLightSize;
+
 						// Transform from a world space position (relative to a given focal point), to orthographics projection space, to shadow map UV coordinates:
-						float maxDirectionalRange = _shadingFocalPointRadius;
-						Matrix4x4 mtxWorld2Focal = Matrix4x4.CreateTranslation(_shadingFocalPoint - Direction * maxDirectionalRange * 0.5f);
-						Matrix4x4 mtxFocal2Clip = Matrix4x4.CreateOrthographicLeftHanded(_shadingFocalPointRadius, _shadingFocalPointRadius, 0.01f, maxDirectionalRange);
-						mtxShadowWorld2Clip = mtxWorld2Focal * mtxFocal2Clip;
+						Vector3 posOrigin = _shadingFocalPoint - Direction * maxDirectionalRange * 0.5f;
+						Pose originPose = new(posOrigin, node.WorldRotation, Vector3.One, false);
+						if (!Matrix4x4.Invert(originPose.Matrix, out Matrix4x4 mtxWorld2Local))
+						{
+							mtxWorld2Local = Matrix4x4.Identity;
+						}
+						Matrix4x4 mtxLocal2Clip = Matrix4x4.CreateOrthographicLeftHanded(maxDirectionalRange, maxDirectionalRange, 0.01f, maxDirectionalRange);		//TODO [later]: this works, but it's pretty bad.
+						mtxShadowWorld2Clip = mtxWorld2Local * mtxLocal2Clip;
 					}
 					break;
 				default:

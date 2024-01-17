@@ -307,6 +307,20 @@ namespace FragEngine3.Graphics.Stack
 			return Initialize(Scene!);
 		}
 
+		private bool GetOrCreateCommandList(out CommandList _outCmdList)
+		{
+			if (commandListPool.TryPop(out CommandList? cmdList) && cmdList != null)
+			{
+				_outCmdList = cmdList;
+			}
+			else
+			{
+				_outCmdList = core.MainFactory.CreateCommandList();
+			}
+			commandListsInUse.Push(_outCmdList);
+			return true;
+		}
+
 		public bool DrawStack(Scene _scene, List<IRenderer> _renderers, in IList<Camera> _cameras, in IList<Light> _lights)
 		{
 			if (!IsInitialized)
@@ -484,13 +498,10 @@ namespace FragEngine3.Graphics.Stack
 					? Camera.MainCamera
 					: _cameras[0];
 
-				const float renderFocalPointLocus = 0.33333f;
-				const float renderFocalRadiusFraction = 0.5f;
-
 				float cameraFarClipPlane = focalCamera.ProjectionSettings.farClipPlane;
 				Pose cameraWorldPose = focalCamera.node.WorldTransformation;
-				_outRenderFocalRadius = cameraFarClipPlane * renderFocalRadiusFraction;
-				_outRenderFocalPoint = cameraWorldPose.position + cameraWorldPose.Forward * cameraFarClipPlane * renderFocalPointLocus;
+				_outRenderFocalRadius = ShadowMapUtility.directionalLightSize;
+				_outRenderFocalPoint = cameraWorldPose.position;
 			}
 
 			// Update scene constant buffer:
@@ -542,21 +553,7 @@ namespace FragEngine3.Graphics.Stack
 				(uint)activeLightsShadowMapped.Count);
 			return true;
 		}
-
-		private bool GetOrCreateCommandList(out CommandList _outCmdList)
-		{
-			if (commandListPool.TryPop(out CommandList? cmdList) && cmdList != null)
-			{
-				_outCmdList = cmdList;
-			}
-			else
-			{
-				_outCmdList = core.MainFactory.CreateCommandList();
-			}
-			commandListsInUse.Push(_outCmdList);
-			return true;
-		}
-
+		
 		private bool DrawShadowMaps(in SceneContext _sceneCtx, Vector3 _renderFocalPoint, float _renderFocalRadius, uint _maxActiveLightCount, bool _rebuildResSetCamera, bool _texShadowsHasChanged)
 		{
 			// No visible shadow-casting light? We're done here:
