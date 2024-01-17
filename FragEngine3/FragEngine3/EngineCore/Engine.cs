@@ -53,6 +53,7 @@ namespace FragEngine3.EngineCore
 		TimeSpan computeTimeSum = TimeSpan.Zero;
 		TimeSpan frameTimeSum = TimeSpan.Zero;
 		long stateStartFrameCount = 0;
+		long below40FpsFrameCount = 0;
 
 		#endregion
 		#region Properties
@@ -140,10 +141,12 @@ namespace FragEngine3.EngineCore
 					double avgFrameRate = stateFrameCount / frameTimeSum.TotalMilliseconds * 1000.0;
 					double avgFrameTimeMs = frameTimeSum.TotalMilliseconds / stateFrameCount;
 					double avgComputeTimeMs = computeTimeSum.TotalMilliseconds / stateFrameCount;
+					double slowFramePerc = (double)below40FpsFrameCount / stateFrameCount;
 
-					Logger.LogMessage($"Engine state {prevState} | Average frame rate: {avgFrameRate:0.00} Hz | Average frame time: {avgFrameTimeMs:0.00} ms | Average compute time: {avgComputeTimeMs:0.00} ms");
+					Logger.LogMessage($"Engine state {prevState} | Average frame rate: {avgFrameRate:0.00} Hz | Average frame time: {avgFrameTimeMs:0.00} ms | Average compute time: {avgComputeTimeMs:0.00} ms | Frames above 25 ms: {slowFramePerc:0.0}%");
 				}
 				stateStartFrameCount = TimeManager.FrameCount;
+				below40FpsFrameCount = 0;
 				frameTimeSum = TimeSpan.Zero;
 				computeTimeSum = TimeSpan.Zero;
 
@@ -301,6 +304,10 @@ namespace FragEngine3.EngineCore
 				TimeManager.EndFrame(out TimeSpan threadSleepTime);
 				computeTimeSum += TimeManager.LastFrameDuration;
 				frameTimeSum += TimeManager.DeltaTime;
+				if (computeTimeSum.TotalMilliseconds > 25)
+				{
+					below40FpsFrameCount++;
+				}
 				Thread.Sleep(threadSleepTime.Milliseconds);
 			}
 

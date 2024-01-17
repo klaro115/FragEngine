@@ -141,7 +141,7 @@ namespace FragEngine3.EngineCore.Test
 				//light.node.SetEnabled(false);
 
 				light.LightIntensity = 15;
-				light.SpotAngleDegrees = 30;
+				light.SpotAngleDegrees = 35;
 				light.CastShadows = true;
 			}
 			if (SceneSpawner.CreateLight(scene, Light.LightType.Spot, out light))
@@ -150,6 +150,7 @@ namespace FragEngine3.EngineCore.Test
 				light.node.SetRotationFromYawPitchRoll(22.5f, 45, 0, true, true);
 				//light.node.SetEnabled(false);
 
+				//light.lightColor = RgbaFloat.Red;
 				light.LightIntensity = 15;
 				light.SpotAngleDegrees = 30;
 				light.CastShadows = true;

@@ -515,10 +515,11 @@ namespace FragEngine3.Graphics.Stack
 				_outTexShadowsHasChanged = true;
 				texShadowMaps?.Dispose();
 
+				const uint shadowResolution = ShadowMapUtility.shadowResolution;
 				if (!ShadowMapUtility.CreateShadowMapArray(
 					in core,
-					1024,
-					1024,
+					shadowResolution,
+					shadowResolution,
 					lightCountShadowMapped,
 					out texShadowMaps))
 				{

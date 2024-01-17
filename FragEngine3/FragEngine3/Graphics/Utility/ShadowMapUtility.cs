@@ -154,9 +154,9 @@ namespace FragEngine3.Graphics.Utility
 					null,
 					0,
 					0,
+					uint.MaxValue,
 					0,
-					0,
-					SamplerBorderColor.TransparentBlack);
+					SamplerBorderColor.OpaqueWhite);
 
 				_outSamplerShadowMaps = _graphicsCore.MainFactory.CreateSampler(ref samplerDesc);
 				_outSamplerShadowMaps.Name = "Sampler_ShadowMaps";

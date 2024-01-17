@@ -80,11 +80,11 @@ struct VertexOutput_Extended
 /****************** LIGHTING: ******************/
 
 static const float LIGHT_NEAR_CLIP_PLANE = 0.001;
-static const float LIGHT_BIAS = -0.07;
+static const float LIGHT_BIAS = 0.04;
 
-half3 CalculateAmbientLight(float3 _normal)
+half3 CalculateAmbientLight(in float3 _worldNormal)
 {
-    half dotY = (half)dot(_normal, float3(0, 1, 0));
+    half dotY = (half)dot(_worldNormal, float3(0, 1, 0));
     half wLow = max(-dotY, 0);
     half wHigh = max(dotY, 0);
     half wMid = 1.0 - wHigh - wLow;
@@ -131,15 +131,18 @@ half3 CalculateTotalLightIntensity(in float3 _worldPosition, in float3 _worldNor
         half3 lightIntensity = CalculatePhongLighting(light, _worldPosition, _worldNormal);
 
         // Transform pixel position to light's clip space, then to UV space:
-        float4 shadowProj = mul(light.mtxShadowWorld2Clip, float4(_worldPosition + light.lightDirection * LIGHT_BIAS, 1));
+        float4 shadowProj = mul(light.mtxShadowWorld2Clip, float4(_worldPosition + _worldNormal * LIGHT_BIAS, 1));
         shadowProj /= shadowProj.w;
         float2 shadowUv = float2(shadowProj.x + 1, 1 - shadowProj.y) * 0.5;
         
         // Load corresponding depth value from shadow texture array:
         half shadowDepth = TexShadowMaps.Sample(SamplerShadowMaps, float3(shadowUv.x, shadowUv.y, light.shadowMapIdx));
+        half lightWeight = shadowDepth > shadowProj.z ? 1 : 0;
 
-        lightIntensity *= shadowProj.z < shadowDepth ? 1 : 0;           //TODO [later]: fade out shadow beyond 90% depth.
-        totalLightIntensity += lightIntensity;
+        // Fade shadows out above 90% maximum shadow distance:
+        lightWeight *= clamp((shadowProj.z - 0.9) * 10, 0, 1);
+
+        totalLightIntensity += lightIntensity * lightWeight;
     }
     // Simple light sources:
     for (i = shadowMappedLightCount; i < lightCount; ++i)
