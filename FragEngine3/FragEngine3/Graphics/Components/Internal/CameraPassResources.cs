@@ -15,7 +15,7 @@ namespace FragEngine3.Graphics.Components.Internal
 		#region Fields
 
 		public DeviceBuffer? cbCamera;
-		public ResourceSet? defaultCameraResourceSet;
+		public ResourceSet? resSetCamera;
 
 		#endregion
 		#region Properties
@@ -35,12 +35,12 @@ namespace FragEngine3.Graphics.Components.Internal
 			IsDisposed = true;
 
 			cbCamera?.Dispose();
-			defaultCameraResourceSet?.Dispose();
+			resSetCamera?.Dispose();
 
 			if (_disposing )
 			{
 				cbCamera = null;
-				defaultCameraResourceSet = null;
+				resSetCamera = null;
 			}
 		}
 		

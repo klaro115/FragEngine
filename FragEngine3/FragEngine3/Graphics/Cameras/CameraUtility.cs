@@ -1,5 +1,4 @@
-﻿using FragEngine3.EngineCore;
-using FragEngine3.Graphics.Components.ConstantBuffers;
+﻿using FragEngine3.Graphics.Components.ConstantBuffers;
 using FragEngine3.Scenes;
 using System.Numerics;
 using Veldrid;
@@ -10,14 +9,19 @@ namespace FragEngine3.Graphics.Cameras
 	{
 		#region Methods
 
-		public static bool UpdateConstantBuffer_CBScene(
+		public static bool UpdateConstantBuffer_CBScene(		// Called once per scene frame.
 			in GraphicsCore _graphicsCore,
 			in SceneSettings _sceneSettings,
-			ref DeviceBuffer? _cbScene)
+			ref DeviceBuffer? _cbScene,
+			out bool _outCbSceneChanged)
 		{
+			_outCbSceneChanged = false;
+
 			// Ensure the buffer is allocated:
 			if (_cbScene == null || _cbScene.IsDisposed)
 			{
+				_outCbSceneChanged = true;
+
 				try
 				{
 					BufferDescription bufferDesc = new(CBScene.packedByteSize, BufferUsage.UniformBuffer | BufferUsage.Dynamic);
@@ -51,40 +55,34 @@ namespace FragEngine3.Graphics.Cameras
 			return true;
 		}
 
-		public static bool CreateConstantBuffer_CBCamera(
-			in GraphicsCore _graphicsCore,
-			out DeviceBuffer _outCbCamera)
-		{
-			try
-			{
-				BufferDescription bufferDesc = new(CBCamera.packedByteSize, BufferUsage.UniformBuffer | BufferUsage.Dynamic);
-
-				_outCbCamera = _graphicsCore.MainFactory.CreateBuffer(ref bufferDesc);
-				_outCbCamera.Name = CBCamera.NAME_IN_SHADER;
-				return true;
-			}
-			catch (Exception ex)
-			{
-				_graphicsCore.graphicsSystem.engine.Logger.LogException("Failed to create camera constant buffer (CBCamera)!", ex);
-				_outCbCamera = null!;
-				return false;
-			}
-		}
-
-		public static bool UpdateConstantBuffer_CBCamera(
+		public static bool UpdateConstantBuffer_CBCamera(		// Called once per camera pass.
 			in CameraInstance _cameraInstance,
 			in Pose _cameraWorldPose,
 			in Matrix4x4 _mtxWorld2Clip,
 			uint _cameraIdx,
 			uint _activeLightCount,
 			uint _shadowMappedLightCount,
-			ref DeviceBuffer? _cbCamera)
+			ref DeviceBuffer? _cbCamera,
+			out bool _outCbCameraChanged)
 		{
 			// Ensure the buffer is allocated:
+			_outCbCameraChanged = false;
 			if (_cbCamera == null || _cbCamera.IsDisposed)
 			{
-				if (!CreateConstantBuffer_CBCamera(in _cameraInstance.graphicsCore, out _cbCamera))
+				_outCbCameraChanged = true;
+
+				try
 				{
+					BufferDescription bufferDesc = new(CBCamera.packedByteSize, BufferUsage.UniformBuffer | BufferUsage.Dynamic);
+
+					_cbCamera = _cameraInstance.graphicsCore.MainFactory.CreateBuffer(ref bufferDesc);
+					_cbCamera.Name = CBCamera.NAME_IN_SHADER;
+					return true;
+				}
+				catch (Exception ex)
+				{
+					_cameraInstance.graphicsCore.graphicsSystem.engine.Logger.LogException("Failed to create camera constant buffer (CBCamera)!", ex);
+					_cbCamera = null;
 					return false;
 				}
 			}
@@ -113,21 +111,23 @@ namespace FragEngine3.Graphics.Cameras
 			return true;
 		}
 
-		public static bool VerifyOrCreateLightDataBuffer(
+		public static bool CreateOrResizeLightDataBuffer(		// called once per camera frame.
 			in GraphicsCore _graphicsCore,
-			uint _maxActiveLightCount,
-			ref DeviceBuffer? lightDataBuffer,
-			ref uint lightDataBufferCapacity)
+			uint _activeLightCount,
+			ref DeviceBuffer? _bufLights,
+			out bool _outBufLightsChanged)
 		{
-			_maxActiveLightCount = Math.Max(_maxActiveLightCount, 1);
-			uint byteSize = LightSourceData.byteSize * _maxActiveLightCount;
+			_activeLightCount = Math.Max(_activeLightCount, 1);
+			uint byteSize = LightSourceData.byteSize * _activeLightCount;
 
 			// Create a new buffer if there is none or if the previous one was too small:
-			if (lightDataBuffer == null || lightDataBuffer.IsDisposed || lightDataBufferCapacity < byteSize)
+			if (_bufLights == null || _bufLights.IsDisposed || _bufLights.SizeInBytes < byteSize)
 			{
+				_outBufLightsChanged = true;
+
 				// Purge any previously allocated buffer:
-				lightDataBuffer?.Dispose();
-				lightDataBuffer = null;
+				_bufLights?.Dispose();
+				_bufLights = null;
 
 				try
 				{
@@ -136,23 +136,22 @@ namespace FragEngine3.Graphics.Cameras
 						BufferUsage.StructuredBufferReadOnly | BufferUsage.Dynamic,
 						LightSourceData.byteSize);
 
-					lightDataBuffer = _graphicsCore.MainFactory.CreateBuffer(ref bufferDesc);
-					lightDataBuffer.Name = $"BufLights_Capacity={_maxActiveLightCount}";
-					lightDataBufferCapacity = byteSize;
+					_bufLights = _graphicsCore.MainFactory.CreateBuffer(ref bufferDesc);
+					_bufLights.Name = $"BufLights_Capacity={_activeLightCount}";
 					return true;
 				}
 				catch (Exception ex)
 				{
 					_graphicsCore.graphicsSystem.engine.Logger.LogException("Failed to create camera's light data buffer!", ex);
-					lightDataBuffer?.Dispose();
-					lightDataBufferCapacity = 0;
+					_bufLights?.Dispose();
 					return false;
 				}
 			}
+			_outBufLightsChanged = false;
 			return true;
 		}
 
-		public static bool UpdateLightDataBuffer(
+		public static bool UpdateLightDataBuffer(				// called once per camera frame.
 			in GraphicsCore _graphicsCore,
 			in DeviceBuffer _lightDataBuffer,
 			in LightSourceData[] _lightData,
@@ -174,30 +173,27 @@ namespace FragEngine3.Graphics.Cameras
 			return true;
 		}
 
-		public static bool VerifyOrCreateDefaultCameraResourceLayout(
+		public static bool CreateCameraResourceLayout(			// called exactly once on scene initialization.
 			in GraphicsCore _graphicsCore,
-			ref ResourceLayout? _defaultCameraResLayout)
+			out ResourceLayout _resLayoutCamera)
 		{
-			if (_defaultCameraResLayout == null || _defaultCameraResLayout.IsDisposed)
+			try
 			{
-				try
-				{
-					ResourceLayoutDescription resLayoutDesc = new(GraphicsConstants.DEFAULT_CAMERA_RESOURCE_LAYOUT_DESC);
+				ResourceLayoutDescription resLayoutDesc = new(GraphicsConstants.DEFAULT_CAMERA_RESOURCE_LAYOUT_DESC);
 
-					_defaultCameraResLayout = _graphicsCore.MainFactory.CreateResourceLayout(ref resLayoutDesc);
-					_defaultCameraResLayout.Name = "ResLayout_DefaultCamera";
-				}
-				catch (Exception ex)
-				{
-					_graphicsCore.graphicsSystem.engine.Logger.LogException("Failed to crate default camera resource layout!", ex);
-					_defaultCameraResLayout = null;
-					return false;
-				}
+				_resLayoutCamera = _graphicsCore.MainFactory.CreateResourceLayout(ref resLayoutDesc);
+				_resLayoutCamera.Name = "ResLayout_Camera";
+				return true;
 			}
-			return true;
+			catch (Exception ex)
+			{
+				_graphicsCore.graphicsSystem.engine.Logger.LogException("Failed to crate default camera resource layout!", ex);
+				_resLayoutCamera = null!;
+				return false;
+			}
 		}
 
-		public static bool UpdateOrCreateDefaultCameraResourceSet(
+		public static bool UpdateOrCreateCameraResourceSet(		// called once per camera pass.
 			in GraphicsCore _graphicsCore,
 			in ResourceLayout _defaultCameraResLayout,
 			in DeviceBuffer _cbScene,
@@ -205,12 +201,12 @@ namespace FragEngine3.Graphics.Cameras
 			in DeviceBuffer _lightDataBuffer,
 			in Texture _texShadowMaps,
 			in Sampler _samplerShadowMaps,
-			ref ResourceSet? _defaultCameraResSet,
+			ref ResourceSet? _resSetCamera,
 			bool _forceRecreate = false)
 		{
-			if (_forceRecreate || _defaultCameraResSet == null || _defaultCameraResSet.IsDisposed)
+			if (_forceRecreate || _resSetCamera == null || _resSetCamera.IsDisposed)
 			{
-				_defaultCameraResSet?.Dispose();
+				_resSetCamera?.Dispose();
 
 				try
 				{
@@ -222,12 +218,12 @@ namespace FragEngine3.Graphics.Cameras
 						_texShadowMaps,
 						_samplerShadowMaps);
 
-					_defaultCameraResSet = _graphicsCore.MainFactory.CreateResourceSet(ref resSetDesc);
+					_resSetCamera = _graphicsCore.MainFactory.CreateResourceSet(ref resSetDesc);
 				}
 				catch (Exception ex)
 				{
 					_graphicsCore.graphicsSystem.engine.Logger.LogException("Failed to crate default camera resource set!", ex);
-					_defaultCameraResSet = null;
+					_resSetCamera = null;
 					return false;
 				}
 			}

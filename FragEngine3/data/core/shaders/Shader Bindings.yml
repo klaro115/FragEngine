@@ -1,0 +1,55 @@
+############################################
+# Resource Origins & Updates:
+
+  Name:                     Slot:         Updated:
+
+SCENE:                                    owned by stack, persistent
+  - ResLayoutCamera         LAYOUT 0
+  - ResLayoutObject         LAYOUT 1
+  - SamplerShadowMaps       s0
+
+- => FRAME:                               owned by scene, may change each frame
+  - CBScene                 b0
+  - TexShadowMaps           t1
+
+
+CAMERA:
+  - => FRAME:                             owned by camera, may change each frame
+    - BufLights             t0
+
+  - => PASS:                              owned by camera, different for each pass
+    - CBCamera              b1
+    - ResSetCamera          SET 0
+
+
+RENDERER:
+  - => FRAME:                             owned by renderer, updated each frame
+    - CBObject              b2
+
+  - => PASS:                              owned by renderer, may change each frame
+    - ResSetObject          SET 1
+
+
+MATERIAL:                                 owned by material, semi-persistent
+  - ResLayoutBound          LAYOUT 2
+  - ResSetBound             SET 2
+
+
+############################################
+# Resource Binding:
+
+- SET 0:    (ResSetCamera)                owned by camera, different for each pass, may be recreated each frame
+  Name:                     Slot:         Updated:    Owner:
+  - CBScene                 b0            f           stack
+  - CBCamera                b1            p           cam
+  - BufLights               t0            f           cam
+  - TexShadowMaps           t1            f           stack
+  - SamplerShadowMaps       s0            -           stack
+
+- SET 1:    (ResSetObject)                owned by renderer, same across passes, created once
+  Name:                     Slot:         Updated:    Owner:
+  - CBObject                b2            f           rend
+
+- SET 2:    (ResSetBound)                 owned by renderer, different for each material (main + shadow)
+  Name:                     Slot:         Updated:    Owner:
+  - [...] Bound Resources   b3+, t2+, s1+ -           mat

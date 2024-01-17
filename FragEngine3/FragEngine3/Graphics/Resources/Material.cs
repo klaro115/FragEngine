@@ -59,8 +59,6 @@ namespace FragEngine3.Graphics.Resources
 		public Material(GraphicsCore _core, ResourceHandle _handle) : base(_handle)
 		{
 			core = _core ?? throw new ArgumentNullException(nameof(_core), "Graphics core may not be null!");
-
-			CreateObjectResourceLayout(0);
 		}
 
 		#endregion
@@ -76,7 +74,6 @@ namespace FragEngine3.Graphics.Resources
 		private ResourceHandle? tesselationShaderEval = null;
 		private ResourceHandle pixelShader = ResourceHandle.None;
 
-		private VersionedMember<ResourceLayout> objectResourceLayout = new(null!, 0);
 		private VersionedMember<ShaderSetDescription> shaderSetDesc = new(default, 0);
 
 		private ResourceLayout? boundResourceLayout = null;
@@ -92,7 +89,6 @@ namespace FragEngine3.Graphics.Resources
 		public override ResourceType ResourceType => ResourceType.Material;
 
 		public bool UseExternalBoundResources { get; private set; } = false;
-		public ResourceLayout ObjectResourceLayout => objectResourceLayout.Value;
 		public ResourceLayout? BoundResourceLayout => boundResourceLayout;
 		public ResourceSet? BoundResourceSet => boundResourceSet.Value;
 
@@ -139,7 +135,6 @@ namespace FragEngine3.Graphics.Resources
 		{
 			base.Dispose(_disposing);
 
-			objectResourceLayout.DisposeValue();
 			boundResourceLayout?.Dispose();
 			boundResourceSet.DisposeValue();
 		}
@@ -152,28 +147,6 @@ namespace FragEngine3.Graphics.Resources
 			}
 			uint newestPipelineVersion = materialVersion ^ _rendererVersion;
 			return newestPipelineVersion == _pipeline.Version;
-		}
-
-		private bool CreateObjectResourceLayout(uint _newVersion)										//TODO: We can probably make this a scene-wide variable as well, and pass it via SceneContext.
-		{
-			try
-			{
-				objectResourceLayout.DisposeValue();
-
-				ResourceLayoutDescription resLayoutDesc = new(GraphicsConstants.DEFAULT_OBJECT_RESOURCE_LAYOUT_DESC);
-
-				ResourceLayout resLayout = core.MainFactory.CreateResourceLayout(ref resLayoutDesc);
-				resLayout.Name = $"ResLayout_Object_{resourceKey}";
-
-				objectResourceLayout.UpdateValue(_newVersion, resLayout);
-				return true;
-			}
-			catch (Exception ex)
-			{
-				Logger.LogException($"Failed to create object resource layout for material '{resourceKey}'!", ex);
-				objectResourceLayout.DisposeValue();
-				return false;
-			}
 		}
 
 		private bool CreateShaderSetDesc(uint _newVersion, MeshVertexDataFlags _vertexDataFlags)
@@ -327,9 +300,9 @@ namespace FragEngine3.Graphics.Resources
 			}
 		}
 
-		internal bool CreatePipeline(SceneContext _sceneCtx, CameraContext _cameraCtx, uint _rendererVersion, MeshVertexDataFlags _vertexDataFlags, out VersionedMember<Pipeline> _outPipeline)
+		internal bool CreatePipeline(SceneContext _sceneCtx, CameraPassContext _cameraPassCtx, uint _rendererVersion, MeshVertexDataFlags _vertexDataFlags, out VersionedMember<Pipeline> _outPipeline)
 		{
-			if (_cameraCtx == null || !_cameraCtx.IsValid)
+			if (_sceneCtx == null || _cameraPassCtx == null)
 			{
 				_outPipeline = new(null!, 0);
 				return false;
@@ -340,7 +313,6 @@ namespace FragEngine3.Graphics.Resources
 				uint newestVersion = materialVersion;
 
 				newestVersion = Math.Max(newestVersion, depthStencilDesc.Version);
-				newestVersion = Math.Max(newestVersion, objectResourceLayout.Version);
 				newestVersion = Math.Max(newestVersion, shaderSetDesc.Version);
 				newestVersion = Math.Max(newestVersion, boundResourceSet.Version);
 
@@ -354,11 +326,6 @@ namespace FragEngine3.Graphics.Resources
 			if (depthStencilDesc.Version != materialVersion)
 			{
 				depthStencilDesc.UpdateValue(materialVersion, depthStencilDesc.Value);
-			}
-			if (objectResourceLayout.Version != materialVersion && !CreateObjectResourceLayout(materialVersion))
-			{
-				_outPipeline = new(null!, 0);
-				return false;
 			}
 			if (shaderSetDesc.Version != materialVersion && !CreateShaderSetDesc(materialVersion, _vertexDataFlags))
 			{
@@ -392,7 +359,7 @@ namespace FragEngine3.Graphics.Resources
 				if (dsd.enableCulling)
 				{
 					rasterizerState = RasterizerStateDescription.Default;
-					if (_cameraCtx.mirrorY)
+					if (_cameraPassCtx.mirrorY)
 					{
 						rasterizerState.FrontFace = FrontFace.CounterClockwise;
 					}
@@ -403,8 +370,8 @@ namespace FragEngine3.Graphics.Resources
 				}
 
 				ResourceLayout[] resourceLayouts = boundResourceLayout != null
-					? [ _sceneCtx.resLayoutCamera, objectResourceLayout.Value, boundResourceLayout ]
-					: [ _sceneCtx.resLayoutCamera, objectResourceLayout.Value ];
+					? [ _sceneCtx.resLayoutCamera, _sceneCtx.resLayoutObject, boundResourceLayout ]
+					: [ _sceneCtx.resLayoutCamera, _sceneCtx.resLayoutObject ];
 
 				GraphicsPipelineDescription pipelineDesc = new(
 					BlendStateDescription.SingleAlphaBlend,
@@ -413,14 +380,14 @@ namespace FragEngine3.Graphics.Resources
 					PrimitiveTopology.TriangleList,
 					shaderSetDesc.Value,
 					resourceLayouts,
-					_cameraCtx.outputDesc);
+					_cameraPassCtx.outputDesc);
 
 				Pipeline pipeline = core.MainFactory.CreateGraphicsPipeline(ref pipelineDesc);
 				uint newPipelineVersion = materialVersion ^ _rendererVersion;
 
-				if (_cameraCtx.outputDesc.ColorAttachments != null && _cameraCtx.outputDesc.ColorAttachments.Length != 0)
+				if (_cameraPassCtx.outputDesc.ColorAttachments != null && _cameraPassCtx.outputDesc.ColorAttachments.Length != 0)
 				{
-					PixelFormat colorFormat = _cameraCtx.outputDesc.ColorAttachments[0].Format;
+					PixelFormat colorFormat = _cameraPassCtx.outputDesc.ColorAttachments[0].Format;
 					pipeline.Name = $"{resourceKey}_{colorFormat}";
 				}
 				else

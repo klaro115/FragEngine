@@ -24,8 +24,8 @@ namespace FragEngine3.Graphics.Components
 		private Material? shadowMaterial = null;
 
 		private DeviceBuffer? cbObject = null;
-		private DeviceBuffer? shadowCbObject = null;
-		private ResourceSet? objectResourceSet = null;
+		private ResourceSet? resSetObject = null;
+
 		private VersionedMember<Pipeline> pipeline = new(null!, 0);
 		private VersionedMember<Pipeline> shadowPipeline = new(null!, 0);
 
@@ -67,7 +67,6 @@ namespace FragEngine3.Graphics.Components
 			base.Dispose(_disposing);
 
 			cbObject?.Dispose();
-			shadowCbObject?.Dispose();
 
 			pipeline.DisposeValue();
 			shadowPipeline.DisposeValue();
@@ -75,7 +74,6 @@ namespace FragEngine3.Graphics.Components
 			if (_disposing)
 			{
 				cbObject = null;
-				shadowCbObject = null;
 
 				MeshHandle = null;
 				Mesh = null;
@@ -250,7 +248,7 @@ namespace FragEngine3.Graphics.Components
 			return Vector3.DistanceSquared(posFront, _viewportPosition);
 		}
 
-		public bool Draw(SceneContext _sceneCtx, CameraContext _cameraCtx)
+		public bool Draw(SceneContext _sceneCtx, CameraPassContext _cameraPassCtx)
 		{
 			// Ensure main material is loaded:
 			if (!ResourceLoadUtility.EnsureResourceIsLoaded(MaterialHandle, ref material, DontDrawUnlessFullyLoaded, out bool materialIsReady))
@@ -260,10 +258,10 @@ namespace FragEngine3.Graphics.Components
 			if (!materialIsReady) return true;
 
 			// Draw material if it's fully loaded, quietly quit otherwise:
-			return material == null || Draw(_sceneCtx, _cameraCtx, Material!, ref pipeline, ref cbObject);
+			return material == null || Draw(_sceneCtx, _cameraPassCtx, Material!, ref pipeline);
 		}
 
-		public bool DrawShadowMap(SceneContext _sceneCtx, CameraContext _cameraCtx)
+		public bool DrawShadowMap(SceneContext _sceneCtx, CameraPassContext _cameraPassCtx)
 		{
 			// Ensure main material is loaded:
 			if (!ResourceLoadUtility.EnsureResourceIsLoaded(MaterialHandle, ref material, DontDrawUnlessFullyLoaded, out bool materialIsReady))
@@ -283,10 +281,14 @@ namespace FragEngine3.Graphics.Components
 			}
 
 			// Draw shadow material if it's fully loaded, quietly quit otherwise:
-			return !materialIsReady || Draw(_sceneCtx, _cameraCtx, shadowMaterial!, ref shadowPipeline, ref shadowCbObject);
+			return !materialIsReady || Draw(_sceneCtx, _cameraPassCtx, shadowMaterial!, ref shadowPipeline);
 		}
 
-		private bool Draw(SceneContext _sceneCtx, CameraContext _cameraCtx, Material _currentMaterial, ref VersionedMember<Pipeline> _currentPipeline, ref DeviceBuffer? _cbObject)
+		private bool Draw(
+			in SceneContext _sceneCtx,
+			in CameraPassContext _cameraPassCtx,
+			Material _currentMaterial,
+			ref VersionedMember<Pipeline> _currentPipeline)
 		{
 			// Check mesh and load it now if necessary:
 			if (Mesh == null || Mesh.IsDisposed)
@@ -318,56 +320,59 @@ namespace FragEngine3.Graphics.Components
 				return false;
 			}
 
-			// Update or (re)create the constant buffer containing object data:
-			if (!MeshRendererUtility.UpdateConstantBuffer_CBObject(
-				in core,
-				in node,
-				BoundingRadius,
-				ref _cbObject,
-				_cameraCtx.cmdList))
-			{
-				return false;
-			}
-
 			// Update (or recreate) pipeline for rendering this material and geometry combo:
 			if (!_currentMaterial.IsPipelineUpToDate(in _currentPipeline, rendererVersion))
 			{
 				_currentPipeline.DisposeValue();
-				if (!_currentMaterial.CreatePipeline(_sceneCtx, _cameraCtx, rendererVersion, vertexDataFlags, out _currentPipeline))
+				if (!_currentMaterial.CreatePipeline(_sceneCtx, _cameraPassCtx, rendererVersion, vertexDataFlags, out _currentPipeline))
 				{
 					Logger.LogError($"Failed to retrieve pipeline description for material '{_currentMaterial}'!");
 					return false;
 				}
 			}
 
+			// Update or (re)create the constant buffer containing object data:
+			if (!MeshRendererUtility.UpdateConstantBuffer_CBObject(
+				in core,
+				in node,
+				BoundingRadius,
+				ref cbObject,
+				out bool cbObjectChanged))
+			{
+				return false;
+			}
+
 			// Ensure the default resource set is assigned:
 			if (!MeshRendererUtility.UpdateObjectResourceSet(
-				_currentMaterial,
-				in _cbObject!,
-				ref objectResourceSet))
+				in core,
+				in _sceneCtx.resLayoutObject,
+				in cbObject!,
+				node.Name,
+				ref resSetObject,
+				cbObjectChanged))
 			{
 				return false;
 			}
 
 			// Throw pipeline and geometry buffers at the command list:
-			_cameraCtx.cmdList.SetPipeline(_currentPipeline.Value);
-			_cameraCtx.cmdList.SetGraphicsResourceSet(0, _cameraCtx.cameraResourceSet);
-			_cameraCtx.cmdList.SetGraphicsResourceSet(1, objectResourceSet);
+			_cameraPassCtx.cmdList.SetPipeline(_currentPipeline.Value);
+			_cameraPassCtx.cmdList.SetGraphicsResourceSet(0, _cameraPassCtx.resSetCamera);
+			_cameraPassCtx.cmdList.SetGraphicsResourceSet(1, resSetObject);
 
 			ResourceSet? boundResourceSet = overrideBoundResourceSet ?? _currentMaterial.BoundResourceSet;
 			if (boundResourceSet != null && _currentMaterial.BoundResourceLayout != null)
 			{
-				_cameraCtx.cmdList.SetGraphicsResourceSet(2, boundResourceSet);
+				_cameraPassCtx.cmdList.SetGraphicsResourceSet(2, boundResourceSet);
 			}
 
 			for (uint i = 0; i < vertexBuffers.Length; ++i)
 			{
-				_cameraCtx.cmdList.SetVertexBuffer(i, vertexBuffers[i]);
+				_cameraPassCtx.cmdList.SetVertexBuffer(i, vertexBuffers[i]);
 			}
-			_cameraCtx.cmdList.SetIndexBuffer(indexBuffer, Mesh.IndexFormat);
+			_cameraPassCtx.cmdList.SetIndexBuffer(indexBuffer, Mesh.IndexFormat);
 
 			// Issue draw call:
-			_cameraCtx.cmdList.DrawIndexed(Mesh.IndexCount);
+			_cameraPassCtx.cmdList.DrawIndexed(Mesh.IndexCount);
 
 			return true;
 		}

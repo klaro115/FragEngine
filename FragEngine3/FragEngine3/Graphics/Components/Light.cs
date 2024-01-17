@@ -82,7 +82,7 @@ namespace FragEngine3.Graphics.Components
 		private CameraInstance? shadowCameraInstance = null;
 		private Framebuffer? shadowMapFrameBuffer = null;
 		private DeviceBuffer? shadowCbCamera = null;
-		private ResourceSet? cameraResourceSet = null;
+		private ResourceSet? shadowResSetCamera = null;
 		private Matrix4x4 mtxShadowWorld2Clip = Matrix4x4.Identity;
 		private Matrix4x4 mtxShadowWorld2Uv = Matrix4x4.Identity;
 		private uint shadowMapIdx = 0;
@@ -206,7 +206,7 @@ namespace FragEngine3.Graphics.Components
 			shadowCameraInstance?.Dispose();
 			shadowMapFrameBuffer?.Dispose();
 			shadowCbCamera?.Dispose();
-			cameraResourceSet?.Dispose();
+			shadowResSetCamera?.Dispose();
 		}
 
 		public override void ReceiveSceneEvent(SceneEventType _eventType, object? _eventData)
@@ -240,27 +240,28 @@ namespace FragEngine3.Graphics.Components
 			in SceneContext _sceneCtx,
 			in CommandList _cmdList,
 			in Texture _texShadowMapArray,
-			in DeviceBuffer _dummyLightDataBuffer,
+			in DeviceBuffer _dummyBufLights,
 			Vector3 _shadingFocalPoint,
 			float _shadingFocalPointRadius,
 			uint _newShadowMapIdx,
-			out CameraContext _outCameraCtx)
+			out CameraPassContext _outCameraPassCtx,
+			bool _rebuildResSetCamera = false)
 		{
 			if (IsDisposed)
 			{
-				_outCameraCtx = null!;
+				_outCameraPassCtx = null!;
 				Logger.LogError("Can't begin drawing shadow map for disposed light source!");
 				return false;
 			}
 			if (!CastShadows)
 			{
-				_outCameraCtx = null!;
+				_outCameraPassCtx = null!;
 				return false;
 			}
 			if (_texShadowMapArray == null || _texShadowMapArray.IsDisposed)
 			{
 				Logger.LogError("Can't begin drawing shadow map using null shadow map texture array!");
-				_outCameraCtx = null!;
+				_outCameraPassCtx = null!;
 				return false;
 			}
 
@@ -287,7 +288,7 @@ namespace FragEngine3.Graphics.Components
 					shadowMapFrameBuffer?.Dispose();
 					shadowMapFrameBuffer = null;
 					Logger.LogException("Failed to create framebuffer for drawing light component's shadow map!", ex);
-				_outCameraCtx = null!;
+					_outCameraPassCtx = null!;
 					return false;
 				}
 			}
@@ -305,7 +306,7 @@ namespace FragEngine3.Graphics.Components
 					spotAngleRad,
 					ref shadowCameraInstance))
 				{
-					_outCameraCtx = null!;
+					_outCameraPassCtx = null!;
 					return false;
 				}
 			}
@@ -318,41 +319,44 @@ namespace FragEngine3.Graphics.Components
 				shadowMapIdx,
 				0,
 				0,
-				ref shadowCbCamera))
+				ref shadowCbCamera,
+				out bool cbCameraChanged))
 			{
 				Logger.LogError("Failed to update camera constant buffer for drawing light component's shadow map!");
-				_outCameraCtx = null!;
+				_outCameraPassCtx = null!;
 				return false;
 			}
+			_rebuildResSetCamera |= cbCameraChanged;
 
 			// Camera's default resource set:
-			if (!CameraUtility.UpdateOrCreateDefaultCameraResourceSet(
+			if (!CameraUtility.UpdateOrCreateCameraResourceSet(
 				in core,
 				in _sceneCtx.resLayoutCamera,
 				in _sceneCtx.cbScene,
 				in shadowCbCamera!,
-				in _dummyLightDataBuffer!,
+				in _dummyBufLights!,
 				in _texShadowMapArray,
 				in _sceneCtx.samplerShadowMaps,
-				ref cameraResourceSet))
+				ref shadowResSetCamera,
+				_rebuildResSetCamera))
 			{
 				Logger.LogError("Failed to allocate or update camera's default resource set!");
-				_outCameraCtx = null!;
+				_outCameraPassCtx = null!;
 				return false;
 			}
 
 			// Assemble context object for renderers to reference when issuing draw calls:
-			_outCameraCtx = new(
+			_outCameraPassCtx = new(
 				shadowCameraInstance!,
 				_cmdList,
-
-				cameraResourceSet!,
-				shadowCbCamera!,
 				shadowMapFrameBuffer,
-				_dummyLightDataBuffer,
-				_texShadowMapArray,
-
-				shadowMapFrameBuffer.OutputDescription);
+				shadowResSetCamera!,
+				shadowCbCamera!,
+				_dummyBufLights,
+				0,
+				_newShadowMapIdx,
+				0,
+				0);
 
 			// Bind framebuffers and clear targets:
 			if (!shadowCameraInstance!.BeginDrawing(_cmdList, true, false, out _))

@@ -88,11 +88,12 @@ namespace FragEngine3.Graphics.Stack
 		private readonly Stack<CommandList> commandListPool = new();
 		private readonly Stack<CommandList> commandListsInUse = new();
 		private ResourceLayout? resLayoutCamera = null;
+		private ResourceLayout? resLayoutObject = null;
 
 		// Shadow maps:
 		private Texture? texShadowMaps = null;
 		private uint texShadowMapsCapacity = 0;
-		private DeviceBuffer? dummyLightDataBuffer = null;
+		private DeviceBuffer? dummyBufLights = null;
 		private Sampler? samplerShadowMaps = null;
 
 		// Output composition:
@@ -143,8 +144,9 @@ namespace FragEngine3.Graphics.Stack
 
 			cbScene?.Dispose();
 			resLayoutCamera?.Dispose();
+			resLayoutObject?.Dispose();
 			compositionResourceSet?.Dispose();
-			dummyLightDataBuffer?.Dispose();
+			dummyBufLights?.Dispose();
 			texShadowMaps?.Dispose();
 			texShadowMapsCapacity = 0;
 			samplerShadowMaps?.Dispose();
@@ -187,18 +189,23 @@ namespace FragEngine3.Graphics.Stack
 
 			// GLOBAL RESOURCES:
 
-			if (!CameraUtility.VerifyOrCreateDefaultCameraResourceLayout(in core, ref resLayoutCamera))
+			if (!CameraUtility.CreateCameraResourceLayout(in core, out resLayoutCamera))
 			{
 				Logger.LogError("Failed to create default camera resource layout for graphics stack!");
 				return false;
 			}
 
+			if (!SceneUtility.CreateObjectResourceLayout(in core, out resLayoutObject))
+			{
+				Logger.LogError("Failed to create default object resource layout for graphics stack!");
+				return false;
+			}
+
 			// SHADOW MAPPING:
 
-			if (dummyLightDataBuffer == null || dummyLightDataBuffer.IsDisposed)
+			if (dummyBufLights == null || dummyBufLights.IsDisposed)
 			{
-				uint dummyLightDataBufferCap = 0;
-				if (!CameraUtility.VerifyOrCreateLightDataBuffer(in core, 1, ref dummyLightDataBuffer, ref dummyLightDataBufferCap))
+				if (!CameraUtility.CreateOrResizeLightDataBuffer(in core, 1, ref dummyBufLights, out _))
 				{
 					Logger.LogError("Failed to create dummy light data buffer for graphics stack!");
 					return false;
@@ -287,8 +294,9 @@ namespace FragEngine3.Graphics.Stack
 
 			cbScene?.Dispose();
 			resLayoutCamera?.Dispose();
+			resLayoutObject?.Dispose();
 			compositionResourceSet?.Dispose();
-			dummyLightDataBuffer?.Dispose();
+			dummyBufLights?.Dispose();
 			texShadowMaps?.Dispose();
 			texShadowMapsCapacity = 0;
 			samplerShadowMaps?.Dispose();
@@ -383,7 +391,8 @@ namespace FragEngine3.Graphics.Stack
 				in _lights,
 				out SceneContext sceneCtx,
 				out Vector3 renderFocalPoint,
-				out float renderFocalRadius);
+				out float renderFocalRadius,
+				out bool rebuildResSetCamera);
 			if (!success)
 			{
 				Logger.LogError("Graphics stack failed to begin drawing scene!");
@@ -404,18 +413,27 @@ namespace FragEngine3.Graphics.Stack
 				in sceneCtx,
 				renderFocalPoint,
 				renderFocalRadius,
-				maxActiveLightCount);
+				maxActiveLightCount,
+				rebuildResSetCamera);
 
 			// Draw each active camera component in the scene, and composite output:
 			success &= DrawSceneCameras(
 				in sceneCtx,
-				maxActiveLightCount);
+				maxActiveLightCount,
+				rebuildResSetCamera);
 
 			isDrawing = false;
 			return success;
 		}
 
-		private bool BeginDrawScene(in List<IRenderer> _renderers, in IList<Camera> _cameras, in IList<Light> _lights, out SceneContext _outSceneCtx, out Vector3 _outRenderFocalPoint, out float _outRenderFocalRadius)
+		private bool BeginDrawScene(
+			in List<IRenderer> _renderers,
+			in IList<Camera> _cameras,
+			in IList<Light> _lights,
+			out SceneContext _outSceneCtx,
+			out Vector3 _outRenderFocalPoint,
+			out float _outRenderFocalRadius,
+			out bool _outRebuildResSetCamera)
 		{
 			// Clear all lists for new frame:
 			activeCameras.Clear();
@@ -509,7 +527,8 @@ namespace FragEngine3.Graphics.Stack
 			if (!CameraUtility.UpdateConstantBuffer_CBScene(
 				in core,
 				in Scene!.settings,
-				ref cbScene))
+				ref cbScene,
+				out _outRebuildResSetCamera))
 			{
 				Logger.LogError("Failed to create or update scene constant buffer!");
 				_outSceneCtx = null!;
@@ -520,10 +539,14 @@ namespace FragEngine3.Graphics.Stack
 
 			_outSceneCtx = new(
 				Scene,
-				cbScene!,
 				resLayoutCamera!,
-				samplerShadowMaps!);
-			return _outSceneCtx.IsValid;
+				resLayoutObject!,
+				cbScene!,
+				texShadowMaps!,
+				samplerShadowMaps!,
+				(uint)activeLights.Count,
+				(uint)activeLightsShadowMapped.Count);
+			return true;
 		}
 
 		private bool GetOrCreateCommandList(out CommandList _outCmdList)
@@ -540,7 +563,7 @@ namespace FragEngine3.Graphics.Stack
 			return true;
 		}
 
-		private bool DrawShadowMaps(in SceneContext _sceneCtx, Vector3 _renderFocalPoint, float _renderFocalRadius, uint _maxActiveLightCount)						// TODO [important]: This doesn't work, incorrect target or projection! Objects appear missing!
+		private bool DrawShadowMaps(in SceneContext _sceneCtx, Vector3 _renderFocalPoint, float _renderFocalRadius, uint _maxActiveLightCount, bool _rebuildResSetCamera)
 		{
 			// No visible shadow-casting light? We're done here:
 			if (activeLightsShadowMapped.Count == 0)
@@ -583,11 +606,12 @@ namespace FragEngine3.Graphics.Stack
 					in _sceneCtx,
 					in cmdList,
 					in texShadowMaps,
-					in dummyLightDataBuffer!,
+					in dummyBufLights!,
 					_renderFocalPoint,
 					_renderFocalRadius,
 					shadowMapIdx,
-					out CameraContext lightCtx);
+					out CameraPassContext lightCtx,
+					_rebuildResSetCamera);
 				if (!success) break;
 
 				//TODO [later]: Exclude renderers that are entirely outside of point/spot lights' maximum range.
@@ -615,7 +639,7 @@ namespace FragEngine3.Graphics.Stack
 			return success;
 		}
 
-		private bool DrawSceneCameras(in SceneContext _sceneCtx, uint _maxActiveLightCount)
+		private bool DrawSceneCameras(in SceneContext _sceneCtx, uint _maxActiveLightCount, bool _rebuildAllResSetCamera)
 		{
 			bool success = true;
 
@@ -632,13 +656,14 @@ namespace FragEngine3.Graphics.Stack
 			{
 				Camera camera = activeCameras[(int)i];
 				uint activeLightCount = (uint)activeLights.Count;
-				if (!camera.GetLightDataBuffer(activeLightCount, out DeviceBuffer? lightDataBuffer))
+				if (!camera.GetLightDataBuffer(activeLightCount, out DeviceBuffer? lightDataBuffer, out bool bufLightsChanged))
 				{
 					success = false;
 					continue;
 				}
+				bool rebuildResSetCamera = _rebuildAllResSetCamera || bufLightsChanged;
 
-				if (!camera.BeginFrame(activeLightCount))
+				if (!camera.BeginFrame(activeLightCount, false, out _))
 				{
 					success = false;
 					continue;
@@ -649,13 +674,13 @@ namespace FragEngine3.Graphics.Stack
 				result &= camera.SetOverrideCameraTarget(null);
 				result &= CameraUtility.UpdateLightDataBuffer(in core, in lightDataBuffer!, in activeLightData, activeLightCount, _maxActiveLightCount);
 
-				result &= DrawSceneRenderers(in _sceneCtx, cmdList, camera, RenderMode.Opaque, activeRenderersOpaque, true, i);
-				result &= DrawSceneRenderers(in _sceneCtx, cmdList, camera, RenderMode.Transparent, activeRenderersTransparent, false, i);
-				result &= DrawSceneRenderers(in _sceneCtx, cmdList, camera, RenderMode.UI, activeRenderersUI, false, i);
+				result &= DrawSceneRenderers(in _sceneCtx, cmdList, camera, RenderMode.Opaque,		activeRenderersOpaque,		true,	rebuildResSetCamera, i);
+				result &= DrawSceneRenderers(in _sceneCtx, cmdList, camera, RenderMode.Transparent,	activeRenderersTransparent,	false,	rebuildResSetCamera, i);
+				result &= DrawSceneRenderers(in _sceneCtx, cmdList, camera, RenderMode.UI,			activeRenderersUI,			false,	rebuildResSetCamera, i);
 
 				if (result)
 				{
-					result &= CompositeFinalOutput(in _sceneCtx, camera, i);
+					result &= CompositeFinalOutput(in _sceneCtx, camera, rebuildResSetCamera, i);
 				}
 				result &= camera.EndFrame();
 				success &= result;
@@ -668,7 +693,15 @@ namespace FragEngine3.Graphics.Stack
 			return success;
 		}
 
-		private bool DrawSceneRenderers(in SceneContext _sceneCtx, in CommandList _cmdList, Camera _camera, RenderMode _renderMode, in List<IRenderer> _renderers, bool _clearRenderTargets, uint _cameraIdx)
+		private bool DrawSceneRenderers(
+			in SceneContext _sceneCtx,
+			in CommandList _cmdList,
+			Camera _camera,
+			RenderMode _renderMode,
+			in List<IRenderer> _renderers,
+			bool _clearRenderTargets,
+			bool _rebuildResSetCamera,
+			uint _cameraIdx)
 		{
 			if (!_camera.BeginPass(
 				in _sceneCtx,
@@ -679,7 +712,8 @@ namespace FragEngine3.Graphics.Stack
 				_cameraIdx,
 				(uint)activeLights.Count,
 				(uint)activeLightsShadowMapped.Count,
-				out CameraContext cameraCtx))
+				out CameraPassContext cameraPassCtx,
+				_rebuildResSetCamera))
 			{
 				return false;
 			}
@@ -690,7 +724,7 @@ namespace FragEngine3.Graphics.Stack
 			{
 				if ((_camera.layerMask & renderer.LayerFlags) != 0)
 				{
-					success &= renderer.Draw(_sceneCtx, cameraCtx);
+					success &= renderer.Draw(_sceneCtx, cameraPassCtx);
 				}
 			}
 
@@ -698,7 +732,7 @@ namespace FragEngine3.Graphics.Stack
 			return success;
 		}
 
-		private bool CompositeFinalOutput(in SceneContext _sceneCtx, Camera _camera, uint _cameraIdx)
+		private bool CompositeFinalOutput(in SceneContext _sceneCtx, Camera _camera, bool _rebuildResSetCamera, uint _cameraIdx)
 		{
 			if (!GetOrCreateCommandList(out CommandList cmdList))
 			{
@@ -730,7 +764,8 @@ namespace FragEngine3.Graphics.Stack
 				true,
 				_cameraIdx,
 				0, 0,
-				out CameraContext cameraCtx))
+				out CameraPassContext cameraPassCtx,
+				_rebuildResSetCamera))
 			{
 				Logger.LogError("Failed to begin frame on graphics stack's composition pass!");
 				_camera.SetOverrideCameraTarget(null);
@@ -743,9 +778,9 @@ namespace FragEngine3.Graphics.Stack
 			ResourceLayout resourceLayout = compositionMaterial.BoundResourceLayout!;
 			if (resourceLayout != null && (compositionResourceSet == null || compositionResourceSet.IsDisposed))
 			{
-				success &= _camera.GetOrCreateCameraTarget(RenderMode.Opaque, out CameraTarget? opaqueTarget);
-				success &= _camera.GetOrCreateCameraTarget(RenderMode.Transparent, out CameraTarget? transparentTarget);
-				success &= _camera.GetOrCreateCameraTarget(RenderMode.UI, out CameraTarget? uiTarget);
+				success &= _camera.GetOrCreateCameraTarget(RenderMode.Opaque,		out CameraTarget? opaqueTarget);
+				success &= _camera.GetOrCreateCameraTarget(RenderMode.Transparent,	out CameraTarget? transparentTarget);
+				success &= _camera.GetOrCreateCameraTarget(RenderMode.UI,			out CameraTarget? uiTarget);
 				if (!success)
 				{
 					Logger.LogError("Failed to get camera's targets needed for output composition!");
@@ -784,7 +819,7 @@ namespace FragEngine3.Graphics.Stack
 			}
 
 			// Send draw calls for output composition:
-			success &= compositionRenderer.Draw(_sceneCtx, cameraCtx);
+			success &= compositionRenderer.Draw(_sceneCtx, cameraPassCtx);
 
 			// Finish drawing and submit command list to GPU:
 			success &= _camera.EndPass();

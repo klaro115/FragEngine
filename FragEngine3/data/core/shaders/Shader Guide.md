@@ -1,5 +1,7 @@
 ### Shader Buffer Order:
 
+**OUT-DATED! Some of the following information no longer applies; major changes have been made, and this document needs to be updated once those changes are fully implemented.**
+
 ####Vertex Buffers:
 
 The engine expects between 1 and 4 vertex buffers for each piece of scene geometry. The first vertex buffer (```VertexInput_Basic```) contains positions, normals, and texture coordinates for each vertex of surface. The other 3 vertex buffers are optional, and contain additional geometry data or animation data for the those same vertices.

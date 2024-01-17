@@ -32,8 +32,7 @@ public sealed class Camera : Component
 	public uint layerMask = 0xFFFFu;
 
 	// Scene & Lighting:
-	private DeviceBuffer? lightDataBuffer = null;
-	private uint lightDataBufferCapacity = 0;
+	private DeviceBuffer? bufLights = null;
 
 	// Render targets:
 	private readonly Dictionary<RenderMode, CameraTarget> targetDict = new(4);
@@ -136,7 +135,7 @@ public sealed class Camera : Component
 			passRes.Dispose();
 		}
 
-		lightDataBuffer?.Dispose();
+		bufLights?.Dispose();
 
 		if (_disposing)
 		{
@@ -145,8 +144,7 @@ public sealed class Camera : Component
 			passResourcePool.Clear();
 			passResourcesInUse.Clear();
 
-			lightDataBuffer = null;
-			lightDataBufferCapacity = 0;
+			bufLights = null;
 		}
 	}
 
@@ -162,8 +160,7 @@ public sealed class Camera : Component
 		IsMainCamera = false;
 
 		// Purge dynamically allocated resources:
-		lightDataBuffer?.Dispose();
-		lightDataBufferCapacity = 0;
+		bufLights?.Dispose();
 
 		overrideTarget = null;
 		foreach (var kvp in targetDict)
@@ -243,11 +240,6 @@ public sealed class Camera : Component
 			_outPassResources = new();
 		}
 
-		if (!CameraUtility.CreateConstantBuffer_CBCamera(in instance.graphicsCore, out _outPassResources.cbCamera))
-		{
-			return false;
-		}
-
 		passResourcesInUse.Push(_outPassResources);
 		return true;
 	}
@@ -281,8 +273,27 @@ public sealed class Camera : Component
 		return true;
 	}
 
-	public bool BeginFrame(uint _activeLightCount)
+	private bool GetActiveCameraTarget(RenderMode _renderMode, out CameraTarget _outActiveTarget, out Framebuffer _outActiveFramebuffer)
 	{
+		if (HasOverrideFramebuffer)
+		{
+			_outActiveTarget = overrideTarget!;
+		}
+		else if (!GetOrCreateCameraTarget(_renderMode, out _outActiveTarget))
+		{
+			Logger.LogError($"Failed to get or create camera target for render mode '{_renderMode}'!");
+			_outActiveTarget = null!;
+			_outActiveFramebuffer = null!;
+			return false;
+		}
+
+		_outActiveFramebuffer = _outActiveTarget.framebuffer;
+		return true;
+	}
+
+	public bool BeginFrame(uint _activeLightCount, bool _allowResizeBufLights, out bool _outRebuildResSetCamera)
+	{
+		_outRebuildResSetCamera = false;
 		if (IsDisposed)
 		{
 			Logger.LogError("Cannot begin frame on camera that is already drawing!");
@@ -295,11 +306,11 @@ public sealed class Camera : Component
 		}
 
 		// Create or resize light data buffer:
-		if (!CameraUtility.VerifyOrCreateLightDataBuffer(
+		if (_allowResizeBufLights && !CameraUtility.CreateOrResizeLightDataBuffer(
 			in instance.graphicsCore,
 			_activeLightCount,
-			ref lightDataBuffer,
-			ref lightDataBufferCapacity))
+			ref bufLights,
+			out _outRebuildResSetCamera))
 		{
 			return false;
 		}
@@ -344,53 +355,42 @@ public sealed class Camera : Component
 		uint _cameraIdx_,
 		uint _activeLightCount,
 		uint _shadowMappedLightCount,
-		out CameraContext _outCameraCtx)
+		out CameraPassContext _outCameraPassCtx,
+		bool _rebuildResSetCamera = false)
 	{
 		if (IsDisposed)
 		{
 			Logger.LogError("Cannot begin pass on camera that is already drawing!");
-			_outCameraCtx = null!;
+			_outCameraPassCtx = null!;
 			return false;
 		}
 		if (IsDrawing)
 		{
 			Logger.LogError("Cannot begin pass on camera that is already drawing!");
-			_outCameraCtx = null!;
+			_outCameraPassCtx = null!;
 			return false;
 		}
 		if (_cmdList == null || _cmdList.IsDisposed)
 		{
 			Logger.LogError("Cannot begin pass on camera using null or disposed command list!");
-			_outCameraCtx = null!;
+			_outCameraPassCtx = null!;
 			return false;
 		}
 
-		// Fetch or prepare a reusable set of resources to use for this pass:
 		if (!GetOrCreateCameraPassResources(out CameraPassResources passResources))
 		{
-			_outCameraCtx = null!;
+			_outCameraPassCtx = null!;
 			return false;
 		}
 
-		// Get or create the active camera target:
-		CameraTarget activeTarget;
-		if (HasOverrideFramebuffer)
+		if (!GetActiveCameraTarget(_renderMode, out _, out Framebuffer activeFramebuffer))
 		{
-			activeTarget = overrideTarget!;
-		}
-		else if (!GetOrCreateCameraTarget(_renderMode, out activeTarget))
-		{
-			Logger.LogError($"Failed to get or create camera target for render mode '{_renderMode}'!");
-			_outCameraCtx = null!;
+			_outCameraPassCtx = null!;
 			return false;
 		}
-
-		Framebuffer activeFramebuffer = activeTarget.framebuffer;
-
-		// Assign target's framebuffer as override to the camera instance:
 		if (!instance.SetOverrideFramebuffer(activeFramebuffer, true))
 		{
-			_outCameraCtx = null!;
+			_outCameraPassCtx = null!;
 			return false;
 		}
 
@@ -399,56 +399,58 @@ public sealed class Camera : Component
 		if (!instance.BeginDrawing(_cmdList, _clearRenderTargets, true, out Matrix4x4 mtxWorld2Clip))
 		{
 			Logger.LogError("Camera instance failed to begin pass!");
-			_outCameraCtx = null!;
+			_outCameraPassCtx = null!;
 			return false;
 		}
 
-		Pose worldPose = node.WorldTransformation;
-
-		// Camera data constant buffer:
+		// Update CBCamera:
 		if (!CameraUtility.UpdateConstantBuffer_CBCamera(
 			in instance,
-			in worldPose,
+			node.WorldTransformation,
 			in mtxWorld2Clip,
 			_cameraIdx_,
 			_activeLightCount,
 			_shadowMappedLightCount,
-			ref passResources.cbCamera!))
+			ref passResources.cbCamera!,
+			out bool cbCameraChanged))
 		{
 			Logger.LogError("Failed to allocate or update camera constant buffer!");
-			_outCameraCtx = null!;
+			_outCameraPassCtx = null!;
 			return false;
 		}
 
-		// Camera's default resource set:
-		if (!CameraUtility.UpdateOrCreateDefaultCameraResourceSet(
+		// Always force a rebuild of the camera's resource set if either the scene resources have changed, or those owned by the camera:
+		_rebuildResSetCamera |= cbCameraChanged;
+
+		// Update ResSetCamera:
+		if (!CameraUtility.UpdateOrCreateCameraResourceSet(
 			in instance.graphicsCore,
 			in _sceneCtx.resLayoutCamera,
 			in _sceneCtx.cbScene,
 			in passResources.cbCamera,
-			in lightDataBuffer!,
+			in bufLights!,
 			in _texShadowMaps,
 			in _sceneCtx.samplerShadowMaps,
-			ref passResources.defaultCameraResourceSet))
+			ref passResources.resSetCamera,
+			_rebuildResSetCamera))
 		{
 			Logger.LogError("Failed to allocate or update camera's default resource set!");
-			_outCameraCtx = null!;
+			_outCameraPassCtx = null!;
 			return false;
 		}
 
-		// Assemble camera context for rendering:
-		_outCameraCtx = new(
+		// Assemble context for rendering this pass:
+		_outCameraPassCtx = new(
 			instance,
 			_cmdList,
-
-			passResources.defaultCameraResourceSet!,
-			passResources.cbCamera!,
 			activeFramebuffer,
-			lightDataBuffer!,
-			_texShadowMaps,
-
-			activeFramebuffer.OutputDescription);
-
+			passResources.resSetCamera!,
+			passResources.cbCamera,
+			bufLights!,
+			FrameCounter,
+			PassCounter,
+			_activeLightCount,
+			_shadowMappedLightCount);
 		return true;
 	}
 
@@ -470,24 +472,25 @@ public sealed class Camera : Component
 		return instance.EndDrawing();
 	}
 
-	public bool GetLightDataBuffer(uint _maxActiveLightCount, out DeviceBuffer? _outLightDataBuffer)
+	public bool GetLightDataBuffer(uint _activeLightCount, out DeviceBuffer? _outBufLights, out bool _outBufLightsHasChanged)
 	{
 		if (IsDisposed)
 		{
-			_outLightDataBuffer = null;
+			_outBufLights = null;
+			_outBufLightsHasChanged = false;
 			return false;
 		}
 
-		if (!CameraUtility.VerifyOrCreateLightDataBuffer(
+		if (!CameraUtility.CreateOrResizeLightDataBuffer(
 			in instance.graphicsCore,
-			_maxActiveLightCount,
-			ref lightDataBuffer,
-			ref lightDataBufferCapacity))
+			_activeLightCount,
+			ref bufLights,
+			out _outBufLightsHasChanged))
 		{
-			_outLightDataBuffer = null;
+			_outBufLights = null;
 			return false;
 		}
-		_outLightDataBuffer = lightDataBuffer;
+		_outBufLights = bufLights;
 		return true;
 	}
 

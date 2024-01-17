@@ -4,26 +4,35 @@ using Veldrid;
 namespace FragEngine3.Graphics.Contexts
 {
 	public sealed class SceneContext(
+		// References:
 		Scene _scene,
-		DeviceBuffer _cbScene,
+
+		// Scene resources:
 		ResourceLayout _resLayoutCamera,
-		Sampler _samplerShadowMaps)
+		ResourceLayout _resLayoutObject,
+		DeviceBuffer _cbScene,
+		Texture _texShadowMaps,
+		Sampler _samplerShadowMaps,
+
+		// Parameters:
+		uint _lightCount,
+		uint _lightCountShadowMapped)
 	{
 		#region Fields
 
-		public readonly Scene scene = _scene ?? throw new ArgumentNullException(nameof(scene), "Scene may not be null!");
-		public readonly DeviceBuffer cbScene = _cbScene ?? throw new ArgumentNullException(nameof(_cbScene), "Scene-wide constant buffer may not be null!");
-		public readonly ResourceLayout resLayoutCamera = _resLayoutCamera ?? throw new ArgumentNullException(nameof(_resLayoutCamera), "Resource layout for per-camera resources may not be null!");
+		// References:
+		public readonly Scene scene = _scene;
+
+		// Scene resources:
+		public readonly ResourceLayout resLayoutCamera = _resLayoutCamera;
+		public readonly ResourceLayout resLayoutObject = _resLayoutObject;
+		public readonly DeviceBuffer cbScene = _cbScene;
+		public readonly Texture texShadowMaps = _texShadowMaps;
 		public readonly Sampler samplerShadowMaps = _samplerShadowMaps;
 
-		#endregion
-		#region Properties
-
-		public bool IsValid =>
-			scene != null && !scene.IsDisposed &&
-			cbScene != null && !cbScene.IsDisposed &&
-			resLayoutCamera != null && !resLayoutCamera.IsDisposed &&
-			samplerShadowMaps != null && !samplerShadowMaps.IsDisposed;
+		// Parameters:
+		public readonly uint lightCount = _lightCount;
+		public readonly uint lightCountShadowMapped = Math.Min(_lightCountShadowMapped, _lightCount);
 
 		#endregion
 	}
