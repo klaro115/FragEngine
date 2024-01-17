@@ -16,47 +16,6 @@ namespace FragEngine3.Graphics.Stack
 {
 	public sealed class ForwardPlusLightsStack(GraphicsCore _core) : IGraphicsStack
 	{
-		#region Types
-
-		private sealed class RendererList(int _initialCapacity) : IDisposable		// TODO: Move this to camera if possible. Having to juggle and reassign these, while pushing renderers in the correct lists is too slow right now!
-		{
-			~RendererList()
-			{
-				Dispose(false);
-			}
-
-			public readonly List<IRenderer> renderersOpaque = new(_initialCapacity);
-			public readonly List<IRenderer> renderersTransparent = new(_initialCapacity);
-			public readonly List<IRenderer> renderersUI = new(_initialCapacity);
-			public CommandList cmdList = null!;
-
-			public bool HasRenderers => renderersOpaque.Count != 0 || renderersTransparent.Count != 0;
-
-			public void Dispose()
-			{
-				GC.SuppressFinalize(this);
-				Dispose(true);
-			}
-			private void Dispose(bool _disposing)
-			{
-				cmdList?.Dispose();
-
-				if (_disposing)
-				{
-					cmdList = null!;
-					Clear();
-				}
-			}
-
-			public void Clear()
-			{
-				renderersOpaque.Clear();
-				renderersTransparent.Clear();
-				renderersUI.Clear();
-			}
-		}
-
-		#endregion
 		#region Constructors
 
 		~ForwardPlusLightsStack()
@@ -214,7 +173,8 @@ namespace FragEngine3.Graphics.Stack
 
 			if (texShadowMaps == null || texShadowMaps.IsDisposed || texShadowMapsCapacity == 0)
 			{
-				if (!ShadowMapUtility.CreateShadowMapArray(in core, 1024, 1024, 1, out texShadowMaps))
+				const uint shadowResolution = ShadowMapUtility.shadowResolution;
+				if (!ShadowMapUtility.CreateShadowMapArray(in core, shadowResolution, shadowResolution, 1, out texShadowMaps))
 				{
 					Logger.LogError("Failed to create initial shadow map texture array for graphics stack!");
 					return false;
@@ -465,12 +425,17 @@ namespace FragEngine3.Graphics.Stack
 					if (light.CheckVisibilityByCamera(in camera))
 					{
 						activeLights.Add(light);
-						if (light.CastShadows)
-						{
-							activeLightsShadowMapped.Add(light);
-						}
 						break;
 					}
+				}
+			}
+			// Sort lights, to prioritize shadow casters first, and higher priority lights second:
+			activeLights.Sort(Light.CompareLightsForSorting);
+			foreach (Light light in activeLights)
+			{
+				if (light.CastShadows)
+				{
+					activeLightsShadowMapped.Add(light);
 				}
 			}
 

@@ -141,7 +141,7 @@ namespace FragEngine3.EngineCore
 					double avgFrameTimeMs = frameTimeSum.TotalMilliseconds / stateFrameCount;
 					double avgComputeTimeMs = computeTimeSum.TotalMilliseconds / stateFrameCount;
 
-					Logger.LogMessage($"Engine state {prevState} | Average frame rate: {avgFrameRate:0.00} Hz | Average frame time: {avgFrameTimeMs:0.00} ms | Average compute time: {avgComputeTimeMs} ms");
+					Logger.LogMessage($"Engine state {prevState} | Average frame rate: {avgFrameRate:0.00} Hz | Average frame time: {avgFrameTimeMs:0.00} ms | Average compute time: {avgComputeTimeMs:0.00} ms");
 				}
 				stateStartFrameCount = TimeManager.FrameCount;
 				frameTimeSum = TimeSpan.Zero;

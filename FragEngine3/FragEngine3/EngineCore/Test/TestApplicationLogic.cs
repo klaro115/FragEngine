@@ -123,7 +123,7 @@ namespace FragEngine3.EngineCore.Test
 			{
 				light.node.WorldPosition = new Vector3(0, 5, 0);
 				light.node.SetRotationFromYawPitchRoll(22.5f, 45, 0, true, true);
-				light.node.SetEnabled(false);
+				//light.node.SetEnabled(false);
 
 				light.CastShadows = false;
 			}
@@ -133,6 +133,7 @@ namespace FragEngine3.EngineCore.Test
 				light.node.SetRotationFromYawPitchRoll(-70, -30, 0, true, true);
 				light.node.SetEnabled(false);
 			}
+			// Create a spot light:
 			if (SceneSpawner.CreateLight(scene, Light.LightType.Spot, out light))
 			{
 				light.node.WorldPosition = new Vector3(0, 0, -3);

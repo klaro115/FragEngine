@@ -7,6 +7,11 @@ namespace FragEngine3.Graphics.Utility
 {
 	public static class ShadowMapUtility
 	{
+		#region Constants
+
+		public const uint shadowResolution = 512;
+
+		#endregion
 		#region Methods
 
 		public static bool UpdateOrCreateShadowMapCameraInstance(
@@ -40,8 +45,8 @@ namespace FragEngine3.Graphics.Utility
 					{
 						OutputSettings = new CameraOutput()
 						{
-							resolutionX = 1024,
-							resolutionY = 1024,
+							resolutionX = shadowResolution,
+							resolutionY = shadowResolution,
 
 							colorFormat = _graphicsCore.DefaultColorTargetPixelFormat,
 							depthFormat = _graphicsCore.DefaultShadowMapDepthTargetFormat,

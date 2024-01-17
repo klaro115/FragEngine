@@ -31,13 +31,13 @@ namespace FragEngine3.Graphics.Components
 			/// Cone-shaped light source. All light rays are cast from a single point and in one general
 			/// direction, with rays distributed evenly across a given angle.
 			/// </summary>
-			Spot,
+			Spot			= 1,
 			/// <summary>
 			/// Directional sun-like light source. Light rays are cast following a single direction across
 			/// the entire world space. The light does not attenuate over increasing distances, and is not
 			/// tied to the source's position.
 			/// </summary>
-			Directional,
+			Directional		= 2,
 		}
 
 		#endregion
@@ -215,6 +215,13 @@ namespace FragEngine3.Graphics.Components
 			{
 				node.scene.drawManager.UnregisterLight(this);
 			}
+		}
+
+		public static int CompareLightsForSorting(Light _a, Light _b)
+		{
+			int weightA = _a.lightPriority + (_a.castShadows ? 1000 : 0);
+			int weightB = _b.lightPriority + (_b.castShadows ? 1000 : 0);
+			return weightB.CompareTo(weightA);
 		}
 
 		/// <summary>
