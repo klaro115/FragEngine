@@ -49,15 +49,16 @@ struct Light
     float3 lightPosition;
     uint lightType;
     float3 lightDirection;
-    float lightSpotAngleAcos;
-    float4x4 mtxShadowWorld2Uv;
+    float lightSpotMinDot;
+    float4x4 mtxShadowWorld2Clip;
     uint shadowMapIdx;
+    float lightMaxRange;
 };
 
 StructuredBuffer<Light> BufLights : register(ps, t0);   // Buffer containing an array of light source data. Number of lights is given in 'CBGlobal.lightCount'.
 
 Texture2DArray<half> TexShadowMaps : register(ps, t1);
-SamplerState SamplerStateShadowMaps : register(ps, s0);
+SamplerState SamplerShadowMaps : register(ps, s0);
 
 /**************** VERTEX OUTPUT: ***************/
 
@@ -77,6 +78,9 @@ struct VertexOutput_Extended
 };
 
 /****************** LIGHTING: ******************/
+
+static const float LIGHT_NEAR_CLIP_PLANE = 0.001;
+static const float LIGHT_BIAS = -0.03;
 
 half3 CalculateAmbientLight(float3 _normal)
 {
@@ -105,7 +109,7 @@ half3 CalculatePhongLighting(in Light _light, in float3 _worldPosition, in float
         lightRayDir = normalize(lightOffset);
 
         // Spot light angle:
-        if (_light.lightType == 1 && dot(_light.lightDirection, lightRayDir) < _light.lightSpotAngleAcos)
+        if (_light.lightType == 1 && dot(_light.lightDirection, lightRayDir) < _light.lightSpotMinDot)
         {
             lightIntens = half3(0, 0, 0);
         }
@@ -126,12 +130,15 @@ half3 CalculateTotalLightIntensity(in float3 _worldPosition, in float3 _worldNor
 
         half3 lightIntensity = CalculatePhongLighting(light, _worldPosition, _worldNormal);
 
-        float4 shadowProj = mul(light.mtxShadowWorld2Uv, float4(_worldPosition, 1));
-        float3 shadowUv = float3(shadowProj.xy, light.shadowMapIdx);
-
-        half shadowDepth = TexShadowMaps.Sample(SamplerStateShadowMaps, shadowUv);
+        // Transform pixel position to light's clip space, then to UV space:
+        float4 shadowProj = mul(light.mtxShadowWorld2Clip, float4(_worldPosition + light.lightDirection * LIGHT_BIAS, 1));
+        shadowProj /= shadowProj.w;
+        float2 shadowUv = float2(shadowProj.x + 1, 1 - shadowProj.y) * 0.5;
         
+        // Load corresponding depth value from shadow texture array:
+        half shadowDepth = TexShadowMaps.Sample(SamplerShadowMaps, float3(shadowUv.x, shadowUv.y, light.shadowMapIdx));
 
+        lightIntensity *= shadowProj.z < shadowDepth ? 1 : 0;           //TODO [later]: fade out shadow beyond 90% depth.
         totalLightIntensity += lightIntensity;
     }
     // Simple light sources:

@@ -84,7 +84,6 @@ namespace FragEngine3.Graphics.Components
 		private DeviceBuffer? shadowCbCamera = null;
 		private ResourceSet? shadowResSetCamera = null;
 		private Matrix4x4 mtxShadowWorld2Clip = Matrix4x4.Identity;
-		private Matrix4x4 mtxShadowWorld2Uv = Matrix4x4.Identity;
 		private uint shadowMapIdx = 0;
 
 		#endregion
@@ -223,6 +222,10 @@ namespace FragEngine3.Graphics.Components
 		/// </summary>
 		public LightSourceData GetLightSourceData()
 		{
+			float spotMinDot = type == LightType.Spot
+				? MathF.Cos(spotAngleRad * 0.5f)
+				: 0;
+
 			return new()
 			{
 				color = new Vector3(lightColor.R, lightColor.G, lightColor.B),
@@ -230,9 +233,10 @@ namespace FragEngine3.Graphics.Components
 				position = WorldPosition,
 				type = (uint)type,
 				direction = type != LightType.Point ? Direction : Vector3.UnitZ,
-				spotAngleAcos = type == LightType.Spot ? MathF.Acos(spotAngleRad * 0.5f) : 0,
-				mtxShadowWorld2Uv = mtxShadowWorld2Uv,
+				spotMinDot = spotMinDot,
+				mtxShadowWorld2Clip = mtxShadowWorld2Clip,
 				shadowMapIdx = shadowMapIdx,
+				lightMaxRange = maxLightRange,
 			};
 		}
 
@@ -303,7 +307,6 @@ namespace FragEngine3.Graphics.Components
 					in core,
 					in shadowMapFrameBuffer,
 					in mtxShadowWorld2Clip,
-					in mtxShadowWorld2Uv,
 					type == LightType.Directional,
 					_shadingFocalPointRadius,
 					spotAngleRad,
@@ -413,8 +416,7 @@ namespace FragEngine3.Graphics.Components
 					break;
 			}
 
-			Matrix4x4 mtxClip2Uv = Matrix4x4.CreateViewportLeftHanded(0, 0, 1, 1, 0, 1);
-			mtxShadowWorld2Uv = mtxShadowWorld2Clip * mtxClip2Uv;
+			mtxShadowWorld2Clip *= Matrix4x4.CreateScale(1, -1, 1);
 		}
 
 		/// <summary>

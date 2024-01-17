@@ -123,15 +123,25 @@ namespace FragEngine3.EngineCore.Test
 			{
 				light.node.WorldPosition = new Vector3(0, 5, 0);
 				light.node.SetRotationFromYawPitchRoll(22.5f, 45, 0, true, true);
-				//light.node.SetEnabled(false);
+				light.node.SetEnabled(false);
 
-				light.CastShadows = true;
+				light.CastShadows = false;
 			}
 			if (SceneSpawner.CreateLight(scene, Light.LightType.Directional, out light))
 			{
 				light.node.WorldPosition = new Vector3(0, 5, 0);
 				light.node.SetRotationFromYawPitchRoll(-70, -30, 0, true, true);
 				light.node.SetEnabled(false);
+			}
+			if (SceneSpawner.CreateLight(scene, Light.LightType.Spot, out light))
+			{
+				light.node.WorldPosition = new Vector3(0, 0, -3);
+				light.node.LocalRotation = Quaternion.Identity;
+				//light.node.SetEnabled(false);
+
+				light.LightIntensity = 15;
+				light.SpotAngleDegrees = 30;
+				light.CastShadows = true;
 			}
 
 			if (SceneSpawner.CreateStaticMeshRenderer(scene, out StaticMeshRenderer rabbit))
@@ -202,9 +212,20 @@ namespace FragEngine3.EngineCore.Test
 			MeshPrimitiveFactory.CreatePlaneMesh("Plane", Engine, new Vector2(5, 5), 6, false, out _, out _, out ResourceHandle planeHandle);
 			if (SceneSpawner.CreateStaticMeshRenderer(scene, out StaticMeshRenderer plane))
 			{
-				plane.node.Name = "Plane";
+				plane.node.Name = "Ground";
 				plane.node.LocalPosition = new Vector3(0, -1.5f, 2);
 				plane.node.LocalRotation = Quaternion.Identity;
+				plane.node.LocalScale = Vector3.One;
+				//plane.node.SetEnabled(false);
+
+				plane.SetMesh(planeHandle);
+				plane.SetMaterial("Mtl_DefaultSurface");
+			}
+			if (SceneSpawner.CreateStaticMeshRenderer(scene, out plane))
+			{
+				plane.node.Name = "Wall";
+				plane.node.LocalPosition = new Vector3(0, 1, 4.5f);
+				plane.node.SetRotationFromAxisAngle(Vector3.UnitX, -90, false, true);
 				plane.node.LocalScale = Vector3.One;
 				//plane.node.SetEnabled(false);
 

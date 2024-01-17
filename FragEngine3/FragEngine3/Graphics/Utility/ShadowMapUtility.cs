@@ -13,7 +13,6 @@ namespace FragEngine3.Graphics.Utility
 			in GraphicsCore _graphicsCore,
 			in Framebuffer _shadowMapFramebuffer,
 			in Matrix4x4 _mtxShadowWorld2Clip,
-			in Matrix4x4 _mtxShadowWorld2Uv,
 			bool _isDirectional,
 			float _farClipPlane,
 			float _spotAngleRad,
@@ -30,7 +29,7 @@ namespace FragEngine3.Graphics.Utility
 				mirrorY = true,
 
 				mtxWorld2Clip = _mtxShadowWorld2Clip,
-				mtxWorld2Pixel = _mtxShadowWorld2Uv,
+				mtxWorld2Pixel = _mtxShadowWorld2Clip,
 			};
 
 			if (_cameraInstance == null || _cameraInstance.IsDisposed)
