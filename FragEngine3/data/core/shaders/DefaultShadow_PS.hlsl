@@ -19,12 +19,12 @@ struct VertexOutput_Extended
 
 /******************* SHADERS: ******************/
 
-half4 Main_Pixel(in VertexOutput_Basic inputBasic) : SV_Target0
+half Main_Pixel(in VertexOutput_Basic inputBasic) : SV_Target0
 {
-    return half4(1, 1, 1, 1);
+    return 1;
 };
 
-half4 Main_Pixel_Ext(in VertexOutput_Basic inputBasic, in VertexOutput_Extended inputExt) : SV_Target0
+half Main_Pixel_Ext(in VertexOutput_Basic inputBasic, in VertexOutput_Extended inputExt) : SV_Target0
 {
-    return half4(1, 1, 1, 1);
+    return 1;
 };

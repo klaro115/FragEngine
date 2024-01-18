@@ -19,6 +19,7 @@ cbuffer CBCamera : register(b1)
     float4x4 mtxWorld2Clip;         // Camera's full projection matrix, transforming from world space to clip space coordinates.
     float4 cameraPosition;          // Camera position, in world space.
     float4 cameraDirection;         // Camera forward facing direction, in world space.
+    float4x4 mtxInvCameraMotion;    // Camera movement matrix, encoding inverse motion/transformation from current to previous frame.
 
 	// Camera parameters:
     uint cameraIdx;                 // Index of the currently drawing camera.
@@ -30,6 +31,7 @@ cbuffer CBCamera : register(b1)
     // Per-camera lighting:
     uint lightCount;                // Total number of lights affecting this camera.
     uint shadowMappedLightCount;    // Total number of lights that have a layer of the shadow map texture array assigned.
+    float shadowBiasIncrease;
 };
 
 // Constant buffer containing only object-specific settings:
@@ -52,7 +54,7 @@ struct Light
     float lightSpotMinDot;
     float4x4 mtxShadowWorld2Clip;
     uint shadowMapIdx;
-    float lightMaxRange;
+    float shadowBias;
 };
 
 StructuredBuffer<Light> BufLights : register(ps, t0);   // Buffer containing an array of light source data. Number of lights is given in 'CBGlobal.lightCount'.
@@ -80,7 +82,6 @@ struct VertexOutput_Extended
 /****************** LIGHTING: ******************/
 
 static const float LIGHT_NEAR_CLIP_PLANE = 0.001;
-static const float LIGHT_BIAS = 0.04;
 
 half3 CalculateAmbientLight(in float3 _worldNormal)
 {
@@ -123,6 +124,9 @@ half3 CalculateTotalLightIntensity(in float3 _worldPosition, in float3 _worldNor
 {
     half3 totalLightIntensity = CalculateAmbientLight(_worldNormal);
 
+    // Stabilize world space position against camera motion for shadow-mapping:
+    float4 worldPosStabilized = mul(mtxInvCameraMotion, float4(_worldPosition, 1));
+    
     // Shadow-casting light sources:
     for (uint i = 0; i < shadowMappedLightCount; ++i)
     {
@@ -130,8 +134,20 @@ half3 CalculateTotalLightIntensity(in float3 _worldPosition, in float3 _worldNor
 
         half3 lightIntensity = CalculatePhongLighting(light, _worldPosition, _worldNormal);
 
+        // Add a bias to position along surface normal, to counter-act stair-stepping artifacts:
+        float4 worldPosBiased;
+        if (light.lightType == 2)
+        {
+            worldPosBiased = worldPosStabilized;
+            worldPosBiased.xyz += _worldNormal * (light.shadowBias + shadowBiasIncrease);
+        }
+        else
+        {
+            worldPosBiased = float4(_worldPosition + _worldNormal * light.shadowBias, 1);
+        }
+
         // Transform pixel position to light's clip space, then to UV space:
-        float4 shadowProj = mul(light.mtxShadowWorld2Clip, float4(_worldPosition + _worldNormal * LIGHT_BIAS, 1));
+        float4 shadowProj = mul(light.mtxShadowWorld2Clip, worldPosBiased);
         shadowProj /= shadowProj.w;
         float2 shadowUv = float2(shadowProj.x + 1, 1 - shadowProj.y) * 0.5;
         

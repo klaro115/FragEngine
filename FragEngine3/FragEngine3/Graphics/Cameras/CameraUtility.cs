@@ -60,9 +60,11 @@ namespace FragEngine3.Graphics.Cameras
 			in CameraInstance _cameraInstance,
 			in Pose _cameraWorldPose,
 			in Matrix4x4 _mtxWorld2Clip,
+			in Matrix4x4 _mtxCameraMotion,
 			uint _cameraIdx,
 			uint _activeLightCount,
 			uint _shadowMappedLightCount,
+			float _shadowBiasIncrease,
 			ref DeviceBuffer? _cbCamera,
 			out bool _outCbCameraChanged)
 		{
@@ -94,6 +96,7 @@ namespace FragEngine3.Graphics.Cameras
 				mtxWorld2Clip = _mtxWorld2Clip,
 				cameraPosition = new Vector4(_cameraWorldPose.position, 0),
 				cameraDirection = new Vector4(_cameraWorldPose.Forward, 0),
+				mtxInvCameraMotion = _mtxCameraMotion,
 
 				// Camera parameters:
 				cameraIdx = _cameraIdx,
@@ -105,6 +108,7 @@ namespace FragEngine3.Graphics.Cameras
 				// Per-camera lighting:
 				lightCount = _activeLightCount,
 				shadowMappedLightCount = Math.Min(_shadowMappedLightCount, _activeLightCount),
+				shadowBiasIncrease = _shadowBiasIncrease,
 			};
 
 			_cameraInstance.graphicsCore.Device.UpdateBuffer(_cbCamera, 0, ref cbData, CBCamera.packedByteSize);

@@ -18,7 +18,7 @@ namespace FragEngine3.Graphics.Components.ConstantBuffers
 		public float spotMinDot;				// Minimum dot product between light ray direction and direction to pixel/fragment for a spot light to apply.
 		public Matrix4x4 mtxShadowWorld2Clip;	// Projection matrix, transforming world space position to clip space coordinates.
 		public uint shadowMapIdx;               // Index of the shadow map in texture array. Default=0, map at index 0 is always a 'blank' placeholder.
-		public float lightMaxRange;				// Maximum distance light rays can travel.
+		public float shadowBias;				// Bias distance along surface normal when comparing against shadow depth. (this reduces stair-stepping artifacts)
 
 		#endregion
 		#region Constants

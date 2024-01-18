@@ -41,6 +41,11 @@ public sealed class Camera : Component
 	private readonly Stack<CameraPassResources> passResourcePool = new(4);
 	private readonly Stack<CameraPassResources> passResourcesInUse = new(4);
 
+	// Motion:
+	private Pose lastFrameWorldPose = Pose.Identity;
+	private Matrix4x4 mtxInvMotionSinceLastFrame = Matrix4x4.Identity;
+	private float shadowBiasIncrease = 0.0f;
+
 	// Main camera:
 	private static Camera? mainCamera = null;
 	private static readonly object mainCameraLockObj = new();
@@ -315,6 +320,15 @@ public sealed class Camera : Component
 			return false;
 		}
 
+		// Calculate camera transformation/movement since last frame:
+		{
+			Pose curFrameWorldPose = node.WorldTransformation;
+			Vector3 posDiff = lastFrameWorldPose.position - curFrameWorldPose.position;
+			Quaternion rotDiff = lastFrameWorldPose.rotation * Quaternion.Conjugate(curFrameWorldPose.rotation);
+			mtxInvMotionSinceLastFrame = Matrix4x4.CreateFromQuaternion(rotDiff) * Matrix4x4.CreateTranslation(posDiff);
+			shadowBiasIncrease = posDiff.Length();
+		}
+
 		// Reset pass counter:
 		PassCounter = 0;
 		return true;
@@ -339,6 +353,9 @@ public sealed class Camera : Component
 			passResourcePool.Push(passRes);
 		}
 		passResourcesInUse.Clear();
+
+		// Store current world space pose for camera motion checks next frame:
+		lastFrameWorldPose = node.WorldTransformation;
 
 		// Update counters:
 		PassCounter = 0;
@@ -407,9 +424,11 @@ public sealed class Camera : Component
 			in instance,
 			node.WorldTransformation,
 			in mtxWorld2Clip,
+			in mtxInvMotionSinceLastFrame,
 			_cameraIdx_,
 			_activeLightCount,
 			_shadowMappedLightCount,
+			shadowBiasIncrease,
 			ref passResources.cbCamera!,
 			out bool cbCameraChanged))
 		{

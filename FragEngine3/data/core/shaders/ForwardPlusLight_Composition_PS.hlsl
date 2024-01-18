@@ -9,6 +9,7 @@ cbuffer CBCamera : register(b1)
     float4x4 mtxWorld2Clip;         // Camera's full projection matrix, transforming from world space to clip space coordinates.
     float4 cameraPosition;          // Camera position, in world space.
     float4 cameraDirection;         // Camera forward facing direction, in world space.
+    float4x4 mtxInvCameraMotion;    // Camera movement matrix, encoding inverse motion/transformation from current to previous frame.
 
 	// Camera parameters:
     uint cameraIdx;                 // Index of the currently drawing camera.
@@ -20,6 +21,7 @@ cbuffer CBCamera : register(b1)
     // Per-camera lighting:
     uint lightCount;                // Total number of lights affecting this camera.
     uint shadowMappedLightCount;    // Total number of lights that have a layer of the shadow map texture array assigned.
+    float shadowBiasIncrease;
 };
 
 /**************** VERTEX OUTPUT: ***************/
@@ -54,8 +56,8 @@ Texture2D<float2> TexTransparentDepth : register(ps, t5);
 Texture2D<half4> TexUIColor : register(ps, t6);
 
 //TEST TEST TEST
-Texture2DArray<half> TexShadowMaps : register(ps, t1);
-SamplerState SamplerShadowMaps : register(ps, s0);
+//Texture2DArray<half> TexShadowMaps : register(ps, t1);
+//SamplerState SamplerShadowMaps : register(ps, s0);
 //TEST TEST TEST
 
 /******************* SHADERS: ******************/
@@ -85,12 +87,15 @@ PixelOutput Main_Pixel(in VertexOutput_Basic inputBasic)
     float depthFinal = colUI.w <= 0.001 ? depthGeometry : 0;
 
     //TEST TEST TEST
+    /*
     if (inputBasic.uv.x < 0.5 && inputBasic.uv.y < 0.5)
     {
         float4 shadowUv = float4(inputBasic.uv.x * 2, inputBasic.uv.y * 2, 0, 0);
         half shadowDepth = TexShadowMaps.Sample(SamplerShadowMaps, shadowUv.xyz);
-        colFinal = lerp(float4(0, 0, 0, 1), float4(1, 1, 1, 1), (float)shadowDepth * 1);
+        shadowDepth = sqrt(shadowDepth);
+        colFinal = lerp(float4(0, 0, 0, 1), float4(1, 1, 1, 1), abs(sin((float)shadowDepth * 100)));
     }
+    */
     //TEST TEST TEST
     
     // Assemble final output:

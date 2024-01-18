@@ -72,13 +72,17 @@ namespace FragEngine3.Graphics.Components
 		/// </summary>
 		public uint layerMask = 0xFFu;
 
+		// Light settings:
 		public RgbaFloat lightColor = RgbaFloat.White;
 		private float lightIntensity = 1.0f;
 		private float maxLightRange = 1.0e+8f;
 		private float maxLightRangeSq = 1.0e+8f;
 		private float spotAngleRad = 30.0f * DEG2RAD;
 
-		// Shadow maps:
+		// Shadow settings:
+		private float shadowBias = 0.03f;
+
+		// Shadow resources:
 		private CameraInstance? shadowCameraInstance = null;
 		private Framebuffer? shadowMapFrameBuffer = null;
 		private DeviceBuffer? shadowCbCamera = null;
@@ -120,34 +124,6 @@ namespace FragEngine3.Graphics.Components
 		}
 
 		/// <summary>
-		/// Gets or sets whether this light source should cast shadows.<para/>
-		/// NOTE: If true, before scene cameras are drawn, a shadow map will be rendered for this light source.
-		/// When changing this value to false, the shadow map and its framebuffer will be disposed. This flag
-		/// may not be changed during the engine's drawing stage.<para/>
-		/// LIMITATION: Point lights cannot casts shadows at this stage. Use spot or directional lights if shadows
-		/// are required.
-		/// </summary>
-		public bool CastShadows
-		{
-			get => castShadows && type != LightType.Point;
-			set
-			{
-				castShadows = value;
-				if (!castShadows)
-				{
-					shadowMapIdx = 0;
-
-					shadowCameraInstance?.Dispose();
-					shadowMapFrameBuffer?.Dispose();
-					shadowCbCamera?.Dispose();
-					shadowCameraInstance = null;
-					shadowMapFrameBuffer = null;
-					shadowCbCamera = null;
-				}
-			}
-		}
-
-		/// <summary>
 		/// Gets or sets the intensity of light emitted by this light source. TODO: Figure out which unit to use for this.
 		/// </summary>
 		public float LightIntensity
@@ -184,6 +160,40 @@ namespace FragEngine3.Graphics.Components
 		{
 			get => spotAngleRad * RAD2DEG;
 			set => spotAngleRad = Math.Max(value, 0.0f) * DEG2RAD;
+		}
+
+		/// <summary>
+		/// Gets or sets whether this light source should cast shadows.<para/>
+		/// NOTE: If true, before scene cameras are drawn, a shadow map will be rendered for this light source.
+		/// When changing this value to false, the shadow map and its framebuffer will be disposed. This flag
+		/// may not be changed during the engine's drawing stage.<para/>
+		/// LIMITATION: Point lights cannot casts shadows at this stage. Use spot or directional lights if shadows
+		/// are required.
+		/// </summary>
+		public bool CastShadows
+		{
+			get => castShadows && type != LightType.Point;
+			set
+			{
+				castShadows = value;
+				if (!castShadows)
+				{
+					shadowMapIdx = 0;
+
+					shadowCameraInstance?.Dispose();
+					shadowMapFrameBuffer?.Dispose();
+					shadowCbCamera?.Dispose();
+					shadowCameraInstance = null;
+					shadowMapFrameBuffer = null;
+					shadowCbCamera = null;
+				}
+			}
+		}
+
+		public float ShadowBias
+		{
+			get => shadowBias;
+			set => shadowBias = Math.Clamp(value, 0, 10);
 		}
 
 		/// <summary>
@@ -243,7 +253,7 @@ namespace FragEngine3.Graphics.Components
 				spotMinDot = spotMinDot,
 				mtxShadowWorld2Clip = mtxShadowWorld2Clip,
 				shadowMapIdx = shadowMapIdx,
-				lightMaxRange = maxLightRange,
+				shadowBias = shadowBias,
 			};
 		}
 
@@ -332,7 +342,9 @@ namespace FragEngine3.Graphics.Components
 				in shadowCameraInstance!,
 				node.WorldTransformation,
 				in mtxShadowWorld2Clip,
+				Matrix4x4.Identity,
 				shadowMapIdx,
+				0,
 				0,
 				0,
 				ref shadowCbCamera,

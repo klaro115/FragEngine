@@ -125,7 +125,9 @@ namespace FragEngine3.EngineCore.Test
 				light.node.SetRotationFromYawPitchRoll(22.5f, 45, 0, true, true);
 				//light.node.SetEnabled(false);
 
+				light.LightIntensity = 0.5f;
 				light.CastShadows = true;
+				light.ShadowBias = 0.08f;
 			}
 			if (SceneSpawner.CreateLight(scene, Light.LightType.Directional, out light))
 			{
@@ -138,7 +140,7 @@ namespace FragEngine3.EngineCore.Test
 			{
 				light.node.WorldPosition = new Vector3(0, 0, -3);
 				light.node.LocalRotation = Quaternion.Identity;
-				light.node.SetEnabled(false);
+				//light.node.SetEnabled(false);
 
 				light.LightIntensity = 15;
 				light.SpotAngleDegrees = 35;
@@ -148,7 +150,7 @@ namespace FragEngine3.EngineCore.Test
 			{
 				light.node.WorldPosition = new Vector3(-4, 5, -4);
 				light.node.SetRotationFromYawPitchRoll(22.5f, 45, 0, true, true);
-				light.node.SetEnabled(false);
+				//light.node.SetEnabled(false);
 
 				//light.lightColor = RgbaFloat.Red;
 				light.LightIntensity = 15;
@@ -189,7 +191,7 @@ namespace FragEngine3.EngineCore.Test
 				cylinder.node.LocalPosition = new Vector3(-2.5f, 0, 2);
 				cylinder.node.LocalRotation = Quaternion.Identity;
 				cylinder.node.LocalScale = Vector3.One;
-				//cylinder.node.SetEnabled(false);
+				cylinder.node.SetEnabled(false);
 
 				cylinder.SetMesh(cylinderHandle);
 				cylinder.SetMaterial("Mtl_DefaultSurface");
@@ -199,10 +201,10 @@ namespace FragEngine3.EngineCore.Test
 			if (SceneSpawner.CreateStaticMeshRenderer(scene, out StaticMeshRenderer cone))
 			{
 				cone.node.Name = "Cone";
-				cone.node.LocalPosition = new Vector3(0, 1.5f, 2);
+				cone.node.LocalPosition = new Vector3(0, 2, 2);
 				cone.node.LocalRotation = Quaternion.Identity;
 				cone.node.LocalScale = Vector3.One;
-				//cone.node.SetEnabled(false);
+				cone.node.SetEnabled(false);
 
 				cone.SetMesh(coneHandle);
 				cone.SetMaterial("Mtl_DefaultSurface");
@@ -212,7 +214,7 @@ namespace FragEngine3.EngineCore.Test
 			if (SceneSpawner.CreateStaticMeshRenderer(scene, out StaticMeshRenderer d20))
 			{
 				d20.node.Name = "D20";
-				d20.node.LocalPosition = new Vector3(0, 0, 2);
+				d20.node.LocalPosition = new Vector3(0, 1, 2);
 				d20.node.LocalRotation = Quaternion.Identity;
 				d20.node.LocalScale = Vector3.One;
 				//d20.node.SetEnabled(false);
