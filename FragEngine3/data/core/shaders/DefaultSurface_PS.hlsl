@@ -43,6 +43,8 @@ cbuffer CBObject : register(b2)
 
 /******************* BUFFERS: ******************/
 
+// ResSetCamera:
+
 struct Light
 {
     float3 lightColor;
@@ -60,6 +62,11 @@ StructuredBuffer<Light> BufLights : register(ps, t0);   // Buffer containing an 
 
 Texture2DArray<half> TexShadowMaps : register(ps, t1);
 SamplerState SamplerShadowMaps : register(ps, s0);
+
+// ResSetBound:
+
+Texture2D<half4> TexMain : register(ps, t2);
+SamplerState SamplerMain : register(s1);
 
 /**************** VERTEX OUTPUT: ***************/
 

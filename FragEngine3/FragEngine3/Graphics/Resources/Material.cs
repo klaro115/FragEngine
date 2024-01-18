@@ -69,7 +69,7 @@ namespace FragEngine3.Graphics.Resources
 		private VersionedMember<ShaderSetDescription> shaderSetDesc = new(default, 0);
 
 		private ResourceLayout? boundResourceLayout = null;
-		private Tuple<string, int>[]? boundResourceKeys = null;
+		private MaterialData.BoundResourceKeys[]? boundResourceKeys = null;
 		private VersionedMember<ResourceSet?> boundResourceSet = new(null, 0);
 
 		private VersionedMember<DepthStencilDesc> depthStencilDesc = new(DepthStencilDesc.Default, 0);
@@ -256,31 +256,54 @@ namespace FragEngine3.Graphics.Resources
 				return false;
 			}
 
-			BindableResource[] boundResources = new BindableResource[boundResourceKeys.Length];
+			List<BindableResource> boundResources = new(boundResourceKeys.Length);
 			for (int i = 0; i < boundResourceKeys.Length; ++i)
 			{
-				Tuple<string, int> resourceKeys = boundResourceKeys[i];
-				if (string.IsNullOrEmpty(resourceKeys.Item1) || !resourceManager.GetResource(resourceKeys.Item1, out ResourceHandle handle))
-				{
-					return false;
-				}
+				MaterialData.BoundResourceKeys resourceKeys = boundResourceKeys[i];
 
-				Resource? resource = handle.GetResource(true, true);
-				if (resource is TextureResource texture)
+				// Create a sampler:
+				if (resourceKeys.resourceKind == ResourceKind.Sampler)
 				{
-					boundResources[resourceKeys.Item2] = texture.Texture!;
+					Sampler sampler;
+					try
+					{
+						SamplerDescription samplerDesc = MaterialDataDescriptionParser.DecodeDescription_Sampler(resourceKeys.description);
+
+						sampler = core.MainFactory.CreateSampler(ref samplerDesc);																		// TODO: Create and manage samplers globally, in graphics core maybe?
+					}
+					catch (Exception ex)
+					{
+						Logger.LogException($"Failed to create sampler for bound resources of material '{resourceKey}'", ex);
+						return false;
+					}
+					boundResources[resourceKeys.resourceIdx] = sampler;
 				}
+				// Load a resource:
 				else
 				{
-					boundResources[resourceKeys.Item2] = null!;
+					if (string.IsNullOrEmpty(resourceKeys.resourceKey) || !resourceManager.GetResource(resourceKeys.resourceKey, out ResourceHandle handle))
+					{
+						return false;
+					}
+
+					Resource? resource = handle.GetResource(true, true);
+					if (resource is TextureResource texture)
+					{
+						boundResources[resourceKeys.resourceIdx] = texture.Texture!;
+					}
+					else
+					{
+						Logger.LogWarning($"Unsupported or unknown resource type '{resource?.GetType().Name ?? "NULL"}' in material '{resourceKey}'");
+						boundResources[resourceKeys.resourceIdx] = null!;
+					}
 				}
 			}
 
 			try
 			{
-				ResourceSetDescription resourceSetDesc = new(boundResourceLayout, boundResources);
+				ResourceSetDescription resourceSetDesc = new(boundResourceLayout, boundResources.ToArray());
 				ResourceSet resourceSet = core.MainFactory.CreateResourceSet(ref resourceSetDesc);
-				resourceSet.Name = $"ResSet_Bound_{resourceKey}";
+				resourceSet.Name = $"ResSet_Bound_{resourceKey}_v{materialVersion}";
 
 				boundResourceSet.UpdateValue(materialVersion, resourceSet);
 				return true;
@@ -337,15 +360,15 @@ namespace FragEngine3.Graphics.Resources
 				StencilBehaviourDesc sd = depthStencilDesc.Value.stencilBehaviour;
 
 				DepthStencilStateDescription depthStateDesc = new(
-						dsd.enableDepthRead,
-						dsd.enableDepthWrite,
-						ComparisonKind.LessEqual,
-						dsd.enableStencil,
-						sd.stencilFront,
-						sd.stencilBack,
-						sd.readMask,
-						sd.writeMask,
-						sd.referenceValue);
+					dsd.enableDepthRead,
+					dsd.enableDepthWrite,
+					ComparisonKind.LessEqual,
+					dsd.enableStencil,
+					sd.stencilFront,
+					sd.stencilBack,
+					sd.readMask,
+					sd.writeMask,
+					sd.referenceValue);
 
 				RasterizerStateDescription rasterizerState;
 				if (dsd.enableCulling)
@@ -495,10 +518,22 @@ namespace FragEngine3.Graphics.Resources
 
 			// Assemble layout descriptions for bound resources:
 			ResourceLayout? boundResourceLayout = null;
-			if (data.GetBoundResourceLayoutDesc(out ResourceLayoutDescription boundResourceLayoutDesc, out Tuple<string, int>[]? boundResourceKeys, out bool useExternalBoundResources))
+			if (data.GetBoundResourceLayoutDesc(
+				out ResourceLayoutDescription boundResourceLayoutDesc,
+				out MaterialData.BoundResourceKeys[]? boundResourceKeys,
+				out bool useExternalBoundResources))
 			{
-				boundResourceLayout = _graphicsCore.MainFactory.CreateResourceLayout(boundResourceLayoutDesc);
-				boundResourceLayout.Name = $"ResLayout_Bound_{_handle.resourceKey}";
+				try
+				{
+					boundResourceLayout = _graphicsCore.MainFactory.CreateResourceLayout(boundResourceLayoutDesc);
+					boundResourceLayout.Name = $"ResLayout_Bound_{_handle.resourceKey}";
+				}
+				catch (Exception ex)
+				{
+					logger.LogException($"Failed to create resource layout for material resource '{_handle}'!", ex);
+					_outMaterial = null;
+					return false;
+				}
 			}
 
 			// Assemble stencil description, if required and available:

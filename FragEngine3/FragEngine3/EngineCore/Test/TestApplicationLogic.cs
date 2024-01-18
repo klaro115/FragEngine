@@ -123,7 +123,7 @@ namespace FragEngine3.EngineCore.Test
 			{
 				light.node.WorldPosition = new Vector3(0, 5, 0);
 				light.node.SetRotationFromYawPitchRoll(22.5f, 45, 0, true, true);
-				//light.node.SetEnabled(false);
+				light.node.SetEnabled(false);
 
 				//light.LightIntensity = 0.5f;
 				light.CastShadows = true;
@@ -140,7 +140,7 @@ namespace FragEngine3.EngineCore.Test
 			{
 				light.node.WorldPosition = new Vector3(0, 0, -3);
 				light.node.LocalRotation = Quaternion.Identity;
-				light.node.SetEnabled(false);
+				//light.node.SetEnabled(false);
 
 				light.LightIntensity = 15;
 				light.SpotAngleDegrees = 35;
@@ -150,12 +150,20 @@ namespace FragEngine3.EngineCore.Test
 			{
 				light.node.WorldPosition = new Vector3(-4, 5, -4);
 				light.node.SetRotationFromYawPitchRoll(22.5f, 45, 0, true, true);
-				light.node.SetEnabled(false);
+				//light.node.SetEnabled(false);
 
 				//light.lightColor = RgbaFloat.Red;
 				light.LightIntensity = 15;
 				light.SpotAngleDegrees = 30;
 				light.CastShadows = true;
+			}
+			// Create a point light:
+			if (SceneSpawner.CreateLight(scene, Light.LightType.Point, out light))
+			{
+				light.node.WorldPosition = new Vector3(0, 2, -1);
+				light.node.SetEnabled(false);
+
+				light.LightIntensity = 7;
 			}
 
 			if (SceneSpawner.CreateStaticMeshRenderer(scene, out StaticMeshRenderer rabbit))

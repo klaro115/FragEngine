@@ -48,41 +48,46 @@
             {
                 "ResourceKey": "",
                 "SlotName": "TexOpaqueColor",
-                "SlotIndex": 1,
+                "SlotIndex": 2,
                 "ResourceKind": 3,
                 "ShaderStageFlags": 16,
+                "Description": null,
                 "IsBoundBySystem": true
             },
             {
                 "ResourceKey": "",
                 "SlotName": "TexOpaqueDepth",
-                "SlotIndex": 2,
+                "SlotIndex": 3,
                 "ResourceKind": 3,
                 "ShaderStageFlags": 16,
+                "Description": null,
                 "IsBoundBySystem": true
             },
             {
                 "ResourceKey": "",
                 "SlotName": "TexTransparentColor",
-                "SlotIndex": 3,
+                "SlotIndex": 4,
                 "ResourceKind": 3,
                 "ShaderStageFlags": 16,
+                "Description": null,
                 "IsBoundBySystem": true
             },
             {
                 "ResourceKey": "",
                 "SlotName": "TexTransparentDepth",
-                "SlotIndex": 4,
+                "SlotIndex": 5,
                 "ResourceKind": 3,
                 "ShaderStageFlags": 16,
+                "Description": null,
                 "IsBoundBySystem": true
             },
             {
                 "ResourceKey": "",
                 "SlotName": "TexUIColor",
-                "SlotIndex": 5,
+                "SlotIndex": 6,
                 "ResourceKind": 3,
                 "ShaderStageFlags": 16,
+                "Description": null,
                 "IsBoundBySystem": true
             }
         ]
