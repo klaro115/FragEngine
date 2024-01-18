@@ -81,6 +81,7 @@ struct VertexOutput_Extended
 /****************** LIGHTING: ******************/
 
 static const float LIGHT_NEAR_CLIP_PLANE = 0.001;
+#define SHADOW_EDGE_FACE_SCALE 10.0
 
 half3 CalculateAmbientLight(in float3 _worldNormal)
 {
@@ -142,8 +143,14 @@ half3 CalculateTotalLightIntensity(in float3 _worldPosition, in float3 _worldNor
         half shadowDepth = TexShadowMaps.Sample(SamplerShadowMaps, float3(shadowUv.x, shadowUv.y, light.shadowMapIdx));
         half lightWeight = shadowDepth > shadowProj.z ? 1 : 0;
 
-        // Fade shadows out above 90% maximum shadow distance:
-        //lightWeight *= clamp((shadowProj.z - 0.9) * 10, 0, 1);
+        // Fade shadows out near boundaries of UV/Depth space:
+        if (light.lightType == 2)
+        {
+            half3 edgeUv = half3(shadowUv, shadowProj.z) * SHADOW_EDGE_FACE_SCALE;
+            half3 edgeMax = min(min(edgeUv, SHADOW_EDGE_FACE_SCALE - edgeUv), 1);
+            half k = 1 - min(min(edgeMax.x, edgeMax.y), edgeMax.z);
+            lightWeight = lerp(lightWeight, 1.0, clamp(k, 0, 1));
+        }
 
         totalLightIntensity += lightIntensity * lightWeight;
     }
