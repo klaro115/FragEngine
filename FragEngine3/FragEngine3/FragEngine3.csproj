@@ -32,7 +32,6 @@
     <Folder Include="EngineCore\Config\" />
     <Folder Include="Graphics\Internal\" />
     <Folder Include="Graphics\MacOS\" />
-    <Folder Include="Graphics\Resources\Import\" />
     <Folder Include="EngineCore\Logging\" />
     <Folder Include="Utility\Unicode\" />
   </ItemGroup>
