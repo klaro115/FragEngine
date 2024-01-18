@@ -458,16 +458,6 @@ namespace FragEngine3.Graphics.Stack
 				}
 			}
 
-			// Gather light data for each active light source:
-			if (activeLightData.Length < activeLights.Count)
-			{
-				activeLightData = new LightSourceData[activeLights.Count];
-			}
-			for (int i = 0; i < activeLights.Count; ++i)
-			{
-				activeLightData[i] = activeLights[i].GetLightSourceData();
-			}
-
 			// Identify only visible renderers:
 			foreach (IRenderer renderer in _renderers)
 			{
@@ -626,7 +616,15 @@ namespace FragEngine3.Graphics.Stack
 		{
 			bool success = true;
 
-			//TODO [later]: Pre-filter lights to only include those are actually visible by current camera!
+			// Gather light data for each active light source:
+			if (activeLightData.Length < activeLights.Count)
+			{
+				activeLightData = new LightSourceData[activeLights.Count];
+			}
+			for (int i = 0; i < activeLights.Count; ++i)
+			{
+				activeLightData[i] = activeLights[i].GetLightSourceData();
+			}
 
 			// Fetch or create a command list for shadow rendering:
 			if (!GetOrCreateCommandList(out CommandList cmdList))
@@ -639,6 +637,8 @@ namespace FragEngine3.Graphics.Stack
 			{
 				try
 				{
+					//TODO [later]: Pre-filter lights to only include those are actually visible by current camera!
+
 					Camera camera = activeCameras[(int)i];
 					uint activeLightCount = (uint)activeLights.Count;
 					if (!camera.GetLightDataBuffer(activeLightCount, out DeviceBuffer? lightDataBuffer, out bool bufLightsChanged))

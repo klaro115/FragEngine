@@ -19,7 +19,7 @@ cbuffer CBCamera : register(b1)
     float4x4 mtxWorld2Clip;         // Camera's full projection matrix, transforming from world space to clip space coordinates.
     float4 cameraPosition;          // Camera position, in world space.
     float4 cameraDirection;         // Camera forward facing direction, in world space.
-    float4x4 mtxInvCameraMotion;    // Camera movement matrix, encoding inverse motion/transformation from current to previous frame.
+    float4x4 mtxCameraMotion;       // Camera movement matrix, encoding motion/transformation from previous to current frame.
 
 	// Camera parameters:
     uint cameraIdx;                 // Index of the currently drawing camera.
@@ -31,7 +31,6 @@ cbuffer CBCamera : register(b1)
     // Per-camera lighting:
     uint lightCount;                // Total number of lights affecting this camera.
     uint shadowMappedLightCount;    // Total number of lights that have a layer of the shadow map texture array assigned.
-    float shadowBiasIncrease;
 };
 
 // Constant buffer containing only object-specific settings:
@@ -124,9 +123,6 @@ half3 CalculateTotalLightIntensity(in float3 _worldPosition, in float3 _worldNor
 {
     half3 totalLightIntensity = CalculateAmbientLight(_worldNormal);
 
-    // Stabilize world space position against camera motion for shadow-mapping:
-    float4 worldPosStabilized = mul(mtxInvCameraMotion, float4(_worldPosition, 1));
-    
     // Shadow-casting light sources:
     for (uint i = 0; i < shadowMappedLightCount; ++i)
     {
@@ -135,16 +131,7 @@ half3 CalculateTotalLightIntensity(in float3 _worldPosition, in float3 _worldNor
         half3 lightIntensity = CalculatePhongLighting(light, _worldPosition, _worldNormal);
 
         // Add a bias to position along surface normal, to counter-act stair-stepping artifacts:
-        float4 worldPosBiased;
-        if (light.lightType == 2)
-        {
-            worldPosBiased = worldPosStabilized;
-            worldPosBiased.xyz += _worldNormal * (light.shadowBias + shadowBiasIncrease);
-        }
-        else
-        {
-            worldPosBiased = float4(_worldPosition + _worldNormal * light.shadowBias, 1);
-        }
+        float4 worldPosBiased = float4(_worldPosition + _worldNormal * light.shadowBias, 1);
 
         // Transform pixel position to light's clip space, then to UV space:
         float4 shadowProj = mul(light.mtxShadowWorld2Clip, worldPosBiased);

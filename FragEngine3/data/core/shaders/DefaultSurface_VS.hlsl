@@ -19,7 +19,7 @@ cbuffer CBCamera : register(b1)
     float4x4 mtxWorld2Clip;         // Camera's full projection matrix, transforming from world space to clip space coordinates.
     float4 cameraPosition;          // Camera position, in world space.
     float4 cameraDirection;         // Camera forward facing direction, in world space.
-    float4x4 mtxInvCameraMotion;    // Camera movement matrix, encoding inverse motion/transformation from current to previous frame.
+    float4x4 mtxCameraMotion;       // Camera movement matrix, encoding motion/transformation from previous to current frame.
 
 	// Camera parameters:
     uint cameraIdx;                 // Index of the currently drawing camera.
@@ -31,7 +31,6 @@ cbuffer CBCamera : register(b1)
     // Per-camera lighting:
     uint lightCount;                // Total number of lights affecting this camera.
     uint shadowMappedLightCount;    // Total number of lights that have a layer of the shadow map texture array assigned.
-    float shadowBiasIncrease;
 };
 
 // Constant buffer containing only object-specific settings:

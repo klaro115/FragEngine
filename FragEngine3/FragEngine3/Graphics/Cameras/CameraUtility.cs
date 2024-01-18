@@ -64,7 +64,6 @@ namespace FragEngine3.Graphics.Cameras
 			uint _cameraIdx,
 			uint _activeLightCount,
 			uint _shadowMappedLightCount,
-			float _shadowBiasIncrease,
 			ref DeviceBuffer? _cbCamera,
 			out bool _outCbCameraChanged)
 		{
@@ -108,7 +107,6 @@ namespace FragEngine3.Graphics.Cameras
 				// Per-camera lighting:
 				lightCount = _activeLightCount,
 				shadowMappedLightCount = Math.Min(_shadowMappedLightCount, _activeLightCount),
-				shadowBiasIncrease = _shadowBiasIncrease,
 			};
 
 			_cameraInstance.graphicsCore.Device.UpdateBuffer(_cbCamera, 0, ref cbData, CBCamera.packedByteSize);

@@ -25,7 +25,6 @@ public struct CBCamera
 	// Per-camera lighting:
 	public uint lightCount;					// Total number of lights.
 	public uint shadowMappedLightCount;     // Total number of lights that have a layer of the shadow map texture array assigned.
-	public float shadowBiasIncrease;
 
 	#endregion
 	#region Constants
@@ -36,8 +35,7 @@ public struct CBCamera
 		2 * 4 * sizeof(float) + // camera vectors
 		3 * sizeof(uint) +      // camera idx & res
 		2 * sizeof(float) +     // clip planes
-		2 * sizeof(uint) +      // light counts
-		1 * sizeof(float);		// shadow bias inc		// = 188 bytes
+		2 * sizeof(uint);		// light counts			= 184 bytes
 
 	public const int packedByteSize = 192;
 

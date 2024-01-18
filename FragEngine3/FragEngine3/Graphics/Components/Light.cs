@@ -346,7 +346,6 @@ namespace FragEngine3.Graphics.Components
 				shadowMapIdx,
 				0,
 				0,
-				0,
 				ref shadowCbCamera,
 				out bool cbCameraChanged))
 			{
@@ -421,11 +420,26 @@ namespace FragEngine3.Graphics.Components
 					break;
 				case LightType.Directional:
 					{
+						Vector3 lightDir = Direction;
+						Quaternion worldRot = node.WorldRotation;
+						Vector3 worldUp = Vector3.Transform(Vector3.UnitY, worldRot);
+						Vector3 cameraDir = Camera.MainCamera!.node.WorldForward;	//TODO / TEMP
+						
+						// Orient light map projection to have its pixel grid roughly aligned with the camera's direction:
+						Vector3 lightDirProj = Vector3.Normalize(VectorExt.ProjectToPlane(cameraDir, lightDir));
+						float cameraRotAngle = VectorExt.Angle(worldUp, lightDirProj, true);
+						Quaternion cameraRot = Quaternion.CreateFromAxisAngle(lightDir, cameraRotAngle);
+
+
+
+
+
+
 						const float maxDirectionalRange = ShadowMapUtility.directionalLightSize;
 
 						// Transform from a world space position (relative to a given focal point), to orthographics projection space, to shadow map UV coordinates:
-						Vector3 posOrigin = _shadingFocalPoint - Direction * maxDirectionalRange * 0.5f;
-						Pose originPose = new(posOrigin, node.WorldRotation, Vector3.One, false);
+						Vector3 posOrigin = _shadingFocalPoint - lightDir * maxDirectionalRange * 0.5f;
+						Pose originPose = new(posOrigin, cameraRot * worldRot, Vector3.One, false);
 						if (!Matrix4x4.Invert(originPose.Matrix, out Matrix4x4 mtxWorld2Local))
 						{
 							mtxWorld2Local = Matrix4x4.Identity;

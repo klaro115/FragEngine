@@ -18,7 +18,7 @@ public struct CameraProjection
 	public float orthographicSize = 5.0f;
 	public bool mirrorY = true;
 
-	public Matrix4x4 mtxWorld2Camera = Matrix4x4.Identity;		// World space => Camera's local space
+	public Matrix4x4 mtxWorld2Local = Matrix4x4.Identity;		// World space => Camera's local space
 	public Matrix4x4 mtxWorld2Clip = Matrix4x4.Identity;		// World space => Clip space
 	public Matrix4x4 mtxClip2Pixel = Matrix4x4.Identity;		// Clip space => Pixel space
 
@@ -61,9 +61,9 @@ public struct CameraProjection
 
 	public void RecalculateClipSpaceMatrices(in Matrix4x4 _mtxWorld, float _aspectRatio)
 	{
-		if (!Matrix4x4.Invert(_mtxWorld, out mtxWorld2Camera))
+		if (!Matrix4x4.Invert(_mtxWorld, out mtxWorld2Local))
 		{
-			mtxWorld2Camera = Matrix4x4.Identity;
+			mtxWorld2Local = Matrix4x4.Identity;
 		}
 
 		RecalculateClipSpaceMatrices(_aspectRatio);
@@ -72,10 +72,10 @@ public struct CameraProjection
 	public void RecalculateClipSpaceMatrices(float _aspectRatio)
 	{
 		// Calculate projection matrix:
-		Matrix4x4 mtxCamera2Clip;
+		Matrix4x4 mtxLocal2Clip;
 		if (projectionType == CameraProjectionType.Perspective)
 		{
-			mtxCamera2Clip = Matrix4x4.CreatePerspectiveFieldOfViewLeftHanded(
+			mtxLocal2Clip = Matrix4x4.CreatePerspectiveFieldOfViewLeftHanded(
 				fieldOfViewRad,
 				_aspectRatio,
 				nearClipPlane,
@@ -83,7 +83,7 @@ public struct CameraProjection
 		}
 		else
 		{
-			mtxCamera2Clip = Matrix4x4.CreateOrthographicLeftHanded(
+			mtxLocal2Clip = Matrix4x4.CreateOrthographicLeftHanded(
 				orthographicSize * _aspectRatio,
 				orthographicSize,
 				nearClipPlane,
@@ -91,7 +91,7 @@ public struct CameraProjection
 		}
 
 		// Assemble matrix for transforming from world space to clip space:
-		mtxWorld2Clip = mtxWorld2Camera * mtxCamera2Clip;
+		mtxWorld2Clip = mtxWorld2Local * mtxLocal2Clip;
 
 		// Optionally mirror projection vertically:
 		if (mirrorY)
