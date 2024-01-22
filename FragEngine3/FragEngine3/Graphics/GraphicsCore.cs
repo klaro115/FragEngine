@@ -446,7 +446,7 @@ namespace FragEngine3.Graphics
 		/// NOTE: This is used internally to create single-color placeholder textures held by the graphics system.
 		/// </summary>
 		/// <param name="_fillColor">The color to fill all pixels of the texture with.</param>
-		/// <param name="_outTexture">Outputs a new texture with a size of 8x8 pixels, that are all of the same color.
+		/// <param name="_outTexture">Outputs a new 2D texture with a size of 8x8 pixels, that are all of the same color.
 		/// This may be null if texture creation fails.</param>
 		/// <returns>True if a texture was created and colored successfully, false otherwise. All outputs will be disposed
 		/// on failure.</returns>

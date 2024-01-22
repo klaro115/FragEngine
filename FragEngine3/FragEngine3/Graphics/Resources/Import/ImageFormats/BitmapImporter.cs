@@ -2,7 +2,7 @@
 using FragEngine3.Graphics.Resources.Data;
 using Veldrid;
 
-namespace FragEngine3.Graphics.Resources.Import
+namespace FragEngine3.Graphics.Resources.Import.ImageFormats
 {
 	public static class BitmapImporter
 	{
@@ -10,32 +10,32 @@ namespace FragEngine3.Graphics.Resources.Import
 
 		private enum BiCompression : uint
 		{
-			BI_RGB			= 0,				// uncompressed
-			BI_RLE8			= 1,				// running length encoding, requires: biBitCount=8, biHeight>0
-			BI_RLE4			= 2,				// running length encoding, requires: biBitCount=4, biHeight>0
-			BI_BITFIELDS	= 3,				// uncompressed, but using bit masks, requires: biBitCount=16 or 32.
+			BI_RGB = 0,							// uncompressed
+			BI_RLE8 = 1,						// running length encoding, requires: biBitCount=8, biHeight>0
+			BI_RLE4 = 2,						// running length encoding, requires: biBitCount=4, biHeight>0
+			BI_BITFIELDS = 3,					// uncompressed, but using bit masks, requires: biBitCount=16 or 32.
 		}
 
 		private struct BmpHeader
 		{
-			public ushort bfType;				// ASCII "BM"
-			public uint bfSize;					// File byte size (unreliable).
-			public uint bfReserved;				// unused, should be 0.
+			public ushort bfType;               // ASCII "BM"
+			public uint bfSize;                 // File byte size (unreliable).
+			public uint bfReserved;             // unused, should be 0.
 			public uint bfOffBits;              // Byte offset from file start to image data start.
 		}
 
 		private struct BmpInfoBlock
 		{
-			public uint biSize;					// Info block byte size.
+			public uint biSize;                 // Info block byte size.
 			public int biWidth;
-			public int biHeight;				// if negative, image is top-down, if positive, image is bottom-up.
-			public ushort biPlanes;				// unused, should be 1.
-			public ushort biBitCount;			// Bits per pixel, must be 1, 4, 8, 16, 24, or 32.
+			public int biHeight;                // if negative, image is top-down, if positive, image is bottom-up.
+			public ushort biPlanes;             // unused, should be 1.
+			public ushort biBitCount;           // Bits per pixel, must be 1, 4, 8, 16, 24, or 32.
 			public BiCompression biCompression;
 			public uint biSizeImage;            // Byte size of image data, May be 0 if uncompressed RGB. 
-			public int biXPelsPerMeter;			// usually 0.
+			public int biXPelsPerMeter;         // usually 0.
 			public int biYPelsPerMeter;         // usually 0.
-			public uint biClrUsed;				// Number of colors in color table. If biBitCount is 1, 4 or 8 => 0 means max count (2, 16, or 256). If other, number is accurate.
+			public uint biClrUsed;              // Number of colors in color table. If biBitCount is 1, 4 or 8 => 0 means max count (2, 16, or 256). If other, number is accurate.
 			public uint biClrImportant;
 
 			public readonly bool ColorsAreIndexed => biBitCount <= 8;
@@ -84,7 +84,7 @@ namespace FragEngine3.Graphics.Resources.Import
 				channelCount = 4,
 				bitsPerPixel = 32,
 				isSrgb = false,
-				
+
 				pixelData_MonoByte = null,
 				pixelData_MonoFloat = null,
 				pixelData_RgbaByte = null,
@@ -92,7 +92,7 @@ namespace FragEngine3.Graphics.Resources.Import
 			};
 
 			long streamStartPosition = _byteStream.Position;
-			BinaryReader reader = new(_byteStream);
+			using BinaryReader reader = new(_byteStream);
 
 			// Read file header:
 			if (!ReadHeader(reader, out BmpHeader header))
@@ -158,10 +158,10 @@ namespace FragEngine3.Graphics.Resources.Import
 			{
 				_outHeader = new BmpHeader()
 				{
-					bfType			= _reader.ReadUInt16(),	// ASCII "BM"
-					bfSize			= _reader.ReadUInt32(),	// File size in bytes
-					bfReserved		= _reader.ReadUInt32(),	// Reserved, should be 0
-					bfOffBits		= _reader.ReadUInt32(),	// Byte offset where image data starts, usually 54
+					bfType			= _reader.ReadUInt16(),  // ASCII "BM"
+					bfSize			= _reader.ReadUInt32(),  // File size in bytes
+					bfReserved		= _reader.ReadUInt32(),  // Reserved, should be 0
+					bfOffBits		= _reader.ReadUInt32(),   // Byte offset where image data starts, usually 54
 				};
 				return true;
 			}
@@ -172,7 +172,7 @@ namespace FragEngine3.Graphics.Resources.Import
 				return false;
 			}
 		}
-		
+
 		private static bool ReadInfoBlock(BinaryReader _reader, out BmpInfoBlock _outInfoBlock)
 		{
 			try
@@ -289,7 +289,7 @@ namespace FragEngine3.Graphics.Resources.Import
 					case 4:
 						if (_infoBlock.biCompression == BiCompression.BI_RLE4)
 						{
-							//TODO: 4-bit RLE compressed color data.
+							//TODO [whenever]: 4-bit RLE compressed color data.
 							Logger.Instance?.LogError("4-bit run-length encoding (RLE) for bitmap is not supported at this time!");
 							return false;
 						}
@@ -383,7 +383,7 @@ namespace FragEngine3.Graphics.Resources.Import
 
 					for (int i = 0; i < 8; ++i)
 					{
-						int srcIdx = (eightIdx >> (7 - i)) & 1;
+						int srcIdx = eightIdx >> 7 - i & 1;
 						_pixelData[dstIdxStart + i] = srcIdx == 1
 							? color1
 							: color0;
@@ -486,7 +486,7 @@ namespace FragEngine3.Graphics.Resources.Import
 				int dstRowStartIdx = dstRowIdx * width;
 				for (int x = 0; x < width; ++x)
 				{
-					ushort packed = _reader.ReadUInt16();	// RGB555, 1st bit is unused
+					ushort packed = _reader.ReadUInt16();   // RGB555, 1st bit is unused
 					byte r = (byte)((packed >> 10) & 0x1F);
 					byte g = (byte)((packed >>  5) & 0x1F);
 					byte b = (byte)((packed >>  0) & 0x1F);
@@ -532,7 +532,7 @@ namespace FragEngine3.Graphics.Resources.Import
 			return true;
 		}
 
-		private static bool ReadPixelData_Uncompressed_32(BinaryReader _reader, in BmpInfoBlock _infoBlock, RgbaByte[] _pixelData)		//TODO: Untested
+		private static bool ReadPixelData_Uncompressed_32(BinaryReader _reader, in BmpInfoBlock _infoBlock, RgbaByte[] _pixelData)      //TODO: Untested
 		{
 			int height = Math.Abs(_infoBlock.biHeight);
 			int width = _infoBlock.biWidth;
@@ -568,7 +568,7 @@ namespace FragEngine3.Graphics.Resources.Import
 			return true;
 		}
 
-		private static bool ReadPixelData_RLE_8(BinaryReader _reader, in BmpInfoBlock _infoBlock, RgbaByte[] _pixelData)		//TODO: Untested
+		private static bool ReadPixelData_RLE_8(BinaryReader _reader, in BmpInfoBlock _infoBlock, RgbaByte[] _pixelData)        //TODO: Untested
 		{
 			int height = Math.Abs(_infoBlock.biHeight);
 			int width = _infoBlock.biWidth;

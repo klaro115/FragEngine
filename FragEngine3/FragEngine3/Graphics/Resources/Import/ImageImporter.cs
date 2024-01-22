@@ -1,10 +1,11 @@
 ﻿using FragEngine3.EngineCore;
 using FragEngine3.Graphics.Resources.Data;
+using FragEngine3.Graphics.Resources.Import.ImageFormats;
 using FragEngine3.Resources;
 
 namespace FragEngine3.Graphics.Resources.Import
 {
-	public static class ImageImporter
+    public static class ImageImporter
 	{
 		#region Methods
 
@@ -63,7 +64,7 @@ namespace FragEngine3.Graphics.Resources.Import
 				// Import from stream, identifying file format from extension:
 				string formatExt = Path.GetExtension(fileHandle.dataFilePath);
 
-				if (!ImportImageData(stream, formatExt, out _outImageData))
+				if (!ImportImageData(stream, formatExt, _handle.importFlags, out _outImageData))
 				{
 					logger.LogError($"Failed to import raw image data for resource handle '{_handle}'!");
 					_outImageData = null;
@@ -96,6 +97,7 @@ namespace FragEngine3.Graphics.Resources.Import
 		public static bool ImportImageData(
 			Stream _stream,
 			string _formatExt,
+			string? _importFlags,
 			out RawImageData? _outImageData)
 		{
 			if (_stream == null || !_stream.CanRead)
@@ -118,6 +120,11 @@ namespace FragEngine3.Graphics.Resources.Import
 				return BitmapImporter.ImportImage(_stream, out _outImageData);
 			}
 			//...
+			else if (MagickImporter.SupportsFormat(_formatExt))
+			{
+				var importFlags = MagickImporter.ParseImportFlags(_importFlags);
+				return MagickImporter.ImportImage(_stream, importFlags, out _outImageData);
+			}
 			else
 			{
 				Logger.Instance?.LogError($"Unknown image file format extension '{_formatExt}', cannot import raw image data!");

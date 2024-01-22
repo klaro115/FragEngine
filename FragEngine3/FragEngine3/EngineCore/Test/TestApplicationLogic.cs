@@ -126,7 +126,7 @@ namespace FragEngine3.EngineCore.Test
 				light.node.SetRotationFromYawPitchRoll(22.5f, 45, 0, true, true);
 				//light.node.SetEnabled(false);
 
-				//light.LightIntensity = 0.5f;
+				light.LightIntensity = 0.5f;
 				light.CastShadows = true;
 				light.ShadowBias = 0.08f;
 			}

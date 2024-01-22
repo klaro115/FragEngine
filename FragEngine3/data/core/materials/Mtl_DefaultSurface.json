@@ -46,7 +46,7 @@
         "BoundResources":
         [
             {
-                "ResourceKey": "TexFlauschi512",
+                "ResourceKey": "TexWhite",
                 "SlotName": "TexMain",
                 "SlotIndex": 2,
                 "ResourceKind": 3,

@@ -94,14 +94,9 @@ namespace FragEngine3.Graphics.Resources.Data
 				case 8:
 					return MirrorVerticallyTyped(pixelData_MonoByte!);
 				case 32:
-					if (channelCount != 1)
-					{
-						return MirrorVerticallyTyped(pixelData_RgbaByte!);
-					}
-					else
-					{
-						return MirrorVerticallyTyped(pixelData_MonoFloat!);
-					}
+					return channelCount != 1
+						? MirrorVerticallyTyped(pixelData_RgbaByte!)
+						: MirrorVerticallyTyped(pixelData_MonoFloat!);
 				case 128:
 					return MirrorVerticallyTyped(pixelData_RgbaFloat!);
 				default:
@@ -127,9 +122,9 @@ namespace FragEngine3.Graphics.Resources.Data
 					}
 					return true;
 				}
-				catch (Exception)
+				catch (Exception ex)
 				{
-					Logger.Instance?.LogError($"Failed to mirror raw image! (bitsPerPixel={bitsPerPixel}, channelCount={channelCount})");
+					Logger.Instance?.LogException($"Failed to mirror raw image! (bitsPerPixel={bitsPerPixel}, channelCount={channelCount})", ex);
 					return false;
 				}
 			}
