@@ -1,5 +1,5 @@
 {
-    "DataFilePath": "./Flauschi512_24bit.bmp",
+    "DataFilePath": "./FeatureTest_PS.hlsl",
     "DataFileType": 0,
     "DataFileSize": 0,
     "UncompressedFileSize": 0,
@@ -9,14 +9,13 @@
     "Resources":
     [
         {
-            "ResourceKey": "TexFlauschi512",
-            "ResourceType": 2,
+            "ResourceKey": "FeatureTest_PS",
+            "ResourceType": 4,
             "PlatformFlags": 0,
             "DataOffset": 0,
             "DataSize": 0,
             "DependencyCount": 0,
-            "Dependencies": null,
-            "ImportFlags": "SDR"
+            "Dependencies": null
         }
     ]
 }

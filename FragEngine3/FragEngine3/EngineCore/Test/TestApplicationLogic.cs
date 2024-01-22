@@ -81,6 +81,7 @@ namespace FragEngine3.EngineCore.Test
 			Engine.ResourceManager.GetAndLoadResource("TexFlauschi512", true, out _);
 			Engine.ResourceManager.GetAndLoadResource("Mtl_TestMaterial", true, out _);
 			Engine.ResourceManager.GetAndLoadResource("Mtl_DefaultSurface", true, out _);
+			Engine.ResourceManager.GetAndLoadResource("Mtl_FeatureTest", true, out _);
 			Engine.ResourceManager.GetAndLoadResource("ForwardPlusLight_Composition_PS", true, out _);
 
 			Scene scene = Engine.SceneManager.MainScene!;
@@ -128,7 +129,6 @@ namespace FragEngine3.EngineCore.Test
 
 				light.LightIntensity = 0.5f;
 				light.CastShadows = true;
-				light.ShadowBias = 0.08f;
 			}
 			if (SceneSpawner.CreateLight(scene, Light.LightType.Directional, out light))
 			{
@@ -180,7 +180,7 @@ namespace FragEngine3.EngineCore.Test
 				rabbit.DontDrawUnlessFullyLoaded = true;
 			}
 
-			MeshPrimitiveFactory.CreateCubeMesh("Cube", Engine, new(1, 1, 1), false, out _, out _, out ResourceHandle cubeHandle);
+			MeshPrimitiveFactory.CreateCubeMesh("Cube", Engine, new(1, 1, 1), true, out _, out _, out ResourceHandle cubeHandle);
 			if (SceneSpawner.CreateStaticMeshRenderer(scene, out StaticMeshRenderer cube))
 			{
 				cube.node.Name = "Cube";
@@ -190,7 +190,8 @@ namespace FragEngine3.EngineCore.Test
 				//cube.node.SetEnabled(false);
 
 				cube.SetMesh(cubeHandle);
-				cube.SetMaterial("Mtl_DefaultSurface");
+				cube.SetMaterial("Mtl_FeatureTest");
+				//cube.SetMaterial("Mtl_DefaultSurface");
 			}
 
 			MeshPrimitiveFactory.CreateCylinderMesh("Cylinder", Engine, 0.5f, 2, 32, false, out _, out _, out ResourceHandle cylinderHandle);
@@ -203,7 +204,8 @@ namespace FragEngine3.EngineCore.Test
 				cylinder.node.SetEnabled(false);
 
 				cylinder.SetMesh(cylinderHandle);
-				cylinder.SetMaterial("Mtl_DefaultSurface");
+				cylinder.SetMaterial("Mtl_FeatureTest");
+				//cylinder.SetMaterial("Mtl_DefaultSurface");
 			}
 
 			MeshPrimitiveFactory.CreateConeMesh("Cone", Engine, 0.75f, 1, 32, false, out _, out _, out ResourceHandle coneHandle);
@@ -232,7 +234,7 @@ namespace FragEngine3.EngineCore.Test
 				d20.SetMaterial("Mtl_DefaultSurface");
 			}
 
-			MeshPrimitiveFactory.CreatePlaneMesh("Plane", Engine, new Vector2(5, 5), 6, false, out _, out _, out ResourceHandle planeHandle);
+			MeshPrimitiveFactory.CreatePlaneMesh("Plane", Engine, new Vector2(5, 5), 6, true, out _, out _, out ResourceHandle planeHandle);
 			if (SceneSpawner.CreateStaticMeshRenderer(scene, out StaticMeshRenderer plane))
 			{
 				plane.node.Name = "Ground";
@@ -242,7 +244,8 @@ namespace FragEngine3.EngineCore.Test
 				//plane.node.SetEnabled(false);
 
 				plane.SetMesh(planeHandle);
-				plane.SetMaterial("Mtl_DefaultSurface");
+				plane.SetMaterial("Mtl_FeatureTest");
+				//plane.SetMaterial("Mtl_DefaultSurface");
 			}
 			if (SceneSpawner.CreateStaticMeshRenderer(scene, out plane))
 			{
@@ -253,7 +256,8 @@ namespace FragEngine3.EngineCore.Test
 				//plane.node.SetEnabled(false);
 
 				plane.SetMesh(planeHandle);
-				plane.SetMaterial("Mtl_DefaultSurface");
+				plane.SetMaterial("Mtl_FeatureTest");
+				//plane.SetMaterial("Mtl_DefaultSurface");
 			}
 
 			// Create two-sided quad:

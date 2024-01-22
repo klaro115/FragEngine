@@ -1,5 +1,5 @@
 {
-    "DataFilePath": "./Flauschi512_24bit.bmp",
+    "DataFilePath": "./Mtl_FeatureTest.json",
     "DataFileType": 0,
     "DataFileSize": 0,
     "UncompressedFileSize": 0,
@@ -9,14 +9,13 @@
     "Resources":
     [
         {
-            "ResourceKey": "TexFlauschi512",
-            "ResourceType": 2,
+            "ResourceKey": "Mtl_FeatureTest",
+            "ResourceType": 5,
             "PlatformFlags": 0,
             "DataOffset": 0,
             "DataSize": 0,
             "DependencyCount": 0,
-            "Dependencies": null,
-            "ImportFlags": "SDR"
+            "Dependencies": null
         }
     ]
 }

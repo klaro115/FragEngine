@@ -1,5 +1,5 @@
 {
-    "DataFilePath": "./Flauschi512_24bit.bmp",
+    "DataFilePath": "./TexFeatureTest_Normal.jpg",
     "DataFileType": 0,
     "DataFileSize": 0,
     "UncompressedFileSize": 0,
@@ -9,14 +9,13 @@
     "Resources":
     [
         {
-            "ResourceKey": "TexFlauschi512",
+            "ResourceKey": "TexFeatureTest_Normal",
             "ResourceType": 2,
             "PlatformFlags": 0,
             "DataOffset": 0,
             "DataSize": 0,
             "DependencyCount": 0,
             "Dependencies": null,
-            "ImportFlags": "SDR"
         }
     ]
 }

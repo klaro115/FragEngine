@@ -90,6 +90,8 @@ namespace FragEngine3.Graphics.Components
 		private Matrix4x4 mtxShadowWorld2Clip = Matrix4x4.Identity;
 		private uint shadowMapIdx = 0;
 
+		private static readonly bool rotateProjectionAlongCamera = false;
+
 		#endregion
 		#region Constants
 
@@ -287,7 +289,7 @@ namespace FragEngine3.Graphics.Components
 			}
 
 			// Recalculate projection matrix for 
-			RecalculateShadowProjectionMatrix(_shadingFocalPoint, _shadingFocalPointRadius);
+			RecalculateShadowProjectionMatrix(_shadingFocalPoint);
 			shadowMapIdx = _newShadowMapIdx;
 
 			// Ensure render targets are created and assigned:
@@ -397,7 +399,7 @@ namespace FragEngine3.Graphics.Components
 			return !IsDisposed && shadowCameraInstance != null && shadowCameraInstance.EndDrawing();
 		}
 
-		private void RecalculateShadowProjectionMatrix(Vector3 _shadingFocalPoint, float _shadingFocalPointRadius)
+		private void RecalculateShadowProjectionMatrix(Vector3 _shadingFocalPoint)
 		{
 			switch (type)
 			{
@@ -420,26 +422,26 @@ namespace FragEngine3.Graphics.Components
 					break;
 				case LightType.Directional:
 					{
+						const float maxDirectionalRange = ShadowMapUtility.directionalLightSize;
+
 						Vector3 lightDir = Direction;
 						Quaternion worldRot = node.WorldRotation;
-						Vector3 worldUp = Vector3.Transform(Vector3.UnitY, worldRot);
-						Vector3 cameraDir = Camera.MainCamera!.node.WorldForward;	//TODO / TEMP
 						
 						// Orient light map projection to have its pixel grid roughly aligned with the camera's direction:
-						Vector3 lightDirProj = Vector3.Normalize(VectorExt.ProjectToPlane(cameraDir, lightDir));
-						float cameraRotAngle = VectorExt.Angle(worldUp, lightDirProj, true);
-						Quaternion cameraRot = Quaternion.CreateFromAxisAngle(lightDir, cameraRotAngle);
+						if (rotateProjectionAlongCamera && Camera.MainCamera != null)
+						{
+							Vector3 worldUp = Vector3.Transform(Vector3.UnitY, worldRot);
+							Vector3 cameraDir = Camera.MainCamera.node.WorldForward;
 
-
-
-
-
-
-						const float maxDirectionalRange = ShadowMapUtility.directionalLightSize;
+							Vector3 lightDirProj = Vector3.Normalize(VectorExt.ProjectToPlane(cameraDir, lightDir));
+							float cameraRotAngle = VectorExt.Angle(worldUp, lightDirProj, true);
+							Quaternion cameraRot = Quaternion.CreateFromAxisAngle(lightDir, cameraRotAngle);
+							worldRot = cameraRot * worldRot;
+						}
 
 						// Transform from a world space position (relative to a given focal point), to orthographics projection space, to shadow map UV coordinates:
 						Vector3 posOrigin = _shadingFocalPoint - lightDir * maxDirectionalRange * 0.5f;
-						Pose originPose = new(posOrigin, cameraRot * worldRot, Vector3.One, false);
+						Pose originPose = new(posOrigin, worldRot, Vector3.One, false);
 						if (!Matrix4x4.Invert(originPose.Matrix, out Matrix4x4 mtxWorld2Local))
 						{
 							mtxWorld2Local = Matrix4x4.Identity;
