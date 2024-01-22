@@ -41,6 +41,7 @@ namespace FragEngine3.Graphics.Resources.Import
 			public readonly bool ColorsAreIndexed => biBitCount <= 8;
 			public readonly bool HasColorMasks => biCompression == BiCompression.BI_BITFIELDS;
 			public readonly bool HasColorTables => biBitCount <= 8 || biClrUsed != 0;
+			public readonly bool UseRleCompression => biCompression == BiCompression.BI_RLE4 || biCompression == BiCompression.BI_RLE8;
 		}
 
 		private struct BmpColorMasks
@@ -276,42 +277,68 @@ namespace FragEngine3.Graphics.Resources.Import
 
 		private static bool ReadPixelData(BinaryReader _reader, in BmpInfoBlock _infoBlock, in BmpColorMasks _colorMasks, in BmpColorTable _colorTable, RawImageData _rawImage)
 		{
+			_rawImage.pixelData_RgbaByte = new RgbaByte[_rawImage.PixelCount];
+
 			try
 			{
 				switch (_infoBlock.biBitCount)
 				{
 					case 1:
-						_rawImage.pixelData_RgbaByte = new RgbaByte[_rawImage.PixelCount];
 						return ReadPixelData_Indexed_1(_reader, in _infoBlock, in _colorTable, _rawImage.pixelData_RgbaByte);
+
 					case 4:
-						_rawImage.pixelData_RgbaByte = new RgbaByte[_rawImage.PixelCount];
-						return ReadPixelData_Indexed_4(_reader, in _infoBlock, in _colorTable, _rawImage.pixelData_RgbaByte);
+						if (_infoBlock.biCompression == BiCompression.BI_RLE4)
+						{
+							//TODO: 4-bit RLE compressed color data.
+							Logger.Instance?.LogError("4-bit run-length encoding (RLE) for bitmap is not supported at this time!");
+							return false;
+						}
+						else
+						{
+							return ReadPixelData_Indexed_4(_reader, in _infoBlock, in _colorTable, _rawImage.pixelData_RgbaByte);
+						}
+
 					case 8:
-						_rawImage.pixelData_RgbaByte = new RgbaByte[_rawImage.PixelCount];
-						return ReadPixelData_Indexed_8(_reader, in _infoBlock, in _colorTable, _rawImage.pixelData_RgbaByte);
+						if (_infoBlock.biCompression == BiCompression.BI_RLE8)
+						{
+							return ReadPixelData_RLE_8(_reader, in _infoBlock, _rawImage.pixelData_RgbaByte);
+						}
+						else
+						{
+							return ReadPixelData_Indexed_8(_reader, in _infoBlock, in _colorTable, _rawImage.pixelData_RgbaByte);
+						}
+
 					case 16:
-						_rawImage.pixelData_RgbaByte = new RgbaByte[_rawImage.PixelCount];
-						return ReadPixelData_Uncompressed_16(_reader, in _infoBlock, _rawImage.pixelData_RgbaByte);
+						if (_infoBlock.biCompression == BiCompression.BI_BITFIELDS)
+						{
+							//TODO: Uncompressed 16-bit color using color masks.
+							return false;
+						}
+						else
+						{
+							return ReadPixelData_Uncompressed_16(_reader, in _infoBlock, _rawImage.pixelData_RgbaByte);
+						}
+
 					case 24:
-						_rawImage.pixelData_RgbaByte = new RgbaByte[_rawImage.PixelCount];
 						return ReadPixelData_Uncompressed_24(_reader, in _infoBlock, _rawImage.pixelData_RgbaByte);
+
 					case 32:
-						_rawImage.pixelData_RgbaByte = new RgbaByte[_rawImage.PixelCount];
 						if (_infoBlock.biCompression == BiCompression.BI_BITFIELDS)
 						{
 							//TODO: Uncompressed 32-bit color using color masks.
+							return false;
 						}
 						else
 						{
 							return ReadPixelData_Uncompressed_32(_reader, in _infoBlock, _rawImage.pixelData_RgbaByte);
 						}
-						break;
-					default:
-						Logger.Instance?.LogError($"Bitmap image file uses invalid bit depth! (biBitCount={_infoBlock.biBitCount})!");
-						return false;
-				}
 
-				return true;
+					default:
+						{
+							Logger.Instance?.LogError($"Bitmap image file uses invalid bit depth! (biBitCount={_infoBlock.biBitCount})!");
+							return false;
+						}
+				}
 			}
 			catch (Exception ex)
 			{
@@ -536,6 +563,89 @@ namespace FragEngine3.Graphics.Resources.Import
 
 					_pixelData[dstRowStartIdx + x] = new(r, g, b, a);
 				}
+			}
+
+			return true;
+		}
+
+		private static bool ReadPixelData_RLE_8(BinaryReader _reader, in BmpInfoBlock _infoBlock, RgbaByte[] _pixelData)		//TODO: Untested
+		{
+			int height = Math.Abs(_infoBlock.biHeight);
+			int width = _infoBlock.biWidth;
+			int pixelCount = width * height;
+
+			int dstStartY;
+			int dstDirY;
+			if (_infoBlock.biHeight < 0)
+			{
+				dstStartY = height;
+				dstDirY = -1;
+			}
+			else
+			{
+				dstStartY = 0;
+				dstDirY = 1;
+			}
+
+			// Prepare byte array for intermediate uncompressed buffering:
+			const int decodedPixelSize = 4;
+			byte[] byteBuffer = new byte[pixelCount * decodedPixelSize];
+
+			int x = 0;
+			int y = dstStartY;
+
+			int pixelsRead = 0;
+			int leadByte;
+			while (pixelsRead < pixelCount && (leadByte = _reader.Read()) >= 0)
+			{
+				byte valueByte = _reader.ReadByte();
+
+				// If leading byte is 0, treat subsequent data as an instruction:
+				if (leadByte == 0)
+				{
+					// New line:
+					if (valueByte == 0)
+					{
+						x = 0;
+						y += dstDirY;
+					}
+					// End of data:
+					else if (valueByte == 1)
+					{
+						break;
+					}
+					// Jump to new position:
+					else if (valueByte == 2)
+					{
+						byte jumpOffsetX = _reader.ReadByte();
+						byte jumpOffsetY = _reader.ReadByte();
+						x += jumpOffsetX;
+						y += dstDirY * jumpOffsetY;
+					}
+				}
+				// If first byte has non-zero value N, repeat the subsequent byte N times:
+				else
+				{
+					int dstStartIdx = y * width + x;
+					for (int i = 0; i < leadByte; ++i)
+					{
+						int dstIdx = dstStartIdx + i;
+						byteBuffer[dstIdx] = valueByte;
+						x++;
+					}
+				}
+			}
+
+			// Convert buffered data to colors we can use:
+			for (int i = 0; i < pixelCount; ++i)
+			{
+				int bufferStartIdx = decodedPixelSize * i;
+				byte b = byteBuffer[bufferStartIdx + 0];
+				byte g = byteBuffer[bufferStartIdx + 1];
+				byte r = byteBuffer[bufferStartIdx + 2];
+				byte a = byteBuffer[bufferStartIdx + 3];    //TEMP: Not sure if this decodes to 32-bit or 24-bit, or whatever BPP is written in '_infoBlock.biBitCount'.
+
+				_pixelData[i] = new RgbaByte(r, g, b, a);
 			}
 
 			return true;
