@@ -18,6 +18,7 @@ namespace FragEngine3.Resources
 			[ResourceType.Texture] =
 			[
 				".bmp",
+				".exr",
 				".gif",
 				".jpg",
 				".jpeg",
@@ -83,6 +84,11 @@ namespace FragEngine3.Resources
 			[ResourceType.Prefab] =
 			[
 				".prefab",
+			],
+			[ResourceType.Font] =
+			[
+				"ttf",
+				//...
 			],
 			[ResourceType.Data] =
 			[

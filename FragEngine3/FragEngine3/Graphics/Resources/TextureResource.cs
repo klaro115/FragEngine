@@ -1,4 +1,5 @@
 ﻿using FragEngine3.EngineCore;
+using FragEngine3.Graphics.Resources.Data;
 using FragEngine3.Resources;
 using Veldrid;
 
@@ -48,6 +49,8 @@ namespace FragEngine3.Graphics.Resources
 
 		public Texture? Texture { get; private set; } = null;
 
+		private Logger Logger => core.graphicsSystem.engine.Logger ?? Logger.Instance!;
+
 		#endregion
 		#region Methods
 
@@ -57,6 +60,53 @@ namespace FragEngine3.Graphics.Resources
 
 			Texture?.Dispose();
 			Texture = null;
+		}
+
+		public bool SetPixelData(RawImageData _rawImage)
+		{
+			if (IsDisposed)
+			{
+				Logger.LogError("Cannot set pixel data of disposed texture resource!");
+				return false;
+			}
+			if (!IsLoaded)
+			{
+				Logger.LogError("Cannot set pixel data of uninitialized texture resource!");
+				return false;
+			}
+			if (_rawImage == null || !_rawImage.IsValid())
+			{
+				Logger.LogError("Cannot set pixel data of texture from null or invalid raw image data!");
+				return false;
+			}
+
+			// Upload typed raw pixel data to GPU texture memory:
+			return _rawImage.bitsPerPixel switch
+			{
+				8 => UpdateTexture(_rawImage.pixelData_MonoByte),
+				32 => _rawImage.channelCount != 1
+					? UpdateTexture(_rawImage.pixelData_RgbaByte)
+					: UpdateTexture(_rawImage.pixelData_MonoFloat),
+				128 => UpdateTexture(_rawImage.pixelData_RgbaFloat),
+				_ => false,
+			};
+
+
+			// Local helper method for uploading pixels of arbitrary types and layouts:
+			bool UpdateTexture<T>(T[]? _pixelData) where T : unmanaged
+			{
+				if (_pixelData == null) return false;
+				try
+				{
+					core.Device.UpdateTexture(Texture, _pixelData, 0, 0, 0, _rawImage.width, _rawImage.height, 1, 0, 0);
+					return true;
+				}
+				catch (Exception ex)
+				{
+					Logger.LogException($"Failed to set pixel data on texture resource '{resourceKey}'!", ex);
+					return false;
+				}
+			}
 		}
 
 		//...
@@ -82,7 +132,7 @@ namespace FragEngine3.Graphics.Resources
 			return $"Texture '{resourceKey}' (Size: {sizeTxt}, Format: {Texture.Format})";
 		}
 
-		public static bool CreateTexture(ResourceHandle _handle, GraphicsCore _graphicsCore, out TextureResource? _outTexture)
+		public static bool CreateTexture(ResourceHandle _handle, GraphicsCore _graphicsCore, RawImageData _rawImageData, out TextureResource? _outTexture)
 		{
 			if (_graphicsCore == null)
 			{
@@ -116,10 +166,29 @@ namespace FragEngine3.Graphics.Resources
 				}
 			}
 
-			//TODO [later]: Add import functionality for various image file formats. Consider moving this method to its own importer class.
+			// Try creating the empty texture GPU object:
+			Texture texture;
+			try
+			{
+				TextureDescription textureDesc = _rawImageData.CreateTextureDescription();
 
-			_outTexture = null;	//TEMP
-			return false;
+				texture = _graphicsCore.MainFactory.CreateTexture(ref textureDesc);
+			}
+			catch (Exception ex)
+			{
+				logger.LogException($"Failed to create texture for handle '{_handle.resourceKey}'!", ex);
+				_outTexture = null;
+				return false;
+			}
+
+			// Create a texture resource object:
+			_outTexture = new TextureResource(_graphicsCore, _handle)
+			{
+				Texture = texture,
+			};
+
+			// Set initial texture content from the given raw image data:
+			return _outTexture.SetPixelData(_rawImageData);
 		}
 
 		#endregion

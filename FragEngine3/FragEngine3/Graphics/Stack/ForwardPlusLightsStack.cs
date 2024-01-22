@@ -6,6 +6,7 @@ using FragEngine3.Graphics.Components.Internal;
 using FragEngine3.Graphics.Contexts;
 using FragEngine3.Graphics.Resources;
 using FragEngine3.Graphics.Resources.Data;
+using FragEngine3.Graphics.Utility;
 using FragEngine3.Resources;
 using FragEngine3.Scenes;
 using System.Numerics;
@@ -15,47 +16,6 @@ namespace FragEngine3.Graphics.Stack
 {
 	public sealed class ForwardPlusLightsStack(GraphicsCore _core) : IGraphicsStack
 	{
-		#region Types
-
-		private sealed class RendererList(int _initialCapacity) : IDisposable		// TODO: Move this to camera if possible. Having to juggle and reassign these, while pushing renderers in the correct lists is too slow right now!
-		{
-			~RendererList()
-			{
-				Dispose(false);
-			}
-
-			public readonly List<IRenderer> renderersOpaque = new(_initialCapacity);
-			public readonly List<IRenderer> renderersTransparent = new(_initialCapacity);
-			public readonly List<IRenderer> renderersUI = new(_initialCapacity);
-			public CommandList cmdList = null!;
-
-			public bool HasRenderers => renderersOpaque.Count != 0 || renderersTransparent.Count != 0;
-
-			public void Dispose()
-			{
-				GC.SuppressFinalize(this);
-				Dispose(true);
-			}
-			private void Dispose(bool _disposing)
-			{
-				cmdList?.Dispose();
-
-				if (_disposing)
-				{
-					cmdList = null!;
-					Clear();
-				}
-			}
-
-			public void Clear()
-			{
-				renderersOpaque.Clear();
-				renderersTransparent.Clear();
-				renderersUI.Clear();
-			}
-		}
-
-		#endregion
 		#region Constructors
 
 		~ForwardPlusLightsStack()
@@ -71,23 +31,33 @@ namespace FragEngine3.Graphics.Stack
 		private bool isInitialized = false;
 		private bool isDrawing = false;
 
-		private readonly Stack<RendererList> rendererListPool = new(5);
-		private readonly Stack<RendererList> rendererListBusyStack = new(5);
+		// Lists & object management:
+		private readonly List<Camera> activeCameras = new(2);
+		private readonly List<Light> activeLights = new(10);
+		private readonly List<Light> activeLightsShadowMapped = new(5);
+		private LightSourceData[] activeLightData = [];
 
-		// Light sources:
-		private readonly List<Light> cameraLightBuffer = new(64);
-		private LightSourceData[] lightSourceDataBuffer = new LightSourceData[32];
+		private readonly List<IRenderer> activeRenderersOpaque = new(128);
+		private readonly List<IRenderer> activeRenderersTransparent = new(128);
+		private readonly List<IRenderer> activeRenderersUI = new(128);
+		private readonly List<IRenderer> activeShadowCasters = new(128);
+
+		// Global resources:
+		private DeviceBuffer? cbScene = null;
+		private readonly Stack<CommandList> commandListPool = new();
+		private readonly Stack<CommandList> commandListsInUse = new();
+		private ResourceLayout? resLayoutCamera = null;
+		private ResourceLayout? resLayoutObject = null;
 
 		// Shadow maps:
-		private Texture? texShadowMapArray = null;
-		private DeviceBuffer? dummyLightDataBuffer = null;
+		private Texture? texShadowMaps = null;
+		private uint texShadowMapsCapacity = 0;
+		private DeviceBuffer? dummyBufLights = null;
+		private Sampler? samplerShadowMaps = null;
 
 		// Output composition:
 		private ResourceSet? compositionResourceSet = null;
 		private StaticMeshRenderer? compositionRenderer = null;
-
-
-		private readonly object lockObj = new();
 
 		#endregion
 		#region Constants
@@ -131,20 +101,25 @@ namespace FragEngine3.Graphics.Stack
 
 			IsDisposed = true;
 
-			texShadowMapArray?.Dispose();
-			dummyLightDataBuffer?.Dispose();
+			cbScene?.Dispose();
+			resLayoutCamera?.Dispose();
+			resLayoutObject?.Dispose();
 			compositionResourceSet?.Dispose();
+			dummyBufLights?.Dispose();
+			texShadowMaps?.Dispose();
+			texShadowMapsCapacity = 0;
+			samplerShadowMaps?.Dispose();
 
-			foreach (RendererList rendererList in rendererListPool)
+			foreach (CommandList cmdList in commandListPool)
 			{
-				rendererList.Dispose();
+				cmdList.Dispose();
 			}
-			foreach (RendererList rendererList in rendererListBusyStack)
+			foreach (CommandList cmdList in commandListsInUse)
 			{
-				rendererList.Dispose();
+				cmdList.Dispose();
 			}
-			rendererListPool.Clear();
-			rendererListBusyStack.Clear();
+			commandListPool.Clear();
+			commandListsInUse.Clear();
 		}
 
 		public bool Initialize(Scene _scene)
@@ -171,7 +146,50 @@ namespace FragEngine3.Graphics.Stack
 			SkippedRendererCount = 0;
 			FailedRendererCount = 0;
 
-			//...
+			// GLOBAL RESOURCES:
+
+			if (!CameraUtility.CreateCameraResourceLayout(in core, out resLayoutCamera))
+			{
+				Logger.LogError("Failed to create default camera resource layout for graphics stack!");
+				return false;
+			}
+
+			if (!SceneUtility.CreateObjectResourceLayout(in core, out resLayoutObject))
+			{
+				Logger.LogError("Failed to create default object resource layout for graphics stack!");
+				return false;
+			}
+
+			// SHADOW MAPPING:
+
+			if (dummyBufLights == null || dummyBufLights.IsDisposed)
+			{
+				if (!CameraUtility.CreateOrResizeLightDataBuffer(in core, 1, ref dummyBufLights, out _))
+				{
+					Logger.LogError("Failed to create dummy light data buffer for graphics stack!");
+					return false;
+				}
+			}
+
+			if (texShadowMaps == null || texShadowMaps.IsDisposed || texShadowMapsCapacity == 0)
+			{
+				const uint shadowResolution = ShadowMapUtility.shadowResolution;
+				if (!ShadowMapUtility.CreateShadowMapArray(in core, shadowResolution, shadowResolution, 1, out texShadowMaps))
+				{
+					Logger.LogError("Failed to create initial shadow map texture array for graphics stack!");
+					return false;
+				}
+				texShadowMapsCapacity = 1;
+			}
+
+			if (samplerShadowMaps == null || samplerShadowMaps.IsDisposed)
+			{
+				if (!ShadowMapUtility.CreateShadowSampler(in core, out samplerShadowMaps))
+				{
+					Logger.LogError("Failed to create shadow map sampler for graphics stack!");
+					return false;
+				}
+			}
 
 			// OUTPUT COMPOSITION:
 
@@ -208,20 +226,7 @@ namespace FragEngine3.Graphics.Stack
 					compositionRenderer.LayerFlags = COMPOSITION_LAYER_MASK;
 				}
 			}
-
-			// SHADOW MAPS:
-
-			if (texShadowMapArray == null || texShadowMapArray.IsDisposed)
-			{
-				core.CreateShadowMapArray(8, 8, 1, out texShadowMapArray);
-				// ^Note: The first shadow map texture is always a maximum-depth, no-shadows empty
-				// texture that's used as a fallback for missing or wrongly assigned shadow maps.
-				// This 'empty' placeholder array is populated with only a tiny 8x8 placeholder.
-			}
-
-			uint dummyLightDataBufferCapacity = 0;
-			CameraUtility.VerifyOrCreateLightDataBuffer(in core, 1, ref dummyLightDataBuffer, ref dummyLightDataBufferCapacity);
-
+			
 			Logger.LogMessage($"Initialized graphics stack of type '{nameof(ForwardPlusLightsStack)}' for scene '{Scene.Name}'.");
 
 			isDrawing = false;
@@ -233,40 +238,48 @@ namespace FragEngine3.Graphics.Stack
 		{
 			if (!isInitialized) return;
 
-			lock(lockObj)
+			if (Scene != null && compositionRenderer != null)
 			{
-				if (Scene != null && compositionRenderer != null)
-				{
-					Scene.rootNode.DestroyChild(compositionRenderer.node);
-					compositionRenderer = null;
-				}
-
-				texShadowMapArray?.Dispose();
-				dummyLightDataBuffer?.Dispose();
-				compositionResourceSet?.Dispose();
-
-				cameraLightBuffer.Clear();
-
-				foreach (RendererList rendererList in rendererListPool)
-				{
-					rendererList.Dispose();
-				}
-				foreach (RendererList rendererList in rendererListBusyStack)
-				{
-					rendererList.Dispose();
-				}
-				rendererListPool.Clear();
-				rendererListBusyStack.Clear();
-
-				VisibleRendererCount = 0;
-				SkippedRendererCount = 0;
-				FailedRendererCount = 0;
-
-				Scene = null;
-
-				isDrawing = false;
-				isInitialized = false;
+				Scene.rootNode.DestroyChild(compositionRenderer.node);
+				compositionRenderer = null;
 			}
+
+			activeCameras.Clear();
+			activeLights.Clear();
+			activeLightsShadowMapped.Clear();
+			activeRenderersOpaque.Clear();
+			activeRenderersTransparent.Clear();
+			activeRenderersUI.Clear();
+			activeShadowCasters.Clear();
+
+			cbScene?.Dispose();
+			resLayoutCamera?.Dispose();
+			resLayoutObject?.Dispose();
+			compositionResourceSet?.Dispose();
+			dummyBufLights?.Dispose();
+			texShadowMaps?.Dispose();
+			texShadowMapsCapacity = 0;
+			samplerShadowMaps?.Dispose();
+
+			foreach (CommandList cmdList in commandListPool)
+			{
+				cmdList.Dispose();
+			}
+			foreach (CommandList cmdList in commandListsInUse)
+			{
+				cmdList.Dispose();
+			}
+			commandListPool.Clear();
+			commandListsInUse.Clear();
+
+			VisibleRendererCount = 0;
+			SkippedRendererCount = 0;
+			FailedRendererCount = 0;
+
+			Scene = null;
+
+			isDrawing = false;
+			isInitialized = false;
 
 			Logger.LogMessage($"Shut down graphics stack of type '{nameof(ForwardPlusLightsStack)}'.");
 		}
@@ -294,6 +307,20 @@ namespace FragEngine3.Graphics.Stack
 			return Initialize(Scene!);
 		}
 
+		private bool GetOrCreateCommandList(out CommandList _outCmdList)
+		{
+			if (commandListPool.TryPop(out CommandList? cmdList) && cmdList != null)
+			{
+				_outCmdList = cmdList;
+			}
+			else
+			{
+				_outCmdList = core.MainFactory.CreateCommandList();
+			}
+			commandListsInUse.Push(_outCmdList);
+			return true;
+		}
+
 		public bool DrawStack(Scene _scene, List<IRenderer> _renderers, in IList<Camera> _cameras, in IList<Light> _lights)
 		{
 			if (!IsInitialized)
@@ -317,15 +344,6 @@ namespace FragEngine3.Graphics.Stack
 				return false;
 			}
 
-			cameraLightBuffer.Clear();
-
-			// Return renderer used list to pool for re-use this frame:
-			foreach (RendererList rendererList in rendererListBusyStack)
-			{
-				rendererListPool.Push(rendererList);
-			}
-			rendererListBusyStack.Clear();
-
 			// Skip rendering if there are no cameras in the scene:
 			if (_cameras.Count == 0)
 			{
@@ -340,278 +358,374 @@ namespace FragEngine3.Graphics.Stack
 
 			uint maxActiveLightCount = Math.Max(core.graphicsSystem.Settings.MaxActiveLightCount, 1);
 
-			// Identify (main) camera focal point:
-			float renderFocalRadius;
-			Vector3 renderFocalPoint;
+			// Prepare global resources for drawing the scene and sort out non-visible objects:
+			success &= BeginDrawScene(
+				in _renderers,
+				in _cameras,
+				in _lights,
+				maxActiveLightCount,
+				out SceneContext sceneCtx,
+				out Vector3 renderFocalPoint,
+				out float renderFocalRadius,
+				out bool rebuildResSetCamera,
+				out bool texShadowMapsHasChanged);
+			if (!success)
 			{
-				Camera mainCamera = Camera.MainCamera ?? _cameras[0];
+				Logger.LogError("Graphics stack failed to begin drawing scene!");
+				return false;
+			}
 
-				const float renderFocalPointLocus = 0.33333f;
-				const float renderFocalRadiusFraction = 0.5f;
-
-				float cameraFarClipPlane = mainCamera.ProjectionSettings.farClipPlane;
-				Pose cameraWorldPose = mainCamera.node.WorldTransformation;
-				renderFocalRadius = cameraFarClipPlane * renderFocalRadiusFraction;
-				renderFocalPoint = cameraWorldPose.position + cameraWorldPose.Forward * cameraFarClipPlane * renderFocalPointLocus;
+			// Skip rendering if no cameras are active:
+			if (activeCameras.Count == 0)
+			{
+				VisibleRendererCount = 0;
+				SkippedRendererCount = 0;
+				isDrawing = false;
+				return true;
 			}
 
 			// Draw shadow maps for all shadow-casting light sources:
-			success &= DrawShadowMaps(in _renderers, in _lights, renderFocalPoint, renderFocalRadius);
-			if (!success)
-			{
-				return false;
-			}
-			
-			// Draw scene for each of the scene's active cameras:
-			for (int i = 0; i < _cameras.Count; ++i)
-			{
-				// Skip any cameras that are expired or disabled:
-				Camera camera = _cameras[i];
-				if (camera == null || camera.IsDisposed || !camera.node.IsEnabledInHierarchy() || camera.layerMask == 0u)
-				{
-					continue;
-				}
+			success &= DrawShadowMaps(
+				in sceneCtx,
+				renderFocalPoint,
+				renderFocalRadius,
+				maxActiveLightCount,
+				rebuildResSetCamera,
+				texShadowMapsHasChanged);
 
-				try
-				{
-					GatherLightsForCamera(in _lights, camera);
-
-					success &= TryRenderCamera(_scene, _renderers, camera, maxActiveLightCount, out uint activeLightCount);
-
-					// Composite results:
-					success &= CompositeFinalOutput(camera, activeLightCount);
-				}
-				catch (Exception ex)
-				{
-					Logger.LogException($"An exception was caught while trying to draw scene using graphics stack of type '{nameof(ForwardPlusLightsStack)}'!", ex);
-					success = false;
-					continue;
-				}
-			}
+			// Draw each active camera component in the scene, and composite output:
+			success &= DrawSceneCameras(
+				in sceneCtx,
+				maxActiveLightCount,
+				rebuildResSetCamera);
 
 			isDrawing = false;
 			return success;
 		}
 
-		private void GatherLightsForCamera(in IList<Light> _lights, Camera _camera)
+		private bool BeginDrawScene(
+			in List<IRenderer> _renderers,
+			in IList<Camera> _cameras,
+			in IList<Light> _lights,
+			uint _maxActiveLightCount,
+			out SceneContext _outSceneCtx,
+			out Vector3 _outRenderFocalPoint,
+			out float _outRenderFocalRadius,
+			out bool _outRebuildResSetCamera,
+			out bool _outTexShadowsHasChanged)
 		{
-			// Identify all relevant lights for this camera's viewport:
-			foreach (Light light in _lights)
+			// Clear all lists for new frame:
+			activeCameras.Clear();
+			activeLights.Clear();
+			activeLightsShadowMapped.Clear();
+			activeRenderersOpaque.Clear();
+			activeRenderersTransparent.Clear();
+			activeRenderersUI.Clear();
+			activeShadowCasters.Clear();
+
+			// Identify only active cameras and visible light sources:
+			foreach (Camera camera in _cameras)
 			{
-				if (!light.IsDisposed &&
-					light.node.IsEnabledInHierarchy() &&
-					(light.layerMask & _camera.layerMask) != 0)
+				if (!camera.IsDisposed && camera.layerMask != 0 && camera.node.IsEnabledInHierarchy())
 				{
-					if (light.Type != Light.LightType.Directional)
-					{
-						// TODO: Determine if light's maximum range overlaps viewport frustum!
-						cameraLightBuffer.Add(light);
-					}
-					else
-					{
-						cameraLightBuffer.Add(light);
-					}
+					activeCameras.Add(camera);
 				}
 			}
-		}
-
-		private bool GetRendererList(out RendererList _outRendererList)
-		{
-			if (!rendererListPool.TryPop(out RendererList? rendererList))
-			{
-				rendererList = new(32);
-			}
-			_outRendererList = rendererList;
-
-			if (_outRendererList.cmdList == null || _outRendererList.cmdList.IsDisposed)
-			{
-				if (!_core.CreateCommandList(out CommandList? cmdList) || cmdList == null)
-				{
-					Logger.LogError($"Failed to create command list for renderer list!");
-					_outRendererList.Dispose();
-					return false;
-				}
-				_outRendererList.cmdList = cmdList;
-				_outRendererList.cmdList.Name = $"CmdList_{nameof(ForwardPlusLightsStack)}";
-			}
-
-			_outRendererList.Clear();
-			return true;
-		}
-
-		private bool DrawShadowMaps(in List<IRenderer> _renderers, in IList<Light> _lights, Vector3 renderFocalPoint, float renderFocalRadius)
-		{
-			bool success = true;
-
-			//TODO 1: Consider gathering list containing only active/relevant shadow-casting lights first.
-			//TODO 2: Resize shadow map texture array as needed to match active/valid shadow-casting lights count. (plus 1 layer for default/empty map)
-
-			// Use an incremental ID counter to map texture array layers to lights:
-			uint lightArrayIdx = 0;			//TODO: Use more persistent per-instance IDs to map same layer to same light, or use override framebuffers in lights after mapping to different ID/layer.
-
-			GetRendererList(out RendererList lightList);
-			lightList.cmdList.Begin();
 
 			foreach (Light light in _lights)
 			{
-				if (light.layerMask == 0 || !light.CastShadows || !light.node.IsEnabledInHierarchy()) continue;
+				// Skip disabled and overly dim light sources:
+				if (light.IsDisposed || light.layerMask == 0 || light.LightIntensity < 0.0001f || !light.node.IsEnabledInHierarchy())
+					continue;
 
-				success &= light.BeginDrawShadowMap(
-					in lightList.cmdList,
-					in texShadowMapArray!,
-					in dummyLightDataBuffer!,
-					renderFocalPoint,
-					renderFocalRadius,
-					lightArrayIdx,
-					out CameraContext lightCtx);
-
-				// Draw list of renderers:
-				if (_renderers.Count != 0)
+				// Only retain sources whose light may be seen by an active camera:
+				foreach (Camera camera in activeCameras)
 				{
-					foreach (IRenderer renderer in _renderers)
+					if (light.CheckVisibilityByCamera(in camera))
 					{
-						FailedRendererCount += renderer.DrawShadowMap(lightCtx) ? 0 : 1;
+						activeLights.Add(light);
+						break;
 					}
 				}
-
-				success &= light.EndDrawShadowMap();
-				lightArrayIdx++;
 			}
-
-			lightList.cmdList.End();
-			if (lightArrayIdx == 1)
+			// Sort lights, to prioritize shadow casters first, and higher priority lights second:
+			activeLights.Sort(Light.CompareLightsForSorting);
+			foreach (Light light in activeLights)
 			{
-				core.CommitCommandList(lightList.cmdList);
-			}
-			return success;
-		}
-
-		private bool TryRenderCamera(Scene _scene, List<IRenderer> _renderers, Camera _camera, uint _maxActiveLightCount, out uint _outActiveLightCount)
-		{
-			_outActiveLightCount = Math.Clamp((uint)cameraLightBuffer.Count, 0, _maxActiveLightCount);
-
-			lock (lockObj)
-			{
-				// Get or create CPU and CPU-side buffers for assembling and binding light data:
-				if (!_camera.GetLightDataBuffer(_outActiveLightCount, out DeviceBuffer? lightDataBuffer) || lightDataBuffer == null)
+				if (light.CastShadows)
 				{
-					Logger.LogError("Failed to get or create camera's light source data buffer!");
+					activeLightsShadowMapped.Add(light);
+				}
+			}
+
+			// Identify only visible renderers:
+			foreach (IRenderer renderer in _renderers)
+			{
+				//TODO [later]: We'll just take all renderers for now, but they need to be excluded/culled if not visible by any camera.
+
+				List<IRenderer>? rendererList = renderer.RenderMode switch
+				{
+					RenderMode.Opaque => activeRenderersOpaque,
+					RenderMode.Transparent => activeRenderersTransparent,
+					RenderMode.UI => activeRenderersUI,
+					_ => null,
+				};
+				rendererList?.Add(renderer);
+			}
+			activeShadowCasters.AddRange(activeRenderersOpaque);
+			activeShadowCasters.AddRange(activeRenderersTransparent);
+
+			// Return command lists used in last frame to pool:
+			foreach (CommandList cmdList in commandListsInUse)
+			{
+				commandListPool.Push(cmdList);
+			}
+			commandListsInUse.Clear();
+
+			// Identify (main) camera focal point:
+			{
+				Camera focalCamera = Camera.MainCamera != null && Camera.MainCamera.node.scene == Scene
+					? Camera.MainCamera
+					: _cameras[0];
+
+				float cameraFarClipPlane = focalCamera.ProjectionSettings.farClipPlane;
+				Pose cameraWorldPose = focalCamera.node.WorldTransformation;
+				_outRenderFocalRadius = ShadowMapUtility.directionalLightSize;
+				_outRenderFocalPoint = cameraWorldPose.position;
+			}
+
+			// Update scene constant buffer:
+			if (!CameraUtility.UpdateConstantBuffer_CBScene(
+				in core,
+				in Scene!.settings,
+				ref cbScene,
+				out _outRebuildResSetCamera))
+			{
+				Logger.LogError("Failed to create or update scene constant buffer!");
+				_outSceneCtx = null!;
+				_outTexShadowsHasChanged = false;
+				return false;
+			}
+
+			// Resize shadow map texture array to reflect maximum number of shadow-casting lights:
+			_outTexShadowsHasChanged = false;
+			uint lightCountShadowMapped = Math.Min((uint)activeLightsShadowMapped.Count, _maxActiveLightCount);
+			if (texShadowMaps == null || texShadowMaps.IsDisposed || texShadowMapsCapacity < lightCountShadowMapped)
+			{
+				_outRebuildResSetCamera = true;
+				_outTexShadowsHasChanged = true;
+				texShadowMaps?.Dispose();
+
+				const uint shadowResolution = ShadowMapUtility.shadowResolution;
+				if (!ShadowMapUtility.CreateShadowMapArray(
+					in core,
+					shadowResolution,
+					shadowResolution,
+					lightCountShadowMapped,
+					out texShadowMaps))
+				{
+					Logger.LogError("Failed to create shadow map texture array for graphics stack!");
+					_outSceneCtx = null!;
+					_outTexShadowsHasChanged = false;
 					return false;
 				}
-				if (lightSourceDataBuffer.Length < _outActiveLightCount)
-				{
-					lightSourceDataBuffer = new LightSourceData[_outActiveLightCount];
-				}
-				// Upload light data to GPU buffer:
-				for (int i = 0; i < _outActiveLightCount; i++)
-				{
-					lightSourceDataBuffer[i] = cameraLightBuffer[i].GetLightSourceData();
-				}
-				ReadOnlySpan<LightSourceData> lightSourceDataSpan = new(lightSourceDataBuffer, 0, (int)_outActiveLightCount);
-				core.Device.UpdateBuffer(lightDataBuffer, 0, lightSourceDataSpan);
-
-				GetRendererList(out RendererList rendererList);
-				VisibleRendererCount = 0;
-				SkippedRendererCount = 0;
-
-				// No nodes and no scene behaviours? Skip drawing altogether:
-				if (_renderers.Count == 0 && _scene.SceneBehaviourCount == 0)
-				{
-					return true;
-				}
-
-				// Assign each renderer to the most appropriate rendering list:
-				foreach (IRenderer renderer in _renderers)
-				{
-					if (renderer.IsVisible && (renderer.LayerFlags & _camera.layerMask) != 0)
-					{
-						// Skip any renderers that cannot be mapped to any of the supported modes:
-						List<IRenderer>? modeList = renderer.RenderMode switch
-						{
-							RenderMode.Opaque =>		rendererList.renderersOpaque,
-							RenderMode.Transparent =>	rendererList.renderersTransparent,
-							RenderMode.UI =>			rendererList.renderersUI,
-							_ =>						null,
-						};
-						if (modeList != null)
-						{
-							// Add the renderer to its mode's corresponding list:
-							modeList.Add(renderer);
-							VisibleRendererCount++;
-						}
-						else
-						{
-							SkippedRendererCount++;
-						}
-					}
-				}
-
-				rendererList.cmdList!.Begin();
-
-				if (VisibleRendererCount != 0)
-				{
-					bool success = true;
-
-					// Issue draw calls for each renderer list:
-					success &= DrawRenderers(_camera, rendererList.renderersOpaque,			rendererList.cmdList!, RenderMode.Opaque,		_outActiveLightCount,	true, false);
-					success &= DrawRenderers(_camera, rendererList.renderersTransparent,	rendererList.cmdList!, RenderMode.Transparent,	_outActiveLightCount,	false, true);
-					success &= DrawRenderers(_camera, rendererList.renderersUI,				rendererList.cmdList!, RenderMode.UI,			0,						false, false);
-					if (!success)
-					{
-						return false;
-					}
-				}
-				else
-				{
-					// If no renderers, just allow clearing of render targets, to ensure backbuffer contents aren't undefined:
-					_camera.BeginFrame(rendererList.cmdList!, texShadowMapArray!, RenderMode.Opaque, true, 0, out _);
-					_camera.EndFrame(rendererList.cmdList!);
-				}
-
-				core.CommitCommandList(rendererList.cmdList);
-				rendererList.cmdList.End();
-
-				// Clear renderer list and return it to pool for later re-use:
-				rendererList.Clear();
-				rendererListBusyStack.Push(rendererList);
+				texShadowMapsCapacity = lightCountShadowMapped;
 			}
 
-			cameraLightBuffer.Clear();
+			_outSceneCtx = new(
+				Scene,
+				resLayoutCamera!,
+				resLayoutObject!,
+				cbScene!,
+				texShadowMaps!,
+				samplerShadowMaps!,
+				(uint)activeLights.Count,
+				(uint)activeLightsShadowMapped.Count);
 			return true;
 		}
-
-		private bool DrawRenderers(Camera _camera, List<IRenderer> _renderers, CommandList _cmdList, RenderMode _renderMode, uint _activeLightCount, bool _clearRenderTargets, bool _useZSorting)
+		
+		private bool DrawShadowMaps(in SceneContext _sceneCtx, Vector3 _renderFocalPoint, float _renderFocalRadius, uint _maxActiveLightCount, bool _rebuildResSetCamera, bool _texShadowsHasChanged)
 		{
+			// No visible shadow-casting light? We're done here:
+			if (activeLightsShadowMapped.Count == 0)
+			{
+				return true;
+			}
+
+			// Fetch or create a command list for shadow rendering:
+			if (!GetOrCreateCommandList(out CommandList cmdList))
+			{
+				return false;
+			}
+			cmdList.Begin();
+
 			bool success = true;
 
-			// If required, sort all renderers by their Z-depth: (aka distance to camera)
-			if (_useZSorting)
+			uint shadowMapIdx = 0;
+			int shadowMappedLightCount = Math.Min(activeLightsShadowMapped.Count, (int)_maxActiveLightCount);
+
+			try
 			{
-				Vector3 viewportPosition = _camera.node.WorldPosition;
-				Vector3 cameraDirection = Vector3.Transform(Vector3.UnitZ, _camera.node.WorldRotation);
-
-				_renderers.Sort((a, b) => a.GetZSortingDepth(viewportPosition, cameraDirection).CompareTo(b.GetZSortingDepth(viewportPosition, cameraDirection)));
-			}
-
-			success &= _camera.BeginFrame(_cmdList, texShadowMapArray!, _renderMode, _clearRenderTargets, _activeLightCount, out CameraContext cameraCtx);
-
-			// Draw list of renderers:
-			if (_renderers.Count != 0)
-			{
-				foreach (IRenderer renderer in _renderers)
+				for (int i = 0; i < shadowMappedLightCount; ++i)
 				{
-					FailedRendererCount += renderer.Draw(cameraCtx) ? 0 : 1;
+					Light light = activeLightsShadowMapped[i];
+					success &= light.BeginDrawShadowMap(
+						in _sceneCtx,
+						in cmdList,
+						in dummyBufLights!,
+						_renderFocalPoint,
+						_renderFocalRadius,
+						shadowMapIdx,
+						out CameraPassContext lightCtx,
+						_rebuildResSetCamera,
+						_texShadowsHasChanged);
+					if (!success) break;
+
+					//TODO [later]: Exclude renderers that are entirely outside of point/spot lights' maximum range.
+
+					// Draw renderers for opaque and tranparent geometry, ignore UI:
+					foreach (IRenderer renderer in activeShadowCasters)
+					{
+						if ((light.layerMask & renderer.LayerFlags) != 0)
+						{
+							success &= renderer.DrawShadowMap(_sceneCtx, lightCtx);
+						}
+					}
+
+					success &= light.EndDrawShadowMap();
+					shadowMapIdx++;
 				}
 			}
+			catch (Exception ex)
+			{
+				Logger.LogException($"An unhandled exception was caught while drawing shadow maps, around shadow map index {shadowMapIdx}!", ex);
+				success = false;
+			}
 
-			success &= _camera.EndFrame(_cmdList);
+			// If any shadows maps were rendered, submit command list for execution:
+			cmdList.End();
+			if (shadowMapIdx != 0)
+			{
+				success &= core.CommitCommandList(cmdList);
+			}
 
 			return success;
 		}
 
-		private bool CompositeFinalOutput(Camera _camera, uint _maxActiveLightCount)
+		private bool DrawSceneCameras(in SceneContext _sceneCtx, uint _maxActiveLightCount, bool _rebuildAllResSetCamera)
 		{
-			if (!GetRendererList(out RendererList? rendererList) || rendererList?.cmdList == null)
+			bool success = true;
+
+			// Gather light data for each active light source:
+			if (activeLightData.Length < activeLights.Count)
+			{
+				activeLightData = new LightSourceData[activeLights.Count];
+			}
+			for (int i = 0; i < activeLights.Count; ++i)
+			{
+				activeLightData[i] = activeLights[i].GetLightSourceData();
+			}
+
+			// Fetch or create a command list for shadow rendering:
+			if (!GetOrCreateCommandList(out CommandList cmdList))
+			{
+				return false;
+			}
+			cmdList.Begin();
+
+			for (uint i = 0; i < activeCameras.Count; ++i)
+			{
+				try
+				{
+					//TODO [later]: Pre-filter lights to only include those are actually visible by current camera!
+
+					Camera camera = activeCameras[(int)i];
+					uint activeLightCount = (uint)activeLights.Count;
+					if (!camera.GetLightDataBuffer(activeLightCount, out DeviceBuffer? lightDataBuffer, out bool bufLightsChanged))
+					{
+						success = false;
+						continue;
+					}
+					bool rebuildResSetCamera = _rebuildAllResSetCamera || bufLightsChanged;
+
+					if (!camera.BeginFrame(activeLightCount, false, out _))
+					{
+						success = false;
+						continue;
+					}
+
+					bool result = true;
+
+					result &= camera.SetOverrideCameraTarget(null);
+					result &= CameraUtility.UpdateLightDataBuffer(in core, in lightDataBuffer!, in activeLightData, activeLightCount, _maxActiveLightCount);
+
+					result &= DrawSceneRenderers(in _sceneCtx, cmdList, camera, RenderMode.Opaque, activeRenderersOpaque, true, rebuildResSetCamera, i);
+					result &= DrawSceneRenderers(in _sceneCtx, cmdList, camera, RenderMode.Transparent, activeRenderersTransparent, false, rebuildResSetCamera, i);
+					result &= DrawSceneRenderers(in _sceneCtx, cmdList, camera, RenderMode.UI, activeRenderersUI, false, rebuildResSetCamera, i);
+
+					if (result)
+					{
+						result &= CompositeFinalOutput(in _sceneCtx, camera, rebuildResSetCamera, i);
+					}
+					result &= camera.EndFrame();
+					success &= result;
+				}
+				catch (Exception ex)
+				{
+					Logger.LogException($"An unhandled exception was caught while drawing scene camera {i}!", ex);
+					success = false;
+					break;
+				}
+			}
+
+			// If any shadows maps were rendered, submit command list for execution:
+			cmdList.End();
+			success &= core.CommitCommandList(cmdList);
+
+			return success;
+		}
+
+		private bool DrawSceneRenderers(
+			in SceneContext _sceneCtx,
+			in CommandList _cmdList,
+			Camera _camera,
+			RenderMode _renderMode,
+			in List<IRenderer> _renderers,
+			bool _clearRenderTargets,
+			bool _rebuildResSetCamera,
+			uint _cameraIdx)
+		{
+			if (!_camera.BeginPass(
+				in _sceneCtx,
+				_cmdList,
+				_renderMode,
+				_clearRenderTargets,
+				_cameraIdx,
+				(uint)activeLights.Count,
+				(uint)activeLightsShadowMapped.Count,
+				out CameraPassContext cameraPassCtx,
+				_rebuildResSetCamera))
+			{
+				return false;
+			}
+
+			bool success = true;
+
+			foreach (IRenderer renderer in _renderers)
+			{
+				if ((_camera.layerMask & renderer.LayerFlags) != 0)
+				{
+					success &= renderer.Draw(_sceneCtx, cameraPassCtx);
+				}
+			}
+
+			success &= _camera.EndPass();
+			return success;
+		}
+
+		private bool CompositeFinalOutput(in SceneContext _sceneCtx, Camera _camera, bool _rebuildResSetCamera, uint _cameraIdx)
+		{
+			if (!GetOrCreateCommandList(out CommandList cmdList))
 			{
 				return false;
 			}
@@ -632,8 +746,16 @@ namespace FragEngine3.Graphics.Stack
 				}
 			}
 
-			rendererList.cmdList.Begin();
-			if (!_camera.BeginFrame(rendererList.cmdList, texShadowMapArray!, RenderMode.Custom, true, _maxActiveLightCount, out CameraContext cameraCtx))
+			cmdList.Begin();
+			if (!_camera.BeginPass(
+				in _sceneCtx,
+				cmdList,
+				RenderMode.Custom,
+				true,
+				_cameraIdx,
+				0, 0,
+				out CameraPassContext cameraPassCtx,
+				_rebuildResSetCamera))
 			{
 				Logger.LogError("Failed to begin frame on graphics stack's composition pass!");
 				_camera.SetOverrideCameraTarget(null);
@@ -646,9 +768,9 @@ namespace FragEngine3.Graphics.Stack
 			ResourceLayout resourceLayout = compositionMaterial.BoundResourceLayout!;
 			if (resourceLayout != null && (compositionResourceSet == null || compositionResourceSet.IsDisposed))
 			{
-				success &= _camera.GetOrCreateCameraTarget(RenderMode.Opaque, out CameraTarget? opaqueTarget);
-				success &= _camera.GetOrCreateCameraTarget(RenderMode.Transparent, out CameraTarget? transparentTarget);
-				success &= _camera.GetOrCreateCameraTarget(RenderMode.UI, out CameraTarget? uiTarget);
+				success &= _camera.GetOrCreateCameraTarget(RenderMode.Opaque,		out CameraTarget? opaqueTarget);
+				success &= _camera.GetOrCreateCameraTarget(RenderMode.Transparent,	out CameraTarget? transparentTarget);
+				success &= _camera.GetOrCreateCameraTarget(RenderMode.UI,			out CameraTarget? uiTarget);
 				if (!success)
 				{
 					Logger.LogError("Failed to get camera's targets needed for output composition!");
@@ -687,20 +809,16 @@ namespace FragEngine3.Graphics.Stack
 			}
 
 			// Send draw calls for output composition:
-			success &= compositionRenderer.Draw(cameraCtx);
+			success &= compositionRenderer.Draw(_sceneCtx, cameraPassCtx);
 
 			// Finish drawing and submit command list to GPU:
-			success &= _camera.EndFrame(rendererList.cmdList);
-			rendererList.cmdList.End();
+			success &= _camera.EndPass();
+			cmdList.End();
 
-			core.CommitCommandList(rendererList.cmdList);
+			core.CommitCommandList(cmdList);
 
 			// Reset camera state:
 			_camera.SetOverrideCameraTarget(null);
-
-			// Return renderer list for re-use:
-			rendererList.Clear();
-			rendererListBusyStack.Push(rendererList);
 			return success;
 		}
 

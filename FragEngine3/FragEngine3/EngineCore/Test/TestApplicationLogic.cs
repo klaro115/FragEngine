@@ -78,6 +78,7 @@ namespace FragEngine3.EngineCore.Test
 		protected override bool BeginRunningState()
 		{
 			// Import 3D models:
+			Engine.ResourceManager.GetAndLoadResource("TexFlauschi512", true, out _);
 			Engine.ResourceManager.GetAndLoadResource("Mtl_TestMaterial", true, out _);
 			Engine.ResourceManager.GetAndLoadResource("Mtl_DefaultSurface", true, out _);
 			Engine.ResourceManager.GetAndLoadResource("ForwardPlusLight_Composition_PS", true, out _);
@@ -125,13 +126,45 @@ namespace FragEngine3.EngineCore.Test
 				light.node.SetRotationFromYawPitchRoll(22.5f, 45, 0, true, true);
 				//light.node.SetEnabled(false);
 
+				light.LightIntensity = 0.5f;
 				light.CastShadows = true;
+				light.ShadowBias = 0.08f;
 			}
 			if (SceneSpawner.CreateLight(scene, Light.LightType.Directional, out light))
 			{
 				light.node.WorldPosition = new Vector3(0, 5, 0);
 				light.node.SetRotationFromYawPitchRoll(-70, -30, 0, true, true);
 				light.node.SetEnabled(false);
+			}
+			// Create a spot light:
+			if (SceneSpawner.CreateLight(scene, Light.LightType.Spot, out light))
+			{
+				light.node.WorldPosition = new Vector3(0, 0, -3);
+				light.node.LocalRotation = Quaternion.Identity;
+				//light.node.SetEnabled(false);
+
+				light.LightIntensity = 15;
+				light.SpotAngleDegrees = 35;
+				light.CastShadows = true;
+			}
+			if (SceneSpawner.CreateLight(scene, Light.LightType.Spot, out light))
+			{
+				light.node.WorldPosition = new Vector3(-4, 5, -4);
+				light.node.SetRotationFromYawPitchRoll(22.5f, 45, 0, true, true);
+				light.node.SetEnabled(false);
+
+				//light.lightColor = RgbaFloat.Red;
+				light.LightIntensity = 15;
+				light.SpotAngleDegrees = 30;
+				light.CastShadows = true;
+			}
+			// Create a point light:
+			if (SceneSpawner.CreateLight(scene, Light.LightType.Point, out light))
+			{
+				light.node.WorldPosition = new Vector3(0, 2, -1);
+				light.node.SetEnabled(false);
+
+				light.LightIntensity = 7;
 			}
 
 			if (SceneSpawner.CreateStaticMeshRenderer(scene, out StaticMeshRenderer rabbit))
@@ -167,7 +200,7 @@ namespace FragEngine3.EngineCore.Test
 				cylinder.node.LocalPosition = new Vector3(-2.5f, 0, 2);
 				cylinder.node.LocalRotation = Quaternion.Identity;
 				cylinder.node.LocalScale = Vector3.One;
-				//cylinder.node.SetEnabled(false);
+				cylinder.node.SetEnabled(false);
 
 				cylinder.SetMesh(cylinderHandle);
 				cylinder.SetMaterial("Mtl_DefaultSurface");
@@ -177,10 +210,10 @@ namespace FragEngine3.EngineCore.Test
 			if (SceneSpawner.CreateStaticMeshRenderer(scene, out StaticMeshRenderer cone))
 			{
 				cone.node.Name = "Cone";
-				cone.node.LocalPosition = new Vector3(0, 1.5f, 2);
+				cone.node.LocalPosition = new Vector3(0, 2, 2);
 				cone.node.LocalRotation = Quaternion.Identity;
 				cone.node.LocalScale = Vector3.One;
-				//cone.node.SetEnabled(false);
+				cone.node.SetEnabled(false);
 
 				cone.SetMesh(coneHandle);
 				cone.SetMaterial("Mtl_DefaultSurface");
@@ -190,7 +223,7 @@ namespace FragEngine3.EngineCore.Test
 			if (SceneSpawner.CreateStaticMeshRenderer(scene, out StaticMeshRenderer d20))
 			{
 				d20.node.Name = "D20";
-				d20.node.LocalPosition = new Vector3(0, 0, 2);
+				d20.node.LocalPosition = new Vector3(0, 1, 2);
 				d20.node.LocalRotation = Quaternion.Identity;
 				d20.node.LocalScale = Vector3.One;
 				//d20.node.SetEnabled(false);
@@ -202,9 +235,20 @@ namespace FragEngine3.EngineCore.Test
 			MeshPrimitiveFactory.CreatePlaneMesh("Plane", Engine, new Vector2(5, 5), 6, false, out _, out _, out ResourceHandle planeHandle);
 			if (SceneSpawner.CreateStaticMeshRenderer(scene, out StaticMeshRenderer plane))
 			{
-				plane.node.Name = "Plane";
+				plane.node.Name = "Ground";
 				plane.node.LocalPosition = new Vector3(0, -1.5f, 2);
 				plane.node.LocalRotation = Quaternion.Identity;
+				plane.node.LocalScale = Vector3.One;
+				//plane.node.SetEnabled(false);
+
+				plane.SetMesh(planeHandle);
+				plane.SetMaterial("Mtl_DefaultSurface");
+			}
+			if (SceneSpawner.CreateStaticMeshRenderer(scene, out plane))
+			{
+				plane.node.Name = "Wall";
+				plane.node.LocalPosition = new Vector3(0, 1, 4.5f);
+				plane.node.SetRotationFromAxisAngle(Vector3.UnitX, -90, false, true);
 				plane.node.LocalScale = Vector3.One;
 				//plane.node.SetEnabled(false);
 

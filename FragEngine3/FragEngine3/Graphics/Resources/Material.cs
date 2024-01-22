@@ -9,7 +9,7 @@ using Veldrid;
 
 namespace FragEngine3.Graphics.Resources
 {
-	public class Material : Resource
+	public class Material(GraphicsCore _core, ResourceHandle _handle) : Resource(_handle)
 	{
 		#region Types
 
@@ -54,19 +54,9 @@ namespace FragEngine3.Graphics.Resources
 		}
 
 		#endregion
-		#region Constructors
-
-		public Material(GraphicsCore _core, ResourceHandle _handle) : base(_handle)
-		{
-			core = _core ?? throw new ArgumentNullException(nameof(_core), "Graphics core may not be null!");
-
-			CreateDefaultResourceLayout(0);
-		}
-
-		#endregion
 		#region Fields
 
-		public GraphicsCore core;
+		public GraphicsCore core = _core ?? throw new ArgumentNullException(nameof(_core), "Graphics core may not be null!");
 
 		private uint materialVersion = 1000;
 
@@ -76,11 +66,10 @@ namespace FragEngine3.Graphics.Resources
 		private ResourceHandle? tesselationShaderEval = null;
 		private ResourceHandle pixelShader = ResourceHandle.None;
 
-		private VersionedMember<ResourceLayout> defaultResourceLayout = new(null!, 0);
 		private VersionedMember<ShaderSetDescription> shaderSetDesc = new(default, 0);
 
 		private ResourceLayout? boundResourceLayout = null;
-		private Tuple<string, int>[]? boundResourceKeys = null;
+		private MaterialData.BoundResourceKeys[]? boundResourceKeys = null;
 		private VersionedMember<ResourceSet?> boundResourceSet = new(null, 0);
 
 		private VersionedMember<DepthStencilDesc> depthStencilDesc = new(DepthStencilDesc.Default, 0);
@@ -92,7 +81,6 @@ namespace FragEngine3.Graphics.Resources
 		public override ResourceType ResourceType => ResourceType.Material;
 
 		public bool UseExternalBoundResources { get; private set; } = false;
-		public ResourceLayout ResourceLayout => defaultResourceLayout.Value;
 		public ResourceLayout? BoundResourceLayout => boundResourceLayout;
 		public ResourceSet? BoundResourceSet => boundResourceSet.Value;
 
@@ -139,7 +127,6 @@ namespace FragEngine3.Graphics.Resources
 		{
 			base.Dispose(_disposing);
 
-			defaultResourceLayout.DisposeValue();
 			boundResourceLayout?.Dispose();
 			boundResourceSet.DisposeValue();
 		}
@@ -154,31 +141,12 @@ namespace FragEngine3.Graphics.Resources
 			return newestPipelineVersion == _pipeline.Version;
 		}
 
-		private bool CreateDefaultResourceLayout(uint _newVersion)
-		{
-			try
-			{
-				defaultResourceLayout.DisposeValue();
-
-				ResourceLayoutDescription resLayoutDesc = new(GraphicsContants.DEFAULT_SURFACE_RESOURCE_LAYOUT_DESC);
-
-				ResourceLayout resLayout = core.MainFactory.CreateResourceLayout(ref resLayoutDesc);
-				resLayout.Name = $"ResLayout_Default_{resourceKey}";
-
-				defaultResourceLayout.UpdateValue(_newVersion, resLayout);
-				return true;
-			}
-			catch (Exception ex)
-			{
-				Logger.LogException($"Failed to create resource layout for material '{resourceKey}'!", ex);
-				defaultResourceLayout.DisposeValue();
-				return false;
-			}
-		}
-
 		private bool CreateShaderSetDesc(uint _newVersion, MeshVertexDataFlags _vertexDataFlags)
 		{
 			shaderSetDesc.DisposeValue();
+
+			// If a fitting vertex data variant is unavailable for one of the later stages, try using basic variant instead:
+			bool enableFallackToBasic = _vertexDataFlags != MeshVertexDataFlags.BasicSurfaceData;
 
 			GraphicsCapabilities capabilities = core.GetCapabilities();
 
@@ -218,17 +186,17 @@ namespace FragEngine3.Graphics.Resources
 				i = 0;
 				ShaderStages errorStages = 0;
 
-				bool success = AddShaderVariant(vertexShader, ShaderStages.Vertex);
+				bool success = AddShaderVariant(vertexShader, ShaderStages.Vertex, false);
 				if (hasGeometryShader)
 				{
-					success &= AddShaderVariant(geometryShader, ShaderStages.Geometry);
+					success &= AddShaderVariant(geometryShader, ShaderStages.Geometry, false);
 				}
 				if (hasTesselationShader)
 				{
-					success &= AddShaderVariant(tesselationShaderCtrl, ShaderStages.TessellationControl);
-					success &= AddShaderVariant(tesselationShaderEval, ShaderStages.TessellationEvaluation);
+					success &= AddShaderVariant(tesselationShaderCtrl, ShaderStages.TessellationControl, enableFallackToBasic);
+					success &= AddShaderVariant(tesselationShaderEval, ShaderStages.TessellationEvaluation, enableFallackToBasic);
 				}
-				success &= AddShaderVariant(pixelShader, ShaderStages.Fragment);
+				success &= AddShaderVariant(pixelShader, ShaderStages.Fragment, enableFallackToBasic);
 
 				if (!success || errorStages != 0)
 				{
@@ -246,7 +214,7 @@ namespace FragEngine3.Graphics.Resources
 
 
 				// Local helper method for fetching and loading a shader variant:
-				bool AddShaderVariant(ResourceHandle? _handle, ShaderStages _stageFlag)
+				bool AddShaderVariant(ResourceHandle? _handle, ShaderStages _stageFlag, bool _fallbackToBasic)
 				{
 					if (_handle == null || !_handle.IsValid)
 					{
@@ -254,12 +222,18 @@ namespace FragEngine3.Graphics.Resources
 						return false;
 					}
 
-					if (_handle.GetResource(true, true) is not ShaderResource shaderRes ||
-						!shaderRes.GetShaderProgram(_vertexDataFlags, out Shader? shader) ||
-						shader == null)
+					if (_handle.GetResource(true, true) is not ShaderResource shaderRes)
 					{
 						errorStages |= _stageFlag;
 						return false;
+					}
+					if (!shaderRes.GetShaderProgram(_vertexDataFlags, out Shader? shader) || shader == null)
+					{
+						if (!_fallbackToBasic || shaderRes.GetShaderProgram(MeshVertexDataFlags.BasicSurfaceData, out shader) || shader == null)
+						{
+							errorStages |= _stageFlag;
+							return false;
+						}
 					}
 
 					shaders[i++] = shader;
@@ -285,28 +259,58 @@ namespace FragEngine3.Graphics.Resources
 			BindableResource[] boundResources = new BindableResource[boundResourceKeys.Length];
 			for (int i = 0; i < boundResourceKeys.Length; ++i)
 			{
-				Tuple<string, int> resourceKeys = boundResourceKeys[i];
-				if (string.IsNullOrEmpty(resourceKeys.Item1) || !resourceManager.GetResource(resourceKeys.Item1, out ResourceHandle handle))
-				{
-					return false;
-				}
+				MaterialData.BoundResourceKeys resourceKeys = boundResourceKeys[i];
 
-				Resource? resource = handle.GetResource(true, true);
-				if (resource is TextureResource texture)
+				// Create a sampler:
+				if (resourceKeys.resourceKind == ResourceKind.Sampler)
 				{
-					boundResources[resourceKeys.Item2] = texture.Texture!;
+					Sampler sampler;
+					try
+					{
+						SamplerDescription samplerDesc = MaterialDataDescriptionParser.DecodeDescription_Sampler(resourceKeys.description);
+
+						sampler = core.MainFactory.CreateSampler(ref samplerDesc);																		// TODO: Create and manage samplers globally, in graphics core maybe?
+					}
+					catch (Exception ex)
+					{
+						Logger.LogException($"Failed to create sampler for bound resources of material '{resourceKey}'", ex);
+						return false;
+					}
+					boundResources[resourceKeys.resourceIdx] = sampler;
 				}
+				// Load a resource:
 				else
 				{
-					boundResources[resourceKeys.Item2] = null!;
+					if (string.IsNullOrEmpty(resourceKeys.resourceKey) || !resourceManager.GetResource(resourceKeys.resourceKey, out ResourceHandle handle))
+					{
+						return false;
+					}
+
+					switch (handle.resourceType)
+					{
+						case ResourceType.Texture:
+							{
+								TextureResource? resource = handle.GetResource(true, true) as TextureResource;
+								resource ??= core.graphicsSystem.TexPlaceholderMagenta.GetResource(false, false) as TextureResource;
+								boundResources[resourceKeys.resourceIdx] = resource?.Texture!;
+							}
+							break;
+						default:
+							{
+								Logger.LogWarning($"Unsupported or unknown resource type '{handle.resourceType}' in slot {resourceKeys.resourceIdx} of material '{resourceKey}'");
+								boundResources[resourceKeys.resourceIdx] = null!;
+							}
+							break;
+					}
 				}
 			}
 
 			try
 			{
 				ResourceSetDescription resourceSetDesc = new(boundResourceLayout, boundResources);
+
 				ResourceSet resourceSet = core.MainFactory.CreateResourceSet(ref resourceSetDesc);
-				resourceSet.Name = $"ResSet_Bound_{resourceKey}";
+				resourceSet.Name = $"ResSet_Bound_{resourceKey}_v{materialVersion}";
 
 				boundResourceSet.UpdateValue(materialVersion, resourceSet);
 				return true;
@@ -318,9 +322,9 @@ namespace FragEngine3.Graphics.Resources
 			}
 		}
 
-		internal bool CreatePipeline(CameraContext _cameraCtx, uint _rendererVersion, MeshVertexDataFlags _vertexDataFlags, out VersionedMember<Pipeline> _outPipeline)
+		internal bool CreatePipeline(SceneContext _sceneCtx, CameraPassContext _cameraPassCtx, uint _rendererVersion, MeshVertexDataFlags _vertexDataFlags, out VersionedMember<Pipeline> _outPipeline)
 		{
-			if (_cameraCtx == null || !_cameraCtx.IsValid)
+			if (_sceneCtx == null || _cameraPassCtx == null)
 			{
 				_outPipeline = new(null!, 0);
 				return false;
@@ -331,7 +335,6 @@ namespace FragEngine3.Graphics.Resources
 				uint newestVersion = materialVersion;
 
 				newestVersion = Math.Max(newestVersion, depthStencilDesc.Version);
-				newestVersion = Math.Max(newestVersion, defaultResourceLayout.Version);
 				newestVersion = Math.Max(newestVersion, shaderSetDesc.Version);
 				newestVersion = Math.Max(newestVersion, boundResourceSet.Version);
 
@@ -345,11 +348,6 @@ namespace FragEngine3.Graphics.Resources
 			if (depthStencilDesc.Version != materialVersion)
 			{
 				depthStencilDesc.UpdateValue(materialVersion, depthStencilDesc.Value);
-			}
-			if (defaultResourceLayout.Version != materialVersion && !CreateDefaultResourceLayout(materialVersion))
-			{
-				_outPipeline = new(null!, 0);
-				return false;
 			}
 			if (shaderSetDesc.Version != materialVersion && !CreateShaderSetDesc(materialVersion, _vertexDataFlags))
 			{
@@ -369,21 +367,21 @@ namespace FragEngine3.Graphics.Resources
 				StencilBehaviourDesc sd = depthStencilDesc.Value.stencilBehaviour;
 
 				DepthStencilStateDescription depthStateDesc = new(
-						dsd.enableDepthRead,
-						dsd.enableDepthWrite,
-						ComparisonKind.LessEqual,
-						dsd.enableStencil,
-						sd.stencilFront,
-						sd.stencilBack,
-						sd.readMask,
-						sd.writeMask,
-						sd.referenceValue);
+					dsd.enableDepthRead,
+					dsd.enableDepthWrite,
+					ComparisonKind.LessEqual,
+					dsd.enableStencil,
+					sd.stencilFront,
+					sd.stencilBack,
+					sd.readMask,
+					sd.writeMask,
+					sd.referenceValue);
 
 				RasterizerStateDescription rasterizerState;
 				if (dsd.enableCulling)
 				{
 					rasterizerState = RasterizerStateDescription.Default;
-					if (_cameraCtx.mirrorY)
+					if (_cameraPassCtx.mirrorY)
 					{
 						rasterizerState.FrontFace = FrontFace.CounterClockwise;
 					}
@@ -394,8 +392,8 @@ namespace FragEngine3.Graphics.Resources
 				}
 
 				ResourceLayout[] resourceLayouts = boundResourceLayout != null
-					? [ defaultResourceLayout.Value, boundResourceLayout ]
-					: [ defaultResourceLayout.Value ];
+					? [ _sceneCtx.resLayoutCamera, _sceneCtx.resLayoutObject, boundResourceLayout ]
+					: [ _sceneCtx.resLayoutCamera, _sceneCtx.resLayoutObject ];
 
 				GraphicsPipelineDescription pipelineDesc = new(
 					BlendStateDescription.SingleAlphaBlend,
@@ -404,14 +402,14 @@ namespace FragEngine3.Graphics.Resources
 					PrimitiveTopology.TriangleList,
 					shaderSetDesc.Value,
 					resourceLayouts,
-					_cameraCtx.outputDesc);
+					_cameraPassCtx.outputDesc);
 
 				Pipeline pipeline = core.MainFactory.CreateGraphicsPipeline(ref pipelineDesc);
 				uint newPipelineVersion = materialVersion ^ _rendererVersion;
 
-				if (_cameraCtx.outputDesc.ColorAttachments != null && _cameraCtx.outputDesc.ColorAttachments.Length != 0)
+				if (_cameraPassCtx.outputDesc.ColorAttachments != null && _cameraPassCtx.outputDesc.ColorAttachments.Length != 0)
 				{
-					PixelFormat colorFormat = _cameraCtx.outputDesc.ColorAttachments[0].Format;
+					PixelFormat colorFormat = _cameraPassCtx.outputDesc.ColorAttachments[0].Format;
 					pipeline.Name = $"{resourceKey}_{colorFormat}";
 				}
 				else
@@ -527,10 +525,22 @@ namespace FragEngine3.Graphics.Resources
 
 			// Assemble layout descriptions for bound resources:
 			ResourceLayout? boundResourceLayout = null;
-			if (data.GetBoundResourceLayoutDesc(out ResourceLayoutDescription boundResourceLayoutDesc, out Tuple<string, int>[]? boundResourceKeys, out bool useExternalBoundResources))
+			if (data.GetBoundResourceLayoutDesc(
+				out ResourceLayoutDescription boundResourceLayoutDesc,
+				out MaterialData.BoundResourceKeys[]? boundResourceKeys,
+				out bool useExternalBoundResources))
 			{
-				boundResourceLayout = _graphicsCore.MainFactory.CreateResourceLayout(boundResourceLayoutDesc);
-				boundResourceLayout.Name = $"ResLayout_Bound_{_handle.resourceKey}";
+				try
+				{
+					boundResourceLayout = _graphicsCore.MainFactory.CreateResourceLayout(boundResourceLayoutDesc);
+					boundResourceLayout.Name = $"ResLayout_Bound_{_handle.resourceKey}";
+				}
+				catch (Exception ex)
+				{
+					logger.LogException($"Failed to create resource layout for material resource '{_handle}'!", ex);
+					_outMaterial = null;
+					return false;
+				}
 			}
 
 			// Assemble stencil description, if required and available:
@@ -628,14 +638,14 @@ namespace FragEngine3.Graphics.Resources
 					EnableDepthWrite = dsd.enableDepthWrite,
 
 					EnableStencil = dsd.enableStencil,
-					StencilFront = new()
+					StencilFront = new MaterialData.StencilBehaviourData()
 					{
 						Fail = dsd.stencilBehaviour.stencilFront.Fail,
 						Pass = dsd.stencilBehaviour.stencilFront.Pass,
 						DepthFail = dsd.stencilBehaviour.stencilFront.DepthFail,
 						ComparisonKind = dsd.stencilBehaviour.stencilFront.Comparison,
 					},
-					StencilBack = new()
+					StencilBack = new MaterialData.StencilBehaviourData()
 					{
 						Fail = dsd.stencilBehaviour.stencilBack.Fail,
 						Pass = dsd.stencilBehaviour.stencilBack.Pass,
@@ -652,7 +662,7 @@ namespace FragEngine3.Graphics.Resources
 					ZSortingBias = rmd.zSortingBias,
 				},
 
-				Shaders = new()
+				Shaders = new MaterialData.ShaderData()
 				{
 					IsSurfaceMaterial = true,
 					Compute = string.Empty,
@@ -663,18 +673,25 @@ namespace FragEngine3.Graphics.Resources
 					Pixel = pixelShader.resourceKey,
 				},
 
-				Replacements = new()
+				Replacements = new MaterialData.ReplacementData()
 				{
 					SimplifiedVersion = SimplifiedMaterialVersion?.resourceKey ?? string.Empty,
 					ShadowMap = ShadowMapMaterialVersion?.resourceKey ?? string.Empty,
 				},
 
-				Resources = new()
+				Resources = new MaterialData.ResourceData()
 				{
 					// TODO
 				},
 			};
 			return _outData.IsValid();
+		}
+
+		public override string ToString()
+		{
+			string simplifiedVersionTxt = HasSimplifiedMaterialVersion ? $", Simplified={SimplifiedMaterialVersion!.resourceKey}" : string.Empty;
+			string shadowVersionTxt = HasShadowMapMaterialVersion ? $", Shadow={ShadowMapMaterialVersion!.resourceKey}" : string.Empty;
+			return $"{resourceKey}{simplifiedVersionTxt}{shadowVersionTxt}";
 		}
 
 		#endregion

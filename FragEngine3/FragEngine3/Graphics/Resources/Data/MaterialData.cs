@@ -63,10 +63,11 @@ namespace FragEngine3.Graphics.Resources.Data
 		{
 			public string ResourceKey { get; set; } = string.Empty;
 			public string SlotName { get; set; } = string.Empty;
+			public uint SlotIndex { get; set; } = 0;
 			public ResourceKind ResourceKind { get; set; } = ResourceKind.TextureReadOnly;
 			public ShaderStages ShaderStageFlags { get; set; } = ShaderStages.Fragment;
+			public string? Description { get; set; } = null;
 			public bool IsBoundBySystem { get; set; } = false;
-			public uint SlotIndex { get; set; } = 0;
 		}
 
 		[Serializable]
@@ -74,6 +75,14 @@ namespace FragEngine3.Graphics.Resources.Data
 		{
 			public int BoundResourceCount { get; set; } = 0;
 			public BoundResourceData[]? BoundResources { get; set; } = null;
+		}
+
+		public readonly struct BoundResourceKeys(string _resourceKey, int _resourceIdx, ResourceKind _resourceKind, string? _description)
+		{
+			public readonly string resourceKey = _resourceKey;
+			public readonly int resourceIdx = _resourceIdx;
+			public readonly ResourceKind resourceKind = _resourceKind;
+			public readonly string? description = _description;
 		}
 
 		#endregion
@@ -138,7 +147,7 @@ namespace FragEngine3.Graphics.Resources.Data
 			return true;
 		}
 
-		public bool GetBoundResourceLayoutDesc(out ResourceLayoutDescription _outLayoutDesc, out Tuple<string, int>[] _outResourceKeysAndIndices, out bool _outUseExternalBoundResources)
+		public bool GetBoundResourceLayoutDesc(out ResourceLayoutDescription _outLayoutDesc, out BoundResourceKeys[] _outResourceKeysAndIndices, out bool _outUseExternalBoundResources)
 		{
 			_outUseExternalBoundResources = false;
 			if (Resources == null)
@@ -159,13 +168,23 @@ namespace FragEngine3.Graphics.Resources.Data
 			}
 
 			ResourceLayoutElementDescription[] elements = new ResourceLayoutElementDescription[resourceCount];
-			_outResourceKeysAndIndices = new Tuple<string, int>[resourceCount];
+			_outResourceKeysAndIndices = new BoundResourceKeys[resourceCount];
 			for (int i = 0; i < resourceCount; i++)
 			{
 				BoundResourceData resData = Resources.BoundResources![i];
-				elements[i] = new(resData.SlotName, resData.ResourceKind, resData.ShaderStageFlags);
-				_outResourceKeysAndIndices[i] = new(resData.ResourceKey ?? string.Empty, i);
-				if (string.IsNullOrEmpty(resData.ResourceKey) || resData.IsBoundBySystem)
+
+				elements[i] = new(
+					resData.SlotName,
+					resData.ResourceKind,
+					resData.ShaderStageFlags);
+
+				_outResourceKeysAndIndices[i] = new(
+					resData.ResourceKey ?? string.Empty,
+					i,
+					resData.ResourceKind,
+					resData.Description);
+
+				if (resData.IsBoundBySystem || (string.IsNullOrEmpty(resData.ResourceKey) && resData.ResourceKind != ResourceKind.Sampler))
 				{
 					_outUseExternalBoundResources = true;
 				}
@@ -178,4 +197,3 @@ namespace FragEngine3.Graphics.Resources.Data
 		#endregion
 	}
 }
-

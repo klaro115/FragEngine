@@ -28,7 +28,7 @@ namespace FragEngine3.Graphics.Resources
 
 			// Try to extrapolate the shader stage from the resource key's suffix: (ex.: Vertex = '_VS')
 			ShaderStages stage = ShaderStages.None;
-			foreach (var kvp in GraphicsContants.shaderResourceSuffixes)
+			foreach (var kvp in GraphicsConstants.shaderResourceSuffixes)
 			{
 				if (_handle.resourceKey.EndsWith(kvp.Value))
 				{
@@ -48,7 +48,7 @@ namespace FragEngine3.Graphics.Resources
 			out ShaderResource? _outShaderRes)
 		{
 			// Determine standard entry point function name based on shader stage:
-			if (!GraphicsContants.defaultShaderStageEntryPoints.TryGetValue(_stage, out string? entryPoint))
+			if (!GraphicsConstants.defaultShaderStageEntryPoints.TryGetValue(_stage, out string? entryPoint))
 			{
 				Logger logger = _graphicsCore?.graphicsSystem.engine.Logger ?? Logger.Instance!;
 				logger.LogError($"Could not determine entry point name for shader stage '{_stage}'!");
@@ -175,7 +175,7 @@ namespace FragEngine3.Graphics.Resources
 							variantBuilder.Append(c);
 							suffixBuilder.Append(c);
 						}
-						if (suffixBuilder.Length != 0 && GraphicsContants.shaderEntryPointSuffixesForVariants.TryGetValue((txt = suffixBuilder.ToString()), out MeshVertexDataFlags flag))
+						if (suffixBuilder.Length != 0 && GraphicsConstants.shaderEntryPointSuffixesForVariants.TryGetValue((txt = suffixBuilder.ToString()), out MeshVertexDataFlags flag))
 						{
 							variantFlags |= flag;
 						}

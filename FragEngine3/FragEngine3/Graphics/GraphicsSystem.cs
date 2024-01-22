@@ -76,6 +76,7 @@ namespace FragEngine3.Graphics
 		public ResourceHandle TexPlaceholderGray { get; private set; } = ResourceHandle.None;
 		public ResourceHandle TexPlaceholderBlack { get; private set; } = ResourceHandle.None;
 		public ResourceHandle TexPlaceholderTransparent { get; private set; } = ResourceHandle.None;
+		public ResourceHandle TexPlaceholderMagenta { get; private set; } = ResourceHandle.None;
 
 		private Logger Logger => engine.Logger ?? Logger.Instance!;
 
@@ -95,6 +96,7 @@ namespace FragEngine3.Graphics
 			if (TexPlaceholderGray != null && TexPlaceholderGray.IsLoaded) TexPlaceholderGray.Unload();
 			if (TexPlaceholderBlack != null && TexPlaceholderBlack.IsLoaded) TexPlaceholderBlack.Unload();
 			if (TexPlaceholderTransparent != null && TexPlaceholderTransparent.IsLoaded) TexPlaceholderTransparent.Unload();
+			if (TexPlaceholderMagenta != null && TexPlaceholderMagenta.IsLoaded) TexPlaceholderMagenta.Unload();
 
 			if (_disposing)
 			{
@@ -102,6 +104,7 @@ namespace FragEngine3.Graphics
 				TexPlaceholderGray = ResourceHandle.None;
 				TexPlaceholderBlack = ResourceHandle.None;
 				TexPlaceholderTransparent = ResourceHandle.None;
+				TexPlaceholderMagenta = ResourceHandle.None;
 			}
 
 			graphicsCore.Dispose();
@@ -139,8 +142,8 @@ namespace FragEngine3.Graphics
 			}
 
 			string applicationPath = engine.ResourceManager.fileGatherer.applicationPath;
-			string settingsDirPath = Path.Combine(applicationPath, GraphicsContants.SETTINGS_ROOT_DIR_REL_PATH);
-			string filePath = Path.GetFullPath(Path.Combine(settingsDirPath, GraphicsContants.SETTINGS_FILE_NAME));
+			string settingsDirPath = Path.Combine(applicationPath, GraphicsConstants.SETTINGS_ROOT_DIR_REL_PATH);
+			string filePath = Path.GetFullPath(Path.Combine(settingsDirPath, GraphicsConstants.SETTINGS_FILE_NAME));
 
 			if (!File.Exists(filePath))
 			{
@@ -175,8 +178,8 @@ namespace FragEngine3.Graphics
 			}
 
 			string applicationPath = engine.ResourceManager.fileGatherer.applicationPath;
-			string settingsDirPath = Path.Combine(applicationPath, GraphicsContants.SETTINGS_ROOT_DIR_REL_PATH);
-			string filePath = Path.GetFullPath(Path.Combine(settingsDirPath, GraphicsContants.SETTINGS_FILE_NAME));
+			string settingsDirPath = Path.Combine(applicationPath, GraphicsConstants.SETTINGS_ROOT_DIR_REL_PATH);
+			string filePath = Path.GetFullPath(Path.Combine(settingsDirPath, GraphicsConstants.SETTINGS_FILE_NAME));
 
 			return Serializer.SerializeJsonToFile(settings, filePath);
 		}
@@ -247,6 +250,10 @@ namespace FragEngine3.Graphics
 			if (success &= CreatePlaceholderTexture("TexTransparent", new RgbaByte(0, 0, 0, 0), out texHandle))
 			{
 				TexPlaceholderTransparent = texHandle;
+			}
+			if (success &= CreatePlaceholderTexture("TexMagenta", new RgbaByte(255, 0, 255, 255), out texHandle))
+			{
+				TexPlaceholderMagenta = texHandle;
 			}
 
 			return success;

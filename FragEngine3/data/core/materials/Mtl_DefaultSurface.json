@@ -42,7 +42,27 @@
     },
     "Resources":
     {
-        "BoundResourceCount": 0,
-        "BoundResources": null
+        "BoundResourceCount": 2,
+        "BoundResources":
+        [
+            {
+                "ResourceKey": "TexWhite",
+                "SlotName": "TexMain",
+                "SlotIndex": 2,
+                "ResourceKind": 3,
+                "ShaderStageFlags": 16,
+                "Description": null,
+                "IsBoundBySystem": false
+            },
+            {
+                "ResourceKey": "",
+                "SlotName": "SamplerMain",
+                "SlotIndex": 1,
+                "ResourceKind": 5,
+                "ShaderStageFlags": 16,
+                "Description": "WWW_7_N_W",
+                "IsBoundBySystem": false
+            }
+        ]
     }
 }

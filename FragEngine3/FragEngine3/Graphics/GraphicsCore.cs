@@ -31,7 +31,7 @@ namespace FragEngine3.Graphics
 
 		public PixelFormat DefaultColorTargetPixelFormat { get; protected set; } = PixelFormat.R8_G8_B8_A8_UNorm;
 		public PixelFormat DefaultDepthTargetPixelFormat { get; protected set; } = PixelFormat.D24_UNorm_S8_UInt;
-		public PixelFormat DefaultShadowMapDepthTargetFormat { get; protected set; } = PixelFormat.R16_UNorm;
+		public PixelFormat DefaultShadowMapDepthTargetFormat { get; protected set; } = PixelFormat.D24_UNorm_S8_UInt;
 
 		protected readonly List<CommandList> cmdListQueue = new(1);
 
@@ -446,7 +446,7 @@ namespace FragEngine3.Graphics
 		/// NOTE: This is used internally to create single-color placeholder textures held by the graphics system.
 		/// </summary>
 		/// <param name="_fillColor">The color to fill all pixels of the texture with.</param>
-		/// <param name="_outTexture">Outputs a new texture with a size of 8x8 pixels, that are all of the same color.
+		/// <param name="_outTexture">Outputs a new 2D texture with a size of 8x8 pixels, that are all of the same color.
 		/// This may be null if texture creation fails.</param>
 		/// <returns>True if a texture was created and colored successfully, false otherwise. All outputs will be disposed
 		/// on failure.</returns>
@@ -496,61 +496,7 @@ namespace FragEngine3.Graphics
 			return true;
 		}
 
-		public bool CreateShadowMapArray(uint _resolutionX, uint _resolutionY, uint _arraySize, out Texture _outTexShadowMapArray)
-		{
-			if (!IsInitialized)
-			{
-				Logger.LogError("Cannot create shadow map texture array using initialized graphics core!");
-				_outTexShadowMapArray = null!;
-				return false;
-			}
-
-			_resolutionX = Math.Max(_resolutionX, 8);
-			_resolutionY = Math.Max(_resolutionY, 8);
-			_arraySize = Math.Max(_arraySize, 1);
-
-			const int depth = 1;
-
-			// Create a 2D texture array in single-channel 16-bit float format:
-			TextureDescription textureArrayDesc = new(
-				_resolutionX,
-				_resolutionY,
-				depth,
-				1,
-				_arraySize,
-				DefaultShadowMapDepthTargetFormat,
-				TextureUsage.Sampled | TextureUsage.DepthStencil,
-				TextureType.Texture2D);
-
-			try
-			{
-				_outTexShadowMapArray = MainFactory.CreateTexture(ref textureArrayDesc);
-				_outTexShadowMapArray.Name = $"TexShadowMapArray_{_resolutionX}x{_resolutionY}_count={_arraySize}";
-			}
-			catch (Exception ex)
-			{
-				Logger.LogException($"Failed to create shadow map texture array! (Resolution: {_resolutionX}x{_resolutionY}, count={_arraySize})", ex);
-				_outTexShadowMapArray = null!;
-				return false;
-			}
-
-			// First element is always the default/blank texture, with depth set to maximum:
-			bool wasCleared = DefaultShadowMapDepthTargetFormat switch
-			{
-				PixelFormat.R16_UNorm =>			FillTexture(_outTexShadowMapArray, ushort.MaxValue,	_resolutionX, _resolutionY, depth, 0, 0),
-				PixelFormat.R32_Float =>			FillTexture(_outTexShadowMapArray, 1.0f,			_resolutionX, _resolutionY, depth, 0, 0),
-				PixelFormat.D24_UNorm_S8_UInt =>	FillTexture(_outTexShadowMapArray, 0xFFFFFF00u,		_resolutionX, _resolutionY, depth, 0, 0),
-				PixelFormat.D32_Float_S8_UInt =>	FillTexture(_outTexShadowMapArray, 1.0f,			_resolutionX, _resolutionY, depth, 0, 0),
-				_ => false,
-			};
-			if (!wasCleared)
-			{
-				Logger.LogError("Failed to clear first layer of shadow map texture array to maximum depth!");
-			}
-			return wasCleared;
-		}
-
-		private bool FillTexture<T>(Texture _texture, T _fillValue, uint _resolutionX, uint _resolutionY, uint _depth = 1, uint _mipLevel = 0, uint _arrayLayer = 0) where T : unmanaged
+		internal bool FillTexture<T>(Texture _texture, T _fillValue, uint _resolutionX, uint _resolutionY, uint _depth = 1, uint _mipLevel = 0, uint _arrayLayer = 0) where T : unmanaged
 		{
 			uint pixelCount = _resolutionX * _resolutionY * _depth;
 			T[] pixelData = new T[pixelCount];

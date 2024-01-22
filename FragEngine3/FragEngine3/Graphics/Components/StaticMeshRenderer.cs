@@ -1,8 +1,8 @@
 ﻿using FragEngine3.Containers;
 using FragEngine3.Graphics.Components.Data;
-using FragEngine3.Graphics.Components.Utility;
 using FragEngine3.Graphics.Contexts;
 using FragEngine3.Graphics.Resources;
+using FragEngine3.Graphics.Utility;
 using FragEngine3.Resources;
 using FragEngine3.Scenes;
 using FragEngine3.Scenes.Data;
@@ -23,9 +23,9 @@ namespace FragEngine3.Graphics.Components
 		private Material? material = null;
 		private Material? shadowMaterial = null;
 
-		private DeviceBuffer? objectDataConstantBuffer = null;
-		private DeviceBuffer? shadowObjectDataConstantBuffer = null;
-		private ResourceSet? defaultResourceSet = null;
+		private DeviceBuffer? cbObject = null;
+		private ResourceSet? resSetObject = null;
+
 		private VersionedMember<Pipeline> pipeline = new(null!, 0);
 		private VersionedMember<Pipeline> shadowPipeline = new(null!, 0);
 
@@ -66,16 +66,14 @@ namespace FragEngine3.Graphics.Components
 		{
 			base.Dispose(_disposing);
 
-			objectDataConstantBuffer?.Dispose();
-			shadowObjectDataConstantBuffer?.Dispose();
+			cbObject?.Dispose();
 
 			pipeline.DisposeValue();
 			shadowPipeline.DisposeValue();
 
 			if (_disposing)
 			{
-				objectDataConstantBuffer = null;
-				shadowObjectDataConstantBuffer = null;
+				cbObject = null;
 
 				MeshHandle = null;
 				Mesh = null;
@@ -250,7 +248,7 @@ namespace FragEngine3.Graphics.Components
 			return Vector3.DistanceSquared(posFront, _viewportPosition);
 		}
 
-		public bool Draw(CameraContext _cameraCtx)
+		public bool Draw(SceneContext _sceneCtx, CameraPassContext _cameraPassCtx)
 		{
 			// Ensure main material is loaded:
 			if (!ResourceLoadUtility.EnsureResourceIsLoaded(MaterialHandle, ref material, DontDrawUnlessFullyLoaded, out bool materialIsReady))
@@ -260,10 +258,10 @@ namespace FragEngine3.Graphics.Components
 			if (!materialIsReady) return true;
 
 			// Draw material if it's fully loaded, quietly quit otherwise:
-			return material == null || Draw(_cameraCtx, Material!, ref pipeline, ref objectDataConstantBuffer);
+			return material == null || Draw(_sceneCtx, _cameraPassCtx, Material!, ref pipeline);
 		}
 
-		public bool DrawShadowMap(CameraContext _cameraCtx)
+		public bool DrawShadowMap(SceneContext _sceneCtx, CameraPassContext _cameraPassCtx)
 		{
 			// Ensure main material is loaded:
 			if (!ResourceLoadUtility.EnsureResourceIsLoaded(MaterialHandle, ref material, DontDrawUnlessFullyLoaded, out bool materialIsReady))
@@ -283,10 +281,14 @@ namespace FragEngine3.Graphics.Components
 			}
 
 			// Draw shadow material if it's fully loaded, quietly quit otherwise:
-			return !materialIsReady || Draw(_cameraCtx, shadowMaterial!, ref shadowPipeline, ref shadowObjectDataConstantBuffer);
+			return !materialIsReady || Draw(_sceneCtx, _cameraPassCtx, shadowMaterial!, ref shadowPipeline);
 		}
 
-		private bool Draw(CameraContext _cameraCtx, Material _currentMaterial, ref VersionedMember<Pipeline> _currentPipeline, ref DeviceBuffer? _currentObjectDataConstantBuffer)
+		private bool Draw(
+			in SceneContext _sceneCtx,
+			in CameraPassContext _cameraPassCtx,
+			Material _currentMaterial,
+			ref VersionedMember<Pipeline> _currentPipeline)
 		{
 			// Check mesh and load it now if necessary:
 			if (Mesh == null || Mesh.IsDisposed)
@@ -318,47 +320,59 @@ namespace FragEngine3.Graphics.Components
 				return false;
 			}
 
-			// Update or (re)create the constant buffer containing object data:
-			if (!MeshRendererUtility.UpdateObjectDataConstantBuffer(in core, in node, BoundingRadius, ref _currentObjectDataConstantBuffer, _cameraCtx.cmdList))
-			{
-				return false;
-			}
-
 			// Update (or recreate) pipeline for rendering this material and geometry combo:
 			if (!_currentMaterial.IsPipelineUpToDate(in _currentPipeline, rendererVersion))
 			{
 				_currentPipeline.DisposeValue();
-				if (!_currentMaterial.CreatePipeline(_cameraCtx, rendererVersion, vertexDataFlags, out _currentPipeline))
+				if (!_currentMaterial.CreatePipeline(_sceneCtx, _cameraPassCtx, rendererVersion, vertexDataFlags, out _currentPipeline))
 				{
 					Logger.LogError($"Failed to retrieve pipeline description for material '{_currentMaterial}'!");
 					return false;
 				}
 			}
 
+			// Update or (re)create the constant buffer containing object data:
+			if (!MeshRendererUtility.UpdateConstantBuffer_CBObject(
+				in core,
+				in node,
+				BoundingRadius,
+				ref cbObject,
+				out bool cbObjectChanged))
+			{
+				return false;
+			}
+
 			// Ensure the default resource set is assigned:
-			if (!MeshRendererUtility.UpdateDefaultResourceSet(_currentMaterial, in _cameraCtx, in _currentObjectDataConstantBuffer!, ref defaultResourceSet))
+			if (!MeshRendererUtility.UpdateObjectResourceSet(
+				in core,
+				in _sceneCtx.resLayoutObject,
+				in cbObject!,
+				node.Name,
+				ref resSetObject,
+				cbObjectChanged))
 			{
 				return false;
 			}
 
 			// Throw pipeline and geometry buffers at the command list:
-			_cameraCtx.cmdList.SetPipeline(_currentPipeline.Value);
-			_cameraCtx.cmdList.SetGraphicsResourceSet(0, defaultResourceSet);
+			_cameraPassCtx.cmdList.SetPipeline(_currentPipeline.Value);
+			_cameraPassCtx.cmdList.SetGraphicsResourceSet(0, _cameraPassCtx.resSetCamera);
+			_cameraPassCtx.cmdList.SetGraphicsResourceSet(1, resSetObject);
 
 			ResourceSet? boundResourceSet = overrideBoundResourceSet ?? _currentMaterial.BoundResourceSet;
 			if (boundResourceSet != null && _currentMaterial.BoundResourceLayout != null)
 			{
-				_cameraCtx.cmdList.SetGraphicsResourceSet(1, boundResourceSet);
+				_cameraPassCtx.cmdList.SetGraphicsResourceSet(2, boundResourceSet);
 			}
 
 			for (uint i = 0; i < vertexBuffers.Length; ++i)
 			{
-				_cameraCtx.cmdList.SetVertexBuffer(i, vertexBuffers[i]);
+				_cameraPassCtx.cmdList.SetVertexBuffer(i, vertexBuffers[i]);
 			}
-			_cameraCtx.cmdList.SetIndexBuffer(indexBuffer, Mesh.IndexFormat);
+			_cameraPassCtx.cmdList.SetIndexBuffer(indexBuffer, Mesh.IndexFormat);
 
 			// Issue draw call:
-			_cameraCtx.cmdList.DrawIndexed(Mesh.IndexCount);
+			_cameraPassCtx.cmdList.DrawIndexed(Mesh.IndexCount);
 
 			return true;
 		}

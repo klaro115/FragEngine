@@ -71,8 +71,8 @@ namespace FragEngine3.Graphics.Resources
 		public override VertexLayoutDescription[] GetVertexLayoutDesc()
 		{
 			return useFullSurfaceDef
-				? GraphicsContants.SURFACE_VERTEX_LAYOUT_EXTENDED
-				: GraphicsContants.SURFACE_VERTEX_LAYOUT_BASIC;
+				? GraphicsConstants.SURFACE_VERTEX_LAYOUT_EXTENDED
+				: GraphicsConstants.SURFACE_VERTEX_LAYOUT_BASIC;
 		}
 
 		public bool SetGeometry(in MeshSurfaceData _surfaceData)

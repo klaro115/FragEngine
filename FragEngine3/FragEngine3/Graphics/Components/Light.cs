@@ -2,6 +2,7 @@
 using FragEngine3.Graphics.Components.ConstantBuffers;
 using FragEngine3.Graphics.Components.Data;
 using FragEngine3.Graphics.Contexts;
+using FragEngine3.Graphics.Utility;
 using FragEngine3.Scenes;
 using FragEngine3.Scenes.Data;
 using FragEngine3.Scenes.EventSystem;
@@ -30,13 +31,13 @@ namespace FragEngine3.Graphics.Components
 			/// Cone-shaped light source. All light rays are cast from a single point and in one general
 			/// direction, with rays distributed evenly across a given angle.
 			/// </summary>
-			Spot,
+			Spot			= 1,
 			/// <summary>
 			/// Directional sun-like light source. Light rays are cast following a single direction across
 			/// the entire world space. The light does not attenuate over increasing distances, and is not
 			/// tied to the source's position.
 			/// </summary>
-			Directional,
+			Directional		= 2,
 		}
 
 		#endregion
@@ -71,18 +72,22 @@ namespace FragEngine3.Graphics.Components
 		/// </summary>
 		public uint layerMask = 0xFFu;
 
+		// Light settings:
 		public RgbaFloat lightColor = RgbaFloat.White;
 		private float lightIntensity = 1.0f;
 		private float maxLightRange = 1.0e+8f;
 		private float maxLightRangeSq = 1.0e+8f;
 		private float spotAngleRad = 30.0f * DEG2RAD;
 
-		// Shadow maps:
+		// Shadow settings:
+		private float shadowBias = 0.03f;
+
+		// Shadow resources:
 		private CameraInstance? shadowCameraInstance = null;
 		private Framebuffer? shadowMapFrameBuffer = null;
-		private DeviceBuffer? shadowGlobalConstantBuffer = null;
+		private DeviceBuffer? shadowCbCamera = null;
+		private ResourceSet? shadowResSetCamera = null;
 		private Matrix4x4 mtxShadowWorld2Clip = Matrix4x4.Identity;
-		private Matrix4x4 mtxShadowWorld2Uv = Matrix4x4.Identity;
 		private uint shadowMapIdx = 0;
 
 		#endregion
@@ -115,34 +120,6 @@ namespace FragEngine3.Graphics.Components
 				type = value;
 				maxLightRange = type != LightType.Directional ? MathF.Sqrt(lightIntensity / MIN_LIGHT_INTENSITY) : 1.0e+8f;
 				maxLightRangeSq = maxLightRange * maxLightRange;
-			}
-		}
-
-		/// <summary>
-		/// Gets or sets whether this light source should cast shadows.<para/>
-		/// NOTE: If true, before scene cameras are drawn, a shadow map will be rendered for this light source.
-		/// When changing this value to false, the shadow map and its framebuffer will be disposed. This flag
-		/// may not be changed during the engine's drawing stage.<para/>
-		/// LIMITATION: Point lights cannot casts shadows at this stage. Use spot or directional lights if shadows
-		/// are required.
-		/// </summary>
-		public bool CastShadows
-		{
-			get => castShadows && type != LightType.Point;
-			set
-			{
-				castShadows = value;
-				if (!castShadows)
-				{
-					shadowMapIdx = 0;
-
-					shadowCameraInstance?.Dispose();
-					shadowMapFrameBuffer?.Dispose();
-					shadowGlobalConstantBuffer?.Dispose();
-					shadowCameraInstance = null;
-					shadowMapFrameBuffer = null;
-					shadowGlobalConstantBuffer = null;
-				}
 			}
 		}
 
@@ -186,6 +163,40 @@ namespace FragEngine3.Graphics.Components
 		}
 
 		/// <summary>
+		/// Gets or sets whether this light source should cast shadows.<para/>
+		/// NOTE: If true, before scene cameras are drawn, a shadow map will be rendered for this light source.
+		/// When changing this value to false, the shadow map and its framebuffer will be disposed. This flag
+		/// may not be changed during the engine's drawing stage.<para/>
+		/// LIMITATION: Point lights cannot casts shadows at this stage. Use spot or directional lights if shadows
+		/// are required.
+		/// </summary>
+		public bool CastShadows
+		{
+			get => castShadows && type != LightType.Point;
+			set
+			{
+				castShadows = value;
+				if (!castShadows)
+				{
+					shadowMapIdx = 0;
+
+					shadowCameraInstance?.Dispose();
+					shadowMapFrameBuffer?.Dispose();
+					shadowCbCamera?.Dispose();
+					shadowCameraInstance = null;
+					shadowMapFrameBuffer = null;
+					shadowCbCamera = null;
+				}
+			}
+		}
+
+		public float ShadowBias
+		{
+			get => shadowBias;
+			set => shadowBias = Math.Clamp(value, 0, 10);
+		}
+
+		/// <summary>
 		/// Gets the world space position of the light source. Only relevant for point and spot lights.
 		/// </summary>
 		public Vector3 WorldPosition => node.WorldPosition;
@@ -203,7 +214,8 @@ namespace FragEngine3.Graphics.Components
 
 			shadowCameraInstance?.Dispose();
 			shadowMapFrameBuffer?.Dispose();
-			shadowGlobalConstantBuffer?.Dispose();
+			shadowCbCamera?.Dispose();
+			shadowResSetCamera?.Dispose();
 		}
 
 		public override void ReceiveSceneEvent(SceneEventType _eventType, object? _eventData)
@@ -215,11 +227,22 @@ namespace FragEngine3.Graphics.Components
 			}
 		}
 
+		public static int CompareLightsForSorting(Light _a, Light _b)
+		{
+			int weightA = _a.lightPriority + (_a.castShadows ? 1000 : 0);
+			int weightB = _b.lightPriority + (_b.castShadows ? 1000 : 0);
+			return weightB.CompareTo(weightA);
+		}
+
 		/// <summary>
 		/// Get a nicely packed structure containing all information about this light source for upload to a GPU buffer.
 		/// </summary>
 		public LightSourceData GetLightSourceData()
 		{
+			float spotMinDot = type == LightType.Spot
+				? MathF.Cos(spotAngleRad * 0.5f)
+				: 0;
+
 			return new()
 			{
 				color = new Vector3(lightColor.R, lightColor.G, lightColor.B),
@@ -227,36 +250,39 @@ namespace FragEngine3.Graphics.Components
 				position = WorldPosition,
 				type = (uint)type,
 				direction = type != LightType.Point ? Direction : Vector3.UnitZ,
-				spotAngleAcos = type == LightType.Spot ? MathF.Acos(spotAngleRad * 0.5f) : 0,
-				mtxShadowWorld2Uv = mtxShadowWorld2Uv,
+				spotMinDot = spotMinDot,
+				mtxShadowWorld2Clip = mtxShadowWorld2Clip,
 				shadowMapIdx = shadowMapIdx,
+				shadowBias = shadowBias,
 			};
 		}
 
 		public bool BeginDrawShadowMap(
+			in SceneContext _sceneCtx,
 			in CommandList _cmdList,
-			in Texture _texShadowMapArray,
-			in DeviceBuffer _dummyLightDataBuffer,
+			in DeviceBuffer _dummyBufLights,
 			Vector3 _shadingFocalPoint,
 			float _shadingFocalPointRadius,
 			uint _newShadowMapIdx,
-			out CameraContext _outCameraCtx)
+			out CameraPassContext _outCameraPassCtx,
+			bool _rebuildResSetCamera = false,
+			bool _texShadowMapsHasChanged = false)
 		{
 			if (IsDisposed)
 			{
-				_outCameraCtx = null!;
+				_outCameraPassCtx = null!;
 				Logger.LogError("Can't begin drawing shadow map for disposed light source!");
 				return false;
 			}
 			if (!CastShadows)
 			{
-				_outCameraCtx = null!;
+				_outCameraPassCtx = null!;
 				return false;
 			}
-			if (_texShadowMapArray == null || _texShadowMapArray.IsDisposed)
+			if (_sceneCtx.texShadowMaps == null || _sceneCtx.texShadowMaps.IsDisposed)
 			{
 				Logger.LogError("Can't begin drawing shadow map using null shadow map texture array!");
-				_outCameraCtx = null!;
+				_outCameraPassCtx = null!;
 				return false;
 			}
 
@@ -265,12 +291,14 @@ namespace FragEngine3.Graphics.Components
 			shadowMapIdx = _newShadowMapIdx;
 
 			// Ensure render targets are created and assigned:
-			if (shadowMapFrameBuffer == null || shadowMapFrameBuffer.IsDisposed)
+			if (_texShadowMapsHasChanged || shadowMapFrameBuffer == null || shadowMapFrameBuffer.IsDisposed)
 			{
+				_rebuildResSetCamera = true;
+
 				shadowCameraInstance?.Dispose();
 				shadowCameraInstance = null;
 
-				FramebufferAttachmentDescription depthTargetDesc = new(_texShadowMapArray, shadowMapIdx, 0);
+				FramebufferAttachmentDescription depthTargetDesc = new(_sceneCtx.texShadowMaps, shadowMapIdx, 0);
 				FramebufferDescription shadowMapFrameBufferDesc = new(depthTargetDesc, []);
 
 				try
@@ -283,7 +311,7 @@ namespace FragEngine3.Graphics.Components
 					shadowMapFrameBuffer?.Dispose();
 					shadowMapFrameBuffer = null;
 					Logger.LogException("Failed to create framebuffer for drawing light component's shadow map!", ex);
-				_outCameraCtx = null!;
+					_outCameraPassCtx = null!;
 					return false;
 				}
 			}
@@ -291,37 +319,68 @@ namespace FragEngine3.Graphics.Components
 			// Ensure a camera instance is ready for drawing the scene:
 			if (shadowCameraInstance == null || shadowCameraInstance.IsDisposed)
 			{
-				if (!CameraUtility.UpdateOrCreateShadowMapCameraInstance(
+				if (!ShadowMapUtility.UpdateOrCreateShadowMapCameraInstance(
 					in core,
 					in shadowMapFrameBuffer,
 					in mtxShadowWorld2Clip,
-					in mtxShadowWorld2Uv,
 					type == LightType.Directional,
 					_shadingFocalPointRadius,
 					spotAngleRad,
 					ref shadowCameraInstance))
 				{
-					_outCameraCtx = null!;
+					_outCameraPassCtx = null!;
 					return false;
 				}
 			}
+			if (_texShadowMapsHasChanged)
+			{
+				shadowCameraInstance!.SetOverrideFramebuffer(shadowMapFrameBuffer, true);
+			}
 
 			// Update or create global constant buffer with scene and camera information for the shaders:
-			if (!CameraUtility.UpdateGlobalConstantBuffer(
-				in node.scene,
-				shadowCameraInstance!,
+			if (!CameraUtility.UpdateConstantBuffer_CBCamera(
+				in shadowCameraInstance!,
 				node.WorldTransformation,
 				in mtxShadowWorld2Clip,
+				Matrix4x4.Identity,
+				shadowMapIdx,
 				0,
-				ref shadowGlobalConstantBuffer))
+				0,
+				ref shadowCbCamera,
+				out bool cbCameraChanged))
 			{
-				Logger.LogError("Failed to update global constant buffer for drawing light component's shadow map!");
-				_outCameraCtx = null!;
+				Logger.LogError("Failed to update camera constant buffer for drawing light component's shadow map!");
+				_outCameraPassCtx = null!;
+				return false;
+			}
+			_rebuildResSetCamera |= cbCameraChanged;
+
+			// Camera's default resource set:
+			if (!CameraUtility.UpdateOrCreateCameraResourceSet(
+				in core,
+				in _sceneCtx,
+				in shadowCbCamera!,
+				in _dummyBufLights!,
+				ref shadowResSetCamera,
+				_rebuildResSetCamera))
+			{
+				Logger.LogError("Failed to allocate or update camera's default resource set!");
+				_outCameraPassCtx = null!;
 				return false;
 			}
 
 			// Assemble context object for renderers to reference when issuing draw calls:
-			_outCameraCtx = new(shadowCameraInstance!, _cmdList, shadowGlobalConstantBuffer!, _dummyLightDataBuffer, _texShadowMapArray, shadowMapFrameBuffer.OutputDescription);
+			_outCameraPassCtx = new(
+				shadowCameraInstance!,
+				_cmdList,
+				shadowMapFrameBuffer,
+				shadowResSetCamera!,
+				shadowCbCamera!,
+				_dummyBufLights,
+				0,
+				_newShadowMapIdx,
+				0,
+				0);
 
 			// Bind framebuffers and clear targets:
 			if (!shadowCameraInstance!.BeginDrawing(_cmdList, true, false, out _))
@@ -361,11 +420,32 @@ namespace FragEngine3.Graphics.Components
 					break;
 				case LightType.Directional:
 					{
+						Vector3 lightDir = Direction;
+						Quaternion worldRot = node.WorldRotation;
+						Vector3 worldUp = Vector3.Transform(Vector3.UnitY, worldRot);
+						Vector3 cameraDir = Camera.MainCamera!.node.WorldForward;	//TODO / TEMP
+						
+						// Orient light map projection to have its pixel grid roughly aligned with the camera's direction:
+						Vector3 lightDirProj = Vector3.Normalize(VectorExt.ProjectToPlane(cameraDir, lightDir));
+						float cameraRotAngle = VectorExt.Angle(worldUp, lightDirProj, true);
+						Quaternion cameraRot = Quaternion.CreateFromAxisAngle(lightDir, cameraRotAngle);
+
+
+
+
+
+
+						const float maxDirectionalRange = ShadowMapUtility.directionalLightSize;
+
 						// Transform from a world space position (relative to a given focal point), to orthographics projection space, to shadow map UV coordinates:
-						float maxDirectionalRange = _shadingFocalPointRadius;
-						Matrix4x4 mtxWorld2Focal = Matrix4x4.CreateTranslation(_shadingFocalPoint - Direction * maxDirectionalRange * 0.5f);
-						Matrix4x4 mtxFocal2Clip = Matrix4x4.CreateOrthographicLeftHanded(_shadingFocalPointRadius, _shadingFocalPointRadius, 0.01f, maxDirectionalRange);
-						mtxShadowWorld2Clip = mtxWorld2Focal * mtxFocal2Clip;
+						Vector3 posOrigin = _shadingFocalPoint - lightDir * maxDirectionalRange * 0.5f;
+						Pose originPose = new(posOrigin, cameraRot * worldRot, Vector3.One, false);
+						if (!Matrix4x4.Invert(originPose.Matrix, out Matrix4x4 mtxWorld2Local))
+						{
+							mtxWorld2Local = Matrix4x4.Identity;
+						}
+						Matrix4x4 mtxLocal2Clip = Matrix4x4.CreateOrthographicLeftHanded(maxDirectionalRange, maxDirectionalRange, 0.01f, maxDirectionalRange);		//TODO [later]: this works, but it's pretty bad.
+						mtxShadowWorld2Clip = mtxWorld2Local * mtxLocal2Clip;
 					}
 					break;
 				default:
@@ -375,8 +455,19 @@ namespace FragEngine3.Graphics.Components
 					break;
 			}
 
-			Matrix4x4 mtxClip2Uv = Matrix4x4.CreateViewportLeftHanded(0, 0, 1, 1, 0, 1);
-			mtxShadowWorld2Uv = mtxShadowWorld2Clip * mtxClip2Uv;
+			mtxShadowWorld2Clip *= Matrix4x4.CreateScale(1, -1, 1);
+		}
+
+		/// <summary>
+		/// Check whether light emitted by this light source has any chance of being seen by a given camera.
+		/// </summary>
+		/// <param name="_camera">The camera whose pixels may or may not be illuminated by this light source.</param>
+		/// <returns>True if this instance's light could possible be seen by the camera, false otherwise.</returns>
+		public bool CheckVisibilityByCamera(in Camera _camera)
+		{
+			if (_camera == null) return false;
+
+			return true;	//TEMP / TODO [later]
 		}
 
 		public override bool LoadFromData(in ComponentData _componentData, in Dictionary<int, ISceneElement> _idDataMap)

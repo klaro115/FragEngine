@@ -4,7 +4,7 @@ using Veldrid;
 
 namespace FragEngine3.Graphics
 {
-	public static class GraphicsContants
+	public static class GraphicsConstants
 	{
 		#region Constants
 
@@ -70,12 +70,27 @@ namespace FragEngine3.Graphics
 		#endregion
 		#region Constants Pipelines
 
+		public static readonly ResourceLayoutElementDescription[] DEFAULT_CAMERA_RESOURCE_LAYOUT_DESC =
+		[
+			CBScene.resourceLayoutElementDesc,							// Constant buffer with scene-wide data.
+			CBCamera.resourceLayoutElementDesc,							// Constant buffer with camera-specific data.
+			LightSourceData.ResourceLayoutElementDescLightBuffer,		// Structured buffer containing light data.
+			LightSourceData.ResourceLayoutElementDescTexShadowMaps,		// Texture array containing shadow maps.
+			LightSourceData.ResourceLayoutElementDescSamplerShadowMaps,	// Sampler used for reading shadow maps.
+		];
+		public static readonly ResourceLayoutElementDescription[] DEFAULT_OBJECT_RESOURCE_LAYOUT_DESC =								//TODO: Change material's resource layouts and renderers' resource sets to use this instead.
+		[
+			CBObject.resourceLayoutElementDesc,							// Constant buffer with object-specific data.
+		];
+
+		[Obsolete($"Replaced by {nameof(DEFAULT_CAMERA_RESOURCE_LAYOUT_DESC)} and {nameof(DEFAULT_OBJECT_RESOURCE_LAYOUT_DESC)}")]
 		public static readonly ResourceLayoutElementDescription[] DEFAULT_SURFACE_RESOURCE_LAYOUT_DESC =
 		[
-			GlobalConstantBuffer.ResourceLayoutElementDesc,			// Global constant buffer, CBGlobal
-			ObjectDataConstantBuffer.ResourceLayoutElementDesc,		// Object constant buffer, CBObject
-			LightSourceData.ResourceLayoutElementDescLightBuffer,	// Light data buffer, BufLights
-			LightSourceData.ResourceLayoutElementDescShadowMaps,	// Shadow map texture array, TexShadowMaps
+			CBScene.resourceLayoutElementDesc,							// Scene constant buffer, CBScene
+			CBCamera.resourceLayoutElementDesc,							// Scene constant buffer, CBCamera
+			CBObject.resourceLayoutElementDesc,							// Object constant buffer, CBObject
+			LightSourceData.ResourceLayoutElementDescLightBuffer,		// Light data buffer, BufLights
+			LightSourceData.ResourceLayoutElementDescTexShadowMaps,		// Shadow map texture array, TexShadowMaps
 		];
 
 		/// <summary>
