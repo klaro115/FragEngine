@@ -78,6 +78,7 @@ namespace FragEngine3.EngineCore.Test
 		protected override bool BeginRunningState()
 		{
 			// Import 3D models:
+			Engine.ResourceManager.GetAndLoadResource("TexFlauschi512", true, out _);
 			Engine.ResourceManager.GetAndLoadResource("Mtl_TestMaterial", true, out _);
 			Engine.ResourceManager.GetAndLoadResource("Mtl_DefaultSurface", true, out _);
 			Engine.ResourceManager.GetAndLoadResource("ForwardPlusLight_Composition_PS", true, out _);
@@ -123,7 +124,7 @@ namespace FragEngine3.EngineCore.Test
 			{
 				light.node.WorldPosition = new Vector3(0, 5, 0);
 				light.node.SetRotationFromYawPitchRoll(22.5f, 45, 0, true, true);
-				light.node.SetEnabled(false);
+				//light.node.SetEnabled(false);
 
 				//light.LightIntensity = 0.5f;
 				light.CastShadows = true;
@@ -150,7 +151,7 @@ namespace FragEngine3.EngineCore.Test
 			{
 				light.node.WorldPosition = new Vector3(-4, 5, -4);
 				light.node.SetRotationFromYawPitchRoll(22.5f, 45, 0, true, true);
-				//light.node.SetEnabled(false);
+				light.node.SetEnabled(false);
 
 				//light.lightColor = RgbaFloat.Red;
 				light.LightIntensity = 15;

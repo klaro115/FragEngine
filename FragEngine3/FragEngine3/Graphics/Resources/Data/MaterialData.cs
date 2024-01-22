@@ -184,7 +184,7 @@ namespace FragEngine3.Graphics.Resources.Data
 					resData.ResourceKind,
 					resData.Description);
 
-				if (string.IsNullOrEmpty(resData.ResourceKey) || resData.IsBoundBySystem)
+				if (resData.IsBoundBySystem || (string.IsNullOrEmpty(resData.ResourceKey) && resData.ResourceKind != ResourceKind.Sampler))
 				{
 					_outUseExternalBoundResources = true;
 				}

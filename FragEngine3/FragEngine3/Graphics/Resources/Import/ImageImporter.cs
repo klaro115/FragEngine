@@ -96,8 +96,7 @@ namespace FragEngine3.Graphics.Resources.Import
 		public static bool ImportImageData(
 			Stream _stream,
 			string _formatExt,
-			out RawImageData? _outImageData
-			/* out ... */)
+			out RawImageData? _outImageData)
 		{
 			if (_stream == null || !_stream.CanRead)
 			{

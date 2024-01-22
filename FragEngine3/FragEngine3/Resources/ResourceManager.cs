@@ -527,7 +527,7 @@ namespace FragEngine3.Resources
 					break;
 				case ResourceType.Texture:
 					if ((success = ImageImporter.ImportImageData(this, _handle, out RawImageData? rawImageData) && rawImageData != null) &&
-						(success = TextureResource.CreateTexture(_handle, engine.GraphicsSystem.graphicsCore, out TextureResource? texture)))		//TODO [important]: Pass raw image data to texture creation!
+						(success = TextureResource.CreateTexture(_handle, engine.GraphicsSystem.graphicsCore, rawImageData!, out TextureResource? texture)))
 					{
 						_assignResourceCallback(texture);
 					}

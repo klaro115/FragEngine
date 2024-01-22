@@ -1,55 +1,79 @@
 ﻿using FragEngine3.EngineCore;
-using System.Collections;
 using Veldrid;
 
 namespace FragEngine3.Graphics.Resources.Data
 {
-	public sealed class RawImageData : IEnumerable<Color32>
+	public sealed class RawImageData
 	{
 		#region Fields
 
-		public PixelFormat pixelFormat = PixelFormat.B8_G8_R8_A8_UNorm_SRgb;
+		// Image & format parameters:
 		public uint width = 0;
 		public uint height = 0;
 		public uint dpi = 0;
+		public uint bitsPerPixel = 32;
+		public uint channelCount = 4;
+		public bool isSrgb = true;
 
-		public Color32[] pixelData = [];
+		// Pixel data arrays:
+		public byte[]? pixelData_MonoByte = null;
+		public float[]? pixelData_MonoFloat = null;
+		public RgbaByte[]? pixelData_RgbaByte = null;
+		public RgbaFloat[]? pixelData_RgbaFloat = null;
 
 		#endregion
 		#region Properties
 
-		public bool IsValid => pixelData != null && PixelCount <= pixelData.Length;
-
 		public uint PixelCount => width * height;
-		public uint DataCount => Math.Min(pixelData != null ? (uint)pixelData.Length : 0u, PixelCount);
-
-		public uint MaxDataByteSize => width * height * Color32.byteSize;
-
-		public Color32 this[uint _pixelIdx]
-		{
-			get => _pixelIdx < pixelData.Length ? pixelData[_pixelIdx] : Color32.TransparentBlack;
-			set
-			{
-				if (_pixelIdx < pixelData.Length) pixelData[_pixelIdx] = value;
-			}
-		}
-		
-		public Color32 this[uint _x, uint _y]
+		public uint DataCount
 		{
 			get
 			{
-				uint pixelIdx = _y * width + _x;
-				return pixelIdx < pixelData.Length ? pixelData[pixelIdx] : Color32.TransparentBlack;
-			}
-			set
-			{
-				uint pixelIdx = _y * width + _x;
-				if (pixelIdx < pixelData.Length) pixelData[pixelIdx] = value;
+				Array? pixelData = GetPixelDataArray();
+				return pixelData != null ? Math.Min((uint)pixelData.Length, PixelCount) : 0u;
 			}
 		}
 
+		public uint MaxDataByteSize => width * height * (bitsPerPixel / 8);
+
 		#endregion
 		#region Methods
+
+		public bool IsValid()
+		{
+			Array? pixelData = GetPixelDataArray();
+			return pixelData != null && pixelData.Length >= PixelCount;
+		}
+
+		public Array? GetPixelDataArray() => bitsPerPixel switch
+		{
+			8 => pixelData_MonoByte,
+			32 => channelCount != 1 ? pixelData_RgbaByte : pixelData_MonoFloat,
+			128 => pixelData_RgbaFloat,
+			_ => null,
+		};
+
+		public PixelFormat GetPixelFormat()
+		{
+			switch (bitsPerPixel)
+			{
+				case 8:
+					return PixelFormat.R8_UNorm;
+				case 32:
+					if (channelCount != 1)
+					{
+						return isSrgb ? PixelFormat.R8_G8_B8_A8_UNorm_SRgb : PixelFormat.R8_G8_B8_A8_UNorm;
+					}
+					else
+					{
+						return PixelFormat.R32_Float;
+					}
+				case 128:
+					return PixelFormat.R32_G32_B32_A32_Float;
+				default:
+					return PixelFormat.B8_G8_R8_A8_UNorm;
+			}
+		}
 
 		/// <summary>
 		/// Reverse row order of the image, therefore mirroring its content vertically.<para/>
@@ -58,40 +82,67 @@ namespace FragEngine3.Graphics.Resources.Data
 		/// <returns>True if the image was mirrored vertically, false if the image was invalid.</returns>
 		public bool MirrorVertically()
 		{
-			if (!IsValid)
+			if (!IsValid())
 			{
 				Logger.Instance?.LogError("Cannot mirror invalid raw image along Y-axis!");
 				return false;
 			}
 
 			uint halfHeight = height / 2;
-
-			Color32[] rowBuffer = new Color32[width];
-			for (uint y = 0; y < halfHeight; ++y)
+			switch (bitsPerPixel)
 			{
-				long srcLineStartIdx = y * width;
-				long dstLineStartIdx = (height - y - 1) * width;
-
-				Array.Copy(pixelData, srcLineStartIdx, rowBuffer, 0, width);				// src => buffer
-				Array.Copy(pixelData, dstLineStartIdx, rowBuffer, srcLineStartIdx, width);  // dst => src
-				rowBuffer.CopyTo(pixelData, dstLineStartIdx);								// buffer => dst
+				case 8:
+					return MirrorVerticallyTyped(pixelData_MonoByte!);
+				case 32:
+					if (channelCount != 1)
+					{
+						return MirrorVerticallyTyped(pixelData_RgbaByte!);
+					}
+					else
+					{
+						return MirrorVerticallyTyped(pixelData_MonoFloat!);
+					}
+				case 128:
+					return MirrorVerticallyTyped(pixelData_RgbaFloat!);
+				default:
+					Logger.Instance?.LogError($"Cannot mirror raw image with unsupported pixel format! (bitsPerPixel={bitsPerPixel}, channelCount={channelCount})");
+					return false;
 			}
 
-			return true;
+
+			// Local helper method for mirroring pixel data arrays of arbitrary pixel size and layout:
+			bool MirrorVerticallyTyped<T>(T[] _pixelData)
+			{
+				T[] rowBuffer = new T[width];
+				try
+				{
+					for (uint y = 0; y < halfHeight; ++y)
+					{
+						long lowLineStartIdx = y * width;
+						long highLineStartIdx = (height - y - 1) * width;
+
+						Array.Copy(_pixelData, lowLineStartIdx, rowBuffer, 0, width);                   // low => buffer
+						Array.Copy(_pixelData, highLineStartIdx, _pixelData, lowLineStartIdx, width);   // high => low
+						rowBuffer.CopyTo(_pixelData, highLineStartIdx);                                 // buffer => high
+					}
+					return true;
+				}
+				catch (Exception)
+				{
+					Logger.Instance?.LogError($"Failed to mirror raw image! (bitsPerPixel={bitsPerPixel}, channelCount={channelCount})");
+					return false;
+				}
+			}
 		}
 
-		public IEnumerator<Color32> GetEnumerator()
+		public TextureDescription CreateTextureDescription()
 		{
-			for (uint i = 0; i < DataCount; ++i)
-			{
-				yield return pixelData[i];
-			}
+			return new TextureDescription(width, height, 1, 1, 1, GetPixelFormat(), TextureUsage.Sampled, TextureType.Texture2D, TextureSampleCount.Count1);
 		}
-		IEnumerator IEnumerable.GetEnumerator() => GetEnumerator();
 
 		public override string ToString()
 		{
-			return $"RawImageData (Resolution: {width}x{height}, Format: {pixelData}, Size: {MaxDataByteSize} bytes)";
+			return $"RawImageData (Resolution: {width}x{height}, Format: {GetPixelFormat()}, Size: {MaxDataByteSize} bytes)";
 		}
 
 		#endregion

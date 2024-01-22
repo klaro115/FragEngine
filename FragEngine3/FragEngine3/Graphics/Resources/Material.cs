@@ -256,7 +256,7 @@ namespace FragEngine3.Graphics.Resources
 				return false;
 			}
 
-			List<BindableResource> boundResources = new(boundResourceKeys.Length);
+			BindableResource[] boundResources = new BindableResource[boundResourceKeys.Length];
 			for (int i = 0; i < boundResourceKeys.Length; ++i)
 			{
 				MaterialData.BoundResourceKeys resourceKeys = boundResourceKeys[i];
@@ -286,22 +286,29 @@ namespace FragEngine3.Graphics.Resources
 						return false;
 					}
 
-					Resource? resource = handle.GetResource(true, true);
-					if (resource is TextureResource texture)
+					switch (handle.resourceType)
 					{
-						boundResources[resourceKeys.resourceIdx] = texture.Texture!;
-					}
-					else
-					{
-						Logger.LogWarning($"Unsupported or unknown resource type '{resource?.GetType().Name ?? "NULL"}' in material '{resourceKey}'");
-						boundResources[resourceKeys.resourceIdx] = null!;
+						case ResourceType.Texture:
+							{
+								TextureResource? resource = handle.GetResource(true, true) as TextureResource;
+								resource ??= core.graphicsSystem.TexPlaceholderMagenta.GetResource(false, false) as TextureResource;
+								boundResources[resourceKeys.resourceIdx] = resource?.Texture!;
+							}
+							break;
+						default:
+							{
+								Logger.LogWarning($"Unsupported or unknown resource type '{handle.resourceType}' in slot {resourceKeys.resourceIdx} of material '{resourceKey}'");
+								boundResources[resourceKeys.resourceIdx] = null!;
+							}
+							break;
 					}
 				}
 			}
 
 			try
 			{
-				ResourceSetDescription resourceSetDesc = new(boundResourceLayout, boundResources.ToArray());
+				ResourceSetDescription resourceSetDesc = new(boundResourceLayout, boundResources);
+
 				ResourceSet resourceSet = core.MainFactory.CreateResourceSet(ref resourceSetDesc);
 				resourceSet.Name = $"ResSet_Bound_{resourceKey}_v{materialVersion}";
 

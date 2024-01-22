@@ -174,7 +174,8 @@ half3 CalculateTotalLightIntensity(in float3 _worldPosition, in float3 _worldNor
 
 half4 Main_Pixel(in VertexOutput_Basic inputBasic) : SV_Target0
 {
-    half4 albedo = {1, 1, 1, 1};
+    // Sample base color from main texture:
+    half4 albedo = TexMain.Sample(SamplerMain, inputBasic.uv);
 
     // Apply basic phong lighting:
     half3 totalLightIntensity = CalculateTotalLightIntensity(inputBasic.worldPosition, inputBasic.normal);
