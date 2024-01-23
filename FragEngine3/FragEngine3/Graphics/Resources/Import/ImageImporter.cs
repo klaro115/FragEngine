@@ -90,6 +90,10 @@ namespace FragEngine3.Graphics.Resources.Import
 				{
 					_outImageData.MirrorVertically();
 				}
+				if (_handle.importFlags.Contains("normalsDX", StringComparison.Ordinal))
+				{
+					_outImageData.ConvertNormalMapDxAndGL();
+				}
 			}
 			return true;
 		}

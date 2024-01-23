@@ -124,7 +124,7 @@ namespace FragEngine3.EngineCore.Test
 			if (SceneSpawner.CreateLight(scene, Light.LightType.Directional, out Light light))
 			{
 				light.node.WorldPosition = new Vector3(0, 5, 0);
-				light.node.SetRotationFromYawPitchRoll(22.5f, 45, 0, true, true);
+				light.node.SetRotationFromYawPitchRoll(-22.5f, 45, 0, true, true);
 				//light.node.SetEnabled(false);
 
 				light.LightIntensity = 0.5f;
@@ -208,7 +208,7 @@ namespace FragEngine3.EngineCore.Test
 				//cylinder.SetMaterial("Mtl_DefaultSurface");
 			}
 
-			MeshPrimitiveFactory.CreateConeMesh("Cone", Engine, 0.75f, 1, 32, false, out _, out _, out ResourceHandle coneHandle);
+			MeshPrimitiveFactory.CreateConeMesh("Cone", Engine, 0.75f, 1, 32, true, out _, out _, out ResourceHandle coneHandle);
 			if (SceneSpawner.CreateStaticMeshRenderer(scene, out StaticMeshRenderer cone))
 			{
 				cone.node.Name = "Cone";
@@ -218,7 +218,8 @@ namespace FragEngine3.EngineCore.Test
 				cone.node.SetEnabled(false);
 
 				cone.SetMesh(coneHandle);
-				cone.SetMaterial("Mtl_DefaultSurface");
+				cone.SetMaterial("Mtl_FeatureTest");
+				//cone.SetMaterial("Mtl_DefaultSurface");
 			}
 
 			MeshPrimitiveFactory.CreateIcosahedronMesh("Icosahedron", Engine, 0.75f, false, out _, out _, out ResourceHandle d20Handle);
@@ -315,7 +316,7 @@ namespace FragEngine3.EngineCore.Test
 				rabbitNode.LocalTransformation = localPose;
 			}
 
-			if (scene.FindNode("Cube", out SceneNode? cubeNode) && cubeNode != null)
+			if (scene.FindNode("Cylinder", out SceneNode? cubeNode) && cubeNode != null)
 			{
 				float rotSpeed = deltaTime * 5;
 				Pose localPose = cubeNode.LocalTransformation;

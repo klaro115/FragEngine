@@ -77,7 +77,8 @@ namespace FragEngine3.Graphics.Resources.Data
 
 		/// <summary>
 		/// Reverse row order of the image, therefore mirroring its content vertically.<para/>
-		/// NOTE: This operation is done as in-place as possible, using a small single-row buffer as intermediate storage.
+		/// NOTE: This operation is done as in-place as possible, using a small single-row buffer as intermediate storage.<para/>
+		/// IMPORT: Use the import flag "mirrorY" to perform this conversion on texture import.</summary>
 		/// </summary>
 		/// <returns>True if the image was mirrored vertically, false if the image was invalid.</returns>
 		public bool MirrorVertically()
@@ -128,6 +129,41 @@ namespace FragEngine3.Graphics.Resources.Data
 					return false;
 				}
 			}
+		}
+
+		/// <summary>
+		/// Converts a normal map image between Direct3D and OpenGL standards.<para/>
+		/// HINT: In order to convert between both standards, the value of the green color channel of each pixel is inverted, substracting it from 
+		/// the maximum saturation value. This method will convert from whichever the current standard is to the respective other one; the same
+		/// operation works in both directions, so no need to think about what you're currently using. If it looks wrong or normals appear weirdly
+		/// mirrored, this should fix it. This function does nothing for single-channel image data.<para/>
+		/// IMPORT: Normals are expected to be in OpenGL format. Use the import flag "normalsDX" to perform this conversion on texture import.</summary>
+		/// <returns>True if the image was successfully converted, false otherwise.</returns>
+		public bool ConvertNormalMapDxAndGL()
+		{
+			if (!IsValid())
+			{
+				Logger.Instance?.LogError("Cannot convert normal map standard of invalid raw image!");
+				return false;
+			}
+
+			if (pixelData_RgbaByte != null)
+			{
+				for (uint i = 0; i < pixelData_RgbaByte.Length; ++i)
+				{
+					RgbaByte pixel = pixelData_RgbaByte[i];
+					pixelData_RgbaByte[i] = new(pixel.R, (byte)(0xFF - pixel.G), pixel.B, pixel.A);
+				}
+			}
+			else if (pixelData_RgbaFloat != null)
+			{
+				for (uint i = 0; i < pixelData_RgbaFloat.Length; ++i)
+				{
+					RgbaFloat pixel = pixelData_RgbaFloat[i];
+					pixelData_RgbaFloat[i] = new(pixel.R, 1.0f - pixel.G, pixel.B, pixel.A);
+				}
+			}
+			return true;
 		}
 
 		public TextureDescription CreateTextureDescription()

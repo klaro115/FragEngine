@@ -66,10 +66,10 @@ namespace FragEngine3.Graphics.Resources
 					new BasicVertex(new( x,  y,  z),  Vector3.UnitY, new(1, 1)),
 
 					// Bottom
-					new BasicVertex(new(-x, -y, -z), -Vector3.UnitY, new(0, 0)),	//4
-					new BasicVertex(new( x, -y, -z), -Vector3.UnitY, new(1, 0)),
-					new BasicVertex(new(-x, -y,  z), -Vector3.UnitY, new(0, 1)),
-					new BasicVertex(new( x, -y,  z), -Vector3.UnitY, new(1, 1)),
+					new BasicVertex(new(-x, -y, -z), -Vector3.UnitY, new(0, 1)),	//4
+					new BasicVertex(new( x, -y, -z), -Vector3.UnitY, new(1, 1)),
+					new BasicVertex(new(-x, -y,  z), -Vector3.UnitY, new(0, 0)),
+					new BasicVertex(new( x, -y,  z), -Vector3.UnitY, new(1, 0)),
 
 					// Back
 					new BasicVertex(new(-x, -y, -z), -Vector3.UnitZ, new(0, 0)),	//8
@@ -78,16 +78,16 @@ namespace FragEngine3.Graphics.Resources
 					new BasicVertex(new( x,  y, -z), -Vector3.UnitZ, new(1, 1)),
 					
 					// Front
-					new BasicVertex(new(-x, -y,  z),  Vector3.UnitZ, new(0, 0)),	//12
-					new BasicVertex(new( x, -y,  z),  Vector3.UnitZ, new(1, 0)),
-					new BasicVertex(new(-x,  y,  z),  Vector3.UnitZ, new(0, 1)),
-					new BasicVertex(new( x,  y,  z),  Vector3.UnitZ, new(1, 1)),
+					new BasicVertex(new(-x, -y,  z),  Vector3.UnitZ, new(1, 0)),	//12
+					new BasicVertex(new( x, -y,  z),  Vector3.UnitZ, new(0, 0)),
+					new BasicVertex(new(-x,  y,  z),  Vector3.UnitZ, new(1, 1)),
+					new BasicVertex(new( x,  y,  z),  Vector3.UnitZ, new(0, 1)),
 
 					// Left
-					new BasicVertex(new(-x, -y, -z), -Vector3.UnitX, new(0, 0)),	//16
-					new BasicVertex(new(-x, -y,  z), -Vector3.UnitX, new(1, 0)),
-					new BasicVertex(new(-x,  y, -z), -Vector3.UnitX, new(0, 1)),
-					new BasicVertex(new(-x,  y,  z), -Vector3.UnitX, new(1, 1)),
+					new BasicVertex(new(-x, -y, -z), -Vector3.UnitX, new(1, 0)),	//16
+					new BasicVertex(new(-x, -y,  z), -Vector3.UnitX, new(0, 0)),
+					new BasicVertex(new(-x,  y, -z), -Vector3.UnitX, new(1, 1)),
+					new BasicVertex(new(-x,  y,  z), -Vector3.UnitX, new(0, 1)),
 
 					// Right
 					new BasicVertex(new( x, -y, -z),  Vector3.UnitX, new(0, 0)),	//20
@@ -98,10 +98,10 @@ namespace FragEngine3.Graphics.Resources
 				verticesExt = _useExtendedData ?
 				[
 					// Top
-					new ExtendedVertex( Vector3.UnitZ, Vector2.Zero),
-					new ExtendedVertex( Vector3.UnitZ, Vector2.Zero),
-					new ExtendedVertex( Vector3.UnitZ, Vector2.Zero),
-					new ExtendedVertex( Vector3.UnitZ, Vector2.Zero),
+					new ExtendedVertex(Vector3.UnitZ, Vector2.Zero),
+					new ExtendedVertex(Vector3.UnitZ, Vector2.Zero),
+					new ExtendedVertex(Vector3.UnitZ, Vector2.Zero),
+					new ExtendedVertex(Vector3.UnitZ, Vector2.Zero),
 
 					// Bottom
 					new ExtendedVertex(-Vector3.UnitZ, Vector2.Zero),
@@ -110,28 +110,28 @@ namespace FragEngine3.Graphics.Resources
 					new ExtendedVertex(-Vector3.UnitZ, Vector2.Zero),
 
 					// Back
-					new ExtendedVertex(-Vector3.UnitY, Vector2.Zero),
-					new ExtendedVertex(-Vector3.UnitY, Vector2.Zero),
-					new ExtendedVertex(-Vector3.UnitY, Vector2.Zero),
-					new ExtendedVertex(-Vector3.UnitY, Vector2.Zero),
+					new ExtendedVertex(Vector3.UnitY, Vector2.Zero),
+					new ExtendedVertex(Vector3.UnitY, Vector2.Zero),
+					new ExtendedVertex(Vector3.UnitY, Vector2.Zero),
+					new ExtendedVertex(Vector3.UnitY, Vector2.Zero),
 
 					// Front
-					new ExtendedVertex( Vector3.UnitY, Vector2.Zero),
-					new ExtendedVertex( Vector3.UnitY, Vector2.Zero),
-					new ExtendedVertex( Vector3.UnitY, Vector2.Zero),
-					new ExtendedVertex( Vector3.UnitY, Vector2.Zero),
+					new ExtendedVertex(Vector3.UnitY, Vector2.Zero),
+					new ExtendedVertex(Vector3.UnitY, Vector2.Zero),
+					new ExtendedVertex(Vector3.UnitY, Vector2.Zero),
+					new ExtendedVertex(Vector3.UnitY, Vector2.Zero),
 
 					// Left
-					new ExtendedVertex(-Vector3.UnitY, Vector2.Zero),
-					new ExtendedVertex(-Vector3.UnitY, Vector2.Zero),
-					new ExtendedVertex(-Vector3.UnitY, Vector2.Zero),
-					new ExtendedVertex(-Vector3.UnitY, Vector2.Zero),
+					new ExtendedVertex(Vector3.UnitY, Vector2.Zero),
+					new ExtendedVertex(Vector3.UnitY, Vector2.Zero),
+					new ExtendedVertex(Vector3.UnitY, Vector2.Zero),
+					new ExtendedVertex(Vector3.UnitY, Vector2.Zero),
 
 					// Right
-					new ExtendedVertex( Vector3.UnitY, Vector2.Zero),
-					new ExtendedVertex( Vector3.UnitY, Vector2.Zero),
-					new ExtendedVertex( Vector3.UnitY, Vector2.Zero),
-					new ExtendedVertex( Vector3.UnitY, Vector2.Zero),
+					new ExtendedVertex(Vector3.UnitY, Vector2.Zero),
+					new ExtendedVertex(Vector3.UnitY, Vector2.Zero),
+					new ExtendedVertex(Vector3.UnitY, Vector2.Zero),
+					new ExtendedVertex(Vector3.UnitY, Vector2.Zero),
 				] : null,
 				indices16 =
 				[
@@ -273,7 +273,7 @@ namespace FragEngine3.Graphics.Resources
 				indices[iStartIdxQuad + 5] = (ushort)(vStartIdxQuad + 2);
 
 				// Cap fans vertices:
-				Vector2 capUvUp = new Vector2(c + 1, s + 1) * 0.5f;
+				Vector2 capUvUp = new Vector2(1 - c, s + 1) * 0.5f;
 				Vector2 capUvDown = new Vector2(1 - c, 1 - s) * 0.5f;
 
 				uint vStartIdxFanUp = vStartIdxCapUp + i;
@@ -285,7 +285,7 @@ namespace FragEngine3.Graphics.Resources
 				if (_useExtendedData)
 				{
 					// Shell:
-					Vector3 tagentShell = new(s, 0, c);
+					Vector3 tagentShell = new(-s, 0, c);
 
 					verticesExt![vStartIdxQuad + 0] = new(tagentShell, shellUvDown);
 					verticesExt![vStartIdxQuad + 1] = new(tagentShell, shellUvUp);
@@ -506,7 +506,11 @@ namespace FragEngine3.Graphics.Resources
 			float uvStepWidth = uvRelativeWidth / _subdivisions;
 
 			// Generate vertices:
-			verticesBasic[vertexCountSides - 1] = new(new(_radius, 0, 0), new(normSideH, normSideV, 0), Vector2.Zero);
+			verticesBasic[vertexCountSides - 1] = new(new(_radius, 0, 0), new(normSideH, normSideV, 0), new(uvRelativeWidth, 0));
+			if (_useExtendedData)
+			{
+				verticesExt![vertexCountSides - 1] = new(Vector3.UnitZ, new(uvRelativeWidth, 0));
+			}
 
 			for (uint i = 0; i < _subdivisions; ++i)
 			{
@@ -529,7 +533,7 @@ namespace FragEngine3.Graphics.Resources
 				verticesBasic[vStartIdxSides + 1] = new(posTip, normSideT, uvSideT);
 
 				// Vertices base:
-				Vector2 uvBase = new Vector2(cB + 1, sB + 1) * 0.5f;
+				Vector2 uvBase = new Vector2(1 - cB, 1 - sB) * 0.5f;
 
 				uint vStartIdxBase = vertexCountSides + i;
 				verticesBasic[vStartIdxBase + 0] = new(posBase, -Vector3.UnitY, uvBase);
@@ -543,8 +547,8 @@ namespace FragEngine3.Graphics.Resources
 				if (_useExtendedData)
 				{
 					// Sides:
-					Vector3 tanSideB = new(sB, 0, cB);
-					Vector3 tanSideT = new(sT, 0, cT);
+					Vector3 tanSideB = new(-sB, 0, cB);
+					Vector3 tanSideT = new(-sT, 0, cT);
 
 					verticesExt![vStartIdxSides + 0] = new(tanSideB, uvSideB);
 					verticesExt![vStartIdxSides + 1] = new(tanSideT, uvSideT);
@@ -705,7 +709,7 @@ namespace FragEngine3.Graphics.Resources
 
 				if (_useExtendedData)
 				{
-					Vector3 tangent = Vector3.Normalize(Vector3.Cross(normal, Vector3.UnitY));
+					Vector3 tangent = Vector3.Normalize(Vector3.Cross(normal, pos1 - pos0));
 					verticesExt![vTriangleStartIdx + 0] = new(tangent, uv0);
 					verticesExt![vTriangleStartIdx + 1] = new(tangent, uv1);
 					verticesExt![vTriangleStartIdx + 2] = new(tangent, uv2);

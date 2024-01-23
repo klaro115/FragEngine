@@ -176,7 +176,7 @@ half3 CalculateTotalLightIntensity(in float3 _worldPosition, in float3 _worldNor
 half3 UnpackNormalMap(in half3 _texNormal)
 {
     // Unpack direction vector from normal map colors:
-    return half3(1 - 2 * _texNormal.x, _texNormal.z, 1 - 2 * _texNormal.y);
+    return half3(_texNormal.x * 2 - 1, _texNormal.z, _texNormal.y * 2 - 1); // NOTE: Texture normals are expected to be in OpenGL standard.
 }
 
 half3 ApplyNormalMap(in half3 _worldNormal, in half3 _worldTangent, in half3 _worldBinormal, in half3 _texNormal)
