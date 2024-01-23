@@ -176,7 +176,7 @@ half3 CalculateTotalLightIntensity(in float3 _worldPosition, in float3 _worldNor
 half3 UnpackNormalMap(in half3 _texNormal)
 {
     // Unpack direction vector from normal map colors:
-    return half3(_texNormal.x * 2 - 1, _texNormal.y, _texNormal.z * 2 - 1);
+    return half3(1 - 2 * _texNormal.x, _texNormal.z, 1 - 2 * _texNormal.y);
 }
 
 half3 ApplyNormalMap(in half3 _worldNormal, in half3 _worldTangent, in half3 _worldBinormal, in half3 _texNormal)
@@ -186,14 +186,11 @@ half3 ApplyNormalMap(in half3 _worldNormal, in half3 _worldTangent, in half3 _wo
     // Create rotation matrix, projecting from flat surface (UV) space to surface in world space:
     half3x3 mtxNormalRot =
     {
-        _worldTangent,
-        _worldBinormal,
-        _worldNormal,
+        _worldBinormal.x, _worldNormal.x, _worldTangent.x,
+        _worldBinormal.y, _worldNormal.y, _worldTangent.y,
+        _worldBinormal.z, _worldNormal.z, _worldTangent.z,
     };
-    mtxNormalRot = transpose(mtxNormalRot);
     half3 normal = mul(mtxNormalRot, _texNormal);
-    normal = normalize(normal);
-    //normal = lerp(_worldNormal, normal, 0.5);
     return normal;
 }
 
@@ -204,8 +201,9 @@ half4 Main_Pixel(in VertexOutput_Basic inputBasic) : SV_Target0
     // Sample base color from main texture:
     half4 albedo = TexMain.Sample(SamplerMain, inputBasic.uv);
 
-    //float3 normal = TexNormal.Sample(SamplerMain, inputBasic.uv);
-    //normal = ApplyNormalMap(inputBasic.normal, float3(0, 0, 1), float3(1, 0, 0), normal);
+    // Calculate normals from normal map:
+    half3 normal = TexNormal.Sample(SamplerMain, inputBasic.uv);
+    normal = ApplyNormalMap((half3)inputBasic.normal, half3(0, 0, 1), half3(1, 0, 0), normal);
 
     // Apply basic phong lighting:
     half3 totalLightIntensity = CalculateTotalLightIntensity(inputBasic.worldPosition, inputBasic.normal);
@@ -221,32 +219,9 @@ half4 Main_Pixel_Ext(in VertexOutput_Basic inputBasic, in VertexOutput_Extended 
     // Sample base color from main texture:
     half4 albedo = TexMain.Sample(SamplerMain, inputBasic.uv);
 
-    half3 normal;
-    //if (inputBasic.position.x < 0.25 * resolutionX)
-    //{
-    //    normal = TexNormal.Sample(SamplerMain, inputBasic.uv);
-    //    normal = UnpackNormalMap(normal);
-    //}
-    if (inputBasic.position.x < 0.333 * resolutionX)
-    {
-        normal = inputBasic.normal;
-    }
-    else
-    {
-        normal = TexNormal.Sample(SamplerMain, inputBasic.uv);
-        normal = ApplyNormalMap((half3)inputBasic.normal, (half3)inputExt.tangent, (half3)inputExt.binormal, normal);
-    }
-
-    //albedo *= half4(abs(normal), 1);
-    //albedo *= half4(abs(UnpackNormMap(normal)), 1);
-    //if (inputBasic.position.x < 0.5 * resolutionX)
-    //{
-    //    albedo *= abs(half4((normal - 1) * 0.5, 1));
-    //}
-    //else
-    //{
-    //    albedo *= abs(half4((inputBasic.normal - 1) * 0.5, 1));
-    //}
+    // Calculate normals from normal map:
+    half3 normal = TexNormal.Sample(SamplerMain, inputBasic.uv);
+    normal = ApplyNormalMap((half3)inputBasic.normal, (half3)inputExt.tangent, (half3)inputExt.binormal, normal);
 
     // Apply basic phong lighting:
     half3 totalLightIntensity = CalculateTotalLightIntensity(inputBasic.worldPosition, (float3)normal);
