@@ -66,8 +66,8 @@ namespace FragEngine3.Graphics.Resources.Data
 				(SamplerAddressMode)GetCharIndex(_description[2], addressModeChars),
 				(SamplerFilter)(_description[4] - '0'),
 				(ComparisonKind)GetCharIndex(_description[6], comparisonKindChars),
-				0,
-				0,
+				4,
+				ushort.MaxValue,
 				0,
 				0,
 				(SamplerBorderColor)GetCharIndex(_description[8], comparisonKindChars));

@@ -185,7 +185,7 @@ namespace FragEngine3.EngineCore.Test
 			{
 				cube.node.Name = "Cube";
 				cube.node.LocalPosition = new Vector3(2.5f, 0, 2);
-				cube.node.SetRotationFromYawPitchRoll(45, 45, 0, true, true);
+				//cube.node.SetRotationFromYawPitchRoll(45, 45, 0, true, true);
 				cube.node.LocalScale = Vector3.One;
 				//cube.node.SetEnabled(false);
 
@@ -194,7 +194,7 @@ namespace FragEngine3.EngineCore.Test
 				//cube.SetMaterial("Mtl_DefaultSurface");
 			}
 
-			MeshPrimitiveFactory.CreateCylinderMesh("Cylinder", Engine, 0.5f, 2, 32, false, out _, out _, out ResourceHandle cylinderHandle);
+			MeshPrimitiveFactory.CreateCylinderMesh("Cylinder", Engine, 0.5f, 2, 32, true, out _, out _, out ResourceHandle cylinderHandle);
 			if (SceneSpawner.CreateStaticMeshRenderer(scene, out StaticMeshRenderer cylinder))
 			{
 				cylinder.node.Name = "Cylinder";
@@ -315,7 +315,7 @@ namespace FragEngine3.EngineCore.Test
 				rabbitNode.LocalTransformation = localPose;
 			}
 
-			if (scene.FindNode("D20", out SceneNode? cubeNode) && cubeNode != null)
+			if (scene.FindNode("Cube", out SceneNode? cubeNode) && cubeNode != null)
 			{
 				float rotSpeed = deltaTime * 5;
 				Pose localPose = cubeNode.LocalTransformation;

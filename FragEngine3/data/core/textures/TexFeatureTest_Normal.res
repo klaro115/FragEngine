@@ -1,5 +1,5 @@
 {
-    "DataFilePath": "./TexFeatureTest_Normal.jpg",
+    "DataFilePath": "./TexFeatureTest_Normal.bmp",
     "DataFileType": 0,
     "DataFileSize": 0,
     "UncompressedFileSize": 0,
