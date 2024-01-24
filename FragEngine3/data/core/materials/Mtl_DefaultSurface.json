@@ -55,6 +55,15 @@
                 "IsBoundBySystem": false
             },
             {
+                "ResourceKey": "TexGray",
+                "SlotName": "TexNormal",
+                "SlotIndex": 3,
+                "ResourceKind": 3,
+                "ShaderStageFlags": 16,
+                "Description": null,
+                "IsBoundBySystem": false
+            },
+            {
                 "ResourceKey": "",
                 "SlotName": "SamplerMain",
                 "SlotIndex": 1,

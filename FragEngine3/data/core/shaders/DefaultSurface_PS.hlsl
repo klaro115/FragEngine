@@ -66,6 +66,7 @@ SamplerState SamplerShadowMaps : register(ps, s0);
 // ResSetBound:
 
 Texture2D<half4> TexMain : register(ps, t2);
+Texture2D<half3> TexNormal : register(ps, t3);
 SamplerState SamplerMain : register(s1);
 
 /**************** VERTEX OUTPUT: ***************/
@@ -87,7 +88,6 @@ struct VertexOutput_Extended
 
 /****************** LIGHTING: ******************/
 
-static const float LIGHT_NEAR_CLIP_PLANE = 0.001;
 #define SHADOW_EDGE_FACE_SCALE 10.0
 
 half3 CalculateAmbientLight(in float3 _worldNormal)
@@ -127,6 +127,31 @@ half3 CalculatePhongLighting(in Light _light, in float3 _worldPosition, in float
     return lightIntens.xyz * lightDot;
 }
 
+half CalculateShadowMapLightWeight(in Light _light, in float3 _worldPosition, in float3 _worldNormal)
+{
+    // Add a bias to position along surface normal, to counter-act stair-stepping artifacts:
+    float4 worldPosBiased = float4(_worldPosition + _worldNormal * _light.shadowBias, 1);
+
+    // Transform pixel position to light's clip space, then to UV space:
+    float4 shadowProj = mul(_light.mtxShadowWorld2Clip, worldPosBiased);
+    shadowProj /= shadowProj.w;
+    float2 shadowUv = float2(shadowProj.x + 1, 1 - shadowProj.y) * 0.5;
+    
+    // Load corresponding depth value from shadow texture array:
+    half shadowDepth = TexShadowMaps.Sample(SamplerShadowMaps, float3(shadowUv.x, shadowUv.y, _light.shadowMapIdx));
+    half lightWeight = shadowDepth > shadowProj.z ? 1 : 0;
+
+    // Fade shadows out near boundaries of UV/Depth space:
+    if (_light.lightType == 2)
+    {
+        half3 edgeUv = half3(shadowUv, shadowProj.z) * SHADOW_EDGE_FACE_SCALE;
+        half3 edgeMax = min(min(edgeUv, SHADOW_EDGE_FACE_SCALE - edgeUv), 1);
+        half k = 1 - min(min(edgeMax.x, edgeMax.y), edgeMax.z);
+        lightWeight = lerp(lightWeight, 1.0, clamp(k, 0, 1));
+    }
+    return lightWeight;
+}
+
 half3 CalculateTotalLightIntensity(in float3 _worldPosition, in float3 _worldNormal)
 {
     half3 totalLightIntensity = CalculateAmbientLight(_worldNormal);
@@ -137,28 +162,7 @@ half3 CalculateTotalLightIntensity(in float3 _worldPosition, in float3 _worldNor
         Light light = BufLights[i];
 
         half3 lightIntensity = CalculatePhongLighting(light, _worldPosition, _worldNormal);
-
-        // Add a bias to position along surface normal, to counter-act stair-stepping artifacts:
-        float4 worldPosBiased = float4(_worldPosition + _worldNormal * light.shadowBias, 1);
-
-        // Transform pixel position to light's clip space, then to UV space:
-        float4 shadowProj = mul(light.mtxShadowWorld2Clip, worldPosBiased);
-        shadowProj /= shadowProj.w;
-        float2 shadowUv = float2(shadowProj.x + 1, 1 - shadowProj.y) * 0.5;
-        
-        // Load corresponding depth value from shadow texture array:
-        half shadowDepth = TexShadowMaps.Sample(SamplerShadowMaps, float3(shadowUv.x, shadowUv.y, light.shadowMapIdx));
-        half lightWeight = shadowDepth > shadowProj.z ? 1 : 0;
-
-        // Fade shadows out near boundaries of UV/Depth space:
-        if (light.lightType == 2)
-        {
-            half3 edgeUv = half3(shadowUv, shadowProj.z) * SHADOW_EDGE_FACE_SCALE;
-            half3 edgeMax = min(min(edgeUv, SHADOW_EDGE_FACE_SCALE - edgeUv), 1);
-            half k = 1 - min(min(edgeMax.x, edgeMax.y), edgeMax.z);
-            lightWeight = lerp(lightWeight, 1.0, clamp(k, 0, 1));
-        }
-
+        half lightWeight = CalculateShadowMapLightWeight(light, _worldPosition, _worldNormal);
         totalLightIntensity += lightIntensity * lightWeight;
     }
     // Simple light sources:
@@ -170,6 +174,29 @@ half3 CalculateTotalLightIntensity(in float3 _worldPosition, in float3 _worldNor
     return totalLightIntensity;
 }
 
+/******************* NORMALS: ******************/
+
+half3 UnpackNormalMap(in half3 _texNormal)
+{
+    // Unpack direction vector from normal map colors:
+    return half3(_texNormal.x * 2 - 1, _texNormal.z, _texNormal.y * 2 - 1); // NOTE: Texture normals are expected to be in OpenGL standard.
+}
+
+half3 ApplyNormalMap(in half3 _worldNormal, in half3 _worldTangent, in half3 _worldBinormal, in half3 _texNormal)
+{
+    _texNormal = UnpackNormalMap(_texNormal);
+
+    // Create rotation matrix, projecting from flat surface (UV) space to surface in world space:
+    half3x3 mtxNormalRot =
+    {
+        _worldBinormal.x, _worldNormal.x, _worldTangent.x,
+        _worldBinormal.y, _worldNormal.y, _worldTangent.y,
+        _worldBinormal.z, _worldNormal.z, _worldTangent.z,
+    };
+    half3 normal = mul(mtxNormalRot, _texNormal);
+    return normal;
+}
+
 /******************* SHADERS: ******************/
 
 half4 Main_Pixel(in VertexOutput_Basic inputBasic) : SV_Target0
@@ -177,8 +204,30 @@ half4 Main_Pixel(in VertexOutput_Basic inputBasic) : SV_Target0
     // Sample base color from main texture:
     half4 albedo = TexMain.Sample(SamplerMain, inputBasic.uv);
 
+    // Calculate normals from normal map:
+    half3 normal = TexNormal.Sample(SamplerMain, inputBasic.uv);
+    normal = ApplyNormalMap(inputBasic.normal, half3(0, 0, 1), half3(1, 0, 0), normal);
+
     // Apply basic phong lighting:
     half3 totalLightIntensity = CalculateTotalLightIntensity(inputBasic.worldPosition, inputBasic.normal);
+
+    albedo *= half4(totalLightIntensity, 1);
+
+    // Return final color:
+    return albedo;
+};
+
+half4 Main_Pixel_Ext(in VertexOutput_Basic inputBasic, in VertexOutput_Extended inputExt) : SV_Target0
+{
+    // Sample base color from main texture:
+    half4 albedo = TexMain.Sample(SamplerMain, inputBasic.uv);
+
+    // Calculate normals from normal map:
+    half3 normal = TexNormal.Sample(SamplerMain, inputBasic.uv);
+    normal = ApplyNormalMap(inputBasic.normal, inputExt.tangent, inputExt.binormal, normal);
+
+    // Apply basic phong lighting:
+    half3 totalLightIntensity = CalculateTotalLightIntensity(inputBasic.worldPosition, normal);
 
     albedo *= half4(totalLightIntensity, 1);
 

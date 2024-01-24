@@ -1,5 +1,5 @@
 {
-    "DataFilePath": "./TexFeatureTest2_Normal_GL.bmp",
+    "DataFilePath": "./TexFeatureTest_Normal.bmp",
     "DataFileType": 0,
     "DataFileSize": 0,
     "UncompressedFileSize": 0,
@@ -15,7 +15,8 @@
             "DataOffset": 0,
             "DataSize": 0,
             "DependencyCount": 0,
-            "Dependencies": null
+            "Dependencies": null,
+            "ImportFlags": "normalsDX"
         }
     ]
 }

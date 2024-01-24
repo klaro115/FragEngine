@@ -80,7 +80,7 @@ namespace FragEngine3.Graphics.Components
 		private float spotAngleRad = 30.0f * DEG2RAD;
 
 		// Shadow settings:
-		private float shadowBias = 0.03f;
+		private float shadowBias = 0.02f;
 
 		// Shadow resources:
 		private CameraInstance? shadowCameraInstance = null;

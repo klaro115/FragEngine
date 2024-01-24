@@ -239,7 +239,7 @@ namespace FragEngine3.Graphics
 			{
 				TexPlaceholderWhite = texHandle;
 			}
-			if (success &= CreatePlaceholderTexture("TexGray", RgbaByte.Grey, out texHandle))
+			if (success &= CreatePlaceholderTexture("TexGray", new RgbaByte(127, 127, 127, 255), out texHandle))
 			{
 				TexPlaceholderGray = texHandle;
 			}
