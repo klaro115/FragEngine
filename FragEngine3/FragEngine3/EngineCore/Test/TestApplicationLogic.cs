@@ -3,6 +3,8 @@ using FragEngine3.Graphics;
 using FragEngine3.Graphics.Components;
 using FragEngine3.Graphics.Resources;
 using FragEngine3.Graphics.Resources.Data;
+using FragEngine3.Graphics.Resources.ShaderGen;
+using FragEngine3.Graphics.Resources.ShaderGen.SampleCode;
 using FragEngine3.Graphics.Stack;
 using FragEngine3.Resources;
 using FragEngine3.Scenes;
@@ -292,6 +294,37 @@ namespace FragEngine3.EngineCore.Test
 				quad.SetMaterial("Mtl_TestMaterial");
 			}
 
+
+			/**********************************************************/
+			// SHADER GEN TEST:
+
+			{
+				ShaderGenContext ctx = new("PS");
+
+				// Start entrypoint:
+				ShaderGenFeature feat_MainPixel = PixelShaderSamples.CreateFunctionStart_PS(MeshVertexDataFlags.BasicSurfaceData);
+
+				// Declare albedo & sample from TexMain:
+				ShaderGenFeature feat_Albedo_SampleTexMain = PixelShaderSamples.CreateVariable_Albedo_InitializeSampleTexMain();
+
+				// Declare totalLightIntensity & calculate all lighting:
+				ShaderGenFeature feat_LightIntensity = PixelShaderLightingSamples.CreateVariable_TotalLightIntensity_InitializeCalculateAll(false);
+
+				//...
+
+				// End entrypoint:
+				ShaderGenFeature feat_MainPixel_End = PixelShaderSamples.CreateFunctionEnd_PS();
+
+				// Assemble code sections:
+				feat_MainPixel.CreateAllCode(ctx);
+				feat_Albedo_SampleTexMain.CreateAllCode(ctx);
+				feat_LightIntensity.CreateAllCode(ctx);
+				feat_MainPixel_End.CreateAllCode(ctx);
+
+				// Finalize shader code:
+				string shaderCode = ctx.AssembleAllCode();
+			}
+
 			return true;
 		}
 
@@ -316,7 +349,7 @@ namespace FragEngine3.EngineCore.Test
 				rabbitNode.LocalTransformation = localPose;
 			}
 
-			if (scene.FindNode("Cylinder", out SceneNode? cubeNode) && cubeNode != null)
+			if (scene.FindNode("D20", out SceneNode? cubeNode) && cubeNode != null)
 			{
 				float rotSpeed = deltaTime * 5;
 				Pose localPose = cubeNode.LocalTransformation;
