@@ -48,22 +48,18 @@ namespace FragEngine3.Graphics
 			[ShaderStages.Fragment] = SHADER_DEFAULT_ENTRYPOINT_PIXEL,
 		};
 
-		public const string SHADER_VARIANT_ENTRYPOINT_SUFFIX_EXTENDED = "Ext";
-		public const string SHADER_VARIANT_ENTRYPOINT_SUFFIX_BLENDSHAPES = "Blend";
-		public const string SHADER_VARIANT_ENTRYPOINT_SUFFIX_ANIMATIONS = "Anim";
-
 		public static readonly Dictionary<MeshVertexDataFlags, string> shaderVariantsForEntryPointSuffixes = new()
 		{
-			[MeshVertexDataFlags.ExtendedSurfaceData] = SHADER_VARIANT_ENTRYPOINT_SUFFIX_EXTENDED,
-			[MeshVertexDataFlags.BlendShapes] = SHADER_VARIANT_ENTRYPOINT_SUFFIX_BLENDSHAPES,
-			[MeshVertexDataFlags.Animations] = SHADER_VARIANT_ENTRYPOINT_SUFFIX_ANIMATIONS,
+			[MeshVertexDataFlags.ExtendedSurfaceData] = ExtendedVertex.shaderEntryPointSuffix,
+			[MeshVertexDataFlags.BlendShapes] = IndexedWeightedVertex.shaderEntryPointSuffix_Blend,
+			[MeshVertexDataFlags.Animations] = IndexedWeightedVertex.shaderEntryPointSuffix_Anim,
 			//...
 		};
 		public static readonly Dictionary<string, MeshVertexDataFlags> shaderEntryPointSuffixesForVariants = new()
 		{
-			[SHADER_VARIANT_ENTRYPOINT_SUFFIX_EXTENDED] = MeshVertexDataFlags.ExtendedSurfaceData,
-			[SHADER_VARIANT_ENTRYPOINT_SUFFIX_BLENDSHAPES] = MeshVertexDataFlags.BlendShapes,
-			[SHADER_VARIANT_ENTRYPOINT_SUFFIX_ANIMATIONS] = MeshVertexDataFlags.Animations,
+			[ExtendedVertex.shaderEntryPointSuffix] = MeshVertexDataFlags.ExtendedSurfaceData,
+			[IndexedWeightedVertex.shaderEntryPointSuffix_Blend] = MeshVertexDataFlags.BlendShapes,
+			[IndexedWeightedVertex.shaderEntryPointSuffix_Anim] = MeshVertexDataFlags.Animations,
 			//...
 		};
 
@@ -81,16 +77,6 @@ namespace FragEngine3.Graphics
 		public static readonly ResourceLayoutElementDescription[] DEFAULT_OBJECT_RESOURCE_LAYOUT_DESC =								//TODO: Change material's resource layouts and renderers' resource sets to use this instead.
 		[
 			CBObject.resourceLayoutElementDesc,							// Constant buffer with object-specific data.
-		];
-
-		[Obsolete($"Replaced by {nameof(DEFAULT_CAMERA_RESOURCE_LAYOUT_DESC)} and {nameof(DEFAULT_OBJECT_RESOURCE_LAYOUT_DESC)}")]
-		public static readonly ResourceLayoutElementDescription[] DEFAULT_SURFACE_RESOURCE_LAYOUT_DESC =
-		[
-			CBScene.resourceLayoutElementDesc,							// Scene constant buffer, CBScene
-			CBCamera.resourceLayoutElementDesc,							// Scene constant buffer, CBCamera
-			CBObject.resourceLayoutElementDesc,							// Object constant buffer, CBObject
-			LightSourceData.ResourceLayoutElementDescLightBuffer,		// Light data buffer, BufLights
-			LightSourceData.ResourceLayoutElementDescTexShadowMaps,		// Shadow map texture array, TexShadowMaps
 		];
 
 		/// <summary>

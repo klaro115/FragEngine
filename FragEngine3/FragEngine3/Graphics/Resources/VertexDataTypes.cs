@@ -80,6 +80,9 @@ namespace FragEngine3.Graphics.Resources
 			new VertexElementDescription("Normal", VertexElementSemantic.Normal, VertexElementFormat.Float3, 3 * sizeof(float)),
 			new VertexElementDescription("UV", VertexElementSemantic.TextureCoordinate, VertexElementFormat.Float2, 6 * sizeof(float)));
 
+		public const string shaderEntryPointSuffix = "";
+		public const string shaderVertexOuputName = "VertexOutput_Basic";
+
 		#endregion
 		#region Methods
 
@@ -112,6 +115,9 @@ namespace FragEngine3.Graphics.Resources
 			byteSize,
 			new VertexElementDescription("Tangent", VertexElementSemantic.Normal, VertexElementFormat.Float3, 0),
 			new VertexElementDescription("UV2", VertexElementSemantic.TextureCoordinate, VertexElementFormat.Float2, 3 * sizeof(float)));
+
+		public const string shaderEntryPointSuffix = "Ext";
+		public const string shaderVertexOuputName = "VertexOutput_Extended";
 
 		#endregion
 		#region Methods
@@ -159,6 +165,11 @@ namespace FragEngine3.Graphics.Resources
 			byteSize,
 			new VertexElementDescription("Indices", VertexElementSemantic.Normal, VertexElementFormat.UInt4, 0),
 			new VertexElementDescription("Weights", VertexElementSemantic.TextureCoordinate, VertexElementFormat.Float4, 4 * sizeof(uint)));
+
+		public const string shaderEntryPointSuffix_Blend = "Blend";
+		public const string shaderEntryPointSuffix_Anim = "Anim";
+		public const string shaderVertexOuputName_Blend = "VertexOutput_BlendShapes";
+		public const string shaderVertexOuputName_Anim = "VertexOutput_Animation";
 
 		#endregion
 		#region Methods
