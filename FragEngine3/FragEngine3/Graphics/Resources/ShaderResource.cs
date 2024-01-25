@@ -22,6 +22,13 @@ namespace FragEngine3.Graphics.Resources
 			shaderVariants = _shaderVariants ?? throw new ArgumentNullException(nameof(_shaderVariants), "Shader variants array may not be null!");
 			Stage = _stage;
 		}
+		internal ShaderResource(string _resourceKey, GraphicsCore _graphicsCore, Shader?[] _shaderVariants, ShaderStages _stage) : base(_resourceKey, _graphicsCore.graphicsSystem.engine)
+		{
+			graphicsCore = _graphicsCore ?? throw new ArgumentNullException(nameof(_graphicsCore), "Material's graphics core may not be null!");
+
+			shaderVariants = _shaderVariants ?? throw new ArgumentNullException(nameof(_shaderVariants), "Shader variants array may not be null!");
+			Stage = _stage;
+		}
 
 		#endregion
 		#region Fields

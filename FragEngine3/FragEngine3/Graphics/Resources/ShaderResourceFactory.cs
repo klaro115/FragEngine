@@ -144,6 +144,39 @@ namespace FragEngine3.Graphics.Resources
 				return false;
 			}
 
+			// Compile shader from UTF-8 code bytes:
+			return CreateShader(
+				_graphicsCore,
+				_handle.resourceKey,
+				bytes, byteCount, _stage,
+				_entryPoint,
+				out _outShaderRes);
+		}
+
+		public static bool CreateShader(
+			GraphicsCore _graphicsCore,
+			string _resourceKey,
+			byte[] _shaderCodeBytes,
+			int _shaderCodeLength,
+			ShaderStages _stage,
+			string _entryPoint,
+			out ShaderResource? _outShaderRes)
+		{
+			if (_graphicsCore == null || !_graphicsCore.IsInitialized)
+			{
+				Logger.Instance?.LogError("Cannot create shader resource using null or uninitialized graphics core!");
+				_outShaderRes = null;
+				return false;
+			}
+			Logger logger = _graphicsCore.graphicsSystem.engine.Logger ?? Logger.Instance!;
+
+			if (_shaderCodeBytes == null || _shaderCodeBytes.Length == 0 || _shaderCodeBytes[0] == '\0')
+			{
+				logger.LogError("Cannot create shader resource from null or empty shader code!");
+				_outShaderRes = null;
+				return false;
+			}
+
 			// Find all variant entry points:
 			Dictionary<MeshVertexDataFlags, string> variantEntryPoints = new((int)MeshVertexDataFlags.ALL);
 			int maxVariantIndex = -1;
@@ -151,7 +184,7 @@ namespace FragEngine3.Graphics.Resources
 			{
 				StringBuilder variantBuilder = new(256);
 				StringBuilder suffixBuilder = new(128);
-				Utf8Iterator e = new(bytes, byteCount);
+				Utf8Iterator e = new(_shaderCodeBytes, _shaderCodeLength);
 				Utf8Iterator.Position pos;
 
 				e.MoveNext();
@@ -191,14 +224,14 @@ namespace FragEngine3.Graphics.Resources
 			}
 			catch (Exception ex)
 			{
-				logger.LogException($"Failed to read variant entry points for shader '{_handle.resourceKey}' ({_stage})!", ex);
+				logger.LogException($"Failed to read variant entry points for shader '{_resourceKey}' ({_stage})!", ex);
 				_outShaderRes = null;
 				return false;
 			}
 
 			if (maxVariantIndex < 0)
 			{
-				logger.LogError($"Could not find any entry points for shader '{_handle.resourceKey}' ({_stage})!");
+				logger.LogError($"Could not find any entry points for shader '{_resourceKey}' ({_stage})!");
 				_outShaderRes = null;
 				return false;
 			}
@@ -215,14 +248,14 @@ namespace FragEngine3.Graphics.Resources
 					Shader? shader = null;
 					try
 					{
-						ShaderDescription shaderDesc = new(_stage, bytes, variantEntryPoint);
+						ShaderDescription shaderDesc = new(_stage, _shaderCodeBytes, variantEntryPoint);
 
 						shader = _graphicsCore.MainFactory.CreateShader(ref shaderDesc);
-						shader.Name = $"Shader_{_handle.resourceKey}_{_stage}_{variantFlags}";
+						shader.Name = $"Shader_{_resourceKey}_{_stage}_{variantFlags}";
 					}
 					catch (Exception ex)
 					{
-						logger.LogException($"Failed to compile variant '{variantFlags}' for shader '{_handle.resourceKey}' ({_stage})!", ex);
+						logger.LogException($"Failed to compile variant '{variantFlags}' for shader '{_resourceKey}' ({_stage})!", ex);
 						shader?.Dispose();
 						continue;
 					}
@@ -233,13 +266,13 @@ namespace FragEngine3.Graphics.Resources
 			}
 			if (shadersCompiledCount == 0)
 			{
-				logger.LogError($"All variants of shader '{_handle.resourceKey}' ({_stage}) have failed to compile! Shader resource may be broken or incomplete!");
+				logger.LogError($"All variants of shader '{_resourceKey}' ({_stage}) have failed to compile! Shader resource may be broken or incomplete!");
 				_outShaderRes = null;
 				return false;
 			}
 
 			// Output finished shader resource:
-			_outShaderRes = new(_handle, _graphicsCore, shaderVariants, _stage);
+			_outShaderRes = new(_resourceKey, _graphicsCore, shaderVariants, _stage);
 
 			return _outShaderRes.IsLoaded;
 		}
