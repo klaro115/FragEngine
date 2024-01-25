@@ -4,7 +4,6 @@ using FragEngine3.Graphics.Components;
 using FragEngine3.Graphics.Resources;
 using FragEngine3.Graphics.Resources.Data;
 using FragEngine3.Graphics.Resources.ShaderGen;
-using FragEngine3.Graphics.Resources.ShaderGen.SampleCode;
 using FragEngine3.Graphics.Stack;
 using FragEngine3.Resources;
 using FragEngine3.Scenes;
@@ -299,30 +298,23 @@ namespace FragEngine3.EngineCore.Test
 			// SHADER GEN TEST:
 
 			{
-				ShaderGenContext ctx = new("PS");
+				GraphicsCore core = Engine.GraphicsSystem.graphicsCore;
 
-				// Start entrypoint:
-				ShaderGenFeature feat_MainPixel = PixelShaderSamples.CreateFunctionStart_PS(MeshVertexDataFlags.BasicSurfaceData);
+				DefaultShaderBuilder.CreatePixelShaderVariation(DefaultShaderConfig.ConfigMainNormalsLit, Engine.PlatformSystem.PlatformFlags, out string shaderCode);
 
-				// Declare albedo & sample from TexMain:
-				ShaderGenFeature feat_Albedo_SampleTexMain = PixelShaderSamples.CreateVariable_Albedo_InitializeSampleTexMain();
+				byte[] shaderCodeBytes = new byte[shaderCode.Length + 1];
+				for (int i = 0; i < shaderCode.Length; i++)
+				{
+					shaderCodeBytes[i] = (byte)shaderCode[i];
+				}
+				shaderCodeBytes[^1] = (byte)'\0';
 
-				// Declare totalLightIntensity & calculate all lighting:
-				ShaderGenFeature feat_LightIntensity = PixelShaderLightingSamples.CreateVariable_TotalLightIntensity_InitializeCalculateAll(false);
+				GraphicsConstants.defaultShaderStageEntryPoints.TryGetValue(ShaderStages.Fragment, out string? entryPoint);
 
-				//...
-
-				// End entrypoint:
-				ShaderGenFeature feat_MainPixel_End = PixelShaderSamples.CreateFunctionEnd_PS();
-
-				// Assemble code sections:
-				feat_MainPixel.CreateAllCode(ctx);
-				feat_Albedo_SampleTexMain.CreateAllCode(ctx);
-				feat_LightIntensity.CreateAllCode(ctx);
-				feat_MainPixel_End.CreateAllCode(ctx);
-
-				// Finalize shader code:
-				string shaderCode = ctx.AssembleAllCode();
+				if (ShaderResourceFactory.CreateShader(core, "ShaderGen_PS", shaderCodeBytes, shaderCodeBytes.Length, ShaderStages.Fragment, entryPoint!, out ShaderResource? shaderRes))
+				{
+					Engine.ResourceManager.AddResource(new(shaderRes!));
+				}
 			}
 
 			return true;
