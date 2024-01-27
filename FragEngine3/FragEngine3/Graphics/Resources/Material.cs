@@ -229,7 +229,7 @@ namespace FragEngine3.Graphics.Resources
 					}
 					if (!shaderRes.GetShaderProgram(_vertexDataFlags, out Shader? shader) || shader == null)
 					{
-						if (!_fallbackToBasic || shaderRes.GetShaderProgram(MeshVertexDataFlags.BasicSurfaceData, out shader) || shader == null)
+						if (!_fallbackToBasic || !shaderRes.GetShaderProgram(MeshVertexDataFlags.BasicSurfaceData, out shader) || shader == null)
 						{
 							errorStages |= _stageFlag;
 							return false;

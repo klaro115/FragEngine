@@ -88,8 +88,6 @@ struct VertexOutput_Extended
 
 /****************** LIGHTING: ******************/
 
-#define SHADOW_EDGE_FACE_SCALE 10.0
-
 half3 CalculateAmbientLight(in float3 _worldNormal)
 {
     half dotY = (half)dot(_worldNormal, float3(0, 1, 0));
@@ -126,6 +124,8 @@ half3 CalculatePhongLighting(in Light _light, in float3 _worldPosition, in float
     half lightDot = max(-(half)dot(lightRayDir, _worldNormal), 0.0);
     return lightIntens.xyz * lightDot;
 }
+
+#define SHADOW_EDGE_FACE_SCALE 10.0
 
 half CalculateShadowMapLightWeight(in Light _light, in float3 _worldPosition, in float3 _worldNormal)
 {
