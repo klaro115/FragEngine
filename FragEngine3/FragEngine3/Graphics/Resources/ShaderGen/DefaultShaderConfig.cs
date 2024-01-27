@@ -141,7 +141,7 @@ public struct DefaultShaderConfig
 		}
 
 		bool success = true;
-		DefaultShaderConfig config = new DefaultShaderConfig();
+		DefaultShaderConfig config = new();
 
 		string[] parts = _txt.Split('_', StringSplitOptions.RemoveEmptyEntries);
 		foreach (string part in parts)
