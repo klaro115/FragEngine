@@ -177,7 +177,8 @@ namespace FragEngine3.EngineCore.Test
 				//rabbit.node.SetEnabled(false);
 
 				rabbit.SetMesh("Rabbit.obj");
-				rabbit.SetMaterial("Mtl_DefaultSurface");
+				//rabbit.SetMaterial("Mtl_DefaultSurface");
+				rabbit.SetMaterial("Mtl_FeatureTest");
 				rabbit.DontDrawUnlessFullyLoaded = true;
 			}
 
@@ -191,8 +192,8 @@ namespace FragEngine3.EngineCore.Test
 				//cube.node.SetEnabled(false);
 
 				cube.SetMesh(cubeHandle);
-				cube.SetMaterial("Mtl_FeatureTest");
-				//cube.SetMaterial("Mtl_DefaultSurface");
+				//cube.SetMaterial("Mtl_FeatureTest");
+				cube.SetMaterial("Mtl_DefaultSurface");
 			}
 
 			MeshPrimitiveFactory.CreateCylinderMesh("Cylinder", Engine, 0.5f, 2, 32, true, out _, out _, out ResourceHandle cylinderHandle);
@@ -202,11 +203,11 @@ namespace FragEngine3.EngineCore.Test
 				cylinder.node.LocalPosition = new Vector3(-2.5f, 0, 2);
 				cylinder.node.LocalRotation = Quaternion.Identity;
 				cylinder.node.LocalScale = Vector3.One;
-				cylinder.node.SetEnabled(false);
+				//cylinder.node.SetEnabled(false);
 
 				cylinder.SetMesh(cylinderHandle);
-				cylinder.SetMaterial("Mtl_FeatureTest");
-				//cylinder.SetMaterial("Mtl_DefaultSurface");
+				//cylinder.SetMaterial("Mtl_FeatureTest");
+				cylinder.SetMaterial("Mtl_DefaultSurface");
 			}
 
 			MeshPrimitiveFactory.CreateConeMesh("Cone", Engine, 0.75f, 1, 32, true, out _, out _, out ResourceHandle coneHandle);
@@ -216,11 +217,11 @@ namespace FragEngine3.EngineCore.Test
 				cone.node.LocalPosition = new Vector3(0, 2, 2);
 				cone.node.LocalRotation = Quaternion.Identity;
 				cone.node.LocalScale = Vector3.One;
-				cone.node.SetEnabled(false);
+				//cone.node.SetEnabled(false);
 
 				cone.SetMesh(coneHandle);
-				cone.SetMaterial("Mtl_FeatureTest");
-				//cone.SetMaterial("Mtl_DefaultSurface");
+				//cone.SetMaterial("Mtl_FeatureTest");
+				cone.SetMaterial("Mtl_DefaultSurface");
 			}
 
 			MeshPrimitiveFactory.CreateIcosahedronMesh("Icosahedron", Engine, 0.75f, false, out _, out _, out ResourceHandle d20Handle);
@@ -246,8 +247,8 @@ namespace FragEngine3.EngineCore.Test
 				//plane.node.SetEnabled(false);
 
 				plane.SetMesh(planeHandle);
-				plane.SetMaterial("Mtl_FeatureTest");
-				//plane.SetMaterial("Mtl_DefaultSurface");
+				//plane.SetMaterial("Mtl_FeatureTest");
+				plane.SetMaterial("Mtl_DefaultSurface");
 			}
 			if (SceneSpawner.CreateStaticMeshRenderer(scene, out plane))
 			{
@@ -258,8 +259,8 @@ namespace FragEngine3.EngineCore.Test
 				//plane.node.SetEnabled(false);
 
 				plane.SetMesh(planeHandle);
-				plane.SetMaterial("Mtl_FeatureTest");
-				//plane.SetMaterial("Mtl_DefaultSurface");
+				//plane.SetMaterial("Mtl_FeatureTest");
+				plane.SetMaterial("Mtl_DefaultSurface");
 			}
 
 			// Create two-sided quad:
@@ -289,7 +290,7 @@ namespace FragEngine3.EngineCore.Test
 				//quad.node.SetEnabled(false);
 
 				quad.SetMesh(quadHandle);
-				quad.SetMaterial("Mtl_DefaultSurface");
+				//quad.SetMaterial("Mtl_DefaultSurface");
 				quad.SetMaterial("Mtl_TestMaterial");
 			}
 
@@ -297,25 +298,33 @@ namespace FragEngine3.EngineCore.Test
 			/**********************************************************/
 			// SHADER GEN TEST:
 
+			/*
 			{
 				GraphicsCore core = Engine.GraphicsSystem.graphicsCore;
 
-				DefaultShaderBuilder.CreatePixelShaderVariation(DefaultShaderConfig.ConfigMainNormalsLit, Engine.PlatformSystem.PlatformFlags, out string shaderCode);
+				DefaultShaderConfig config = DefaultShaderConfig.ConfigMainNormalsLit;
+				DefaultShaderConfig.TryParseDescriptionTxt(config.CreateDescriptionTxt(), out config);
 
-				byte[] shaderCodeBytes = new byte[shaderCode.Length + 1];
-				for (int i = 0; i < shaderCode.Length; i++)
+				Engine.Logger.LogMessage($"Generating default shader variation: \"{config.CreateDescriptionTxt()}\"");
+
+				if (DefaultShaderBuilder.CreatePixelShaderVariation(in config, Engine.PlatformSystem.PlatformFlags, out string shaderCode))
 				{
-					shaderCodeBytes[i] = (byte)shaderCode[i];
-				}
-				shaderCodeBytes[^1] = (byte)'\0';
+					byte[] shaderCodeBytes = new byte[shaderCode.Length + 1];
+					for (int i = 0; i < shaderCode.Length; i++)
+					{
+						shaderCodeBytes[i] = (byte)shaderCode[i];
+					}
+					shaderCodeBytes[^1] = (byte)'\0';
 
-				GraphicsConstants.defaultShaderStageEntryPoints.TryGetValue(ShaderStages.Fragment, out string? entryPoint);
+					GraphicsConstants.defaultShaderStageEntryPoints.TryGetValue(ShaderStages.Fragment, out string? entryPoint);
 
-				if (ShaderResourceFactory.CreateShader(core, "ShaderGen_PS", shaderCodeBytes, shaderCodeBytes.Length, ShaderStages.Fragment, entryPoint!, out ShaderResource? shaderRes))
-				{
-					Engine.ResourceManager.AddResource(new(shaderRes!));
+					if (ShaderResourceFactory.CreateShaderFromCodeBytes(core, "ShaderGen_PS", shaderCodeBytes, shaderCodeBytes.Length, ShaderStages.Fragment, entryPoint!, out ShaderResource? shaderRes))
+					{
+						Engine.ResourceManager.AddResource(new(shaderRes!));
+					}
 				}
 			}
+			*/
 
 			return true;
 		}

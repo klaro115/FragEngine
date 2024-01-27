@@ -47,7 +47,7 @@ public struct DefaultShaderConfig
 	{
 		albedoSource = DefaultShaderAlbedoSource.SampleTexMain,
 		albedoColor = RgbaFloat.White,
-		samplerTexMain = "SamplerMain",
+		samplerTexMain = null,
 
 		useNormalMap = false,
 		samplerTexNormal = null,
@@ -64,10 +64,10 @@ public struct DefaultShaderConfig
 	{
 		albedoSource = DefaultShaderAlbedoSource.SampleTexMain,
 		albedoColor = RgbaFloat.White,
-		samplerTexMain = "SamplerMain",
+		samplerTexMain = null,
 
 		useNormalMap = true,
-		samplerTexNormal = "SamplerMain",
+		samplerTexNormal = null,
 
 		applyLighting = true,
 		useAmbientLight = true,
@@ -76,6 +76,144 @@ public struct DefaultShaderConfig
 		lightingModel = DefaultShaderLightingModel.Phong,
 		useShadowMaps = true,
 	};
+
+	#endregion
+	#region Methods
+
+	public readonly string CreateDescriptionTxt()
+	{
+		// Albedo:
+		char albedoSrc = BoolToCustom(albedoSource == DefaultShaderAlbedoSource.SampleTexMain, 't', 'c');
+
+		// Normals:
+		char normalsYN = BoolToYN(useNormalMap);
+
+		// Lighting:
+		char lightingYN = BoolToYN(applyLighting);
+		char useAmbient = BoolTo01(applyLighting && useAmbientLight);
+		char useLgtMaps = BoolTo01(applyLighting && useLightMaps);
+		char useLgtSrcs = BoolTo01(applyLighting && useLightSources);
+		char lightModel = BoolToCustom(applyLighting && useLightSources && lightingModel == DefaultShaderLightingModel.Phong, 'p', '?');
+		char useShaMaps = BoolTo01(applyLighting && useLightSources && useShadowMaps);
+
+		// Assemble base text containing only flags:
+		string txt = $"A{albedoSrc}_N{normalsYN}_L{lightingYN}{useAmbient}{useLgtMaps}{useLgtSrcs}{lightModel}{useShaMaps}";
+
+		// Albedo start color literal or sampler name:
+		if (albedoSource == DefaultShaderAlbedoSource.SampleTexMain && !string.IsNullOrEmpty(samplerTexMain))
+		{
+			txt += $"_As={samplerTexMain}";
+		}
+		else if (albedoSource == DefaultShaderAlbedoSource.Color)
+		{
+			txt += $"_Al={new Color32(albedoColor).ToHexStringLower()}";
+		}
+
+		// Normal map sampler name:
+		if (useNormalMap && !string.IsNullOrEmpty(samplerTexNormal) && string.CompareOrdinal(samplerTexMain, samplerTexNormal) != 0)
+		{
+			txt += $"_Ns={samplerTexNormal}";
+		}
+
+		return txt;
+
+		static char BoolToYN(bool _value) => _value ? 'y' : 'n';
+		static char BoolTo01(bool _value) => _value ? '1' : '0';
+		static char BoolToCustom(bool _value, char _y, char _n) => _value ? _y : _n;
+	}
+
+	public static bool TryParseDescriptionTxt(string _txt, out DefaultShaderConfig _outConfig)
+	{
+		if (string.IsNullOrEmpty(_txt))
+		{
+			_outConfig = default;
+			return false;
+		}
+
+		bool success = true;
+		DefaultShaderConfig config = new DefaultShaderConfig();
+
+		string[] parts = _txt.Split('_', StringSplitOptions.RemoveEmptyEntries);
+		foreach (string part in parts)
+		{
+			char cLead = part[0];
+			success &= cLead switch
+			{
+				'A' => TryParseAlbedo(part),
+				'N' => TryParseNormals(part),
+				'L' => TryParseLighting(part),
+				_ => false,
+			};
+		}
+
+		_outConfig = config;
+		return true;
+
+
+		bool TryParseAlbedo(string _part)
+		{
+			if (_part.Length < 2) return false;
+			char cType = _part[1];
+			switch (cType)
+			{
+				case 'c':
+					config.albedoSource = DefaultShaderAlbedoSource.Color;
+					return true;
+				case 'l':
+					string colorLiteral = _part.Substring(3);
+					config.albedoColor = Color32.ParseHexString(colorLiteral).ToRgbaFloat();
+					return true;
+				case 's':
+					config.samplerTexMain = _part.Substring(3);
+					return true;
+				case 't':
+					config.albedoSource = DefaultShaderAlbedoSource.SampleTexMain;
+					return true;
+				default:
+					return false;
+			}
+		}
+		bool TryParseNormals(string _part)
+		{
+			if (_part.Length < 2) return false;
+			char cType = _part[1];
+			switch (cType)
+			{
+				case 'n':
+					config.useNormalMap = false;
+					return true;
+				case 's':
+					config.samplerTexNormal = _part.Substring(3);
+					return true;
+				case 'y':
+					config.useNormalMap = true;
+					return true;
+				default:
+					return false;
+			}
+		}
+		bool TryParseLighting(string _part)
+		{
+			if (_part.Length < 2) return false;
+			config.applyLighting = _part[1] == 'y';
+			if (config.applyLighting && _part.Length >= 7)
+			{
+				config.useAmbientLight = _part[2] == '1';
+				config.useLightMaps = _part[3] == '1';
+				config.useLightSources = _part[4] == '1';
+				switch (_part[5])
+				{
+					case 'p':
+						config.lightingModel = DefaultShaderLightingModel.Phong;
+						break;
+					default:
+						return false;
+				}
+				config.useShadowMaps = _part[6] == '1';
+			}
+			return true;
+		}
+	}
 
 	#endregion
 }

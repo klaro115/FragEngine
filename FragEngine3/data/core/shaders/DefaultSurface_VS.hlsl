@@ -87,7 +87,9 @@ struct VertexOutput_Extended
 
 /******************* SHADERS: ******************/
 
-void Main_Vertex(in VertexInput_Basic inputBasic, out VertexOutput_Basic outputBasic)
+void Main_Vertex(
+    in VertexInput_Basic inputBasic,
+    out VertexOutput_Basic outputBasic)
 {
     float4x4 mtxLocal2Clip = mul(mtxWorld2Clip, mtxLocal2World);
 
@@ -99,7 +101,11 @@ void Main_Vertex(in VertexInput_Basic inputBasic, out VertexOutput_Basic outputB
     outputBasic.uv = inputBasic.uv;
 }
 
-void Main_Vertex_Ext(in VertexInput_Basic inputBasic, in VertexInput_Extended inputExt, out VertexOutput_Basic outputBasic, out VertexOutput_Extended outputExt)
+void Main_Vertex_Ext(
+    in VertexInput_Basic inputBasic,
+    in VertexInput_Extended inputExt,
+    out VertexOutput_Basic outputBasic,
+    out VertexOutput_Extended outputExt)
 {
     float4x4 mtxLocal2Clip = mul(mtxWorld2Clip, mtxLocal2World);
 

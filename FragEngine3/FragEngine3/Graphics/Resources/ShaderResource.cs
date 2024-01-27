@@ -95,14 +95,14 @@ namespace FragEngine3.Graphics.Resources
 		/// <summary>
 		/// Gets the vertex definition flags for a specific variant that is supported by this shader's programs.
 		/// </summary>
-		/// <param name="_variantIndex">Index of the variant in question. Must be between 0 and '<see cref="VertexVariantCount"/>'.</param>
+		/// <param name="_variantIdx">Index of the variant in question. Must be between 0 and '<see cref="VertexVariantCount"/>'.</param>
 		/// <param name="_outVariantFlags">Outputs the mesh vertex definition flags for this variant.</param>
 		/// <returns>True if the variant index and flags were valid, false otherwise.</returns>
-		public bool GetVariantVertexDataFlags(int _variantIndex, out MeshVertexDataFlags _outVariantFlags)
+		public bool GetVariantVertexDataFlags(int _variantIdx, out MeshVertexDataFlags _outVariantFlags)
 		{
-			if (_variantIndex >= 0 && _variantIndex < VertexVariantCount)
+			if (_variantIdx >= 0 && _variantIdx < VertexVariantCount)
 			{
-				_outVariantFlags = vertexVariants[_variantIndex];
+				_outVariantFlags = vertexVariants[_variantIdx];
 				return _outVariantFlags.HasFlag(MeshVertexDataFlags.BasicSurfaceData);
 			}
 			_outVariantFlags = 0;
@@ -117,8 +117,8 @@ namespace FragEngine3.Graphics.Resources
 		/// <returns>True if the shader variant exists, false otherwise.</returns>
 		public bool GetShaderProgram(MeshVertexDataFlags _variantFlags, out Shader? _outShader)
 		{
-			int variantIdx = (int)_variantFlags - 1;
-			if (variantIdx >= 0 && variantIdx < shaderVariants.Length)
+			uint variantIdx = _variantFlags.GetVariantIndex();
+			if (variantIdx < shaderVariants.Length)
 			{
 				_outShader = shaderVariants[variantIdx];
 				return _outShader != null;

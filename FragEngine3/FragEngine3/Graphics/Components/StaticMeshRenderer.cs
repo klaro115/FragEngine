@@ -1,6 +1,7 @@
 ﻿using FragEngine3.Containers;
 using FragEngine3.Graphics.Components.Data;
 using FragEngine3.Graphics.Contexts;
+using FragEngine3.Graphics.Internal;
 using FragEngine3.Graphics.Resources;
 using FragEngine3.Graphics.Utility;
 using FragEngine3.Resources;
@@ -12,7 +13,7 @@ using Veldrid;
 
 namespace FragEngine3.Graphics.Components
 {
-    public sealed class StaticMeshRenderer(SceneNode _node) : Component(_node), IRenderer
+	public sealed class StaticMeshRenderer(SceneNode _node) : Component(_node), IRenderer
 	{
 		#region Fields
 
@@ -26,8 +27,8 @@ namespace FragEngine3.Graphics.Components
 		private DeviceBuffer? cbObject = null;
 		private ResourceSet? resSetObject = null;
 
-		private VersionedMember<Pipeline> pipeline = new(null!, 0);
-		private VersionedMember<Pipeline> shadowPipeline = new(null!, 0);
+		private PipelineState? pipeline = null;
+		private PipelineState? shadowPipeline = null;
 
 		private ResourceSet? overrideBoundResourceSet = null;
 
@@ -68,8 +69,8 @@ namespace FragEngine3.Graphics.Components
 
 			cbObject?.Dispose();
 
-			pipeline.DisposeValue();
-			shadowPipeline.DisposeValue();
+			pipeline?.Dispose();
+			shadowPipeline?.Dispose();
 
 			if (_disposing)
 			{
@@ -288,7 +289,7 @@ namespace FragEngine3.Graphics.Components
 			in SceneContext _sceneCtx,
 			in CameraPassContext _cameraPassCtx,
 			Material _currentMaterial,
-			ref VersionedMember<Pipeline> _currentPipeline)
+			ref PipelineState? _currentPipeline)
 		{
 			// Check mesh and load it now if necessary:
 			if (Mesh == null || Mesh.IsDisposed)
@@ -323,13 +324,15 @@ namespace FragEngine3.Graphics.Components
 			// Update (or recreate) pipeline for rendering this material and geometry combo:
 			if (!_currentMaterial.IsPipelineUpToDate(in _currentPipeline, rendererVersion))
 			{
-				_currentPipeline.DisposeValue();
+				_currentPipeline?.Dispose();
+
 				if (!_currentMaterial.CreatePipeline(_sceneCtx, _cameraPassCtx, rendererVersion, vertexDataFlags, out _currentPipeline))
 				{
 					Logger.LogError($"Failed to retrieve pipeline description for material '{_currentMaterial}'!");
 					return false;
 				}
 			}
+			uint vertexBufferCount = Math.Min((uint)vertexBuffers.Length, _currentPipeline!.vertexBufferCount);
 
 			// Update or (re)create the constant buffer containing object data:
 			if (!MeshRendererUtility.UpdateConstantBuffer_CBObject(
@@ -355,7 +358,7 @@ namespace FragEngine3.Graphics.Components
 			}
 
 			// Throw pipeline and geometry buffers at the command list:
-			_cameraPassCtx.cmdList.SetPipeline(_currentPipeline.Value);
+			_cameraPassCtx.cmdList.SetPipeline(_currentPipeline.pipeline);
 			_cameraPassCtx.cmdList.SetGraphicsResourceSet(0, _cameraPassCtx.resSetCamera);
 			_cameraPassCtx.cmdList.SetGraphicsResourceSet(1, resSetObject);
 
@@ -365,9 +368,12 @@ namespace FragEngine3.Graphics.Components
 				_cameraPassCtx.cmdList.SetGraphicsResourceSet(2, boundResourceSet);
 			}
 
-			for (uint i = 0; i < vertexBuffers.Length; ++i)
+			//Console.WriteLine($"Test: Drawing mesh '{Mesh.resourceKey}' using material '{_currentMaterial.resourceKey}'");		//TEST
+
+			for (uint i = 0; i < vertexBufferCount; ++i)
 			{
-				_cameraPassCtx.cmdList.SetVertexBuffer(i, vertexBuffers[i]);
+				DeviceBuffer vertexBuffer = vertexBuffers[i];
+				_cameraPassCtx.cmdList.SetVertexBuffer(i, vertexBuffer);
 			}
 			_cameraPassCtx.cmdList.SetIndexBuffer(indexBuffer, Mesh.IndexFormat);
 
@@ -450,6 +456,11 @@ namespace FragEngine3.Graphics.Components
 				SerializedData = dataJson,
 			};
 			return true;
+		}
+
+		public override string ToString()
+		{
+			return $"StaticMeshRenderer (Mesh: '{MeshHandle?.resourceKey ?? Mesh?.resourceKey ?? "NULL"}', Material: '{MaterialHandle?.resourceKey ?? Material?.resourceKey ?? "NULL"}')";
 		}
 
 		#endregion

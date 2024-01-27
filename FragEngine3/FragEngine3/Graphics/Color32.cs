@@ -271,6 +271,10 @@ namespace FragEngine3.Graphics
 		{
 			return $"{R:X2}{G:X2}{B:X2}{A:X2}";
 		}
+		public readonly string ToHexStringLower()
+		{
+			return $"{R:x2}{G:x2}{B:x2}{A:x2}";
+		}
 
 		public static Color32 ParseHexString(string _hexString)
 		{
@@ -290,7 +294,13 @@ namespace FragEngine3.Graphics
 
 			uint ParseDigit(int _index)
 			{
-				return _hexString[_index] - (uint)'0';
+				uint c = _hexString[_index];
+				if (c >= 'a')
+					return c - 'a' + 10;
+				else if (c >= 'A')
+					return c - 'A' + 10;
+				else
+					return c - '0';
 			}
 		}
 

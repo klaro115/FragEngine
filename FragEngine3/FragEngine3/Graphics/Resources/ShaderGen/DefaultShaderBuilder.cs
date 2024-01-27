@@ -8,7 +8,7 @@ public static class DefaultShaderBuilder
 {
 	#region Types
 
-	private sealed class Context
+	private sealed class Context(DefaultShaderLanguage _language)
 	{
 		public readonly StringBuilder constants = new(2300);
 		public readonly StringBuilder resources = new(512);
@@ -19,6 +19,7 @@ public static class DefaultShaderBuilder
 		public readonly StringBuilder mainHeader = new(512);
 		//^Note: Starting capacities set for a pixel shader with all features enabled.
 
+		public readonly DefaultShaderLanguage language = _language;
 		public readonly HashSet<string> globalDeclarations = new(10);
 		public MeshVertexDataFlags vertexDataFlags = MeshVertexDataFlags.BasicSurfaceData;
 		public string varNameNormals = "inputBasic.normal";
@@ -41,9 +42,6 @@ public static class DefaultShaderBuilder
 
 	public static bool CreatePixelShaderVariation(in DefaultShaderConfig _config, EnginePlatformFlag _platformFlags, out string _outShaderCode)
 	{
-		Context ctx = new();
-		StringBuilder finalBuilder = new(4096);
-
 		DefaultShaderLanguage language;
 		if (_platformFlags.HasFlag(EnginePlatformFlag.GraphicsAPI_D3D))
 			language = DefaultShaderLanguage.HLSL;
@@ -52,8 +50,13 @@ public static class DefaultShaderBuilder
 		else
 			language = DefaultShaderLanguage.GLSL;
 
+		bool success = true;
+
+		Context ctx = new(language);
+		StringBuilder finalBuilder = new(4096);
+
 		// Add universal header defines and compiler instructions:
-		WriteLanguageCodeLines(finalBuilder, language,
+		success &= WriteLanguageCodeLines(finalBuilder, language,
 			[
 				"#pragma pack_matrix( column_major )"
 			],
@@ -64,20 +67,21 @@ public static class DefaultShaderBuilder
 			null);
 		finalBuilder.AppendLine();
 
-		AddAlbedo(in ctx, in _config, language);
+		success &= AddAlbedo(in ctx, in _config);
 
 		if (_config.useNormalMap)
 		{
-			AddNormalMaps(in ctx, in _config);
+			success &= AddNormalMaps(in ctx, in _config);
 		}
 
 		if (_config.applyLighting)
 		{
-			AddLighting(in ctx, in _config, language);
+			success &= WriteVariable_Lighting(in ctx, in _config);
+			success &= ApplyLighting(in ctx);
 		}
 
 		// Assemble full shader code file:
-		AddHeader_MainPixel(ctx, ctx.mainHeader, language);
+		success &= AddHeader_MainPixel(ctx, ctx.mainHeader);
 		finalBuilder.Append(ctx.constants).AppendLine();
 		finalBuilder.Append(ctx.resources).AppendLine();
 		finalBuilder.Append(ctx.vertexOutputs).AppendLine();
@@ -86,11 +90,11 @@ public static class DefaultShaderBuilder
 		// Add entrypoint function:
 		finalBuilder.Append(ctx.mainHeader);
 		finalBuilder.Append(ctx.mainCode);
-		AddFunctionEnd_MainPixel(finalBuilder);
+		success &= AddFunctionEnd_MainPixel(finalBuilder);
 
 		// Output resulting shader code:
 		_outShaderCode = finalBuilder.ToString();
-		return true;
+		return success;
 	}
 
 	private static void WriteColorValues(StringBuilder _dstBuilder, RgbaFloat _color)
@@ -98,7 +102,7 @@ public static class DefaultShaderBuilder
 		_dstBuilder.Append(_color.R).Append(", ").Append(_color.G).Append(", ").Append(_color.B).Append(", ").Append(_color.A);
 	}
 
-	private static int WriteLanguageCodeLines(StringBuilder _dstBuilder, DefaultShaderLanguage _language, string[]? _codeHLSL, string[]? _codeMetal, string[]? _codeGLSL)
+	private static bool WriteLanguageCodeLines(StringBuilder _dstBuilder, DefaultShaderLanguage _language, string[]? _codeHLSL, string[]? _codeMetal, string[]? _codeGLSL, bool _appendAsLines = true)
 	{
 		string[]? codeLines = _language switch
 		{
@@ -112,26 +116,32 @@ public static class DefaultShaderBuilder
 		{
 			foreach (string line in codeLines)
 			{
-				_dstBuilder.AppendLine(line);
+				_dstBuilder.Append(line);
+				if (_appendAsLines)
+				{
+					_dstBuilder.AppendLine();
+				}
 			}
-			return codeLines.Length;
+			return true;
 		}
 		Logger.Instance?.LogError($"Code lines not currently available for shading language '{_language}'.");
-		return 0;
+		return false;
 	}
 	
-	private static bool WriteConstantBuffer_CBScene(in Context _ctx, DefaultShaderLanguage _language)
+	private static bool WriteConstantBuffer_CBScene(in Context _ctx)
 	{
 		const string nameConst = "CBScene";
 		if (_ctx.globalDeclarations.Contains(nameConst)) return true;
 
-		string typeNameVec = _language == DefaultShaderLanguage.GLSL
+		bool success = true;
+
+		string typeNameVec = _ctx.language == DefaultShaderLanguage.GLSL
 			? "vec4"
 			: "float4";
 
 		// Write structure header:
 		_ctx.constants.AppendLine("// Constant buffer containing all scene-wide settings:");
-		WriteLanguageCodeLines(_ctx.constants, _language,
+		success &= WriteLanguageCodeLines(_ctx.constants, _ctx.language,
 			[ "cbuffer CBScene : register(b0)" ],
 			[ "struct CBScene" ],
 			null);
@@ -147,24 +157,26 @@ public static class DefaultShaderBuilder
 			.AppendLine("};");
 
 		_ctx.globalDeclarations.Add(nameConst);
-		return true;
+		return success;
 	}
 
-	private static bool WriteConstantBuffer_CBCamera(in Context _ctx, DefaultShaderLanguage _language)
+	private static bool WriteConstantBuffer_CBCamera(in Context _ctx)
 	{
 		const string nameConst = "CBCamera";
 		if (_ctx.globalDeclarations.Contains(nameConst)) return true;
 
-		string typeNameMtx = _language == DefaultShaderLanguage.GLSL
+		bool success = true;
+
+		string typeNameMtx = _ctx.language == DefaultShaderLanguage.GLSL
 			? "mat4"
 			: "float4x4";
-		string typeNameVec = _language == DefaultShaderLanguage.GLSL
+		string typeNameVec = _ctx.language == DefaultShaderLanguage.GLSL
 			? "vec4"
 			: "float4";
 
 		// Write structure header:
 		_ctx.constants.AppendLine("// Constant buffer containing all settings that apply for everything drawn by currently active camera:");
-		WriteLanguageCodeLines(_ctx.constants, _language,
+		success &= WriteLanguageCodeLines(_ctx.constants, _ctx.language,
 			[ "cbuffer CBCamera : register(b1)" ],
 			[ "struct CBCamera" ],
 			null);
@@ -191,13 +203,15 @@ public static class DefaultShaderBuilder
 			.AppendLine("};");
 
 		_ctx.globalDeclarations.Add(nameConst);
-		return true;
+		return success;
 	}
 
-	private static bool WriteVertexOutput_Basic(in Context _ctx, DefaultShaderLanguage _language)
+	private static bool WriteVertexOutput_Basic(in Context _ctx)
 	{
 		const string nameVert = "VertexOutput_Basic";
 		if (_ctx.globalDeclarations.Contains(nameVert)) return true;
+
+		bool success = true;
 
 		// Write structure header:
 		_ctx.vertexOutputs
@@ -205,7 +219,7 @@ public static class DefaultShaderBuilder
 			.AppendLine("{");
 
 		// Write body:
-		WriteLanguageCodeLines(_ctx.vertexOutputs, _language,
+		success &= WriteLanguageCodeLines(_ctx.vertexOutputs, _ctx.language,
 			// HLSL:
 			[
 				"    float4 position : SV_POSITION;",
@@ -225,13 +239,15 @@ public static class DefaultShaderBuilder
 		_ctx.vertexOutputs.AppendLine("};");
 
 		_ctx.globalDeclarations.Add(nameVert);
-		return true;
+		return success;
 	}
 
-	private static bool WriteVertexOutput_Extended(in Context _ctx, DefaultShaderLanguage _language)
+	private static bool WriteVertexOutput_Extended(in Context _ctx)
 	{
 		const string nameVert = "VertexOutput_Extended";
 		if (_ctx.globalDeclarations.Contains(nameVert)) return true;
+
+		bool success = true;
 
 		// Write structure header:
 		_ctx.vertexOutputs
@@ -239,7 +255,7 @@ public static class DefaultShaderBuilder
 			.AppendLine("{");
 
 		// Write body:
-		WriteLanguageCodeLines(_ctx.vertexOutputs, _language,
+		success &= WriteLanguageCodeLines(_ctx.vertexOutputs, _ctx.language,
 			// HLSL:
 			[
 				"    float4 tangent : NORMAL1;",
@@ -257,17 +273,17 @@ public static class DefaultShaderBuilder
 		_ctx.vertexOutputs.AppendLine("};");
 
 		_ctx.globalDeclarations.Add(nameVert);
-		return true;
+		return success;
 	}
 
-	private static bool AddAlbedo(in Context _ctx, in DefaultShaderConfig _config, DefaultShaderLanguage _language)
+	private static bool AddAlbedo(in Context _ctx, in DefaultShaderConfig _config)
 	{
 		// Write basic declaration:
 		_ctx.mainCode.AppendLine("    // Sample base color from main texture:");
 		_ctx.mainCode.Append("    half4 albedo = ");
 
 		// Initialize vector either from color literal or sample from main texture:
-		switch (_language)
+		switch (_ctx.language)
 		{
 			case DefaultShaderLanguage.HLSL:
 				if (_config.albedoSource == DefaultShaderAlbedoSource.SampleTexMain)
@@ -295,7 +311,7 @@ public static class DefaultShaderBuilder
 				break;
 			default:
 				{
-					Logger.Instance?.LogError($"Feature is not currently supported for shading language '{_language}'.");
+					Logger.Instance?.LogError($"Feature is not currently supported for shading language '{_ctx.language}'.");
 					return false;
 				}
 		}
@@ -310,15 +326,15 @@ public static class DefaultShaderBuilder
 		return true;
 	}
 
-	private static bool WriteType_Lighting_Light(in Context _ctx, DefaultShaderLanguage _language)
+	private static bool WriteType_Lighting_Light(in Context _ctx)
 	{
 		const string nameType = "Light";
 		if (_ctx.globalDeclarations.Contains(nameType)) return true;
 
-		string typeNameVec = _language == DefaultShaderLanguage.GLSL
+		string typeNameVec = _ctx.language == DefaultShaderLanguage.GLSL
 			? "vec3"
 			: "float3";
-		string typeNameMtx = _language == DefaultShaderLanguage.GLSL
+		string typeNameMtx = _ctx.language == DefaultShaderLanguage.GLSL
 			? "mtx4"
 			: "float4x4";
 
@@ -340,16 +356,18 @@ public static class DefaultShaderBuilder
 		return true;
 	}
 
-	private static bool WriteResource_Lighting_BufLights(in Context _ctx, DefaultShaderLanguage _language)
+	private static bool WriteResource_Lighting_BufLights(in Context _ctx)
 	{
 		const string nameRes = "BufLights";
 		if (_ctx.globalDeclarations.Contains(nameRes)) return true;
 
+		bool success = true;
+
 		// Ensure the light type is also defined:
-		WriteType_Lighting_Light(in _ctx, _language);
+		success &= WriteType_Lighting_Light(in _ctx);
 
 		// Metal:
-		if (_language == DefaultShaderLanguage.Metal)
+		if (_ctx.language == DefaultShaderLanguage.Metal)
 		{
 			_ctx.mainInputs.Append(", device const Light* BufLights [[ buffer( 3 ) ]]");
 		}
@@ -360,17 +378,17 @@ public static class DefaultShaderBuilder
 		}
 
 		_ctx.globalDeclarations.Add(nameRes);
-		return true;
+		return success;
 	}
 
-	private static bool WriteResource_Lighting_TexShadowMaps(in Context _ctx, DefaultShaderLanguage _language)
+	private static bool WriteResource_Lighting_TexShadowMaps(in Context _ctx)
 	{
 		// TexShadowMaps:
 		const string nameTex = "TexShadowMaps";
 		if (!_ctx.globalDeclarations.Contains(nameTex))
 		{
 			// Metal:
-			if (_language == DefaultShaderLanguage.Metal)
+			if (_ctx.language == DefaultShaderLanguage.Metal)
 			{
 				_ctx.mainInputs.Append(", texture2d<half, access::read> TexOpaqueColor [[ texture( 0 ) ]]");
 			}
@@ -387,7 +405,7 @@ public static class DefaultShaderBuilder
 		if (!_ctx.globalDeclarations.Contains(nameSampler))
 		{
 			// Metal:
-			if (_language == DefaultShaderLanguage.Metal)
+			if (_ctx.language == DefaultShaderLanguage.Metal)
 			{
 				//TODO: no idea how this is done. This language is a convoluted mess.
 			}
@@ -403,15 +421,17 @@ public static class DefaultShaderBuilder
 		return true;
 	}
 
-	private static bool WriteFunction_Lighting_CalculateAmbientLight(in Context _ctx, DefaultShaderLanguage _language)
+	private static bool WriteFunction_Lighting_CalculateAmbientLight(in Context _ctx)
 	{
 		const string nameFunc = "CalculateAmbientLight";
 		if (_ctx.globalDeclarations.Contains(nameFunc)) return true;
 
-		WriteConstantBuffer_CBScene(in _ctx, _language);
+		bool success = true;
+
+		success &= WriteConstantBuffer_CBScene(in _ctx);
 
 		// Write function header:
-		WriteLanguageCodeLines(_ctx.functions, _language,
+		success &= WriteLanguageCodeLines(_ctx.functions, _ctx.language,
 			[ "half3 CalculateAmbientLight(in float3 _worldNormal)" ],
 			[ "half3 CalculateAmbientLight(const float3& _worldNormal)" ],
 			null);
@@ -428,22 +448,24 @@ public static class DefaultShaderBuilder
 			.AppendLine();
 
 		_ctx.globalDeclarations.Add(nameFunc);
-		return true;
+		return success;
 	}
 
-	private static bool WriteFunction_Lighting_CalculateLightMaps(in Context _ctx, DefaultShaderLanguage _language)
+	private static bool WriteFunction_Lighting_CalculateLightMaps(in Context _ctx)
 	{
 		//TODO
 		return true;
 	}
 
-	private static bool WriteFunction_Lighting_CalculatePhongLighting(in Context _ctx, DefaultShaderLanguage _language)
+	private static bool WriteFunction_Lighting_CalculatePhongLighting(in Context _ctx)
 	{
 		const string nameFunc = "CalculatePhongLighting";
 		if (_ctx.globalDeclarations.Contains(nameFunc)) return true;
 
+		bool success = true;
+
 		// Write function header:
-		WriteLanguageCodeLines(_ctx.functions, _language,
+		success &= WriteLanguageCodeLines(_ctx.functions, _ctx.language,
 			[ "half3 CalculatePhongLighting(in Light _light, in float3 _worldPosition, in float3 _worldNormal)" ],
 			[ "half3 CalculatePhongLighting(device const Light& _light, const float3& _worldPosition, const float3& _worldNormal)" ],
 			null);
@@ -478,15 +500,17 @@ public static class DefaultShaderBuilder
 			.AppendLine();
 
 		_ctx.globalDeclarations.Add(nameFunc);
-		return true;
+		return success;
 	}
 
-	private static bool WriteFunction_Lighting_CalculateShadowMapLightWeight(in Context _ctx, DefaultShaderLanguage _language)
+	private static bool WriteFunction_Lighting_CalculateShadowMapLightWeight(in Context _ctx)
 	{
 		const string nameFunc = "CalculateShadowMapLightWeight";
 		if (_ctx.globalDeclarations.Contains(nameFunc)) return true;
 
-		WriteResource_Lighting_TexShadowMaps(in _ctx, _language);
+		bool success = true;
+
+		success &= WriteResource_Lighting_TexShadowMaps(in _ctx);
 
 		// Write define for "SHADOW_EDGE_FACE_SCALE":
 		_ctx.functions
@@ -494,13 +518,13 @@ public static class DefaultShaderBuilder
 			.AppendLine();
 
 		// Write function header:
-		WriteLanguageCodeLines(_ctx.functions, _language,
+		success &= WriteLanguageCodeLines(_ctx.functions, _ctx.language,
 			[ "half CalculateShadowMapLightWeight(in Light _light, in float3 _worldPosition, in float3 _worldNormal)" ],
 			[ "half CalculateShadowMapLightWeight(device const Light& _light, const float3& _worldPosition, const float3& _worldNormal)" ],
 			null);
 
 		// Write function body:
-		string funcNameLerp = _language == DefaultShaderLanguage.HLSL
+		string funcNameLerp = _ctx.language == DefaultShaderLanguage.HLSL
 			? "lerp"
 			: "mix";
 
@@ -511,7 +535,7 @@ public static class DefaultShaderBuilder
 			.AppendLine()
 			.AppendLine("    // Transform pixel position to light's clip space, then to UV space:");
 
-		WriteLanguageCodeLines(_ctx.functions, _language,
+		success &= WriteLanguageCodeLines(_ctx.functions, _ctx.language,
 			[ "    float4 shadowProj = mul(_light.mtxShadowWorld2Clip, worldPosBiased);" ],	//bloody Metal, breaking matrix multiplication conventions.
 			[ "    float4 shadowProj = _light.mtxShadowWorld2Clip * worldPosBiased;" ],
 			[ "    float4 shadowProj = mul(_light.mtxShadowWorld2Clip, worldPosBiased);" ]);
@@ -537,13 +561,110 @@ public static class DefaultShaderBuilder
 			.AppendLine();
 
 		_ctx.globalDeclarations.Add(nameFunc);
-		return true;
+		return success;
 	}
 
-	private static bool AddLighting(in Context _ctx, in DefaultShaderConfig _config, DefaultShaderLanguage _language)
+	private static bool WriteFunction_Lighting_CalculateTotalLightIntensity(in Context _ctx, in DefaultShaderConfig _config)
 	{
 		const string nameFunc = "CalculateTotalLightIntensity";
 		if (_ctx.globalDeclarations.Contains(nameFunc)) return true;
+
+		bool success = true;
+
+		// Add all functions that may be referenced here-after immediately:
+		if (_config.useAmbientLight)
+		{
+			success &= WriteFunction_Lighting_CalculateAmbientLight(in _ctx);
+		}
+		if (_config.useLightMaps)
+		{
+			success &= WriteFunction_Lighting_CalculateLightMaps(in _ctx);
+		}
+		if (_config.useLightSources)
+		{
+			success &= WriteConstantBuffer_CBCamera(in _ctx);
+			success &= WriteResource_Lighting_BufLights(in _ctx);
+			success &= WriteFunction_Lighting_CalculatePhongLighting(in _ctx);
+
+			if (_config.useShadowMaps)
+			{
+				success &= WriteResource_Lighting_TexShadowMaps(in _ctx);
+				success &= WriteFunction_Lighting_CalculateShadowMapLightWeight(in _ctx);
+			}
+		}
+
+		// Create header of main lighting function:
+		success &= WriteLanguageCodeLines(_ctx.functions, _ctx.language,
+			[ "half3 CalculateTotalLightIntensity(in float3 _worldPosition, in float3 _worldNormal)" ],
+			[ "half3 CalculateTotalLightIntensity(device const Light* BufLights, const float3& _worldPosition, const float3& _worldNormal)" ],
+			null);
+
+		// Declare and initialize "totalLightIntensity" from zero or ambient light!
+		_ctx.functions
+			.AppendLine("{")
+			.Append("    half3 totalLightIntensity = ");
+		if (_config.useAmbientLight)
+		{
+			_ctx.functions.AppendLine($"CalculateAmbientLight(_worldNormal);");
+		}
+		else
+		{
+			_ctx.functions.AppendLine("half3(0, 0, 0);");
+		}
+		_ctx.functions.AppendLine();
+
+		// Start first light source loop:
+		string varNameLightCountFirst = _config.useShadowMaps
+			? "shadowMappedLightCount"
+			: "lightCount";
+
+		_ctx.functions
+			.AppendLine("    // Shadow-casting light sources:")
+			.AppendLine($"    for (uint i = 0; i < {varNameLightCountFirst}; ++i)")
+			.AppendLine("    {");
+
+		if (_config.useShadowMaps)
+		{
+			success &= WriteLanguageCodeLines(_ctx.functions, _ctx.language,
+				[ "        Light light = BufLights[i];" ],
+				[ "        device const Light& light = *BufLights[i];" ],
+				null);
+			_ctx.functions
+				.AppendLine()
+				.AppendLine("        half3 lightIntensity = CalculatePhongLighting(light, _worldPosition, _worldNormal);")
+				.AppendLine("        half lightWeight = CalculateShadowMapLightWeight(light, _worldPosition, _worldNormal);")
+				.AppendLine("        totalLightIntensity += lightIntensity * lightWeight;")
+				.AppendLine("    }");
+		}
+
+		// Start non-casting light source loop:
+		if (_config.useShadowMaps)
+		{
+			_ctx.functions
+			.AppendLine("    // Simple light sources:")
+			.AppendLine("    for (i = shadowMappedLightCount; i < lightCount; ++i)")
+			.AppendLine("    {");
+		}
+		success &= WriteLanguageCodeLines(_ctx.functions, _ctx.language,
+			[ "        totalLightIntensity += CalculatePhongLighting(BufLights[i], _worldPosition, _worldNormal);" ],
+			[ "        totalLightIntensity += CalculatePhongLighting(BufLights[i], _worldPosition, _worldNormal);" ],
+			null);
+		_ctx.functions.AppendLine("    }");
+
+		// Return result and end function:
+		_ctx.functions.AppendLine("    return totalLightIntensity;");
+		_ctx.functions.AppendLine("}");
+
+		_ctx.globalDeclarations.Add(nameFunc);
+		return success;
+	}
+
+	private static bool WriteVariable_Lighting(in Context _ctx, in DefaultShaderConfig _config)
+	{
+		const string nameLocalVar = "totalLightIntensity";
+		bool alreadyDeclared = _ctx.globalDeclarations.Contains(nameLocalVar);
+
+		bool success = true;
 
 		string varNormalName = !string.IsNullOrEmpty(_ctx.varNameNormals)
 			? _ctx.varNameNormals
@@ -558,34 +679,21 @@ public static class DefaultShaderBuilder
 					.AppendLine();
 			}
 
-			// Add all functions that may be referenced here-after immediately:
-			if (_config.useAmbientLight)
-			{
-				WriteFunction_Lighting_CalculateAmbientLight(in _ctx, _language);
-			}
-			if (_config.useLightMaps)
-			{
-				WriteFunction_Lighting_CalculateLightMaps(in _ctx, _language);
-			}
-			if (_config.useLightSources)
-			{
-				WriteConstantBuffer_CBCamera(in _ctx, _language);
-				WriteResource_Lighting_BufLights(in _ctx, _language);
-				WriteFunction_Lighting_CalculatePhongLighting(in _ctx, _language);
-
-				if (_config.useShadowMaps)
-				{
-					WriteResource_Lighting_TexShadowMaps(in _ctx, _language);
-					WriteFunction_Lighting_CalculateShadowMapLightWeight(in _ctx, _language);
-				}
-			}
+			success &= WriteFunction_Lighting_CalculateTotalLightIntensity(in _ctx, _config);
 		}
 
 		// MAIN CODE:
 		{
 			// Declare "totalLightIntensity":
 			_ctx.mainCode.AppendLine($"    // Apply {_config.lightingModel} lighting:");
-			_ctx.mainCode.Append("    half3 totalLightIntensity = ");
+			if (alreadyDeclared)
+			{
+				_ctx.mainCode.Append("    totalLightIntensity = ");
+			}
+			else
+			{
+				_ctx.mainCode.Append("    half3 totalLightIntensity = ");
+			}
 
 			// If not using any further light sources:
 			if (!_config.useLightMaps && !_config.useLightSources)
@@ -609,77 +717,30 @@ public static class DefaultShaderBuilder
 			_ctx.mainCode.AppendLine();
 		}
 
-		// LIGHTING FUNCTION:
+		if (!alreadyDeclared)
 		{
-			// Create header of main lighting function:
-			WriteLanguageCodeLines(_ctx.functions, _language,
-				[ "half3 CalculateTotalLightIntensity(in float3 _worldPosition, in float3 _worldNormal)" ],
-				[ "half3 CalculateTotalLightIntensity(device const Light* BufLights, const float3& _worldPosition, const float3& _worldNormal)" ],
-				null);
+			_ctx.globalDeclarations.Add(nameLocalVar);
+		}
+		return success;
+	}
 
-			// Declare and initialize "totalLightIntensity" from zero or ambient light!
-			_ctx.functions
-				.AppendLine("{")
-				.Append("    half3 totalLightIntensity = ");
-			if (_config.useAmbientLight)
-			{
-				_ctx.functions.AppendLine($"CalculateAmbientLight(_worldNormal);");
-			}
-			else
-			{
-				_ctx.functions.AppendLine("half3(0, 0, 0);");
-			}
-			_ctx.functions.AppendLine();
-
-			// Start first light source loop:
-			string varNameLightCountFirst = _config.useShadowMaps
-				? "shadowMappedLightCount"
-				: "lightCount";
-
-			_ctx.functions
-				.AppendLine("    // Shadow-casting light sources:")
-				.AppendLine($"    for (uint i = 0; i < {varNameLightCountFirst}; ++i)")
-				.AppendLine("    {");
-
-			if (_config.useShadowMaps)
-			{
-				WriteLanguageCodeLines(_ctx.functions, _language,
-					[ "        Light light = BufLights[i];" ],
-					[ "        device const Light& light = *BufLights[i];" ],
-					null);
-				_ctx.functions
-					.AppendLine()
-					.AppendLine("        half3 lightIntensity = CalculatePhongLighting(light, _worldPosition, _worldNormal);")
-					.AppendLine("        half lightWeight = CalculateShadowMapLightWeight(light, _worldPosition, _worldNormal);")
-					.AppendLine("        totalLightIntensity += lightIntensity * lightWeight;")
-					.AppendLine("    }");
-			}
-
-			// Start non-casting light source loop:
-			if (_config.useShadowMaps)
-			{
-				_ctx.functions
-				.AppendLine("    // Simple light sources:")
-				.AppendLine("    for (i = shadowMappedLightCount; i < lightCount; ++i)")
-				.AppendLine("    {");
-			}
-			WriteLanguageCodeLines(_ctx.functions, _language,
-				["        totalLightIntensity += CalculatePhongLighting(BufLights[i], _worldPosition, _worldNormal);"],
-				null,
-				null);
-			_ctx.functions.AppendLine("    }");
-
-			// Return result and end function:
-			_ctx.functions.AppendLine("    return totalLightIntensity;");
-			_ctx.functions.AppendLine("}");
+	private static bool ApplyLighting(in Context _ctx)
+	{
+		const string nameLocalVar = "totalLightIntensity";
+		if (!_ctx.globalDeclarations.Contains(nameLocalVar))
+		{
+			Logger.Instance?.LogError($"Cannot add code to apply lighting, since local variable '{nameLocalVar}' has not been declared!");
+			return false;
 		}
 
-		_ctx.globalDeclarations.Add(nameFunc);
+		_ctx.mainCode.AppendLine("    albedo *= half4(totalLightIntensity, 1.0);");
 		return true;
 	}
 
-	private static bool AddHeader_MainPixel(in Context _ctx, StringBuilder _finalBuilder, DefaultShaderLanguage _language)
+	private static bool AddHeader_MainPixel(in Context _ctx, StringBuilder _finalBuilder)
 	{
+		bool success = true;
+
 		_finalBuilder
 			.AppendLine("/******************* SHADERS: ******************/")
 			.AppendLine();
@@ -689,11 +750,15 @@ public static class DefaultShaderBuilder
 		bool hasBoneAnimation = _ctx.vertexDataFlags.HasFlag(MeshVertexDataFlags.Animations);
 
 		// Ensure the required vertex output types are defined:
-		WriteVertexOutput_Basic(in _ctx, _language);
-		if (hasExtendedData) WriteVertexOutput_Extended(in _ctx, _language);
+		success &= WriteVertexOutput_Basic(in _ctx);
+		if (hasExtendedData) WriteVertexOutput_Extended(in _ctx);
 
 		// Write function's base name:
-		_finalBuilder.Append("half4 Main_Pixel");
+		success &= WriteLanguageCodeLines(_finalBuilder, _ctx.language,
+			[ "half4 Main_Pixel(" ],
+			[ "half4 fragment Main_Pixel(" ],
+			null,
+			false);
 
 		// Add vertex flags to name:
 		if (hasExtendedData) _finalBuilder.Append('_').Append(ExtendedVertex.shaderEntryPointSuffix);
@@ -701,21 +766,30 @@ public static class DefaultShaderBuilder
 		if (hasBoneAnimation) _finalBuilder.Append('_').Append(IndexedWeightedVertex.shaderEntryPointSuffix_Anim);
 
 		// List vertex input paramaters:
-		switch (_language)
+		switch (_ctx.language)
 		{
 			case DefaultShaderLanguage.HLSL:
 				{
-					_finalBuilder.Append($"(in {BasicVertex.shaderVertexOuputName} inputBasic");
+					_finalBuilder.Append($"in {BasicVertex.shaderVertexOuputName} inputBasic");
 
 					if (hasExtendedData) _finalBuilder.Append($", in {ExtendedVertex.shaderVertexOuputName} inputExt");
-					if (hasBlendShapes) _finalBuilder.Append($", in {IndexedWeightedVertex.shaderVertexOuputName_Blend} inputExt");
-					if (hasBoneAnimation) _finalBuilder.Append($", in {IndexedWeightedVertex.shaderVertexOuputName_Anim} inputExt");
+					if (hasBlendShapes) _finalBuilder.Append($", in {IndexedWeightedVertex.shaderVertexOuputName_Blend} inputBlend");
+					if (hasBoneAnimation) _finalBuilder.Append($", in {IndexedWeightedVertex.shaderVertexOuputName_Anim} inputAnim");
+				}
+				break;
+			case DefaultShaderLanguage.Metal:
+				{
+					_finalBuilder.Append($"{BasicVertex.shaderVertexOuputName} inputBasic [[ stage_in ]]");
+
+					if (hasExtendedData) _finalBuilder.Append($", {ExtendedVertex.shaderVertexOuputName} inputExt");
+					if (hasBlendShapes) _finalBuilder.Append($", {IndexedWeightedVertex.shaderVertexOuputName_Blend} inputBlend");
+					if (hasBoneAnimation) _finalBuilder.Append($", {IndexedWeightedVertex.shaderVertexOuputName_Anim} inputAnim");
 				}
 				break;
 			//...
 			default:
 				{
-					Logger.Instance?.LogError($"Feature is not currently supported for shading language '{_language}'.");
+					Logger.Instance?.LogError($"Feature is not currently supported for shading language '{_ctx.language}'.");
 					return false;
 				}
 		}
@@ -727,7 +801,7 @@ public static class DefaultShaderBuilder
 		}
 
 		// Close function header:
-		switch (_language)
+		switch (_ctx.language)
 		{
 			case DefaultShaderLanguage.HLSL:
 				{
@@ -736,12 +810,13 @@ public static class DefaultShaderBuilder
 				break;
 			default:
 				{
-					Logger.Instance?.LogError($"Feature is not currently supported for shading language '{_language}'.");
+					Logger.Instance?.LogError($"Feature is not currently supported for shading language '{_ctx.language}'.");
 					return false;
 				}
 		}
-		return true;
+		return success;
 	}
+
 	private static bool AddFunctionEnd_MainPixel(StringBuilder _finalBuilder)
 	{
 		_finalBuilder.AppendLine(

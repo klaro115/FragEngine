@@ -19,7 +19,7 @@ struct VertexInput_Extended
 
 struct VertexOutput_Basic
 {
-    float4 position : SV_Position;
+    float4 position : SV_POSITION;
     float3 worldPosition : COLOR0;
     float3 normal : NORMAL0;
     float2 uv : TEXCOORD0;
@@ -34,7 +34,9 @@ struct VertexOutput_Extended
 
 /******************* SHADERS: ******************/
 
-void Main_Vertex(in VertexInput_Basic inputBasic, out VertexOutput_Basic outputBasic)
+void Main_Vertex(
+    in VertexInput_Basic inputBasic,
+    out VertexOutput_Basic outputBasic)
 {
     outputBasic.position = float4(inputBasic.position, 1);
     outputBasic.worldPosition = inputBasic.position;

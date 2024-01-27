@@ -1,4 +1,5 @@
 ﻿using FragEngine3.EngineCore;
+using FragEngine3.Graphics.Resources.ShaderGen;
 using FragEngine3.Resources;
 using FragEngine3.Utility.Unicode;
 using System.Text;
@@ -11,6 +12,11 @@ namespace FragEngine3.Graphics.Resources
 	/// </summary>
 	public static class ShaderResourceFactory
 	{
+		#region Constants
+
+		private const string shaderGenFlagsStart = $"{DefaultShaderConstants.shaderGenImportFlag}='";
+
+		#endregion
 		#region Methods
 
 		public static bool CreateShader(
@@ -125,6 +131,44 @@ namespace FragEngine3.Graphics.Resources
 				return true;
 			}
 
+			// Check if import flags contain a ShaderGen flag:
+			int shaderGenFlagsIdx = !string.IsNullOrEmpty(_handle.importFlags)
+				? _handle.importFlags.IndexOf(shaderGenFlagsStart)
+				: -1;
+
+			// ShaderGen flag present? Create shader code procedurally:
+			if (shaderGenFlagsIdx >= 0)
+			{
+				return CreateShaderFromShaderGen(
+					_graphicsCore,
+					_handle.resourceKey,
+					_stage,
+					_entryPoint,
+					_handle.importFlags!,
+					shaderGenFlagsIdx,
+					out _outShaderRes);
+			}
+			// Normal imported shader? Load shader code from resource file:
+			else
+			{
+				return CreateShaderFromFile(
+					_handle,
+					_graphicsCore,
+					_stage,
+					_entryPoint,
+					out _outShaderRes);
+			}
+		}
+
+		private static bool CreateShaderFromFile(
+			ResourceHandle _handle,
+			GraphicsCore _graphicsCore,
+			ShaderStages _stage,
+			string _entryPoint,
+			out ShaderResource? _outShaderRes)
+		{
+			Logger logger = _graphicsCore.graphicsSystem.engine.Logger ?? Logger.Instance!;
+
 			// Retrieve the file that this resource is loaded from:
 			if (!_handle.resourceManager.GetFile(_handle.fileKey, out ResourceFileHandle fileHandle))
 			{
@@ -145,15 +189,79 @@ namespace FragEngine3.Graphics.Resources
 			}
 
 			// Compile shader from UTF-8 code bytes:
-			return CreateShader(
+			return CreateShaderFromCodeBytes(
 				_graphicsCore,
 				_handle.resourceKey,
-				bytes, byteCount, _stage,
+				bytes,
+				byteCount,
+				_stage,
 				_entryPoint,
 				out _outShaderRes);
 		}
 
-		public static bool CreateShader(
+		private static bool CreateShaderFromShaderGen(
+			GraphicsCore _graphicsCore,
+			string _resourceKey,
+			ShaderStages _stage,
+			string _entryPoint,
+			string _importFlags,
+			int _importStartIdx,
+			out ShaderResource? _outShaderRes)
+		{
+			Logger logger = _graphicsCore.graphicsSystem.engine.Logger ?? Logger.Instance!;
+
+			// Extract configuration description text from import flags string:
+			if (_importFlags[0] == DefaultShaderConstants.shaderGenImportFlag[0])
+			{
+				_importStartIdx += shaderGenFlagsStart.Length;
+			}
+			int shaderGenEndIdx = _importFlags.IndexOf('\'', _importStartIdx + shaderGenFlagsStart.Length);
+			if (shaderGenEndIdx <= _importStartIdx + 1)
+			{
+				logger.LogError($"Failed to locate ShaderGen configuration description in import flags of resource '{_resourceKey}'!");
+				_outShaderRes = null;
+				return false;
+			}
+
+			int configTxtLength = shaderGenEndIdx - _importStartIdx;
+			string configDescTxt = _importFlags.Substring(_importStartIdx, configTxtLength);
+
+			// Try to parse the configuration string describing the required shader features:
+			if (!DefaultShaderConfig.TryParseDescriptionTxt(configDescTxt, out DefaultShaderConfig config))
+			{
+				logger.LogError($"Failed to parse ShaderGen configuration description for resource '{_resourceKey}'!");
+				_outShaderRes = null;
+				return false;
+			}
+
+			// Try to generate shader code from parsed configuration:
+			EnginePlatformFlag platformFlags = _graphicsCore.graphicsSystem.engine.PlatformSystem.PlatformFlags;
+			if (!DefaultShaderBuilder.CreatePixelShaderVariation(in config, platformFlags, out string shaderCode))
+			{
+				logger.LogError($"Failed to generate default shader code resource '{_resourceKey}' using config '{configDescTxt}'!");
+				_outShaderRes = null;
+				return false;
+			}
+
+			byte[] shaderCodeBytes = new byte[shaderCode.Length + 1];
+			for (int i = 0; i < shaderCode.Length; i++)
+			{
+				shaderCodeBytes[i] = (byte)shaderCode[i];
+			}
+			shaderCodeBytes[^1] = (byte)'\0';
+
+			// Compile shader from UTF-8 code bytes:
+			return CreateShaderFromCodeBytes(
+				_graphicsCore,
+				_resourceKey,
+				shaderCodeBytes,
+				shaderCodeBytes.Length,
+				_stage,
+				_entryPoint,
+				out _outShaderRes);
+		}
+
+		public static bool CreateShaderFromCodeBytes(
 			GraphicsCore _graphicsCore,
 			string _resourceKey,
 			byte[] _shaderCodeBytes,
@@ -218,7 +326,7 @@ namespace FragEngine3.Graphics.Resources
 					if (!variantEntryPoints.ContainsKey(variantFlags))
 					{
 						variantEntryPoints.Add(variantFlags, variantBuilder.ToString());
-						maxVariantIndex = Math.Max(maxVariantIndex, (int)variantFlags - 1);
+						maxVariantIndex = Math.Max(maxVariantIndex, (int)variantFlags.GetVariantIndex());
 					}
 				}
 			}
@@ -239,9 +347,9 @@ namespace FragEngine3.Graphics.Resources
 			// Try compiling shader:
 			Shader?[] shaderVariants = new Shader[maxVariantIndex + 1];
 			int shadersCompiledCount = 0;
-			for (int i = 0; i < shaderVariants.Length; ++i)
+			for (uint i = 0; i < shaderVariants.Length; ++i)
 			{
-				MeshVertexDataFlags variantFlags = (MeshVertexDataFlags)(i + 1);
+				MeshVertexDataFlags variantFlags = MeshVertexDataFlagsExt.GetFlagsFromVariantIndex(i);
 				if (variantEntryPoints.TryGetValue(variantFlags, out string? variantEntryPoint))
 				{
 					// Try compiling shader for each variant:

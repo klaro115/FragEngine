@@ -205,6 +205,13 @@ namespace FragEngine3.Graphics.Stack
 						new BasicVertex(new(-1,  1, 0), new(0, 0, -1), new(0, 1)),
 						new BasicVertex(new( 1,  1, 0), new(0, 0, -1), new(1, 1)),
 					],
+					verticesExt =
+					[
+						new ExtendedVertex(Vector3.UnitY, new(0, 0)),
+						new ExtendedVertex(Vector3.UnitY, new(1, 0)),
+						new ExtendedVertex(Vector3.UnitY, new(0, 1)),
+						new ExtendedVertex(Vector3.UnitY, new(1, 1)),
+					],
 					indices16 =
 					[
 						0, 2, 1,
@@ -391,7 +398,22 @@ namespace FragEngine3.Graphics.Stack
 				renderFocalRadius,
 				maxActiveLightCount,
 				rebuildResSetCamera,
-				texShadowMapsHasChanged);
+				texShadowMapsHasChanged,
+				out uint shadowMapLightCount);
+
+			// Recreate updated scene context if values changed between passes:
+			if (shadowMapLightCount != sceneCtx.lightCountShadowMapped)
+			{
+				sceneCtx = new(
+					Scene,
+					resLayoutCamera!,
+					resLayoutObject!,
+					cbScene!,
+					texShadowMaps!,
+					samplerShadowMaps!,
+					sceneCtx.lightCount,
+					shadowMapLightCount);
+			}
 
 			// Draw each active camera component in the scene, and composite output:
 			success &= DrawSceneCameras(
@@ -461,16 +483,19 @@ namespace FragEngine3.Graphics.Stack
 			// Identify only visible renderers:
 			foreach (IRenderer renderer in _renderers)
 			{
-				//TODO [later]: We'll just take all renderers for now, but they need to be excluded/culled if not visible by any camera.
-
-				List<IRenderer>? rendererList = renderer.RenderMode switch
+				if (renderer.IsVisible)
 				{
-					RenderMode.Opaque => activeRenderersOpaque,
-					RenderMode.Transparent => activeRenderersTransparent,
-					RenderMode.UI => activeRenderersUI,
-					_ => null,
-				};
-				rendererList?.Add(renderer);
+					//TODO [later]: We'll just take all renderers for now, but they need to be excluded/culled if not visible by any camera.
+
+					List<IRenderer>? rendererList = renderer.RenderMode switch
+					{
+						RenderMode.Opaque => activeRenderersOpaque,
+						RenderMode.Transparent => activeRenderersTransparent,
+						RenderMode.UI => activeRenderersUI,
+						_ => null,
+					};
+					rendererList?.Add(renderer);
+				}
 			}
 			activeShadowCasters.AddRange(activeRenderersOpaque);
 			activeShadowCasters.AddRange(activeRenderersTransparent);
@@ -544,9 +569,17 @@ namespace FragEngine3.Graphics.Stack
 			return true;
 		}
 		
-		private bool DrawShadowMaps(in SceneContext _sceneCtx, Vector3 _renderFocalPoint, float _renderFocalRadius, uint _maxActiveLightCount, bool _rebuildResSetCamera, bool _texShadowsHasChanged)
+		private bool DrawShadowMaps(
+			in SceneContext _sceneCtx,
+			Vector3 _renderFocalPoint,
+			float _renderFocalRadius,
+			uint _maxActiveLightCount,
+			bool _rebuildResSetCamera,
+			bool _texShadowsHasChanged,
+			out uint _outShadowMapLightCount)
 		{
 			// No visible shadow-casting light? We're done here:
+			_outShadowMapLightCount = 0;
 			if (activeLightsShadowMapped.Count == 0)
 			{
 				return true;
@@ -561,7 +594,6 @@ namespace FragEngine3.Graphics.Stack
 
 			bool success = true;
 
-			uint shadowMapIdx = 0;
 			int shadowMappedLightCount = Math.Min(activeLightsShadowMapped.Count, (int)_maxActiveLightCount);
 
 			try
@@ -575,7 +607,7 @@ namespace FragEngine3.Graphics.Stack
 						in dummyBufLights!,
 						_renderFocalPoint,
 						_renderFocalRadius,
-						shadowMapIdx,
+						_outShadowMapLightCount,
 						out CameraPassContext lightCtx,
 						_rebuildResSetCamera,
 						_texShadowsHasChanged);
@@ -593,22 +625,21 @@ namespace FragEngine3.Graphics.Stack
 					}
 
 					success &= light.EndDrawShadowMap();
-					shadowMapIdx++;
+					_outShadowMapLightCount++;
 				}
 			}
 			catch (Exception ex)
 			{
-				Logger.LogException($"An unhandled exception was caught while drawing shadow maps, around shadow map index {shadowMapIdx}!", ex);
+				Logger.LogException($"An unhandled exception was caught while drawing shadow maps, around shadow map index {_outShadowMapLightCount}!", ex);
 				success = false;
 			}
 
 			// If any shadows maps were rendered, submit command list for execution:
 			cmdList.End();
-			if (shadowMapIdx != 0)
+			if (_outShadowMapLightCount != 0)
 			{
 				success &= core.CommitCommandList(cmdList);
 			}
-
 			return success;
 		}
 

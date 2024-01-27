@@ -66,7 +66,7 @@ namespace FragEngine3.Graphics.Resources
 		private ResourceHandle? tesselationShaderEval = null;
 		private ResourceHandle pixelShader = ResourceHandle.None;
 
-		private VersionedMember<ShaderSetDescription> shaderSetDesc = new(default, 0);
+		private VersionedMember<ShaderSetDescription>[]? shaderSetDescs = null;
 
 		private ResourceLayout? boundResourceLayout = null;
 		private MaterialData.BoundResourceKeys[]? boundResourceKeys = null;
@@ -131,22 +131,47 @@ namespace FragEngine3.Graphics.Resources
 			boundResourceSet.DisposeValue();
 		}
 
-		internal bool IsPipelineUpToDate(in VersionedMember<Pipeline> _pipeline, uint _rendererVersion)
+		internal bool IsPipelineUpToDate(in PipelineState? _pipeline, uint _rendererVersion)
 		{
-			if (_pipeline.Value == null || _pipeline.Value.IsDisposed)
+			if (_pipeline == null || _pipeline.IsDisposed)
 			{
 				return false;
 			}
 			uint newestPipelineVersion = materialVersion ^ _rendererVersion;
-			return newestPipelineVersion == _pipeline.Version;
+			return newestPipelineVersion == _pipeline.version;
+		}
+
+		private void ResizeShaderSetDescsForVariant(uint _variantIdx)
+		{
+			uint minVariantCount = _variantIdx + 1;
+
+			if (shaderSetDescs == null)
+			{
+				shaderSetDescs = new VersionedMember<ShaderSetDescription>[minVariantCount];
+				Array.Fill(shaderSetDescs, new(default, 0));
+			}
+			else if (shaderSetDescs.Length < minVariantCount)
+			{
+				int oldShaderSetDescCount = shaderSetDescs.Length;
+				VersionedMember<ShaderSetDescription>[]? oldShaderSetDescs = shaderSetDescs;
+
+				shaderSetDescs = new VersionedMember<ShaderSetDescription>[minVariantCount];
+
+				oldShaderSetDescs?.CopyTo(shaderSetDescs, 0);
+				for (int j = oldShaderSetDescCount; j < shaderSetDescs.Length; ++j)
+				{
+					shaderSetDescs[j] = new(default, 0);
+				}
+			}
 		}
 
 		private bool CreateShaderSetDesc(uint _newVersion, MeshVertexDataFlags _vertexDataFlags)
 		{
-			shaderSetDesc.DisposeValue();
+			uint variantIdx = _vertexDataFlags.GetVariantIndex();
 
-			// If a fitting vertex data variant is unavailable for one of the later stages, try using basic variant instead:
-			bool enableFallackToBasic = _vertexDataFlags != MeshVertexDataFlags.BasicSurfaceData;
+			// Resize array of shader sets to match number of material variants in use:
+			ResizeShaderSetDescsForVariant(variantIdx);
+			shaderSetDescs![variantIdx].DisposeValue();
 
 			GraphicsCapabilities capabilities = core.GetCapabilities();
 
@@ -186,17 +211,17 @@ namespace FragEngine3.Graphics.Resources
 				i = 0;
 				ShaderStages errorStages = 0;
 
-				bool success = AddShaderVariant(vertexShader, ShaderStages.Vertex, false);
+				bool success = AddShaderVariant(vertexShader, ShaderStages.Vertex);
 				if (hasGeometryShader)
 				{
-					success &= AddShaderVariant(geometryShader, ShaderStages.Geometry, false);
+					success &= AddShaderVariant(geometryShader, ShaderStages.Geometry);
 				}
 				if (hasTesselationShader)
 				{
-					success &= AddShaderVariant(tesselationShaderCtrl, ShaderStages.TessellationControl, enableFallackToBasic);
-					success &= AddShaderVariant(tesselationShaderEval, ShaderStages.TessellationEvaluation, enableFallackToBasic);
+					success &= AddShaderVariant(tesselationShaderCtrl, ShaderStages.TessellationControl);
+					success &= AddShaderVariant(tesselationShaderEval, ShaderStages.TessellationEvaluation);
 				}
-				success &= AddShaderVariant(pixelShader, ShaderStages.Fragment, enableFallackToBasic);
+				success &= AddShaderVariant(pixelShader, ShaderStages.Fragment);
 
 				if (!success || errorStages != 0)
 				{
@@ -209,12 +234,12 @@ namespace FragEngine3.Graphics.Resources
 					vertexLayoutDescs,
 					shaders);
 
-				shaderSetDesc.UpdateValue(_newVersion, ssd);
+				shaderSetDescs[variantIdx].UpdateValue(_newVersion, ssd);
 				return success;
 
 
 				// Local helper method for fetching and loading a shader variant:
-				bool AddShaderVariant(ResourceHandle? _handle, ShaderStages _stageFlag, bool _fallbackToBasic)
+				bool AddShaderVariant(ResourceHandle? _handle, ShaderStages _stageFlag)
 				{
 					if (_handle == null || !_handle.IsValid)
 					{
@@ -229,11 +254,8 @@ namespace FragEngine3.Graphics.Resources
 					}
 					if (!shaderRes.GetShaderProgram(_vertexDataFlags, out Shader? shader) || shader == null)
 					{
-						if (!_fallbackToBasic || !shaderRes.GetShaderProgram(MeshVertexDataFlags.BasicSurfaceData, out shader) || shader == null)
-						{
-							errorStages |= _stageFlag;
-							return false;
-						}
+						errorStages |= _stageFlag;
+						return false;
 					}
 
 					shaders[i++] = shader;
@@ -243,7 +265,7 @@ namespace FragEngine3.Graphics.Resources
 			catch (Exception ex)
 			{
 				Logger.LogException($"Failed to create shader set description for material '{resourceKey}' and variant '{_vertexDataFlags}'!", ex);
-				shaderSetDesc.DisposeValue();
+				shaderSetDescs[variantIdx].DisposeValue();
 				return false;
 			}
 		}
@@ -322,13 +344,17 @@ namespace FragEngine3.Graphics.Resources
 			}
 		}
 
-		internal bool CreatePipeline(SceneContext _sceneCtx, CameraPassContext _cameraPassCtx, uint _rendererVersion, MeshVertexDataFlags _vertexDataFlags, out VersionedMember<Pipeline> _outPipeline)
+		internal bool CreatePipeline(SceneContext _sceneCtx, CameraPassContext _cameraPassCtx, uint _rendererVersion, MeshVertexDataFlags _vertexDataFlags, out PipelineState _outPipeline)
 		{
 			if (_sceneCtx == null || _cameraPassCtx == null)
 			{
-				_outPipeline = new(null!, 0);
+				_outPipeline = null!;
 				return false;
 			}
+
+			uint variantIdx = _vertexDataFlags.GetVariantIndex();
+			ResizeShaderSetDescsForVariant(variantIdx);
+			VersionedMember<ShaderSetDescription> shaderSetDesc = shaderSetDescs![variantIdx];
 
 			// Update material version from versioned members:
 			{
@@ -349,14 +375,18 @@ namespace FragEngine3.Graphics.Resources
 			{
 				depthStencilDesc.UpdateValue(materialVersion, depthStencilDesc.Value);
 			}
-			if (shaderSetDesc.Version != materialVersion && !CreateShaderSetDesc(materialVersion, _vertexDataFlags))
+			if (shaderSetDesc.Version != materialVersion)
 			{
-				_outPipeline = new(null!, 0);
-				return false;
+				if (!CreateShaderSetDesc(materialVersion, _vertexDataFlags))
+				{
+					_outPipeline = null!;
+					return false;
+				}
+				shaderSetDesc = shaderSetDescs![variantIdx];
 			}
 			if (boundResourceSet.Value == null && boundResourceLayout != null && !UseExternalBoundResources && !CreateBoundResourceSet())
 			{
-				_outPipeline = new(null!, 0);
+				_outPipeline = null!;
 				return false;
 			}
 
@@ -417,13 +447,13 @@ namespace FragEngine3.Graphics.Resources
 					pipeline.Name = $"{resourceKey}_DepthOnly";
 				}
 
-				_outPipeline = new(pipeline, newPipelineVersion);
+				_outPipeline = new(pipeline, newPipelineVersion, _vertexDataFlags, (uint)shaderSetDesc.Value.VertexLayouts.Length);
 				return true;
 			}
 			catch (Exception ex)
 			{
 				Logger.LogException($"Failed to create pipeline for material '{resourceKey}' and variant '{_vertexDataFlags}'!", ex);
-				_outPipeline = new(null!, 0);
+				_outPipeline = null!;
 				return false;
 			}
 		}

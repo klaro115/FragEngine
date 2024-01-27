@@ -220,4 +220,35 @@ namespace FragEngine3.Graphics.Resources
 
 		ALL					= BasicSurfaceData | ExtendedSurfaceData | BlendShapes | Animations
 	}
+
+	public static class MeshVertexDataFlagsExt
+	{
+		#region Constants
+
+		public const int MAX_VARIANT_INDEX = (int)MeshVertexDataFlags.ALL >> 1;
+		public const int MAX_VARIANT_COUNT = MAX_VARIANT_INDEX + 1;
+
+		#endregion
+		#region Methods
+
+		public static uint GetVariantIndex(this MeshVertexDataFlags _dataFlags)
+		{
+			// Drop basic data bit, as that is always present:
+			uint idx = (uint)_dataFlags >> 1;
+
+			// Return a value between 0 and 7: (3 bits => 8 permutations)
+			return idx;
+		}
+
+		public static MeshVertexDataFlags GetFlagsFromVariantIndex(uint _variantIdx)
+		{
+			// Shift 3 optional bits up:
+			MeshVertexDataFlags extraFlags = (MeshVertexDataFlags)(_variantIdx << 1);
+			
+			// Add basic data flag as that is always present:
+			return MeshVertexDataFlags.BasicSurfaceData | extraFlags;
+		}
+
+		#endregion
+	}
 }
