@@ -23,7 +23,7 @@ public static class DefaultShaderBuilderUtility
 			_ => null,
 		};
 
-		if (codeLines != null && codeLines.Length != 0)
+		if (codeLines != null)
 		{
 			foreach (string line in codeLines)
 			{

@@ -249,11 +249,13 @@ public class Material(GraphicsCore _core, ResourceHandle _handle) : Resource(_ha
 
 				if (_handle.GetResource(true, true) is not ShaderResource shaderRes)
 				{
+					Logger.LogWarning($"Shader resource '{_handle}' could not be found! (Stage: {_stageFlag}");
 					errorStages |= _stageFlag;
 					return false;
 				}
 				if (!shaderRes.GetShaderProgram(_vertexDataFlags, out Shader? shader) || shader == null)
 				{
+					Logger.LogWarning($"Shader variant program '{_vertexDataFlags}' of shader resource '{_handle.resourceKey}' could not be loaded! (Stage: {_stageFlag}");
 					errorStages |= _stageFlag;
 					return false;
 				}

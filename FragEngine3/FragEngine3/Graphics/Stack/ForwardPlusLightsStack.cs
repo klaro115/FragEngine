@@ -620,7 +620,7 @@ public sealed class ForwardPlusLightsStack(GraphicsCore _core) : IGraphicsStack
 				{
 					if ((light.layerMask & renderer.LayerFlags) != 0)
 					{
-						success &= renderer.DrawShadowMap(_sceneCtx, lightCtx);
+						success &= renderer.DrawShadowMap(_sceneCtx, lightCtx);			//TODO [important]: Change this to not crash the game if a single renderer fails to draw!
 					}
 				}
 
@@ -746,7 +746,7 @@ public sealed class ForwardPlusLightsStack(GraphicsCore _core) : IGraphicsStack
 		{
 			if ((_camera.layerMask & renderer.LayerFlags) != 0)
 			{
-				success &= renderer.Draw(_sceneCtx, cameraPassCtx);
+				success &= renderer.Draw(_sceneCtx, cameraPassCtx);			//TODO [important]: Change this to not crash the game if a single renderer fails to draw!
 			}
 		}
 

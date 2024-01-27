@@ -41,7 +41,7 @@ public static class DefaultShaderBuilder
 				"#include <metal_stdlib>",
 				"using namespace metal;",
 			],
-			null);
+			[]);
 		finalBuilder.AppendLine();
 
 		success &= AddAlbedo(in ctx, in _config);
