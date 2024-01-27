@@ -23,6 +23,11 @@ public struct DefaultShaderConfig
 	public DefaultShaderLightingModel lightingModel;    // For lighting, which lighting model to use for light sources.
 	public bool useShadowMaps;                          // For lighting, whether to use shadow maps to mask out light coming from light sources.
 
+	// Variants:
+	public bool alwaysCreateExtendedVariant;			// Whether to always also create an '_Ext' variant, even if no feature requires the additional geometry data.
+	public bool alwaysCreateBlendShapeVariant;          // Whether to always also create '_Blend' variants, even if no feature requires the additional blending data. Unnecessary for pixel shaders.
+	public bool alwaysCreateAnimatedVariant;            // Whether to always also create '_Anim' variants, even if no feature requires the additional bone animation data. Unnecessary for pixel shaders.
+
 	#endregion
 	#region Properties
 
@@ -96,8 +101,13 @@ public struct DefaultShaderConfig
 		char lightModel = BoolToCustom(applyLighting && useLightSources && lightingModel == DefaultShaderLightingModel.Phong, 'p', '?');
 		char useShaMaps = BoolTo01(applyLighting && useLightSources && useShadowMaps);
 
+		// Variants:
+		char variantExt = BoolTo01(alwaysCreateExtendedVariant);
+		char variantBle = BoolTo01(alwaysCreateBlendShapeVariant);
+		char variantAni = BoolTo01(alwaysCreateAnimatedVariant);
+
 		// Assemble base text containing only flags:
-		string txt = $"A{albedoSrc}_N{normalsYN}_L{lightingYN}{useAmbient}{useLgtMaps}{useLgtSrcs}{lightModel}{useShaMaps}";
+		string txt = $"A{albedoSrc}_N{normalsYN}_L{lightingYN}{useAmbient}{useLgtMaps}{useLgtSrcs}{lightModel}{useShaMaps}_V{variantExt}{variantBle}{variantAni}";
 
 		// Albedo start color literal or sampler name:
 		if (albedoSource == DefaultShaderAlbedoSource.SampleTexMain && !string.IsNullOrEmpty(samplerTexMain))
@@ -142,6 +152,7 @@ public struct DefaultShaderConfig
 				'A' => TryParseAlbedo(part),
 				'N' => TryParseNormals(part),
 				'L' => TryParseLighting(part),
+				'V' => TryParseVariants(part),
 				_ => false,
 			};
 		}
@@ -211,6 +222,14 @@ public struct DefaultShaderConfig
 				}
 				config.useShadowMaps = _part[6] == '1';
 			}
+			return true;
+		}
+		bool TryParseVariants(string _part)
+		{
+			int len = _part.Length;
+			config.alwaysCreateExtendedVariant = len >= 2 && _part[1] == '1';
+			config.alwaysCreateBlendShapeVariant = len >= 3 && _part[2] == '1';
+			config.alwaysCreateAnimatedVariant = len >= 4 && _part[3] == '1';
 			return true;
 		}
 	}
