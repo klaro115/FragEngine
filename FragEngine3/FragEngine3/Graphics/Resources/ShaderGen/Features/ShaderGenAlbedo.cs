@@ -17,28 +17,28 @@ public static class ShaderGenAlbedo
 		if (!alreadyDeclaredTexMain)
 		{
 			success &= ShaderGenUtility.WriteLanguageCodeLines(_ctx.resources, _ctx.language,
-				[ "Texture2D<half4> TexMain : register(ps, t2);" ],
-				[ ", texture2d<half, access::read> TexMain [[ texture( 1 ) ]]" ],
+				[ $"Texture2D<half4> TexMain : register(ps, t{_ctx.boundTextureIdx});" ],
+				[ $", texture2d<half, access::read> TexMain [[ texture( {_ctx.boundTextureIdx} ) ]]" ],
 				null,
 				_ctx.language != ShaderGenLanguage.Metal);
 
+			_ctx.boundTextureIdx++;
 			_ctx.globalDeclarations.Add(nameTexMain);
 		}
 
 		// Declare main texture's sampler:
-		string nameSamplerMain = !string.IsNullOrEmpty(_config.samplerTexMain)
-			? _config.samplerTexMain
-			: "SamplerMain";
+		string nameSamplerMain = ShaderGenUtility.SelectName(_config.samplerTexMain, "SamplerMain");
 		bool alreadyDeclaredSamplerMain = _ctx.globalDeclarations.Contains(nameSamplerMain);
 
 		if (!alreadyDeclaredSamplerMain)
 		{
 			success &= ShaderGenUtility.WriteLanguageCodeLines(_ctx.resources, _ctx.language,
-				[ $"SamplerState {nameSamplerMain} : register(s1);" ],
+				[ $"SamplerState {nameSamplerMain} : register(s{_ctx.boundSamplerIdx});" ],
 				[ $", sampler {nameSamplerMain} [[ ??? ]]" ],	//TEMP
 				null,
 				_ctx.language != ShaderGenLanguage.Metal);
 
+			_ctx.boundSamplerIdx++;
 			_ctx.globalDeclarations.Add(nameSamplerMain);
 		}
 
@@ -60,9 +60,7 @@ public static class ShaderGenAlbedo
 		{
 			const string nameVar = "albedo";
 			bool alreadyDeclared = variant.localDeclarations.Contains(nameVar);
-			string nameVarUv = !string.IsNullOrEmpty(variant.varNameUVs)
-				? variant.varNameUVs
-				: ShaderGenVariant.DEFAULT_VAR_NAME_UVs;
+			string nameVarUv = ShaderGenUtility.SelectName(variant.varNameUVs, ShaderGenVariant.DEFAULT_VAR_NAME_UVs);
 
 			// Write basic declaration:
 			variant.code.AppendLine("    // Sample base color from main texture:");
@@ -113,10 +111,6 @@ public static class ShaderGenAlbedo
 					}
 			}
 			variant.code.AppendLine();
-
-			// Increment slot indices for material-bound resources:
-			_ctx.boundTextureIdx++;
-			_ctx.boundSamplerIdx++;
 
 			if (!alreadyDeclared) variant.localDeclarations.Add(nameVar);
 		}

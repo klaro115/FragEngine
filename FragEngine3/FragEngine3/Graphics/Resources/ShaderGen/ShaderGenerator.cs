@@ -54,7 +54,7 @@ public static class ShaderGenerator
 
 		if (_config.useNormalMap)
 		{
-			success &= AddNormalMaps(in ctx, in _config);
+			success &= ShaderGenNormals.WriteVariable_NormalMap(in ctx, in _config);
 		}
 
 		if (_config.applyLighting)
@@ -89,12 +89,6 @@ public static class ShaderGenerator
 		// Output resulting shader code:
 		_outShaderCode = finalBuilder.ToString();
 		return success;
-	}
-
-	private static bool AddNormalMaps(in ShaderGenContext _ctx, in ShaderGenConfig _config)
-	{
-		//TODO
-		return true;
 	}
 
 	#endregion

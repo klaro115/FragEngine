@@ -41,6 +41,8 @@ public sealed class ShaderGenVariant(MeshVertexDataFlags _vertexDataFlags)
 		varNameNormals = DEFAULT_VAR_NAME_UVs;
 	}
 
+	public bool HasDeclaration(string _name) => !string.IsNullOrEmpty(_name) && localDeclarations.Contains(_name);
+
 	public bool WriteFunction_MainPixel(in ShaderGenContext _ctx, StringBuilder _finalBuilder)
 	{
 		if (_finalBuilder == null) return false;
@@ -73,7 +75,8 @@ public sealed class ShaderGenVariant(MeshVertexDataFlags _vertexDataFlags)
 		_finalBuilder
 			.AppendLine("    // Return final color:")
 			.AppendLine("    return albedo;")
-			.AppendLine("};");
+			.AppendLine("};")
+			.AppendLine();
 
 		return success;
 	}

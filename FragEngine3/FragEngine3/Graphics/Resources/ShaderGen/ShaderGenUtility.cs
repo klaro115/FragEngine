@@ -39,5 +39,12 @@ public static class ShaderGenUtility
 		return false;
 	}
 
+	public static string SelectName(string? _customName, string _fallbackName)
+	{
+		return !string.IsNullOrEmpty(_customName)
+			? _customName
+			: _fallbackName;
+	}
+
 	#endregion
 }
