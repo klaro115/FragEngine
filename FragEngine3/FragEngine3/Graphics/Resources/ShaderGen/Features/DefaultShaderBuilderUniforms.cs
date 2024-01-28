@@ -99,7 +99,7 @@ public static class DefaultShaderBuilderUniforms
 		// Write structure header:
 		_ctx.constants.AppendLine("// Constant buffer containing all scene-wide settings:");
 		success &= DefaultShaderBuilderUtility.WriteLanguageCodeLines(_ctx.constants, _ctx.language,
-			[ "cbuffer CBObject : register(b0)" ],
+			[ "cbuffer CBObject : register(b2)" ],
 			[ "struct CBObject" ],
 			[ "layout (binding = 2) uniform CBObject" ]);
 

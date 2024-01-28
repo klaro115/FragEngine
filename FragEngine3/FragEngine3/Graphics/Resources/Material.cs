@@ -177,6 +177,8 @@ public class Material(GraphicsCore _core, ResourceHandle _handle) : Resource(_ha
 
 		// VERTEX DEFINITIONS:
 
+		bool fallbackToBasicVariant = _vertexDataFlags != MeshVertexDataFlags.BasicSurfaceData;
+
 		bool hasExtendedData = _vertexDataFlags.HasFlag(MeshVertexDataFlags.ExtendedSurfaceData);
 		bool hasBlendShapes = _vertexDataFlags.HasFlag(MeshVertexDataFlags.BlendShapes);
 		bool hasBoneAnimations = _vertexDataFlags.HasFlag(MeshVertexDataFlags.Animations);
@@ -211,17 +213,17 @@ public class Material(GraphicsCore _core, ResourceHandle _handle) : Resource(_ha
 			i = 0;
 			ShaderStages errorStages = 0;
 
-			bool success = AddShaderVariant(vertexShader, ShaderStages.Vertex);
+			bool success = AddShaderVariant(vertexShader, ShaderStages.Vertex, false);
 			if (hasGeometryShader)
 			{
-				success &= AddShaderVariant(geometryShader, ShaderStages.Geometry);
+				success &= AddShaderVariant(geometryShader, ShaderStages.Geometry, false);
 			}
 			if (hasTesselationShader)
 			{
-				success &= AddShaderVariant(tesselationShaderCtrl, ShaderStages.TessellationControl);
-				success &= AddShaderVariant(tesselationShaderEval, ShaderStages.TessellationEvaluation);
+				success &= AddShaderVariant(tesselationShaderCtrl, ShaderStages.TessellationControl, fallbackToBasicVariant);
+				success &= AddShaderVariant(tesselationShaderEval, ShaderStages.TessellationEvaluation, fallbackToBasicVariant);
 			}
-			success &= AddShaderVariant(pixelShader, ShaderStages.Fragment);
+			success &= AddShaderVariant(pixelShader, ShaderStages.Fragment, fallbackToBasicVariant);
 
 			if (!success || errorStages != 0)
 			{
@@ -239,7 +241,7 @@ public class Material(GraphicsCore _core, ResourceHandle _handle) : Resource(_ha
 
 
 			// Local helper method for fetching and loading a shader variant:
-			bool AddShaderVariant(ResourceHandle? _handle, ShaderStages _stageFlag)
+			bool AddShaderVariant(ResourceHandle? _handle, ShaderStages _stageFlag, bool _fallbackToBasicVariant)
 			{
 				if (_handle == null || !_handle.IsValid)
 				{
@@ -255,9 +257,13 @@ public class Material(GraphicsCore _core, ResourceHandle _handle) : Resource(_ha
 				}
 				if (!shaderRes.GetShaderProgram(_vertexDataFlags, out Shader? shader) || shader == null)
 				{
-					Logger.LogWarning($"Shader variant program '{_vertexDataFlags}' of shader resource '{_handle.resourceKey}' could not be loaded! (Stage: {_stageFlag}");
-					errorStages |= _stageFlag;
-					return false;
+					// If allowed, try falling back to basic variant, see if that can be loaded:
+					if (!_fallbackToBasicVariant || !shaderRes.GetShaderProgram(MeshVertexDataFlags.BasicSurfaceData, out shader) || shader == null)
+					{
+						Logger.LogWarning($"Shader variant program '{_vertexDataFlags}' of shader resource '{_handle.resourceKey}' could not be loaded! (Stage: {_stageFlag}");
+						errorStages |= _stageFlag;
+						return false;
+					}
 				}
 
 				shaders[i++] = shader;
