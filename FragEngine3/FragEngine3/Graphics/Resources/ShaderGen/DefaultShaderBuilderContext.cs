@@ -10,20 +10,52 @@ public sealed class DefaultShaderBuilderContext(DefaultShaderLanguage _language)
 	public readonly StringBuilder resources = new(512);
 	public readonly StringBuilder vertexOutputs = new(300);
 	public readonly StringBuilder functions = new(4096);
-	public readonly StringBuilder mainInputs = new(256);
-	public readonly StringBuilder mainCode = new(650);
-	public readonly StringBuilder mainHeader = new(512);
+	public readonly List<DefaultShaderBuilderVariant> variants =
+	[
+		new DefaultShaderBuilderVariant(MeshVertexDataFlags.BasicSurfaceData),
+	];
 	//^Note: Starting capacities set for a pixel shader with all features enabled.
 
 	public readonly DefaultShaderLanguage language = _language;
 	public readonly HashSet<string> globalDeclarations = new(10);
-	public MeshVertexDataFlags vertexDataFlags = MeshVertexDataFlags.BasicSurfaceData;
-	public string varNameNormals = "inputBasic.normal";
 
 	public int boundUniformsIdx = 3;
 	public int boundTextureIdx = 2;
 	public int boundBufferIdx = 0;
 	public int boundSamplerIdx = 1;
+
+	#endregion
+	#region Methods
+
+	public void Clear()
+	{
+		constants.Clear();
+		resources.Clear();
+		vertexOutputs.Clear();
+		functions.Clear();
+
+		foreach (DefaultShaderBuilderVariant variant in variants)
+		{
+			variant.isEnabled = false;
+			variant.Clear();
+		}
+	}
+
+	public bool HasGlobalDeclaration(string _name) => !string.IsNullOrEmpty(_name) && globalDeclarations.Contains(_name);
+
+	public bool WriteFunction_MainPixel(StringBuilder _finalBuilder)
+	{
+		if (_finalBuilder == null) return false;
+
+		bool success = true;
+
+		foreach (DefaultShaderBuilderVariant variant in variants)
+		{
+			success &= variant.WriteFunction_MainPixel(this, _finalBuilder);
+		}
+
+		return success;
+	}
 
 	#endregion
 }

@@ -16,7 +16,7 @@
             "DataSize": 0,
             "DependencyCount": 0,
             "Dependencies": null,
-            "ImportFlags": "shaderGen='Ac_Ny_Ly101p0_Al=ff0000ff_V100'"
+            "ImportFlags": "shaderGen='Ac_Ny_Ly101p1_Al=ff0000ff_V100'"
         }
     ]
 }

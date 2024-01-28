@@ -49,7 +49,14 @@ public static class DefaultShaderBuilderLighting
 		// Metal:
 		if (_ctx.language == DefaultShaderLanguage.Metal)
 		{
-			_ctx.mainInputs.Append(", device const Light* BufLights [[ buffer( 3 ) ]]");
+			foreach (DefaultShaderBuilderVariant variant in _ctx.variants)
+			{
+				if (variant.arguments.Length != 0)
+				{
+					variant.arguments.Append(", ");
+				}
+				variant.arguments.Append("device const Light* BufLights [[ buffer( 3 ) ]]");
+			}
 		}
 		// HLSL & GLSL:
 		else
@@ -70,7 +77,14 @@ public static class DefaultShaderBuilderLighting
 			// Metal:
 			if (_ctx.language == DefaultShaderLanguage.Metal)
 			{
-				_ctx.mainInputs.Append(", texture2d<half, access::read> TexOpaqueColor [[ texture( 0 ) ]]");
+				foreach (DefaultShaderBuilderVariant variant in _ctx.variants)
+				{
+					if (variant.arguments.Length != 0)
+					{
+						variant.arguments.Append(", ");
+					}
+					variant.arguments.Append("texture2d<half, access::read> TexOpaqueColor [[ texture( 0 ) ]]");
+				}
 			}
 			// HLSL & GLSL:
 			else
@@ -87,7 +101,14 @@ public static class DefaultShaderBuilderLighting
 			// Metal:
 			if (_ctx.language == DefaultShaderLanguage.Metal)
 			{
-				//TODO: no idea how this is done. This language is a convoluted mess.
+				foreach (DefaultShaderBuilderVariant variant in _ctx.variants)
+				{
+					if (variant.arguments.Length != 0)
+					{
+						variant.arguments.Append(", ");
+					}
+					//TODO: no idea how this is done. This language is a convoluted mess.
+				}
 			}
 			// HLSL & GLSL:
 			else
@@ -342,13 +363,8 @@ public static class DefaultShaderBuilderLighting
 	public static bool WriteVariable_Lighting(in DefaultShaderBuilderContext _ctx, in DefaultShaderConfig _config)
 	{
 		const string nameLocalVar = "totalLightIntensity";
-		bool alreadyDeclared = _ctx.globalDeclarations.Contains(nameLocalVar);
 
 		bool success = true;
-
-		string varNormalName = !string.IsNullOrEmpty(_ctx.varNameNormals)
-			? _ctx.varNameNormals
-			: "inputBasic.normal";
 
 		// REFERENCED FUNCTIONS:
 		{
@@ -363,16 +379,23 @@ public static class DefaultShaderBuilderLighting
 		}
 
 		// MAIN CODE:
+		foreach (DefaultShaderBuilderVariant variant in _ctx.variants)
 		{
+			bool alreadyDeclared = variant.localDeclarations.Contains(nameLocalVar);
+
+			string varNormalName = !string.IsNullOrEmpty(variant.varNameNormals)
+				? variant.varNameNormals
+				: "inputBasic.normal";
+
 			// Declare "totalLightIntensity":
-			_ctx.mainCode.AppendLine($"    // Apply {_config.lightingModel} lighting:");
+			variant.code.AppendLine($"    // Apply {_config.lightingModel} lighting:");
 			if (alreadyDeclared)
 			{
-				_ctx.mainCode.Append("    totalLightIntensity = ");
+				variant.code.Append("    totalLightIntensity = ");
 			}
 			else
 			{
-				_ctx.mainCode.Append("    half3 totalLightIntensity = ");
+				variant.code.Append("    half3 totalLightIntensity = ");
 			}
 
 			// If not using any further light sources:
@@ -381,39 +404,46 @@ public static class DefaultShaderBuilderLighting
 				// Initialize "totalLightIntensity":
 				if (_config.useAmbientLight)
 				{
-					_ctx.mainCode.AppendLine($"CalculateAmbientLight(_worldNormal);");
+					variant.code.AppendLine($"CalculateAmbientLight(_worldNormal);");
 				}
 				else
 				{
-					_ctx.mainCode.AppendLine("half3(0, 0, 0);");
+					variant.code.AppendLine("half3(0, 0, 0);");
 				}
-				_ctx.mainCode.AppendLine();
+				variant.code.AppendLine();
 
 				return true;
 			}
 
 			// Initialize "totalLightIntensity" from main lighting function:
-			_ctx.mainCode.AppendLine($"CalculateTotalLightIntensity(inputBasic.worldPosition, {varNormalName});");
-			_ctx.mainCode.AppendLine();
+			variant.code.AppendLine($"CalculateTotalLightIntensity(inputBasic.worldPosition, {varNormalName});");
+			variant.code.AppendLine();
+
+			if (!alreadyDeclared)
+			{
+				variant.localDeclarations.Add(nameLocalVar);
+			}
 		}
 
-		if (!alreadyDeclared)
-		{
-			_ctx.globalDeclarations.Add(nameLocalVar);
-		}
 		return success;
 	}
 
 	public static bool ApplyLighting(in DefaultShaderBuilderContext _ctx)
 	{
-		const string nameLocalVar = "totalLightIntensity";
-		if (!_ctx.globalDeclarations.Contains(nameLocalVar))
-		{
-			Logger.Instance?.LogError($"Cannot add code to apply lighting, since local variable '{nameLocalVar}' has not been declared!");
-			return false;
-		}
+		const string nameVarLightInt = "totalLightIntensity";
+		const string nameVarAlbedo = "albedo";
 
-		_ctx.mainCode.AppendLine("    albedo *= half4(totalLightIntensity, 1.0);");
+		foreach (DefaultShaderBuilderVariant variant in _ctx.variants)
+		{
+			if (!variant.localDeclarations.Contains(nameVarAlbedo) ||
+				!variant.localDeclarations.Contains(nameVarLightInt))
+			{
+				Logger.Instance?.LogError($"Cannot add code to apply lighting, since local variables '{nameVarAlbedo}' or '{nameVarLightInt}' have not been declared!");
+				return false;
+			}
+
+			variant.code.AppendLine("    albedo *= half4(totalLightIntensity, 1.0);");
+		}
 		return true;
 	}
 
