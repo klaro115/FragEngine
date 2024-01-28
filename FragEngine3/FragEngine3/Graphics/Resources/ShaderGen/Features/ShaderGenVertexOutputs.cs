@@ -1,6 +1,6 @@
 ﻿namespace FragEngine3.Graphics.Resources.ShaderGen.Features;
 
-public static class DefaultShaderBuilderVertexOutputs
+public static class ShaderGenVertexOutputs
 {
 	#region Constants
 
@@ -12,7 +12,7 @@ public static class DefaultShaderBuilderVertexOutputs
 	#endregion
 	#region Methods
 
-	public static bool WriteVertexOutput_Basic(in DefaultShaderBuilderContext _ctx)
+	public static bool WriteVertexOutput_Basic(in ShaderGenContext _ctx)
 	{
 		if (_ctx.globalDeclarations.Contains(NAME_VERTEX_OUTPUT_BASIC)) return true;
 
@@ -24,7 +24,7 @@ public static class DefaultShaderBuilderVertexOutputs
 			.AppendLine("{");
 
 		// Write body:
-		success &= DefaultShaderBuilderUtility.WriteLanguageCodeLines(_ctx.vertexOutputs, _ctx.language,
+		success &= ShaderGenUtility.WriteLanguageCodeLines(_ctx.vertexOutputs, _ctx.language,
 			// HLSL:
 			[
 				"    float4 position : SV_POSITION;",
@@ -47,7 +47,7 @@ public static class DefaultShaderBuilderVertexOutputs
 		return success;
 	}
 
-	public static bool WriteVertexOutput_Extended(in DefaultShaderBuilderContext _ctx)
+	public static bool WriteVertexOutput_Extended(in ShaderGenContext _ctx)
 	{
 		if (_ctx.globalDeclarations.Contains(NAME_VERTEX_OUTPUT_EXT)) return true;
 
@@ -59,7 +59,7 @@ public static class DefaultShaderBuilderVertexOutputs
 			.AppendLine("{");
 
 		// Write body:
-		success &= DefaultShaderBuilderUtility.WriteLanguageCodeLines(_ctx.vertexOutputs, _ctx.language,
+		success &= ShaderGenUtility.WriteLanguageCodeLines(_ctx.vertexOutputs, _ctx.language,
 			// HLSL:
 			[
 				"    float4 tangent : NORMAL1;",
@@ -80,7 +80,7 @@ public static class DefaultShaderBuilderVertexOutputs
 		return success;
 	}
 
-	public static bool WriteVertexOutput_BlendShapes(in DefaultShaderBuilderContext _ctx)
+	public static bool WriteVertexOutput_BlendShapes(in ShaderGenContext _ctx)
 	{
 		if (_ctx.globalDeclarations.Contains(NAME_VERTEX_OUTPUT_BLEND)) return true;
 
@@ -92,7 +92,7 @@ public static class DefaultShaderBuilderVertexOutputs
 			.AppendLine("{");
 
 		// Write body:
-		success &= DefaultShaderBuilderUtility.WriteLanguageCodeLines(_ctx.vertexOutputs, _ctx.language,
+		success &= ShaderGenUtility.WriteLanguageCodeLines(_ctx.vertexOutputs, _ctx.language,
 			// HLSL:
 			[
 				"    uint4 indices : NORMAL3;",
@@ -111,7 +111,7 @@ public static class DefaultShaderBuilderVertexOutputs
 		return success;
 	}
 
-	public static bool WriteVertexOutput_Animated(in DefaultShaderBuilderContext _ctx)
+	public static bool WriteVertexOutput_Animated(in ShaderGenContext _ctx)
 	{
 		if (_ctx.globalDeclarations.Contains(NAME_VERTEX_OUTPUT_ANIM)) return true;
 
@@ -123,7 +123,7 @@ public static class DefaultShaderBuilderVertexOutputs
 			.AppendLine("{");
 
 		// Write body:
-		success &= DefaultShaderBuilderUtility.WriteLanguageCodeLines(_ctx.vertexOutputs, _ctx.language,
+		success &= ShaderGenUtility.WriteLanguageCodeLines(_ctx.vertexOutputs, _ctx.language,
 			// HLSL:
 			[
 				"    uint4 indices : NORMAL4;",

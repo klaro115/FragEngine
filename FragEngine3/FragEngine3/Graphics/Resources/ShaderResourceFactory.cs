@@ -14,7 +14,7 @@ public static class ShaderResourceFactory
 {
 	#region Constants
 
-	private const string shaderGenFlagsStart = $"{DefaultShaderConstants.shaderGenImportFlag}='";
+	private const string shaderGenFlagsStart = $"{ShaderGenConstants.shaderGenImportFlag}='";
 
 	#endregion
 	#region Methods
@@ -211,7 +211,7 @@ public static class ShaderResourceFactory
 		Logger logger = _graphicsCore.graphicsSystem.engine.Logger ?? Logger.Instance!;
 
 		// Extract configuration description text from import flags string:
-		if (_importFlags[0] == DefaultShaderConstants.shaderGenImportFlag[0])
+		if (_importFlags[0] == ShaderGenConstants.shaderGenImportFlag[0])
 		{
 			_importStartIdx += shaderGenFlagsStart.Length;
 		}
@@ -227,7 +227,7 @@ public static class ShaderResourceFactory
 		string configDescTxt = _importFlags.Substring(_importStartIdx, configTxtLength);
 
 		// Try to parse the configuration string describing the required shader features:
-		if (!DefaultShaderConfig.TryParseDescriptionTxt(configDescTxt, out DefaultShaderConfig config))
+		if (!ShaderGenConfig.TryParseDescriptionTxt(configDescTxt, out ShaderGenConfig config))
 		{
 			logger.LogError($"Failed to parse ShaderGen configuration description for resource '{_resourceKey}'!");
 			_outShaderRes = null;
@@ -236,7 +236,7 @@ public static class ShaderResourceFactory
 
 		// Try to generate shader code from parsed configuration:
 		EnginePlatformFlag platformFlags = _graphicsCore.graphicsSystem.engine.PlatformSystem.PlatformFlags;
-		if (!DefaultShaderBuilder.CreatePixelShaderVariation(in config, platformFlags, out string shaderCode))
+		if (!ShaderGenerator.CreatePixelShaderVariation(in config, platformFlags, out string shaderCode))
 		{
 			logger.LogError($"Failed to generate default shader code resource '{_resourceKey}' using config '{configDescTxt}'!");
 			_outShaderRes = null;

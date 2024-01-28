@@ -2,19 +2,19 @@
 
 namespace FragEngine3.Graphics.Resources.ShaderGen.Features;
 
-public static class DefaultShaderBuilderLighting
+public static class ShaderGenLighting
 {
 	#region Methods
 
-	private static bool WriteType_Lighting_Light(in DefaultShaderBuilderContext _ctx)
+	private static bool WriteType_Lighting_Light(in ShaderGenContext _ctx)
 	{
 		const string nameType = "Light";
 		if (_ctx.globalDeclarations.Contains(nameType)) return true;
 
-		string typeNameVec = _ctx.language == DefaultShaderLanguage.GLSL
+		string typeNameVec = _ctx.language == ShaderGenLanguage.GLSL
 			? "vec3"
 			: "float3";
-		string typeNameMtx = _ctx.language == DefaultShaderLanguage.GLSL
+		string typeNameMtx = _ctx.language == ShaderGenLanguage.GLSL
 			? "mtx4"
 			: "float4x4";
 
@@ -36,7 +36,7 @@ public static class DefaultShaderBuilderLighting
 		return true;
 	}
 
-	private static bool WriteResource_Lighting_BufLights(in DefaultShaderBuilderContext _ctx)
+	private static bool WriteResource_Lighting_BufLights(in ShaderGenContext _ctx)
 	{
 		const string nameRes = "BufLights";
 		if (_ctx.globalDeclarations.Contains(nameRes)) return true;
@@ -47,9 +47,9 @@ public static class DefaultShaderBuilderLighting
 		success &= WriteType_Lighting_Light(in _ctx);
 
 		// Metal:
-		if (_ctx.language == DefaultShaderLanguage.Metal)
+		if (_ctx.language == ShaderGenLanguage.Metal)
 		{
-			foreach (DefaultShaderBuilderVariant variant in _ctx.variants)
+			foreach (ShaderGenVariant variant in _ctx.variants)
 			{
 				if (variant.arguments.Length != 0)
 				{
@@ -68,16 +68,16 @@ public static class DefaultShaderBuilderLighting
 		return success;
 	}
 
-	private static bool WriteResource_Lighting_TexShadowMaps(in DefaultShaderBuilderContext _ctx)
+	private static bool WriteResource_Lighting_TexShadowMaps(in ShaderGenContext _ctx)
 	{
 		// TexShadowMaps:
 		const string nameTex = "TexShadowMaps";
 		if (!_ctx.globalDeclarations.Contains(nameTex))
 		{
 			// Metal:
-			if (_ctx.language == DefaultShaderLanguage.Metal)
+			if (_ctx.language == ShaderGenLanguage.Metal)
 			{
-				foreach (DefaultShaderBuilderVariant variant in _ctx.variants)
+				foreach (ShaderGenVariant variant in _ctx.variants)
 				{
 					if (variant.arguments.Length != 0)
 					{
@@ -99,9 +99,9 @@ public static class DefaultShaderBuilderLighting
 		if (!_ctx.globalDeclarations.Contains(nameSampler))
 		{
 			// Metal:
-			if (_ctx.language == DefaultShaderLanguage.Metal)
+			if (_ctx.language == ShaderGenLanguage.Metal)
 			{
-				foreach (DefaultShaderBuilderVariant variant in _ctx.variants)
+				foreach (ShaderGenVariant variant in _ctx.variants)
 				{
 					if (variant.arguments.Length != 0)
 					{
@@ -122,17 +122,17 @@ public static class DefaultShaderBuilderLighting
 		return true;
 	}
 
-	private static bool WriteFunction_Lighting_CalculateAmbientLight(in DefaultShaderBuilderContext _ctx)
+	private static bool WriteFunction_Lighting_CalculateAmbientLight(in ShaderGenContext _ctx)
 	{
 		const string nameFunc = "CalculateAmbientLight";
 		if (_ctx.globalDeclarations.Contains(nameFunc)) return true;
 
 		bool success = true;
 
-		success &= DefaultShaderBuilderUniforms.WriteConstantBuffer_CBScene(in _ctx);
+		success &= ShaderGenUniforms.WriteConstantBuffer_CBScene(in _ctx);
 
 		// Write function header:
-		success &= DefaultShaderBuilderUtility.WriteLanguageCodeLines(_ctx.functions, _ctx.language,
+		success &= ShaderGenUtility.WriteLanguageCodeLines(_ctx.functions, _ctx.language,
 			["half3 CalculateAmbientLight(in float3 _worldNormal)"],
 			["half3 CalculateAmbientLight(const float3& _worldNormal)"],
 			null);
@@ -152,13 +152,13 @@ public static class DefaultShaderBuilderLighting
 		return success;
 	}
 
-	private static bool WriteFunction_Lighting_CalculateLightMaps(in DefaultShaderBuilderContext _ctx)
+	private static bool WriteFunction_Lighting_CalculateLightMaps(in ShaderGenContext _ctx)
 	{
 		//TODO
 		return true;
 	}
 
-	private static bool WriteFunction_Lighting_CalculatePhongLighting(in DefaultShaderBuilderContext _ctx)
+	private static bool WriteFunction_Lighting_CalculatePhongLighting(in ShaderGenContext _ctx)
 	{
 		const string nameFunc = "CalculatePhongLighting";
 		if (_ctx.globalDeclarations.Contains(nameFunc)) return true;
@@ -166,7 +166,7 @@ public static class DefaultShaderBuilderLighting
 		bool success = true;
 
 		// Write function header:
-		success &= DefaultShaderBuilderUtility.WriteLanguageCodeLines(_ctx.functions, _ctx.language,
+		success &= ShaderGenUtility.WriteLanguageCodeLines(_ctx.functions, _ctx.language,
 			["half3 CalculatePhongLighting(in Light _light, in float3 _worldPosition, in float3 _worldNormal)"],
 			["half3 CalculatePhongLighting(device const Light& _light, const float3& _worldPosition, const float3& _worldNormal)"],
 			null);
@@ -204,7 +204,7 @@ public static class DefaultShaderBuilderLighting
 		return success;
 	}
 
-	private static bool WriteFunction_Lighting_CalculateShadowMapLightWeight(in DefaultShaderBuilderContext _ctx)
+	private static bool WriteFunction_Lighting_CalculateShadowMapLightWeight(in ShaderGenContext _ctx)
 	{
 		const string nameFunc = "CalculateShadowMapLightWeight";
 		if (_ctx.globalDeclarations.Contains(nameFunc)) return true;
@@ -219,13 +219,13 @@ public static class DefaultShaderBuilderLighting
 			.AppendLine();
 
 		// Write function header:
-		success &= DefaultShaderBuilderUtility.WriteLanguageCodeLines(_ctx.functions, _ctx.language,
+		success &= ShaderGenUtility.WriteLanguageCodeLines(_ctx.functions, _ctx.language,
 			["half CalculateShadowMapLightWeight(in Light _light, in float3 _worldPosition, in float3 _worldNormal)"],
 			["half CalculateShadowMapLightWeight(device const Light& _light, const float3& _worldPosition, const float3& _worldNormal)"],
 			null);
 
 		// Write function body:
-		string funcNameLerp = _ctx.language == DefaultShaderLanguage.HLSL
+		string funcNameLerp = _ctx.language == ShaderGenLanguage.HLSL
 			? "lerp"
 			: "mix";
 
@@ -236,7 +236,7 @@ public static class DefaultShaderBuilderLighting
 			.AppendLine()
 			.AppendLine("    // Transform pixel position to light's clip space, then to UV space:");
 
-		success &= DefaultShaderBuilderUtility.WriteLanguageCodeLines(_ctx.functions, _ctx.language,
+		success &= ShaderGenUtility.WriteLanguageCodeLines(_ctx.functions, _ctx.language,
 			["    float4 shadowProj = mul(_light.mtxShadowWorld2Clip, worldPosBiased);"],   //bloody Metal, breaking matrix multiplication conventions.
 			["    float4 shadowProj = _light.mtxShadowWorld2Clip * worldPosBiased;"],
 			["    float4 shadowProj = mul(_light.mtxShadowWorld2Clip, worldPosBiased);"]);
@@ -265,7 +265,7 @@ public static class DefaultShaderBuilderLighting
 		return success;
 	}
 
-	private static bool WriteFunction_Lighting_CalculateTotalLightIntensity(in DefaultShaderBuilderContext _ctx, in DefaultShaderConfig _config)
+	private static bool WriteFunction_Lighting_CalculateTotalLightIntensity(in ShaderGenContext _ctx, in ShaderGenConfig _config)
 	{
 		const string nameFunc = "CalculateTotalLightIntensity";
 		if (_ctx.globalDeclarations.Contains(nameFunc)) return true;
@@ -283,7 +283,7 @@ public static class DefaultShaderBuilderLighting
 		}
 		if (_config.useLightSources)
 		{
-			success &= DefaultShaderBuilderUniforms.WriteConstantBuffer_CBCamera(in _ctx);
+			success &= ShaderGenUniforms.WriteConstantBuffer_CBCamera(in _ctx);
 			success &= WriteResource_Lighting_BufLights(in _ctx);
 			success &= WriteFunction_Lighting_CalculatePhongLighting(in _ctx);
 
@@ -295,7 +295,7 @@ public static class DefaultShaderBuilderLighting
 		}
 
 		// Create header of main lighting function:
-		success &= DefaultShaderBuilderUtility.WriteLanguageCodeLines(_ctx.functions, _ctx.language,
+		success &= ShaderGenUtility.WriteLanguageCodeLines(_ctx.functions, _ctx.language,
 			["half3 CalculateTotalLightIntensity(in float3 _worldPosition, in float3 _worldNormal)"],
 			["half3 CalculateTotalLightIntensity(device const Light* BufLights, const float3& _worldPosition, const float3& _worldNormal)"],
 			null);
@@ -326,7 +326,7 @@ public static class DefaultShaderBuilderLighting
 
 		if (_config.useShadowMaps)
 		{
-			success &= DefaultShaderBuilderUtility.WriteLanguageCodeLines(_ctx.functions, _ctx.language,
+			success &= ShaderGenUtility.WriteLanguageCodeLines(_ctx.functions, _ctx.language,
 				["        Light light = BufLights[i];"],
 				["        device const Light& light = *BufLights[i];"],
 				null);
@@ -346,7 +346,7 @@ public static class DefaultShaderBuilderLighting
 			.AppendLine("    for (i = shadowMappedLightCount; i < lightCount; ++i)")
 			.AppendLine("    {");
 		}
-		success &= DefaultShaderBuilderUtility.WriteLanguageCodeLines(_ctx.functions, _ctx.language,
+		success &= ShaderGenUtility.WriteLanguageCodeLines(_ctx.functions, _ctx.language,
 			["        totalLightIntensity += CalculatePhongLighting(BufLights[i], _worldPosition, _worldNormal);"],
 			["        totalLightIntensity += CalculatePhongLighting(BufLights[i], _worldPosition, _worldNormal);"],
 			null);
@@ -360,7 +360,7 @@ public static class DefaultShaderBuilderLighting
 		return success;
 	}
 
-	public static bool WriteVariable_Lighting(in DefaultShaderBuilderContext _ctx, in DefaultShaderConfig _config)
+	public static bool WriteVariable_Lighting(in ShaderGenContext _ctx, in ShaderGenConfig _config)
 	{
 		const string nameLocalVar = "totalLightIntensity";
 
@@ -379,7 +379,7 @@ public static class DefaultShaderBuilderLighting
 		}
 
 		// MAIN CODE:
-		foreach (DefaultShaderBuilderVariant variant in _ctx.variants)
+		foreach (ShaderGenVariant variant in _ctx.variants)
 		{
 			bool alreadyDeclared = variant.localDeclarations.Contains(nameLocalVar);
 
@@ -428,12 +428,12 @@ public static class DefaultShaderBuilderLighting
 		return success;
 	}
 
-	public static bool ApplyLighting(in DefaultShaderBuilderContext _ctx)
+	public static bool ApplyLighting(in ShaderGenContext _ctx)
 	{
 		const string nameVarLightInt = "totalLightIntensity";
 		const string nameVarAlbedo = "albedo";
 
-		foreach (DefaultShaderBuilderVariant variant in _ctx.variants)
+		foreach (ShaderGenVariant variant in _ctx.variants)
 		{
 			if (!variant.localDeclarations.Contains(nameVarAlbedo) ||
 				!variant.localDeclarations.Contains(nameVarLightInt))

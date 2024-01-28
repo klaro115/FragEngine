@@ -1,18 +1,18 @@
 ﻿namespace FragEngine3.Graphics.Resources.ShaderGen;
 
-public enum DefaultShaderAlbedoSource
+public enum ShaderGenAlbedoSource
 {
 	Color			= 0,
 	SampleTexMain,
 }
 
-public enum DefaultShaderLightingModel
+public enum ShaderGenLightingModel
 {
 	Phong,
 	//...
 }
 
-public enum DefaultShaderLanguage
+public enum ShaderGenLanguage
 {
 	HLSL,
 	Metal,

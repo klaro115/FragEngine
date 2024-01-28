@@ -2,12 +2,12 @@
 
 namespace FragEngine3.Graphics.Resources.ShaderGen;
 
-public struct DefaultShaderConfig
+public struct ShaderGenConfig
 {
 	#region Fields
 
 	// Albedo:
-	public DefaultShaderAlbedoSource albedoSource;		// Which value to initialize albedo/main color from. If source is texture, "TexMain" will be added.
+	public ShaderGenAlbedoSource albedoSource;		// Which value to initialize albedo/main color from. If source is texture, "TexMain" will be added.
 	public RgbaFloat albedoColor;						// If albedo source is color, initialize with this value. Implemented as inlined literal.
 	public string? samplerTexMain;						// If albedo source is TexMain, use a sampler with this name. "SamplerMain" is used if null or empty.
 
@@ -20,7 +20,7 @@ public struct DefaultShaderConfig
 	public bool useAmbientLight;                        // For lighting, whether to use ambient lighting from scene constant buffer as basic unlit lighting value. "CBScene" is added.
 	public bool useLightMaps;                           // For lighting, whether to use light maps to add additional static precalculated lighting.
 	public bool useLightSources;						// For lighting, whether to light source in the scene to light up surfaces. "BufLights" buffer and "Light" struct are added.
-	public DefaultShaderLightingModel lightingModel;    // For lighting, which lighting model to use for light sources.
+	public ShaderGenLightingModel lightingModel;    // For lighting, which lighting model to use for light sources.
 	public bool useShadowMaps;                          // For lighting, whether to use shadow maps to mask out light coming from light sources.
 
 	// Variants:
@@ -31,9 +31,9 @@ public struct DefaultShaderConfig
 	#endregion
 	#region Properties
 
-	public static DefaultShaderConfig ConfigWhiteLit => new()
+	public static ShaderGenConfig ConfigWhiteLit => new()
 	{
-		albedoSource = DefaultShaderAlbedoSource.Color,
+		albedoSource = ShaderGenAlbedoSource.Color,
 		albedoColor = RgbaFloat.White,
 		samplerTexMain = null,
 
@@ -44,13 +44,13 @@ public struct DefaultShaderConfig
 		useAmbientLight = true,
 		useLightMaps = false,
 		useLightSources = true,
-		lightingModel = DefaultShaderLightingModel.Phong,
+		lightingModel = ShaderGenLightingModel.Phong,
 		useShadowMaps = true,
 	};
 
-	public static DefaultShaderConfig ConfigMainLit => new()
+	public static ShaderGenConfig ConfigMainLit => new()
 	{
-		albedoSource = DefaultShaderAlbedoSource.SampleTexMain,
+		albedoSource = ShaderGenAlbedoSource.SampleTexMain,
 		albedoColor = RgbaFloat.White,
 		samplerTexMain = null,
 
@@ -61,13 +61,13 @@ public struct DefaultShaderConfig
 		useAmbientLight = true,
 		useLightMaps = false,
 		useLightSources = true,
-		lightingModel = DefaultShaderLightingModel.Phong,
+		lightingModel = ShaderGenLightingModel.Phong,
 		useShadowMaps = true,
 	};
 
-	public static DefaultShaderConfig ConfigMainNormalsLit => new()
+	public static ShaderGenConfig ConfigMainNormalsLit => new()
 	{
-		albedoSource = DefaultShaderAlbedoSource.SampleTexMain,
+		albedoSource = ShaderGenAlbedoSource.SampleTexMain,
 		albedoColor = RgbaFloat.White,
 		samplerTexMain = null,
 
@@ -78,7 +78,7 @@ public struct DefaultShaderConfig
 		useAmbientLight = true,
 		useLightMaps = false,
 		useLightSources = true,
-		lightingModel = DefaultShaderLightingModel.Phong,
+		lightingModel = ShaderGenLightingModel.Phong,
 		useShadowMaps = true,
 	};
 
@@ -88,7 +88,7 @@ public struct DefaultShaderConfig
 	public readonly string CreateDescriptionTxt()
 	{
 		// Albedo:
-		char albedoSrc = BoolToCustom(albedoSource == DefaultShaderAlbedoSource.SampleTexMain, 't', 'c');
+		char albedoSrc = BoolToCustom(albedoSource == ShaderGenAlbedoSource.SampleTexMain, 't', 'c');
 
 		// Normals:
 		char normalsYN = BoolToYN(useNormalMap);
@@ -98,7 +98,7 @@ public struct DefaultShaderConfig
 		char useAmbient = BoolTo01(applyLighting && useAmbientLight);
 		char useLgtMaps = BoolTo01(applyLighting && useLightMaps);
 		char useLgtSrcs = BoolTo01(applyLighting && useLightSources);
-		char lightModel = BoolToCustom(applyLighting && useLightSources && lightingModel == DefaultShaderLightingModel.Phong, 'p', '?');
+		char lightModel = BoolToCustom(applyLighting && useLightSources && lightingModel == ShaderGenLightingModel.Phong, 'p', '?');
 		char useShaMaps = BoolTo01(applyLighting && useLightSources && useShadowMaps);
 
 		// Variants:
@@ -110,11 +110,11 @@ public struct DefaultShaderConfig
 		string txt = $"A{albedoSrc}_N{normalsYN}_L{lightingYN}{useAmbient}{useLgtMaps}{useLgtSrcs}{lightModel}{useShaMaps}_V{variantExt}{variantBle}{variantAni}";
 
 		// Albedo start color literal or sampler name:
-		if (albedoSource == DefaultShaderAlbedoSource.SampleTexMain && !string.IsNullOrEmpty(samplerTexMain))
+		if (albedoSource == ShaderGenAlbedoSource.SampleTexMain && !string.IsNullOrEmpty(samplerTexMain))
 		{
 			txt += $"_As={samplerTexMain}";
 		}
-		else if (albedoSource == DefaultShaderAlbedoSource.Color)
+		else if (albedoSource == ShaderGenAlbedoSource.Color)
 		{
 			txt += $"_Al={new Color32(albedoColor).ToHexStringLower()}";
 		}
@@ -132,7 +132,7 @@ public struct DefaultShaderConfig
 		static char BoolToCustom(bool _value, char _y, char _n) => _value ? _y : _n;
 	}
 
-	public static bool TryParseDescriptionTxt(string _txt, out DefaultShaderConfig _outConfig)
+	public static bool TryParseDescriptionTxt(string _txt, out ShaderGenConfig _outConfig)
 	{
 		if (string.IsNullOrEmpty(_txt))
 		{
@@ -141,7 +141,7 @@ public struct DefaultShaderConfig
 		}
 
 		bool success = true;
-		DefaultShaderConfig config = new();
+		ShaderGenConfig config = new();
 
 		string[] parts = _txt.Split('_', StringSplitOptions.RemoveEmptyEntries);
 		foreach (string part in parts)
@@ -168,7 +168,7 @@ public struct DefaultShaderConfig
 			switch (cType)
 			{
 				case 'c':
-					config.albedoSource = DefaultShaderAlbedoSource.Color;
+					config.albedoSource = ShaderGenAlbedoSource.Color;
 					return true;
 				case 'l':
 					string colorLiteral = _part.Substring(3);
@@ -178,7 +178,7 @@ public struct DefaultShaderConfig
 					config.samplerTexMain = _part.Substring(3);
 					return true;
 				case 't':
-					config.albedoSource = DefaultShaderAlbedoSource.SampleTexMain;
+					config.albedoSource = ShaderGenAlbedoSource.SampleTexMain;
 					return true;
 				default:
 					return false;
@@ -215,7 +215,7 @@ public struct DefaultShaderConfig
 				switch (_part[5])
 				{
 					case 'p':
-						config.lightingModel = DefaultShaderLightingModel.Phong;
+						config.lightingModel = ShaderGenLightingModel.Phong;
 						break;
 					default:
 						return false;

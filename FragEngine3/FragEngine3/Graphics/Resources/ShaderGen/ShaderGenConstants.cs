@@ -1,6 +1,6 @@
 ﻿namespace FragEngine3.Graphics.Resources.ShaderGen;
 
-public static class DefaultShaderConstants
+public static class ShaderGenConstants
 {
 	#region Constants
 

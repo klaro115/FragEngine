@@ -2,11 +2,11 @@
 
 namespace FragEngine3.Graphics.Resources.ShaderGen.Features;
 
-public static class DefaultShaderBuilderAlbedo
+public static class ShaderGenAlbedo
 {
 	#region Methods
 
-	public static bool WriteResources_TexMainAndSampler(in DefaultShaderBuilderContext _ctx, in DefaultShaderConfig _config)
+	public static bool WriteResources_TexMainAndSampler(in ShaderGenContext _ctx, in ShaderGenConfig _config)
 	{
 		bool success = true;
 
@@ -16,11 +16,11 @@ public static class DefaultShaderBuilderAlbedo
 
 		if (!alreadyDeclaredTexMain)
 		{
-			success &= DefaultShaderBuilderUtility.WriteLanguageCodeLines(_ctx.resources, _ctx.language,
+			success &= ShaderGenUtility.WriteLanguageCodeLines(_ctx.resources, _ctx.language,
 				[ "Texture2D<half4> TexMain : register(ps, t2);" ],
 				[ ", texture2d<half, access::read> TexMain [[ texture( 1 ) ]]" ],
 				null,
-				_ctx.language != DefaultShaderLanguage.Metal);
+				_ctx.language != ShaderGenLanguage.Metal);
 
 			_ctx.globalDeclarations.Add(nameTexMain);
 		}
@@ -33,11 +33,11 @@ public static class DefaultShaderBuilderAlbedo
 
 		if (!alreadyDeclaredSamplerMain)
 		{
-			success &= DefaultShaderBuilderUtility.WriteLanguageCodeLines(_ctx.resources, _ctx.language,
+			success &= ShaderGenUtility.WriteLanguageCodeLines(_ctx.resources, _ctx.language,
 				[ $"SamplerState {nameSamplerMain} : register(s1);" ],
 				[ $", sampler {nameSamplerMain} [[ ??? ]]" ],	//TEMP
 				null,
-				_ctx.language != DefaultShaderLanguage.Metal);
+				_ctx.language != ShaderGenLanguage.Metal);
 
 			_ctx.globalDeclarations.Add(nameSamplerMain);
 		}
@@ -45,24 +45,24 @@ public static class DefaultShaderBuilderAlbedo
 		return success;
 	}
 
-	public static bool WriteVariable_Albedo(in DefaultShaderBuilderContext _ctx, in DefaultShaderConfig _config)
+	public static bool WriteVariable_Albedo(in ShaderGenContext _ctx, in ShaderGenConfig _config)
 	{
 		bool success = true;
 
 		// Ensure main texture and main sampler resources are declared:
-		if (_config.albedoSource == DefaultShaderAlbedoSource.SampleTexMain)
+		if (_config.albedoSource == ShaderGenAlbedoSource.SampleTexMain)
 		{
 			success &= WriteResources_TexMainAndSampler(in _ctx, in _config);
 		}
 
 		// Declare and initialize variable:
-		foreach (DefaultShaderBuilderVariant variant in _ctx.variants)
+		foreach (ShaderGenVariant variant in _ctx.variants)
 		{
 			const string nameVar = "albedo";
 			bool alreadyDeclared = variant.localDeclarations.Contains(nameVar);
 			string nameVarUv = !string.IsNullOrEmpty(variant.varNameUVs)
 				? variant.varNameUVs
-				: DefaultShaderBuilderVariant.DEFAULT_VAR_NAME_UVs;
+				: ShaderGenVariant.DEFAULT_VAR_NAME_UVs;
 
 			// Write basic declaration:
 			variant.code.AppendLine("    // Sample base color from main texture:");
@@ -78,8 +78,8 @@ public static class DefaultShaderBuilderAlbedo
 			// Initialize vector either from color literal or sample from main texture:
 			switch (_ctx.language)
 			{
-				case DefaultShaderLanguage.HLSL:
-					if (_config.albedoSource == DefaultShaderAlbedoSource.SampleTexMain)
+				case ShaderGenLanguage.HLSL:
+					if (_config.albedoSource == ShaderGenAlbedoSource.SampleTexMain)
 					{
 						// Sample texture:
 						variant.code.AppendLine($"TexMain.Sample(SamplerMain, {nameVarUv});");
@@ -88,12 +88,12 @@ public static class DefaultShaderBuilderAlbedo
 					{
 						// Color literal:
 						variant.code.Append($"half4(");
-						DefaultShaderBuilderUtility.WriteColorValues(variant.code, _config.albedoColor);
+						ShaderGenUtility.WriteColorValues(variant.code, _config.albedoColor);
 						variant.code.AppendLine(");");
 					}
 					break;
-				case DefaultShaderLanguage.Metal:
-					if (_config.albedoSource == DefaultShaderAlbedoSource.SampleTexMain)
+				case ShaderGenLanguage.Metal:
+					if (_config.albedoSource == ShaderGenAlbedoSource.SampleTexMain)
 					{
 						// Sample texture:
 						variant.code.AppendLine($"TexMain.sample(SamplerMain, {nameVarUv});");
@@ -102,7 +102,7 @@ public static class DefaultShaderBuilderAlbedo
 					{
 						// Color literal:
 						variant.code.Append($"half4(");
-						DefaultShaderBuilderUtility.WriteColorValues(variant.code, _config.albedoColor);
+						ShaderGenUtility.WriteColorValues(variant.code, _config.albedoColor);
 						variant.code.AppendLine(");");
 					}
 					break;

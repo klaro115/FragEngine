@@ -4,30 +4,30 @@ using System.Text;
 
 namespace FragEngine3.Graphics.Resources.ShaderGen;
 
-public static class DefaultShaderBuilder
+public static class ShaderGenerator
 {
 	#region Methods
 
 	public static bool CreatePixelShader(EnginePlatformFlag _platformFlags, out string _outShaderCode)
 	{
-		DefaultShaderConfig config = DefaultShaderConfig.ConfigWhiteLit;
+		ShaderGenConfig config = ShaderGenConfig.ConfigWhiteLit;
 
 		return CreatePixelShaderVariation(config, _platformFlags, out _outShaderCode);
 	}
 
-	public static bool CreatePixelShaderVariation(in DefaultShaderConfig _config, EnginePlatformFlag _platformFlags, out string _outShaderCode)
+	public static bool CreatePixelShaderVariation(in ShaderGenConfig _config, EnginePlatformFlag _platformFlags, out string _outShaderCode)
 	{
-		DefaultShaderLanguage language;
+		ShaderGenLanguage language;
 		if (_platformFlags.HasFlag(EnginePlatformFlag.GraphicsAPI_D3D))
-			language = DefaultShaderLanguage.HLSL;
+			language = ShaderGenLanguage.HLSL;
 		else if (_platformFlags.HasFlag(EnginePlatformFlag.GraphicsAPI_Metal))
-			language = DefaultShaderLanguage.Metal;
+			language = ShaderGenLanguage.Metal;
 		else
-			language = DefaultShaderLanguage.GLSL;
+			language = ShaderGenLanguage.GLSL;
 
 		bool success = true;
 
-		DefaultShaderBuilderContext ctx = new(language);
+		ShaderGenContext ctx = new(language);
 		StringBuilder finalBuilder = new(4096);
 
 		if (_config.alwaysCreateExtendedVariant)	ctx.variants.Add(new(MeshVertexDataFlags.BasicSurfaceData | MeshVertexDataFlags.ExtendedSurfaceData));
@@ -35,7 +35,7 @@ public static class DefaultShaderBuilder
 		if (_config.alwaysCreateAnimatedVariant)	ctx.variants.Add(new(MeshVertexDataFlags.BasicSurfaceData | MeshVertexDataFlags.Animations));
 
 		// Add universal header defines and compiler instructions:
-		success &= DefaultShaderBuilderUtility.WriteLanguageCodeLines(finalBuilder, language,
+		success &= ShaderGenUtility.WriteLanguageCodeLines(finalBuilder, language,
 			// HLSL:
 			[
 				"#pragma pack_matrix( column_major )"
@@ -48,9 +48,9 @@ public static class DefaultShaderBuilder
 			[]);
 		finalBuilder.AppendLine();
 
-		success &= DefaultShaderBuilderVertexOutputs.WriteVertexOutput_Basic(in ctx);
+		success &= ShaderGenVertexOutputs.WriteVertexOutput_Basic(in ctx);
 
-		success &= DefaultShaderBuilderAlbedo.WriteVariable_Albedo(in ctx, in _config);
+		success &= ShaderGenAlbedo.WriteVariable_Albedo(in ctx, in _config);
 
 		if (_config.useNormalMap)
 		{
@@ -59,23 +59,23 @@ public static class DefaultShaderBuilder
 
 		if (_config.applyLighting)
 		{
-			success &= DefaultShaderBuilderLighting.WriteVariable_Lighting(in ctx, in _config);
-			success &= DefaultShaderBuilderLighting.ApplyLighting(in ctx);
+			success &= ShaderGenLighting.WriteVariable_Lighting(in ctx, in _config);
+			success &= ShaderGenLighting.ApplyLighting(in ctx);
 		}
 
 		// Ensure that all required vertex output definitions are defined:
 		MeshVertexDataFlags allVertexDataFlags = MeshVertexDataFlags.BasicSurfaceData;
-		foreach (DefaultShaderBuilderVariant variant in ctx.variants)
+		foreach (ShaderGenVariant variant in ctx.variants)
 		{
 			allVertexDataFlags |= variant.vertexDataFlags;
 		}
-		success &= DefaultShaderBuilderVertexOutputs.WriteVertexOutput_Basic(in ctx);
+		success &= ShaderGenVertexOutputs.WriteVertexOutput_Basic(in ctx);
 		if (allVertexDataFlags.HasFlag(MeshVertexDataFlags.ExtendedSurfaceData))
-			success &= DefaultShaderBuilderVertexOutputs.WriteVertexOutput_Extended(in ctx);
+			success &= ShaderGenVertexOutputs.WriteVertexOutput_Extended(in ctx);
 		if (allVertexDataFlags.HasFlag(MeshVertexDataFlags.BlendShapes))
-			success &= DefaultShaderBuilderVertexOutputs.WriteVertexOutput_BlendShapes(in ctx);
+			success &= ShaderGenVertexOutputs.WriteVertexOutput_BlendShapes(in ctx);
 		if (allVertexDataFlags.HasFlag(MeshVertexDataFlags.Animations))
-			success &= DefaultShaderBuilderVertexOutputs.WriteVertexOutput_Animated(in ctx);
+			success &= ShaderGenVertexOutputs.WriteVertexOutput_Animated(in ctx);
 
 		// Assemble full shader code file:
 		finalBuilder.Append(ctx.constants).AppendLine();
@@ -91,7 +91,7 @@ public static class DefaultShaderBuilder
 		return success;
 	}
 
-	private static bool AddNormalMaps(in DefaultShaderBuilderContext _ctx, in DefaultShaderConfig _config)
+	private static bool AddNormalMaps(in ShaderGenContext _ctx, in ShaderGenConfig _config)
 	{
 		//TODO
 		return true;

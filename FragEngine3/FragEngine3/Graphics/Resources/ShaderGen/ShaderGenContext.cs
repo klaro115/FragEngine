@@ -2,7 +2,7 @@
 
 namespace FragEngine3.Graphics.Resources.ShaderGen;
 
-public sealed class DefaultShaderBuilderContext(DefaultShaderLanguage _language)
+public sealed class ShaderGenContext(ShaderGenLanguage _language)
 {
 	#region Fields
 
@@ -10,13 +10,13 @@ public sealed class DefaultShaderBuilderContext(DefaultShaderLanguage _language)
 	public readonly StringBuilder resources = new(512);
 	public readonly StringBuilder vertexOutputs = new(300);
 	public readonly StringBuilder functions = new(4096);
-	public readonly List<DefaultShaderBuilderVariant> variants =
+	public readonly List<ShaderGenVariant> variants =
 	[
-		new DefaultShaderBuilderVariant(MeshVertexDataFlags.BasicSurfaceData),
+		new ShaderGenVariant(MeshVertexDataFlags.BasicSurfaceData),
 	];
 	//^Note: Starting capacities set for a pixel shader with all features enabled.
 
-	public readonly DefaultShaderLanguage language = _language;
+	public readonly ShaderGenLanguage language = _language;
 	public readonly HashSet<string> globalDeclarations = new(10);
 
 	public int boundUniformsIdx = 3;
@@ -34,7 +34,7 @@ public sealed class DefaultShaderBuilderContext(DefaultShaderLanguage _language)
 		vertexOutputs.Clear();
 		functions.Clear();
 
-		foreach (DefaultShaderBuilderVariant variant in variants)
+		foreach (ShaderGenVariant variant in variants)
 		{
 			variant.isEnabled = false;
 			variant.Clear();
@@ -49,7 +49,7 @@ public sealed class DefaultShaderBuilderContext(DefaultShaderLanguage _language)
 
 		bool success = true;
 
-		foreach (DefaultShaderBuilderVariant variant in variants)
+		foreach (ShaderGenVariant variant in variants)
 		{
 			success &= variant.WriteFunction_MainPixel(this, _finalBuilder);
 		}

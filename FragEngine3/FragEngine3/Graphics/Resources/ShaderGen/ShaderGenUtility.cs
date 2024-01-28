@@ -4,7 +4,7 @@ using Veldrid;
 
 namespace FragEngine3.Graphics.Resources.ShaderGen;
 
-public static class DefaultShaderBuilderUtility
+public static class ShaderGenUtility
 {
 	#region Methods
 
@@ -13,13 +13,13 @@ public static class DefaultShaderBuilderUtility
 		_dstBuilder.Append(_color.R).Append(", ").Append(_color.G).Append(", ").Append(_color.B).Append(", ").Append(_color.A);
 	}
 
-	public static bool WriteLanguageCodeLines(StringBuilder _dstBuilder, DefaultShaderLanguage _language, string[]? _codeHLSL, string[]? _codeMetal, string[]? _codeGLSL, bool _appendAsLines = true)
+	public static bool WriteLanguageCodeLines(StringBuilder _dstBuilder, ShaderGenLanguage _language, string[]? _codeHLSL, string[]? _codeMetal, string[]? _codeGLSL, bool _appendAsLines = true)
 	{
 		string[]? codeLines = _language switch
 		{
-			DefaultShaderLanguage.HLSL => _codeHLSL,
-			DefaultShaderLanguage.Metal => _codeMetal,
-			DefaultShaderLanguage.GLSL => _codeGLSL,
+			ShaderGenLanguage.HLSL => _codeHLSL,
+			ShaderGenLanguage.Metal => _codeMetal,
+			ShaderGenLanguage.GLSL => _codeGLSL,
 			_ => null,
 		};
 
