@@ -55,7 +55,7 @@
                 "IsBoundBySystem": false
             },
             {
-                "ResourceKey": "TexGray",
+                "ResourceKey": "TexFeatureTest_Normal",
                 "SlotName": "TexNormal",
                 "SlotIndex": 3,
                 "ResourceKind": 3,

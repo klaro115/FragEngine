@@ -313,7 +313,17 @@ public class Material(GraphicsCore _core, ResourceHandle _handle) : Resource(_ha
 			{
 				if (string.IsNullOrEmpty(resourceKeys.resourceKey) || !resourceManager.GetResource(resourceKeys.resourceKey, out ResourceHandle handle))
 				{
-					return false;
+					// Try loading a placeholder resource if the given key is invalid:
+					switch (resourceKeys.resourceKind)
+					{
+						case ResourceKind.TextureReadOnly:
+							handle = core.graphicsSystem.TexPlaceholderMagenta;
+							break;
+						default:
+							Logger.LogError($"Resource key '{resourceKeys.resourceKey}' could not be found; Cannot bind slot {resourceKeys.resourceIdx} ({resourceKeys.resourceKey}) of material '{resourceKey}'");
+							return false;
+					}
+					Logger.LogWarning($"Resource key '{resourceKeys.resourceKey}' could not be found; Reverting to placeholder resource in slot {resourceKeys.resourceIdx} ({resourceKeys.resourceKey}) of material '{resourceKey}'");
 				}
 
 				switch (handle.resourceType)
