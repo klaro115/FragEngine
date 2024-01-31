@@ -293,38 +293,6 @@ public sealed class TestApplicationLogic : ApplicationLogic
 			quad.SetMaterial("Mtl_TestMaterial");
 		}
 
-
-		/**********************************************************/
-		// SHADER GEN TEST:
-
-		/*
-		{
-			GraphicsCore core = Engine.GraphicsSystem.graphicsCore;
-
-			DefaultShaderConfig config = DefaultShaderConfig.ConfigMainNormalsLit;
-			DefaultShaderConfig.TryParseDescriptionTxt(config.CreateDescriptionTxt(), out config);
-
-			Engine.Logger.LogMessage($"Generating default shader variation: \"{config.CreateDescriptionTxt()}\"");
-
-			if (DefaultShaderBuilder.CreatePixelShaderVariation(in config, Engine.PlatformSystem.PlatformFlags, out string shaderCode))
-			{
-				byte[] shaderCodeBytes = new byte[shaderCode.Length + 1];
-				for (int i = 0; i < shaderCode.Length; i++)
-				{
-					shaderCodeBytes[i] = (byte)shaderCode[i];
-				}
-				shaderCodeBytes[^1] = (byte)'\0';
-
-				GraphicsConstants.defaultShaderStageEntryPoints.TryGetValue(ShaderStages.Fragment, out string? entryPoint);
-
-				if (ShaderResourceFactory.CreateShaderFromCodeBytes(core, "ShaderGen_PS", shaderCodeBytes, shaderCodeBytes.Length, ShaderStages.Fragment, entryPoint!, out ShaderResource? shaderRes))
-				{
-					Engine.ResourceManager.AddResource(new(shaderRes!));
-				}
-			}
-		}
-		*/
-
 		return true;
 	}
 

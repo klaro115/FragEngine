@@ -6,7 +6,17 @@ namespace FragEngine3.Graphics.Resources.ShaderGen;
 
 public static class ShaderGenerator
 {
+	#region Fields
+
+	private static readonly Stack<ShaderGenContext> contextPool = new();
+
+	#endregion
 	#region Methods
+
+	public static void ClearPooledObjects()
+	{
+		contextPool.Clear();
+	}
 
 	public static bool CreatePixelShader(EnginePlatformFlag _platformFlags, out string _outShaderCode)
 	{
@@ -27,9 +37,14 @@ public static class ShaderGenerator
 
 		bool success = true;
 
-		ShaderGenContext ctx = new(language);
+		// Grab a free context or create a new one for this shader:
+		if (!contextPool.TryPop(out ShaderGenContext? ctx))
+		{
+			ctx = new(language);
+		}
 		StringBuilder finalBuilder = new(4096);
 
+		// Add all variants that we're already aware of:
 		if (_config.alwaysCreateExtendedVariant)	ctx.variants.Add(new(MeshVertexDataFlags.BasicSurfaceData | MeshVertexDataFlags.ExtendedSurfaceData));
 		if (_config.alwaysCreateBlendShapeVariant)	ctx.variants.Add(new(MeshVertexDataFlags.BasicSurfaceData | MeshVertexDataFlags.BlendShapes));
 		if (_config.alwaysCreateAnimatedVariant)	ctx.variants.Add(new(MeshVertexDataFlags.BasicSurfaceData | MeshVertexDataFlags.Animations));
@@ -79,11 +94,11 @@ public static class ShaderGenerator
 
 		// Assemble full shader code file:
 		finalBuilder.Append(ctx.constants).AppendLine();
+		finalBuilder.Append(ctx.vertexOutputs).AppendLine();
 		if (language != ShaderGenLanguage.Metal)
 		{
 			finalBuilder.Append(ctx.resources).AppendLine();
 		}
-		finalBuilder.Append(ctx.vertexOutputs).AppendLine();
 		finalBuilder.Append(ctx.functions).AppendLine();
 
 		// Add entrypoint function:
@@ -91,6 +106,10 @@ public static class ShaderGenerator
 
 		// Output resulting shader code:
 		_outShaderCode = finalBuilder.ToString();
+
+		// Clear and return context to pool for later re-use:
+		ctx.Clear();
+		contextPool.Push(ctx);
 		return success;
 	}
 

@@ -4,6 +4,17 @@ public static class ShaderGenUniforms
 {
 	#region Methods
 
+	private static void WriteResourceForMetal(in ShaderGenContext _ctx, string _code)
+	{
+		if (_ctx.language != ShaderGenLanguage.Metal) return;
+		
+		if (_ctx.resources.Length != 0)
+		{
+			_ctx.resources.Append(", ");
+		}
+		_ctx.resources.Append(_code);
+	}
+
 	public static bool WriteConstantBuffer_CBScene(in ShaderGenContext _ctx)
 	{
 		const string nameConst = "CBScene";
@@ -31,6 +42,9 @@ public static class ShaderGenUniforms
 			.AppendLine($"    {typeNameVec} ambientLightHigh;")
 			.AppendLine("    float shadowFadeStart;")
 			.AppendLine("};");
+
+		// Constant buffers are passed as arguments to entrypoint function in Metal:
+		WriteResourceForMetal(in _ctx, "device const CBScene& cbScene [[ buffer( 0 ) ]]");
 
 		_ctx.globalDeclarations.Add(nameConst);
 		return success;
@@ -78,6 +92,9 @@ public static class ShaderGenUniforms
 			.AppendLine("    uint shadowMappedLightCount;")
 			.AppendLine("};");
 
+		// Constant buffers are passed as arguments to entrypoint function in Metal:
+		WriteResourceForMetal(in _ctx, "device const CBCamera& cbCamera [[ buffer( 1 ) ]]");
+
 		_ctx.globalDeclarations.Add(nameConst);
 		return success;
 	}
@@ -110,6 +127,9 @@ public static class ShaderGenUniforms
 			.AppendLine($"    {typeNameVec} worldPosition;")
 			.AppendLine("    float boundingRadius;")
 			.AppendLine("};");
+
+		// Constant buffers are passed as arguments to entrypoint function in Metal:
+		WriteResourceForMetal(in _ctx, "device const CBObject& cbObject [[ buffer( 2 ) ]]");
 
 		_ctx.globalDeclarations.Add(nameConst);
 		return success;
