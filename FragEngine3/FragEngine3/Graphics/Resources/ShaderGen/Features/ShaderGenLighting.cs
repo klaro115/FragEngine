@@ -18,7 +18,7 @@ public static class ShaderGenLighting
 			? "mtx4"
 			: "float4x4";
 
-		_ctx.resources
+		_ctx.vertexOutputs
 			.AppendLine("struct Light")
 			.AppendLine("{")
 			.AppendLine($"    {typeNameVec} lightColor;")
@@ -83,7 +83,7 @@ public static class ShaderGenLighting
 					{
 						variant.arguments.Append(", ");
 					}
-					variant.arguments.Append("texture2d<half, access::read> TexOpaqueColor [[ texture( 0 ) ]]");
+					variant.arguments.Append("texture2d_array<half, access::sample> TexShadowMaps [[ texture( 0 ) ]]");
 				}
 			}
 			// HLSL & GLSL:
@@ -107,7 +107,7 @@ public static class ShaderGenLighting
 					{
 						variant.arguments.Append(", ");
 					}
-					//TODO: no idea how this is done. This language is a convoluted mess.
+					variant.arguments.Append("sampler TexShadowMaps [[ sampler( 0 ) ]]");
 				}
 			}
 			// HLSL & GLSL:

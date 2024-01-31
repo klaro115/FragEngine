@@ -79,7 +79,10 @@ public static class ShaderGenerator
 
 		// Assemble full shader code file:
 		finalBuilder.Append(ctx.constants).AppendLine();
-		finalBuilder.Append(ctx.resources).AppendLine();
+		if (language != ShaderGenLanguage.Metal)
+		{
+			finalBuilder.Append(ctx.resources).AppendLine();
+		}
 		finalBuilder.Append(ctx.vertexOutputs).AppendLine();
 		finalBuilder.Append(ctx.functions).AppendLine();
 

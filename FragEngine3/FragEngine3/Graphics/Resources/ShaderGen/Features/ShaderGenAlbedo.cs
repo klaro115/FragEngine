@@ -34,7 +34,7 @@ public static class ShaderGenAlbedo
 		{
 			success &= ShaderGenUtility.WriteLanguageCodeLines(_ctx.resources, _ctx.language,
 				[ $"SamplerState {nameSamplerMain} : register(s{_ctx.boundSamplerIdx});" ],
-				[ $", sampler {nameSamplerMain} [[ ??? ]]" ],	//TEMP
+				[ $", sampler {nameSamplerMain} [[ sampler( {_ctx.boundSamplerIdx} ) ]]" ],	//TEMP
 				null,
 				_ctx.language != ShaderGenLanguage.Metal);
 

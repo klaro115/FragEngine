@@ -161,12 +161,16 @@ public sealed class ShaderGenVariant(MeshVertexDataFlags _vertexDataFlags)
 		{
 			case ShaderGenLanguage.HLSL:
 				{
-					header.AppendLine(") : SV_Target0").AppendLine("{");
+					header
+						.AppendLine(") : SV_Target0")
+						.AppendLine("{");
 				}
 				break;
 			case ShaderGenLanguage.Metal:
 				{
-					header.AppendLine(")").AppendLine("{");
+					header
+						.AppendLine(")")
+						.AppendLine("{");
 				}
 				break;
 			default:
