@@ -195,31 +195,7 @@ public sealed class ForwardPlusLightsStack(GraphicsCore _core) : IGraphicsStack
 
 		if (!Scene.engine.ResourceManager.GetResource(RESOURCE_KEY_FULLSCREEN_QUAD_MESH, out ResourceHandle fullscreenQuadHandle))
 		{
-			// Create fullscreen quad:
-			MeshSurfaceData fullscreenQuadData = new()
-			{
-				verticesBasic =
-				[
-					new BasicVertex(new(-1, -1, 0), new(0, 0, -1), new(0, 0)),
-					new BasicVertex(new( 1, -1, 0), new(0, 0, -1), new(1, 0)),
-					new BasicVertex(new(-1,  1, 0), new(0, 0, -1), new(0, 1)),
-					new BasicVertex(new( 1,  1, 0), new(0, 0, -1), new(1, 1)),
-				],
-				verticesExt =
-				[
-					new ExtendedVertex(Vector3.UnitY, new(0, 0)),
-					new ExtendedVertex(Vector3.UnitY, new(1, 0)),
-					new ExtendedVertex(Vector3.UnitY, new(0, 1)),
-					new ExtendedVertex(Vector3.UnitY, new(1, 1)),
-				],
-				indices16 =
-				[
-					0, 2, 1,
-					2, 3, 1,
-				],
-			};
-			StaticMesh fullscreenQuadMesh = new(RESOURCE_KEY_FULLSCREEN_QUAD_MESH, Scene.engine, false, out fullscreenQuadHandle);
-			fullscreenQuadMesh.SetGeometry(in fullscreenQuadData);
+			MeshPrimitiveFactory.CreateFullscreenQuadMesh(RESOURCE_KEY_FULLSCREEN_QUAD_MESH, core.graphicsSystem.engine, true, out _, out _, out fullscreenQuadHandle);
 		}
 
 		if (!Scene.FindNode(NODE_NAME_COMPOSITION_RENDERER, out SceneNode? compositionNode))
@@ -229,7 +205,7 @@ public sealed class ForwardPlusLightsStack(GraphicsCore _core) : IGraphicsStack
 			if (compositionNode.CreateComponent(out compositionRenderer) && compositionRenderer != null)
 			{
 				compositionRenderer.SetMaterial(RESOURCE_KEY_COMPOSITION_MATERIAL, true);
-				compositionRenderer.SetMesh(RESOURCE_KEY_FULLSCREEN_QUAD_MESH);
+				compositionRenderer.SetMesh(fullscreenQuadHandle);
 				compositionRenderer.LayerFlags = COMPOSITION_LAYER_MASK;
 			}
 		}

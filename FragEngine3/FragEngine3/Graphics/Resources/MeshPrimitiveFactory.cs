@@ -758,6 +758,65 @@ namespace FragEngine3.Graphics.Resources
 			return _outMesh.SetGeometry(in _outMeshData);
 		}
 
+		public static MeshSurfaceData CreateFullscreenQuadData(bool _useExtendedData)
+		{
+			return new()
+			{
+				verticesBasic =
+				[
+					new BasicVertex(new(-1, -1, 0), new(0, 0, -1), new(0, 0)),
+					new BasicVertex(new(1, -1, 0), new(0, 0, -1), new(1, 0)),
+					new BasicVertex(new(-1, 1, 0), new(0, 0, -1), new(0, 1)),
+					new BasicVertex(new(1, 1, 0), new(0, 0, -1), new(1, 1)),
+				],
+				verticesExt = _useExtendedData
+				? [
+					new ExtendedVertex(Vector3.UnitY, new(0, 0)),
+					new ExtendedVertex(Vector3.UnitY, new(1, 0)),
+					new ExtendedVertex(Vector3.UnitY, new(0, 1)),
+					new ExtendedVertex(Vector3.UnitY, new(1, 1)),
+				]
+				: null,
+				indices16 =
+				[
+					0, 2, 1,
+					2, 3, 1,
+				],
+			};
+		}
+
+		public static bool CreateFullscreenQuadMesh(
+			string _resourceKey,
+			Engine _engine,
+			bool _useExtendedData,
+			out MeshSurfaceData _outMeshData,
+			out StaticMesh _outMesh,
+			out ResourceHandle _outHandle)
+		{
+			if (string.IsNullOrEmpty(_resourceKey) || _engine == null || _engine.IsDisposed)
+			{
+				// crit fail on creating d20.
+				(_engine?.Logger ?? Logger.Instance)?.LogError("Cannot create fullscreen quad mesh using null resource key or null engine!");
+				_outMeshData = null!;
+				_outMesh = null!;
+				_outHandle = ResourceHandle.None;
+				return false;
+			}
+
+			_outMeshData = CreateFullscreenQuadData(_useExtendedData);
+			if (!_outMeshData.IsValid)
+			{
+				_engine.Logger.LogError("Failed to create fullscreen quad mesh data!");
+				_outMesh = null!;
+				_outHandle = ResourceHandle.None;
+				return false;
+			}
+
+			_outMesh = new(_resourceKey, _engine, _useExtendedData, out _outHandle);
+
+			return _outMesh.SetGeometry(in _outMeshData);
+		}
+
 		#endregion
 	}
 }
