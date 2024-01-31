@@ -116,7 +116,10 @@ namespace FragEngine3.Graphics.Utility
 			try
 			{
 				_outTexShadowMapArray = _graphicsCore.MainFactory.CreateTexture(ref textureArrayDesc);
-				_outTexShadowMapArray.Name = $"TexShadowMapArray_{_resolutionX}x{_resolutionY}_count={_arraySize}";
+				if (_graphicsCore is not MacOS.MacGraphicsCore)
+				{
+					_outTexShadowMapArray.Name = $"TexShadowMapArray_{_resolutionX}x{_resolutionY}_count={_arraySize}";
+				}	//^Note: Naming a texture array somehow leads to hard crashes on MacOS.
 			}
 			catch (Exception ex)
 			{

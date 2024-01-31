@@ -89,6 +89,7 @@ namespace FragEngine3.Graphics.MacOS
 				bool useSrgb = config.Graphics.OutputIsSRGB;
 				DefaultColorTargetPixelFormat = GetOutputPixelFormat(outputBitDepth, useSrgb);
 				DefaultDepthTargetPixelFormat = GetOutputDepthFormat(outputBitDepth, true);
+				DefaultShadowMapDepthTargetFormat = PixelFormat.R32_Float;
 
 				GraphicsDeviceOptions deviceOptions = new(
 					false,
