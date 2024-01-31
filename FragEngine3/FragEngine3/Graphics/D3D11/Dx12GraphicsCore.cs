@@ -161,13 +161,15 @@ namespace FragEngine3.Graphics.D3D11
 				}
 			}
 
+			SamplerManager = new(this);
+
+			stopwatch.Stop();
+
 			isInitialized = Device != null && Window != null;
 			if (isInitialized)
 			{
 				Logger.LogMessage($"# Finished initializing D3D graphics device. ({stopwatch.ElapsedMilliseconds} ms)\n");
 			}
-
-			stopwatch.Stop();
 
 			quitMessageReceived = false;
 			return isInitialized;

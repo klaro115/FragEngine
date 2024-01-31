@@ -287,27 +287,26 @@ public class Material(GraphicsCore _core, ResourceHandle _handle) : Resource(_ha
 			return false;
 		}
 
-		try
+		// Get or create a sampler from the graphics core's centralized sampler registry:
+		if (!core.SamplerManager.GetSampler(_resourceDescription, out _outSampler))
 		{
-			SamplerDescription samplerDesc = MaterialDataDescriptionParser.DecodeDescription_Sampler(_resourceDescription);
-
-			_outSampler = core.MainFactory.CreateSampler(ref samplerDesc);													// TODO: Create and manage samplers globally, in graphics core maybe?
-			return true;
-		}
-		catch (Exception ex)
-		{
-			Logger.LogException($"Failed to create sampler for bound resources of material '{resourceKey}'", ex);
-			_outSampler = null!;
+			Logger.LogError($"Failed to create sampler for bound resources of material '{resourceKey}'!");
 			return false;
 		}
+		return true;
 	}
 
-	private bool LoadBoundResource_Texture(in MaterialData.BoundResourceKeys resourceKeys, out Texture _outTexture)
+	private bool LoadBoundResource_Texture(in MaterialData.BoundResourceKeys _resourceKeys, out Texture _outTexture)
 	{
-		if (string.IsNullOrEmpty(resourceKeys.resourceKey) || !resourceManager.GetResource(resourceKeys.resourceKey, out ResourceHandle handle))
+		if (string.IsNullOrEmpty(_resourceKeys.resourceKey) || !resourceManager.GetResource(_resourceKeys.resourceKey, out ResourceHandle handle))
 		{
 			handle = core.graphicsSystem.TexPlaceholderMagenta;
-			Logger.LogWarning($"Texture resource key '{resourceKeys.resourceKey}' could not be found; Reverting to placeholder resource in slot {resourceKeys.resourceIdx} of material '{resourceKey}'");
+			Logger.LogWarning($"Texture resource key '{_resourceKeys.resourceKey}' could not be found; Reverting to placeholder resource in slot {_resourceKeys.slotIdx} of material '{resourceKey}'");
+		}
+		if (handle.resourceType != ResourceType.Texture)
+		{
+			handle = core.graphicsSystem.TexPlaceholderMagenta;
+			Logger.LogWarning($"Resource '{_resourceKeys.resourceKey}' is not a texture; Reverting to placeholder resource in slot {_resourceKeys.slotIdx} of material '{resourceKey}'");
 		}
 
 		TextureResource? resource = handle.GetResource(true, true) as TextureResource;
@@ -338,14 +337,14 @@ public class Material(GraphicsCore _core, ResourceHandle _handle) : Resource(_ha
 			{
 				case ResourceKind.StructuredBufferReadOnly:
 					{
-						//TODO
-						success = false;    //Temp: not implemented.
+						Logger.LogError($"Structured buffers are not supported yet for use in bound resources! (Material: '{resourceKey}', Slot: {resourceKeys.slotIdx})");
+						success = false;    // TODO [later]: Implement import and management of structured buffer data, then bind them as resource here.
 					}
 					break;
 				case ResourceKind.TextureReadOnly:
 					if (success &= LoadBoundResource_Texture(in resourceKeys, out Texture texture))
 					{
-						boundResources[resourceKeys.resourceIdx] = texture!;
+						boundResources[resourceKeys.resourceIdx] = texture;
 					}
 					break;
 				case ResourceKind.Sampler:
@@ -356,8 +355,7 @@ public class Material(GraphicsCore _core, ResourceHandle _handle) : Resource(_ha
 					break;
 				default:
 					success = false;
-					boundResources[resourceKeys.resourceIdx] = null!;
-					Logger.LogError($"Unsupported or unknown resource kind '{resourceKeys.resourceKind}' for bound resource slot '{resourceKeys.resourceIdx}'!");
+					Logger.LogError($"Unsupported or unknown resource kind '{resourceKeys.resourceKind}' for bound resource slot '{resourceKeys.slotIdx}'!");
 					break;
 			}
 		}

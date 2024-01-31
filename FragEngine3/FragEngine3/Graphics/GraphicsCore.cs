@@ -1,6 +1,7 @@
 ﻿using FragEngine3.EngineCore;
 using FragEngine3.EngineCore.Config;
 using FragEngine3.Graphics.Internal;
+using FragEngine3.Graphics.Resources;
 using Veldrid;
 using Veldrid.Sdl2;
 
@@ -52,6 +53,7 @@ namespace FragEngine3.Graphics
 
 		public CommandList MainCommandList { get; protected set; } = null!;
 		public ResourceFactory MainFactory { get; protected set; } = null!;
+		public SamplerManager SamplerManager { get; protected set; } = null!;
 
 		public abstract EnginePlatformFlag ApiPlatformFlag { get; }
 		public abstract bool DefaultMirrorY { get; }
@@ -76,6 +78,8 @@ namespace FragEngine3.Graphics
 			}
 
 			blittingCmdList?.Dispose();
+			SamplerManager?.Dispose();
+
 			MainCommandList?.Dispose();
 			Device?.Dispose();
 			Window?.Close();
@@ -89,6 +93,15 @@ namespace FragEngine3.Graphics
 			quitMessageReceived = false;
 
 			asyncDownloadsRequests.Clear();
+
+			blittingCmdList?.Dispose();
+			blittingCmdList = null;
+
+			SamplerManager?.Dispose();
+			SamplerManager = null!;
+
+			MainCommandList?.Dispose();
+			MainCommandList = null!;
 
 			Window?.Close();
 			Window = null!;

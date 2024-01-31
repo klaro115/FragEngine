@@ -163,6 +163,8 @@ namespace FragEngine3.Graphics.MacOS
 				}
 			}
 
+			SamplerManager = new(this);
+
 			stopwatch.Stop();
 
 			isInitialized = Device != null && Window != null;

@@ -77,10 +77,11 @@ namespace FragEngine3.Graphics.Resources.Data
 			public BoundResourceData[]? BoundResources { get; set; } = null;
 		}
 
-		public readonly struct BoundResourceKeys(string _resourceKey, int _resourceIdx, ResourceKind _resourceKind, string? _description)
+		public readonly struct BoundResourceKeys(string _resourceKey, int _resourceIdx, uint _slotIdx, ResourceKind _resourceKind, string? _description)
 		{
 			public readonly string resourceKey = _resourceKey;
 			public readonly int resourceIdx = _resourceIdx;
+			public readonly uint slotIdx = _slotIdx;
 			public readonly ResourceKind resourceKind = _resourceKind;
 			public readonly string? description = _description;
 		}
@@ -181,6 +182,7 @@ namespace FragEngine3.Graphics.Resources.Data
 				_outResourceKeysAndIndices[i] = new(
 					resData.ResourceKey ?? string.Empty,
 					i,
+					resData.SlotIndex,
 					resData.ResourceKind,
 					resData.Description);
 

@@ -145,30 +145,25 @@ namespace FragEngine3.Graphics.Utility
 			in GraphicsCore _graphicsCore,
 			out Sampler _outSamplerShadowMaps)
 		{
-			try
-			{
-				SamplerDescription samplerDesc = new(
-					SamplerAddressMode.Clamp,
-					SamplerAddressMode.Clamp,
-					SamplerAddressMode.Clamp,
-					SamplerFilter.MinLinear_MagLinear_MipPoint,
-					null,
-					0,
-					0,
-					uint.MaxValue,
-					0,
-					SamplerBorderColor.OpaqueWhite);
+			SamplerDescription samplerDesc = new(
+				SamplerAddressMode.Clamp,
+				SamplerAddressMode.Clamp,
+				SamplerAddressMode.Clamp,
+				SamplerFilter.MinLinear_MagLinear_MipPoint,
+				null,
+				0,
+				0,
+				uint.MaxValue,
+				0,
+				SamplerBorderColor.OpaqueWhite);
 
-				_outSamplerShadowMaps = _graphicsCore.MainFactory.CreateSampler(ref samplerDesc);
-				_outSamplerShadowMaps.Name = "Sampler_ShadowMaps";
-				return true;
-			}
-			catch (Exception ex)
+			if (!_graphicsCore.SamplerManager.GetSampler(samplerDesc, out _outSamplerShadowMaps))
 			{
-				_graphicsCore.graphicsSystem.engine.Logger.LogException("Failed to create sampler for shadow map texture array!", ex);
-				_outSamplerShadowMaps = null!;
+				_graphicsCore.graphicsSystem.engine.Logger.LogError("Failed to create sampler for shadow map texture array!");
 				return false;
 			}
+			_outSamplerShadowMaps.Name = "Sampler_ShadowMaps";
+			return true;
 		}
 
 		#endregion
