@@ -154,7 +154,7 @@ public static class ShaderGenNormals
 							.Append(nameSamplerNormal)
 							.Append(", ")
 							.Append(nameVarUVs)
-							.AppendLine(");");
+							.AppendLine(").xyz;");
 
 						// Transform normal map output into the surface's normal space:
 						variant.code
@@ -179,7 +179,7 @@ public static class ShaderGenNormals
 							.Append(nameSamplerNormal)
 							.Append(", ")
 							.Append(nameVarUVs)
-							.AppendLine(");");
+							.AppendLine(").xyz;");
 
 						// Transform normal map output into the surface's normal space:
 						variant.code

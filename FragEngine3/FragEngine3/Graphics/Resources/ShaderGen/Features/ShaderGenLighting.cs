@@ -68,60 +68,6 @@ public static class ShaderGenLighting
 		return success;
 	}
 
-	private static bool WriteResource_Lighting_TexShadowMaps(in ShaderGenContext _ctx)
-	{
-		// TexShadowMaps:
-		const string nameTex = "TexShadowMaps";
-		if (!_ctx.globalDeclarations.Contains(nameTex))
-		{
-			// Metal:
-			if (_ctx.language == ShaderGenLanguage.Metal)
-			{
-				foreach (ShaderGenVariant variant in _ctx.variants)
-				{
-					if (variant.arguments.Length != 0)
-					{
-						variant.arguments.Append(", ");
-					}
-					variant.arguments.Append("texture2d_array<half, access::sample> TexShadowMaps [[ texture( 0 ) ]]");
-				}
-			}
-			// HLSL & GLSL:
-			else
-			{
-				_ctx.resources.AppendLine("Texture2DArray<half> TexShadowMaps : register(ps, t1);");
-			}
-			_ctx.globalDeclarations.Add(nameTex);
-		}
-
-		// SamplerShadowMaps:
-		const string nameSampler = "SamplerShadowMaps";
-		if (!_ctx.globalDeclarations.Contains(nameSampler))
-		{
-			// Metal:
-			if (_ctx.language == ShaderGenLanguage.Metal)
-			{
-				foreach (ShaderGenVariant variant in _ctx.variants)
-				{
-					if (variant.arguments.Length != 0)
-					{
-						variant.arguments.Append(", ");
-					}
-					variant.arguments.Append("sampler TexShadowMaps [[ sampler( 0 ) ]]");
-				}
-			}
-			// HLSL & GLSL:
-			else
-			{
-				_ctx.resources.AppendLine("SamplerState SamplerShadowMaps : register(ps, s0);");
-			}
-			_ctx.globalDeclarations.Add(nameTex);
-			_ctx.globalDeclarations.Add(nameSampler);
-		}
-
-		return true;
-	}
-
 	private static bool WriteFunction_Lighting_CalculateAmbientLight(in ShaderGenContext _ctx)
 	{
 		const string nameFunc = "CalculateAmbientLight";
@@ -132,21 +78,20 @@ public static class ShaderGenLighting
 		success &= ShaderGenUniforms.WriteConstantBuffer_CBScene(in _ctx);
 
 		// Write function header:
-		success &= ShaderGenUtility.WriteLanguageCodeLines(_ctx.functions, _ctx.language,
-			["half3 CalculateAmbientLight(in float3 _worldNormal)"],
-			["half3 CalculateAmbientLight(const float3& _worldNormal)"],
+		success &= ShaderGenUtility.WriteLanguageCodeLine(_ctx.functions, _ctx.language,
+			"half3 CalculateAmbientLight(in float3 _worldNormal)",
+			"half3 CalculateAmbientLight(const float3& _worldNormal)",
 			null);
 
 		// Write function body:
-		_ctx.functions
-			.AppendLine("{")
-			.AppendLine("    half dotY = (half)dot(_worldNormal, float3(0, 1, 0));")
-			.AppendLine("    half wLow = max(-dotY, 0);")
-			.AppendLine("    half wHigh = max(dotY, 0);")
-			.AppendLine("    half wMid = 1.0 - wHigh - wLow;")
-			.AppendLine("    return (wLow * (half4)ambientLightLow + wHigh * (half4)ambientLightHigh + wMid * (half4)ambientLightMid).xyz;")
-			.AppendLine("}")
-			.AppendLine();
+		_ctx.functions.AppendLine(
+			"{\n" +
+			"    half dotY = (half)dot(_worldNormal, float3(0, 1, 0));\n" +
+			"    half wLow = max(-dotY, 0);\n" +
+			"    half wHigh = max(dotY, 0);\n" +
+			"    half wMid = 1.0 - wHigh - wLow;\n" +
+			"    return (wLow * (half4)ambientLightLow + wHigh * (half4)ambientLightHigh + wMid * (half4)ambientLightMid).xyz;\n" +
+			"}").AppendLine();
 
 		_ctx.globalDeclarations.Add(nameFunc);
 		return success;
@@ -166,39 +111,38 @@ public static class ShaderGenLighting
 		bool success = true;
 
 		// Write function header:
-		success &= ShaderGenUtility.WriteLanguageCodeLines(_ctx.functions, _ctx.language,
-			["half3 CalculatePhongLighting(in Light _light, in float3 _worldPosition, in float3 _worldNormal)"],
-			["half3 CalculatePhongLighting(device const Light& _light, const float3& _worldPosition, const float3& _worldNormal)"],
+		success &= ShaderGenUtility.WriteLanguageCodeLine(_ctx.functions, _ctx.language,
+			"half3 CalculatePhongLighting(in Light _light, in float3 _worldPosition, in float3 _worldNormal)",
+			"half3 CalculatePhongLighting(device const Light& _light, const float3& _worldPosition, const float3& _worldNormal)",
 			null);
 
-		_ctx.functions
-			.AppendLine("{")
-			.AppendLine("    half3 lightIntens = (half3)(_light.lightColor * _light.lightIntensity);")
-			.AppendLine("    float3 lightRayDir;")
-			.AppendLine()
-			.AppendLine("    // Directional light:")
-			.AppendLine("    if (_light.lightType == 2)")
-			.AppendLine("    {")
-			.AppendLine("        lightRayDir = _light.lightDirection;")
-			.AppendLine("    }")
-			.AppendLine("    // Point or Spot light:")
-			.AppendLine("    else")
-			.AppendLine("    {")
-			.AppendLine("        float3 lightOffset = _worldPosition - _light.lightPosition;")
-			.AppendLine("        lightIntens /= (half)dot(lightOffset, lightOffset);")
-			.AppendLine("        lightRayDir = normalize(lightOffset);")
-			.AppendLine()
-			.AppendLine("        // Spot light angle:")
-			.AppendLine("        if (_light.lightType == 1 && dot(_light.lightDirection, lightRayDir) < _light.lightSpotMinDot)")
-			.AppendLine("        {")
-			.AppendLine("            lightIntens = half3(0, 0, 0);")
-			.AppendLine("        }")
-			.AppendLine("    }")
-			.AppendLine()
-			.AppendLine("    half lightDot = max(-(half)dot(lightRayDir, _worldNormal), 0.0);")
-			.AppendLine("    return lightIntens.xyz * lightDot;")
-			.AppendLine("}")
-			.AppendLine();
+		_ctx.functions.AppendLine(
+			"{\n" +
+			"    half3 lightIntens = (half3)(_light.lightColor * _light.lightIntensity);\n" +
+			"    float3 lightRayDir;\n" +
+			"\n" +
+			"    // Directional light:\n" +
+			"    if (_light.lightType == 2)\n" +
+			"    {\n" +
+			"        lightRayDir = _light.lightDirection;\n" +
+			"    }\n" +
+			"    // Point or Spot light:\n" +
+			"    else\n" +
+			"    {\n" +
+			"        float3 lightOffset = _worldPosition - _light.lightPosition;\n" +
+			"        lightIntens /= (half)dot(lightOffset, lightOffset);\n" +
+			"        lightRayDir = normalize(lightOffset);\n" +
+			"\n" +
+			"        // Spot light angle:\n" +
+			"        if (_light.lightType == 1 && dot(_light.lightDirection, lightRayDir) < _light.lightSpotMinDot)\n" +
+			"        {\n" +
+			"            lightIntens = half3(0, 0, 0);\n" +
+			"        }\n" +
+			"    }\n" +
+			"\n" +
+			"    half lightDot = max(-(half)dot(lightRayDir, _worldNormal), 0.0);\n" +
+			"    return lightIntens.xyz * lightDot;\n" +
+			"}").AppendLine();
 
 		_ctx.globalDeclarations.Add(nameFunc);
 		return success;
@@ -211,17 +155,17 @@ public static class ShaderGenLighting
 
 		bool success = true;
 
-		success &= WriteResource_Lighting_TexShadowMaps(in _ctx);
-
+		success &= ShaderGenUtility.WriteResources_TextureAndSampler(in _ctx, "TexShadowMaps", 1, true, "SamplerShadowMaps", 0, out _, out _);
+		
 		// Write define for "SHADOW_EDGE_FACE_SCALE":
 		_ctx.functions
 			.AppendLine("#define SHADOW_EDGE_FACE_SCALE 10.0")
 			.AppendLine();
 
 		// Write function header:
-		success &= ShaderGenUtility.WriteLanguageCodeLines(_ctx.functions, _ctx.language,
-			["half CalculateShadowMapLightWeight(in Light _light, in float3 _worldPosition, in float3 _worldNormal)"],
-			["half CalculateShadowMapLightWeight(device const Light& _light, const float3& _worldPosition, const float3& _worldNormal)"],
+		success &= ShaderGenUtility.WriteLanguageCodeLine(_ctx.functions, _ctx.language,
+			"half CalculateShadowMapLightWeight(in Light _light, in float3 _worldPosition, in float3 _worldNormal)",
+			"half CalculateShadowMapLightWeight(device const Light& _light, const float3& _worldPosition, const float3& _worldNormal)",
 			null);
 
 		// Write function body:
@@ -236,30 +180,30 @@ public static class ShaderGenLighting
 			.AppendLine()
 			.AppendLine("    // Transform pixel position to light's clip space, then to UV space:");
 
-		success &= ShaderGenUtility.WriteLanguageCodeLines(_ctx.functions, _ctx.language,
-			["    float4 shadowProj = mul(_light.mtxShadowWorld2Clip, worldPosBiased);"],   //bloody Metal, breaking matrix multiplication conventions.
-			["    float4 shadowProj = _light.mtxShadowWorld2Clip * worldPosBiased;"],
-			["    float4 shadowProj = mul(_light.mtxShadowWorld2Clip, worldPosBiased);"]);
+		success &= ShaderGenUtility.WriteLanguageCodeLine(_ctx.functions, _ctx.language,
+			"    float4 shadowProj = mul(_light.mtxShadowWorld2Clip, worldPosBiased);",   //bloody Metal, breaking matrix multiplication conventions.
+			"    float4 shadowProj = _light.mtxShadowWorld2Clip * worldPosBiased;",
+			"    float4 shadowProj = mul(_light.mtxShadowWorld2Clip, worldPosBiased);");
 
-		_ctx.functions
-			.AppendLine("    shadowProj /= shadowProj.w;")
-			.AppendLine("    float2 shadowUv = float2(shadowProj.x + 1, 1 - shadowProj.y) * 0.5;")
-			.AppendLine()
-			.AppendLine("    // Load corresponding depth value from shadow texture array:")
-			.AppendLine("    half shadowDepth = TexShadowMaps.Sample(SamplerShadowMaps, float3(shadowUv.x, shadowUv.y, _light.shadowMapIdx));")
-			.AppendLine("    half lightWeight = shadowDepth > shadowProj.z ? 1 : 0;")
-			.AppendLine()
-			.AppendLine("    // Fade shadows out near boundaries of UV/Depth space:")
-			.AppendLine("    if (_light.lightType == 2)")
-			.AppendLine("    {")
-			.AppendLine("        half3 edgeUv = half3(shadowUv, shadowProj.z) * SHADOW_EDGE_FACE_SCALE;")
-			.AppendLine("        half3 edgeMax = min(min(edgeUv, SHADOW_EDGE_FACE_SCALE - edgeUv), 1);")
-			.AppendLine("        half k = 1 - min(min(edgeMax.x, edgeMax.y), edgeMax.z);")
-			.AppendLine($"        lightWeight = {funcNameLerp}(lightWeight, 1.0, clamp(k, 0, 1));")
-			.AppendLine("    }")
-			.AppendLine("    return lightWeight;")
-			.AppendLine("}")
-			.AppendLine();
+		_ctx.functions.AppendLine(
+			"    shadowProj /= shadowProj.w;\n" +
+			"    float2 shadowUv = float2(shadowProj.x + 1, 1 - shadowProj.y) * 0.5;\n" +
+			"\n" +
+			"    // Load corresponding depth value from shadow texture array:\n" +
+			"    half shadowDepth = TexShadowMaps.Sample(SamplerShadowMaps, float3(shadowUv.x, shadowUv.y, _light.shadowMapIdx));\n" +
+			"    half lightWeight = shadowDepth > shadowProj.z ? 1 : 0;\n" +
+			"\n" +
+			"    // Fade shadows out near boundaries of UV/Depth space:\n" +
+			"    if (_light.lightType == 2)\n" +
+			"    {\n" +
+			"        half3 edgeUv = half3(shadowUv, shadowProj.z) * SHADOW_EDGE_FACE_SCALE;\n" +
+			"        half3 edgeMax = min(min(edgeUv, SHADOW_EDGE_FACE_SCALE - edgeUv), 1);\n" +
+			"        half k = 1 - min(min(edgeMax.x, edgeMax.y), edgeMax.z);")
+			.Append("        lightWeight = ").Append(funcNameLerp).AppendLine("(lightWeight, 1.0, clamp(k, 0, 1));")
+			.AppendLine(
+			"    }\n" +
+			"    return lightWeight;\n" +
+			"}").AppendLine();
 
 		_ctx.globalDeclarations.Add(nameFunc);
 		return success;
@@ -289,7 +233,7 @@ public static class ShaderGenLighting
 
 			if (_config.useShadowMaps)
 			{
-				success &= WriteResource_Lighting_TexShadowMaps(in _ctx);
+				success &= ShaderGenUtility.WriteResources_TextureAndSampler(in _ctx, "TexShadowMaps", 1, true, "SamplerShadowMaps", 0, out _, out _);
 				success &= WriteFunction_Lighting_CalculateShadowMapLightWeight(in _ctx);
 			}
 		}

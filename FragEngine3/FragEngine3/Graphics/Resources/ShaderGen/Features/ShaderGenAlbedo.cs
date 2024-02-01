@@ -6,53 +6,18 @@ public static class ShaderGenAlbedo
 {
 	#region Methods
 
-	public static bool WriteResources_TexMainAndSampler(in ShaderGenContext _ctx, in ShaderGenConfig _config)
-	{
-		bool success = true;
-
-		// Declare main texture "TexMain":
-		const string nameTexMain = "TexMain";
-		bool alreadyDeclaredTexMain = _ctx.globalDeclarations.Contains(nameTexMain);
-
-		if (!alreadyDeclaredTexMain)
-		{
-			success &= ShaderGenUtility.WriteLanguageCodeLines(_ctx.resources, _ctx.language,
-				[ $"Texture2D<half4> TexMain : register(ps, t{_ctx.boundTextureIdx});" ],
-				[ $", texture2d<half, access::read> TexMain [[ texture( {_ctx.boundTextureIdx} ) ]]" ],
-				null,
-				_ctx.language != ShaderGenLanguage.Metal);
-
-			_ctx.boundTextureIdx++;
-			_ctx.globalDeclarations.Add(nameTexMain);
-		}
-
-		// Declare main texture's sampler:
-		string nameSamplerMain = ShaderGenUtility.SelectName(_config.samplerTexMain, "SamplerMain");
-		bool alreadyDeclaredSamplerMain = _ctx.globalDeclarations.Contains(nameSamplerMain);
-
-		if (!alreadyDeclaredSamplerMain)
-		{
-			success &= ShaderGenUtility.WriteLanguageCodeLines(_ctx.resources, _ctx.language,
-				[ $"SamplerState {nameSamplerMain} : register(s{_ctx.boundSamplerIdx});" ],
-				[ $", sampler {nameSamplerMain} [[ sampler( {_ctx.boundSamplerIdx} ) ]]" ],	//TEMP
-				null,
-				_ctx.language != ShaderGenLanguage.Metal);
-
-			_ctx.boundSamplerIdx++;
-			_ctx.globalDeclarations.Add(nameSamplerMain);
-		}
-
-		return success;
-	}
-
 	public static bool WriteVariable_Albedo(in ShaderGenContext _ctx, in ShaderGenConfig _config)
 	{
 		bool success = true;
 
 		// Ensure main texture and main sampler resources are declared:
 		if (_config.albedoSource == ShaderGenAlbedoSource.SampleTexMain)
-		{
-			success &= WriteResources_TexMainAndSampler(in _ctx, in _config);
+		{			
+			string nameSamplerMain = ShaderGenUtility.SelectName(_config.samplerTexMain, "SamplerMain");
+
+			success &= ShaderGenUtility.WriteResources_TextureAndSampler(in _ctx, "TexMain", _ctx.boundTextureIdx, false, nameSamplerMain, _ctx.boundSamplerIdx, out bool texMainAdded, out bool samplerAdded);
+			if (texMainAdded) _ctx.boundTextureIdx++;
+			if (samplerAdded) _ctx.boundSamplerIdx++;
 		}
 
 		// Declare and initialize variable:

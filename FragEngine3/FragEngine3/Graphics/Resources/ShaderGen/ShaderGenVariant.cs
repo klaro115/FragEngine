@@ -162,7 +162,7 @@ public sealed class ShaderGenVariant(MeshVertexDataFlags _vertexDataFlags)
 			case ShaderGenLanguage.HLSL:
 				{
 					header
-						.AppendLine(") : SV_Target0")
+						.AppendLine(") : SV_Target0")				//TODO: On Metal, some or all resources may need to be passed along through all functions for use further down the stack. fml.
 						.AppendLine("{");
 				}
 				break;

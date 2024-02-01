@@ -19,10 +19,10 @@ public sealed class ShaderGenContext(ShaderGenLanguage _language)
 	public readonly ShaderGenLanguage language = _language;
 	public readonly HashSet<string> globalDeclarations = new(10);
 
-	public int boundUniformsIdx = 3;
-	public int boundTextureIdx = 2;
-	public int boundBufferIdx = 0;
-	public int boundSamplerIdx = 1;
+	public uint boundUniformsIdx = 3;
+	public uint boundTextureIdx = 2;
+	public uint boundBufferIdx = 0;
+	public uint boundSamplerIdx = 1;
 
 	#endregion
 	#region Methods
