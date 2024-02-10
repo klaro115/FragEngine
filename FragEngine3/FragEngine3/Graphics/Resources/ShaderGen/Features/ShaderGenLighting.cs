@@ -97,10 +97,39 @@ public static class ShaderGenLighting
 		return success;
 	}
 
-	private static bool WriteFunction_Lighting_CalculateLightMaps(in ShaderGenContext _ctx)
+	private static bool WriteFunction_Lighting_CalculateLightMaps(in ShaderGenContext _ctx, in ShaderGenConfig _config)
 	{
-		//TODO
-		return true;
+		const string nameFunc = "CalculateLightmaps";
+		if (_ctx.globalDeclarations.Contains(nameFunc)) return true;
+
+		bool success = true;
+
+		string nameSamplerMain = ShaderGenUtility.SelectName(_config.samplerTexMain, "SamplerMain");
+
+		success &= ShaderGenUtility.WriteResources_TextureAndSampler(in _ctx, "TexLightmap", 3, _ctx.boundTextureIdx, false, nameSamplerMain, _ctx.boundSamplerIdx, out bool texAdded, out bool samplerAdded);
+		if (texAdded) _ctx.boundTextureIdx++;
+		if (samplerAdded) _ctx.boundSamplerIdx++;
+
+		// Write function header:
+		success &= ShaderGenUtility.WriteLanguageCodeLine(_ctx.functions, _ctx.language,
+			"half3 CalculateLightmaps(in float2 _uv)",
+			$"half3 CalculateLightmaps(texture<half, access::sample> TexLightmaps [[ texture( {_ctx.boundTextureIdx} ) ]], sampler SamplerMain [[ sampler( {_ctx.boundSamplerIdx} ) ]], const float2& _uv)",
+			null);
+
+		_ctx.functions.AppendLine("{");
+
+		// Write function body:
+		success &= ShaderGenUtility.WriteLanguageCodeLine(_ctx.functions, _ctx.language,
+			"    return TexLightmap.Sample(SamplerMain, _uv);",
+			"    return TexLightmap.sample(SamplerMain, _uv);",
+			null);
+
+		_ctx.functions
+			.AppendLine("}")
+			.AppendLine();
+
+		_ctx.globalDeclarations.Add(nameFunc);
+		return success;
 	}
 
 	private static bool WriteFunction_Lighting_CalculatePhongLighting(in ShaderGenContext _ctx)
@@ -155,7 +184,7 @@ public static class ShaderGenLighting
 
 		bool success = true;
 
-		success &= ShaderGenUtility.WriteResources_TextureAndSampler(in _ctx, "TexShadowMaps", 1, true, "SamplerShadowMaps", 0, out _, out _);
+		success &= ShaderGenUtility.WriteResources_TextureAndSampler(in _ctx, "TexShadowMaps", 1, 1, true, "SamplerShadowMaps", 0, out _, out _);
 		
 		// Write define for "SHADOW_EDGE_FACE_SCALE":
 		_ctx.functions
@@ -223,7 +252,7 @@ public static class ShaderGenLighting
 		}
 		if (_config.useLightMaps)
 		{
-			success &= WriteFunction_Lighting_CalculateLightMaps(in _ctx);
+			success &= WriteFunction_Lighting_CalculateLightMaps(in _ctx, in _config);
 		}
 		if (_config.useLightSources)
 		{
@@ -233,15 +262,15 @@ public static class ShaderGenLighting
 
 			if (_config.useShadowMaps)
 			{
-				success &= ShaderGenUtility.WriteResources_TextureAndSampler(in _ctx, "TexShadowMaps", 1, true, "SamplerShadowMaps", 0, out _, out _);
+				success &= ShaderGenUtility.WriteResources_TextureAndSampler(in _ctx, "TexShadowMaps", 1, 1, true, "SamplerShadowMaps", 0, out _, out _);
 				success &= WriteFunction_Lighting_CalculateShadowMapLightWeight(in _ctx);
 			}
 		}
 
 		// Create header of main lighting function:
-		success &= ShaderGenUtility.WriteLanguageCodeLines(_ctx.functions, _ctx.language,
-			["half3 CalculateTotalLightIntensity(in float3 _worldPosition, in float3 _worldNormal)"],
-			["half3 CalculateTotalLightIntensity(device const Light* BufLights, const float3& _worldPosition, const float3& _worldNormal)"],
+		success &= ShaderGenUtility.WriteLanguageCodeLine(_ctx.functions, _ctx.language,
+			"half3 CalculateTotalLightIntensity(in float3 _worldPosition, in float3 _worldNormal, in float3 _surfaceNormal, in float2 _uv)",
+			"half3 CalculateTotalLightIntensity(device const Light* BufLights, const float3& _worldPosition, const float3& _worldNormal, const float3& _surfaceNormal, const float& _uv)",
 			null);
 
 		// Declare and initialize "totalLightIntensity" from zero or ambient light!
@@ -250,13 +279,20 @@ public static class ShaderGenLighting
 			.Append("    half3 totalLightIntensity = ");
 		if (_config.useAmbientLight)
 		{
-			_ctx.functions.AppendLine($"CalculateAmbientLight(_worldNormal);");
+			_ctx.functions.Append($"CalculateAmbientLight(_worldNormal)");
 		}
-		else
+		if (_config.useLightMaps)
 		{
-			_ctx.functions.AppendLine("half3(0, 0, 0);");
+			if (_config.useAmbientLight) _ctx.functions.Append(" + ");
+			_ctx.functions.Append($"CalculateLightmaps(_uv)");
 		}
-		_ctx.functions.AppendLine();
+		if (!_config.useAmbientLight && !_config.useLightMaps)
+		{
+			_ctx.functions.Append("half3(0, 0, 0)");
+		}
+		_ctx.functions
+			.AppendLine(";")
+			.AppendLine();
 
 		// Start first light source loop:
 		string varNameLightCountFirst = _config.useShadowMaps
@@ -270,14 +306,14 @@ public static class ShaderGenLighting
 
 		if (_config.useShadowMaps)
 		{
-			success &= ShaderGenUtility.WriteLanguageCodeLines(_ctx.functions, _ctx.language,
-				["        Light light = BufLights[i];"],
-				["        device const Light& light = *BufLights[i];"],
+			success &= ShaderGenUtility.WriteLanguageCodeLine(_ctx.functions, _ctx.language,
+				"        Light light = BufLights[i];",
+				"        device const Light& light = *BufLights[i];",
 				null);
 			_ctx.functions
 				.AppendLine()
 				.AppendLine("        half3 lightIntensity = CalculatePhongLighting(light, _worldPosition, _worldNormal);")
-				.AppendLine("        half lightWeight = CalculateShadowMapLightWeight(light, _worldPosition, _worldNormal);")
+				.AppendLine("        half lightWeight = CalculateShadowMapLightWeight(light, _worldPosition, _surfaceNormal);")
 				.AppendLine("        totalLightIntensity += lightIntensity * lightWeight;")
 				.AppendLine("    }");
 		}
@@ -290,9 +326,9 @@ public static class ShaderGenLighting
 			.AppendLine("    for (i = shadowMappedLightCount; i < lightCount; ++i)")
 			.AppendLine("    {");
 		}
-		success &= ShaderGenUtility.WriteLanguageCodeLines(_ctx.functions, _ctx.language,
-			["        totalLightIntensity += CalculatePhongLighting(BufLights[i], _worldPosition, _worldNormal);"],
-			["        totalLightIntensity += CalculatePhongLighting(BufLights[i], _worldPosition, _worldNormal);"],
+		success &= ShaderGenUtility.WriteLanguageCodeLine(_ctx.functions, _ctx.language,
+			"        totalLightIntensity += CalculatePhongLighting(BufLights[i], _worldPosition, _worldNormal);",
+			"        totalLightIntensity += CalculatePhongLighting(BufLights[i], _worldPosition, _worldNormal);",
 			null);
 		_ctx.functions.AppendLine("    }");
 
@@ -360,7 +396,7 @@ public static class ShaderGenLighting
 			}
 
 			// Initialize "totalLightIntensity" from main lighting function:
-			variant.code.AppendLine($"CalculateTotalLightIntensity(inputBasic.worldPosition, {varNormalName});");
+			variant.code.AppendLine($"CalculateTotalLightIntensity(inputBasic.worldPosition, {varNormalName}, {ShaderGenVariant.DEFAULT_VAR_NAME_NORMALS}, {ShaderGenVariant.DEFAULT_VAR_NAME_UVs});");
 			variant.code.AppendLine();
 
 			if (!alreadyDeclared)

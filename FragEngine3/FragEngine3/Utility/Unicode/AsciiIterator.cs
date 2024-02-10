@@ -154,7 +154,7 @@ namespace FragEngine3.Utility.Unicode
 		/// <param name="_utf16Offset"></param>
 		/// <returns>The actual number of UTF-16 code units that was iterated over. This may be less than the given
 		/// offset if the end of the source data is reached.</returns>
-		public int AdvanceUtf16(int _utf16Offset, bool _finishTrailingSurrogatePair = true)
+		public int AdvanceUtf16(int _utf16Offset)
 		{
 			int curOffset = 0;
 			while (curOffset < _utf16Offset && MoveNext())

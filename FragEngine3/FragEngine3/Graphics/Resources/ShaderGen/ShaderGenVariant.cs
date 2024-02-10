@@ -72,11 +72,10 @@ public sealed class ShaderGenVariant(MeshVertexDataFlags _vertexDataFlags)
 		_finalBuilder.Append(code);
 
 		// Add return statement and close function:
-		_finalBuilder
-			.AppendLine("    // Return final color:")
-			.AppendLine("    return albedo;")
-			.AppendLine("};")
-			.AppendLine();
+		_finalBuilder.AppendLine(
+			"    // Return final color:\n" +
+			"    return albedo;\n" +
+			"};\n");
 
 		return success;
 	}
@@ -161,16 +160,16 @@ public sealed class ShaderGenVariant(MeshVertexDataFlags _vertexDataFlags)
 		{
 			case ShaderGenLanguage.HLSL:
 				{
-					header
-						.AppendLine(") : SV_Target0")				//TODO: On Metal, some or all resources may need to be passed along through all functions for use further down the stack. fml.
-						.AppendLine("{");
+					header.AppendLine(
+						") : SV_Target0\n" +
+						"{");				//TODO: On Metal, some or all resources may need to be passed along through all functions for use further down the stack. fml.
 				}
 				break;
 			case ShaderGenLanguage.Metal:
 				{
-					header
-						.AppendLine(")")
-						.AppendLine("{");
+					header.AppendLine(
+						")\n" +
+						"{");
 				}
 				break;
 			default:

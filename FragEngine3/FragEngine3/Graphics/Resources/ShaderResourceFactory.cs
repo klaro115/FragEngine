@@ -292,8 +292,8 @@ public static class ShaderResourceFactory
 		{
 			StringBuilder variantBuilder = new(256);
 			StringBuilder suffixBuilder = new(128);
-			Utf8Iterator e = new(_shaderCodeBytes, _shaderCodeLength);
-			Utf8Iterator.Position pos;
+			AsciiIterator e = new(_shaderCodeBytes, _shaderCodeLength);
+			AsciiIterator.Position pos;
 
 			e.MoveNext();
 
@@ -357,7 +357,7 @@ public static class ShaderResourceFactory
 				try
 				{
 					ShaderDescription shaderDesc = new(_stage, _shaderCodeBytes, variantEntryPoint);
-
+					
 					shader = _graphicsCore.MainFactory.CreateShader(ref shaderDesc);
 					shader.Name = $"Shader_{_resourceKey}_{_stage}_{variantFlags}";
 				}

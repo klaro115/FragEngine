@@ -6,6 +6,7 @@ public static class ShaderGenNormals
 {
 	#region Methods
 
+	[Obsolete("redundant")]
 	public static bool WriteResource_NormalMap(in ShaderGenContext _ctx, in ShaderGenConfig _config)
 	{
 		bool success = true;
@@ -36,7 +37,7 @@ public static class ShaderGenNormals
 		{
 			success &= ShaderGenUtility.WriteLanguageCodeLines(_ctx.resources, _ctx.language,
 				[ $"SamplerState {nameSamplerNormal} : register(s{_ctx.boundSamplerIdx});" ],
-				[ $", sampler {nameSamplerNormal} [[ ??? ]]" ], //TEMP
+				[ $", sampler {nameSamplerNormal} [[ sampler( {_ctx.boundSamplerIdx} ) ]]" ],
 				null,
 				_ctx.language != ShaderGenLanguage.Metal);
 
@@ -119,7 +120,10 @@ public static class ShaderGenNormals
 		bool success = true;
 
 		// Ensure the resources (texture & sampler) for normal maps are declared:
-		success &= WriteResource_NormalMap(in _ctx, in _config);
+		success &= ShaderGenUtility.WriteResources_TextureAndSampler(in _ctx, "TexNormal", 3, _ctx.boundTextureIdx, false, nameSamplerNormal, _ctx.boundSamplerIdx, out bool texAdded, out bool samplerAdded);
+		if (texAdded) _ctx.boundTextureIdx++;
+		if (samplerAdded) _ctx.boundSamplerIdx++;
+		//success &= WriteResource_NormalMap(in _ctx, in _config);
 
 		// Ensure the normal processing function is declared:
 		success &= WriteFunction_ApplyNormalMap(in _ctx);

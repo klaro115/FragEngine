@@ -72,7 +72,7 @@ public static class ShaderGenUtility
 			: _fallbackName;
 	}
 
-	public static bool WriteResources_TextureAndSampler(in ShaderGenContext _ctx, string _nameTex, uint _texSlotIdx, bool _isTextureArray, string _nameSampler, uint _samplerSlotIdx, out bool _outTexAdded, out bool _outSamplerAdded)
+	public static bool WriteResources_TextureAndSampler(in ShaderGenContext _ctx, string _nameTex, uint _texChannelCount, uint _texSlotIdx, bool _isTextureArray, string _nameSampler, uint _samplerSlotIdx, out bool _outTexAdded, out bool _outSamplerAdded)
 	{
 		_outTexAdded = false;
 		_outSamplerAdded = false;
@@ -85,6 +85,8 @@ public static class ShaderGenUtility
 		// Texture:
 		if (!_ctx.globalDeclarations.Contains(_nameTex))
 		{
+			_texChannelCount = Math.Clamp(_texChannelCount, 1, 4);
+
 			// Metal:
 			if (_ctx.language == ShaderGenLanguage.Metal)
 			{
@@ -111,11 +113,11 @@ public static class ShaderGenUtility
 			{
 				if (_isTextureArray)
 				{
-					_ctx.resources.Append("Texture2DArray<half> ").Append(_nameTex).Append(" : register(ps, t").Append(_texSlotIdx).AppendLine(");");
+					_ctx.resources.Append("Texture2DArray<half").Append(_texChannelCount).Append("> ").Append(_nameTex).Append(" : register(ps, t").Append(_texSlotIdx).AppendLine(");");
 				}
 				else
 				{
-					_ctx.resources.Append("Texture2D<half> ").Append(_nameTex).Append(" : register(ps, t").Append(_texSlotIdx).AppendLine(");");
+					_ctx.resources.Append("Texture2D<half").Append(_texChannelCount).Append("> ").Append(_nameTex).Append(" : register(ps, t").Append(_texSlotIdx).AppendLine(");");
 				}
 			}
 			_ctx.globalDeclarations.Add(_nameTex);

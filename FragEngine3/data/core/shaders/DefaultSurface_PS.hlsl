@@ -67,6 +67,7 @@ SamplerState SamplerShadowMaps : register(ps, s0);
 
 Texture2D<half4> TexMain : register(ps, t2);
 Texture2D<half3> TexNormal : register(ps, t3);
+Texture2D<half3> TexLightmap : register(ps, t4);
 SamplerState SamplerMain : register(s1);
 
 /**************** VERTEX OUTPUT: ***************/
@@ -95,6 +96,11 @@ half3 CalculateAmbientLight(in float3 _worldNormal)
     half wHigh = max(dotY, 0);
     half wMid = 1.0 - wHigh - wLow;
     return (wLow * (half4)ambientLightLow + wHigh * (half4)ambientLightHigh + wMid * (half4)ambientLightMid).xyz;
+}
+
+half3 CalculateLightmaps(in float2 _uv)
+{
+    return TexLightmap.Sample(SamplerMain, _uv);
 }
 
 half3 CalculatePhongLighting(in Light _light, in float3 _worldPosition, in float3 _worldNormal)
@@ -127,10 +133,10 @@ half3 CalculatePhongLighting(in Light _light, in float3 _worldPosition, in float
 
 #define SHADOW_EDGE_FACE_SCALE 10.0
 
-half CalculateShadowMapLightWeight(in Light _light, in float3 _worldPosition, in float3 _worldNormal)
+half CalculateShadowMapLightWeight(in Light _light, in float3 _worldPosition, in float3 _surfaceNormal)
 {
     // Add a bias to position along surface normal, to counter-act stair-stepping artifacts:
-    float4 worldPosBiased = float4(_worldPosition + _worldNormal * _light.shadowBias, 1);
+    float4 worldPosBiased = float4(_worldPosition + _surfaceNormal * _light.shadowBias, 1);
 
     // Transform pixel position to light's clip space, then to UV space:
     float4 shadowProj = mul(_light.mtxShadowWorld2Clip, worldPosBiased);
@@ -152,9 +158,12 @@ half CalculateShadowMapLightWeight(in Light _light, in float3 _worldPosition, in
     return lightWeight;
 }
 
-half3 CalculateTotalLightIntensity(in float3 _worldPosition, in float3 _worldNormal)
+half3 CalculateTotalLightIntensity(in float3 _worldPosition, in float3 _worldNormal, in float3 _surfaceNormal, in float2 _uv)
 {
     half3 totalLightIntensity = CalculateAmbientLight(_worldNormal);
+
+    // Apply light maps:
+    totalLightIntensity += CalculateLightmaps(_uv);
 
     // Shadow-casting light sources:
     for (uint i = 0; i < shadowMappedLightCount; ++i)
@@ -162,7 +171,7 @@ half3 CalculateTotalLightIntensity(in float3 _worldPosition, in float3 _worldNor
         Light light = BufLights[i];
 
         half3 lightIntensity = CalculatePhongLighting(light, _worldPosition, _worldNormal);
-        half lightWeight = CalculateShadowMapLightWeight(light, _worldPosition, _worldNormal);
+        half lightWeight = CalculateShadowMapLightWeight(light, _worldPosition, _surfaceNormal);
         totalLightIntensity += lightIntensity * lightWeight;
     }
     // Simple light sources:
@@ -209,7 +218,7 @@ half4 Main_Pixel(in VertexOutput_Basic inputBasic) : SV_Target0
     normal = ApplyNormalMap(inputBasic.normal, half3(0, 0, 1), half3(1, 0, 0), normal);
 
     // Apply basic phong lighting:
-    half3 totalLightIntensity = CalculateTotalLightIntensity(inputBasic.worldPosition, inputBasic.normal);
+    half3 totalLightIntensity = CalculateTotalLightIntensity(inputBasic.worldPosition, normal, inputBasic.normal, inputBasic.uv);
 
     albedo *= half4(totalLightIntensity, 1);
 
@@ -227,7 +236,7 @@ half4 Main_Pixel_Ext(in VertexOutput_Basic inputBasic, in VertexOutput_Extended 
     normal = ApplyNormalMap(inputBasic.normal, inputExt.tangent, inputExt.binormal, normal);
 
     // Apply basic phong lighting:
-    half3 totalLightIntensity = CalculateTotalLightIntensity(inputBasic.worldPosition, normal);
+    half3 totalLightIntensity = CalculateTotalLightIntensity(inputBasic.worldPosition, normal, inputBasic.normal, inputBasic.uv);
 
     albedo *= half4(totalLightIntensity, 1);
 

@@ -7,7 +7,7 @@ public struct ShaderGenConfig
 	#region Fields
 
 	// Albedo:
-	public ShaderGenAlbedoSource albedoSource;		// Which value to initialize albedo/main color from. If source is texture, "TexMain" will be added.
+	public ShaderGenAlbedoSource albedoSource;			// Which value to initialize albedo/main color from. If source is texture, "TexMain" will be added.
 	public RgbaFloat albedoColor;						// If albedo source is color, initialize with this value. Implemented as inlined literal.
 	public string? samplerTexMain;						// If albedo source is TexMain, use a sampler with this name. "SamplerMain" is used if null or empty.
 
@@ -19,8 +19,8 @@ public struct ShaderGenConfig
 	public bool applyLighting;							// Whether to apply any lighting at all. Lighting calculations are added after albedo and normals.
 	public bool useAmbientLight;                        // For lighting, whether to use ambient lighting from scene constant buffer as basic unlit lighting value. "CBScene" is added.
 	public bool useLightMaps;                           // For lighting, whether to use light maps to add additional static precalculated lighting.
-	public bool useLightSources;						// For lighting, whether to light source in the scene to light up surfaces. "BufLights" buffer and "Light" struct are added.
-	public ShaderGenLightingModel lightingModel;    // For lighting, which lighting model to use for light sources.
+	public bool useLightSources;						// For lighting, whether to use light sources in the scene to light up surfaces. "BufLights" buffer and "Light" struct are added.
+	public ShaderGenLightingModel lightingModel;		// For lighting, which lighting model to use for light sources.
 	public bool useShadowMaps;                          // For lighting, whether to use shadow maps to mask out light coming from light sources.
 
 	// Variants:

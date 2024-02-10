@@ -15,7 +15,7 @@ public static class ShaderGenAlbedo
 		{			
 			string nameSamplerMain = ShaderGenUtility.SelectName(_config.samplerTexMain, "SamplerMain");
 
-			success &= ShaderGenUtility.WriteResources_TextureAndSampler(in _ctx, "TexMain", _ctx.boundTextureIdx, false, nameSamplerMain, _ctx.boundSamplerIdx, out bool texMainAdded, out bool samplerAdded);
+			success &= ShaderGenUtility.WriteResources_TextureAndSampler(in _ctx, "TexMain", 4, _ctx.boundTextureIdx, false, nameSamplerMain, _ctx.boundSamplerIdx, out bool texMainAdded, out bool samplerAdded);
 			if (texMainAdded) _ctx.boundTextureIdx++;
 			if (samplerAdded) _ctx.boundSamplerIdx++;
 		}
