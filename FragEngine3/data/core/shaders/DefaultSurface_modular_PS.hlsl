@@ -73,7 +73,7 @@ cbuffer CBObject : register(b2)
     float boundingRadius;           // Bounding sphere radius of the object.
 };
 
-/******************* BUFFERS: ******************/
+/****************** RESOURCES: *****************/
 
 // ResSetCamera:
 
