@@ -264,6 +264,8 @@ public class Material(GraphicsCore _core, ResourceHandle _handle) : Resource(_ha
 						errorStages |= _stageFlag;
 						return false;
 					}
+					// Change vertex flags for all subsequent stages to basic-only:
+					_vertexDataFlags = MeshVertexDataFlags.BasicSurfaceData;
 				}
 
 				shaders[i++] = shader;

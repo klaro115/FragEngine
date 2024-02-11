@@ -105,3 +105,29 @@ VertexOutput_Basic vertex Main_Vertex(
     outputBasic.uv = inputBasic.uv;
     return outputBasic;
 }
+
+VertexOutput_Extended vertex Main_Vertex_Ext(
+    device const VertexInput_Basic* pInputBasic     [[ buffer( 0 ) ]],
+    device const VertexInput_Extended* pInputExt    [[ buffer( 1 ) ]],
+    device const CBCamera& cbCamera                 [[ buffer( 2 ) ]],
+    device const CBObject& cbObject                 [[ buffer( 3 ) ]],
+    uint vertexId                                   [[ vertex_id ]])
+{
+    const device VertexInput_Basic& inputBasic = pInputBasic[vertexId];
+    const device VertexInput_Extended& inputExt = pInputExt[vertexId];
+
+    float4x4 mtxLocal2Clip = cbCamera.mtxWorld2Clip * cbObject.mtxLocal2World;
+
+    float4 projResult = mtxLocal2Clip * float4(inputBasic.position, 1);
+
+    VertexOutput_Extended outputExt;
+    outputExt.position = projResult;
+    outputExt.worldPosition = (cbObject.mtxLocal2World * float4(inputBasic.position, 1)).xyz;
+    outputExt.normal = normalize((cbObject.mtxLocal2World * float4(inputBasic.normal, 0)).xyz);
+    outputExt.uv = inputBasic.uv;
+
+    outputExt.tangent = normalize((cbObject.mtxLocal2World * float4(inputExt.tangent, 0)).xyz);
+    outputExt.binormal = cross(outputBasic.normal, outputExt.tangent);
+    outputExt.uv2 = inputExt.uv2;
+    return outputExt;
+}
