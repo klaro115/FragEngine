@@ -1,32 +1,29 @@
 ﻿using FragEngine3.EngineCore;
-using FragEngine3.Graphics.Resources.ShaderGen.Features;
+using FragEngine3.Resources;
 using System.Text;
+using Veldrid;
 
 namespace FragEngine3.Graphics.Resources.ShaderGen;
 
 public static class ShaderGenerator
 {
-	#region Fields
+	#region Constants
 
-	private static readonly Stack<ShaderGenContext> contextPool = new();
+	public const string MODULAR_SURFACE_SHADER_PS_NAME_BASE = "DefaultSurface_modular_PS";
 
 	#endregion
 	#region Methods
 
-	public static void ClearPooledObjects()
-	{
-		contextPool.Clear();
-	}
-
-	public static bool CreatePixelShader(EnginePlatformFlag _platformFlags, out string _outShaderCode)
+	public static bool CreatePixelShader(ResourceManager _resourceManager, EnginePlatformFlag _platformFlags, out string _outShaderCode)
 	{
 		ShaderGenConfig config = ShaderGenConfig.ConfigWhiteLit;
 
-		return CreatePixelShaderVariation(config, _platformFlags, out _outShaderCode);
+		return CreatePixelShaderVariation(_resourceManager, config, _platformFlags, out _outShaderCode);
 	}
 
-	public static bool CreatePixelShaderVariation(in ShaderGenConfig _config, EnginePlatformFlag _platformFlags, out string _outShaderCode)
+	public static bool CreatePixelShaderVariation(ResourceManager _resourceManager, in ShaderGenConfig _config, EnginePlatformFlag _platformFlags, out string _outShaderCode)
 	{
+		// Identify the shader language of choice for current platform setup:
 		ShaderGenLanguage language;
 		if (_platformFlags.HasFlag(EnginePlatformFlag.GraphicsAPI_D3D))
 			language = ShaderGenLanguage.HLSL;
@@ -35,82 +32,124 @@ public static class ShaderGenerator
 		else
 			language = ShaderGenLanguage.GLSL;
 
-		bool success = true;
-
-		// Grab a free context or create a new one for this shader:
-		if (!contextPool.TryPop(out ShaderGenContext? ctx))
+		// Determine name and extension for template shader code file:
+		string templateFileName = language switch
 		{
-			ctx = new(language);
-		}
-		StringBuilder finalBuilder = new(4096);
-
-		// Add all variants that we're already aware of:
-		if (_config.alwaysCreateExtendedVariant)	ctx.variants.Add(new(MeshVertexDataFlags.BasicSurfaceData | MeshVertexDataFlags.ExtendedSurfaceData));
-		if (_config.alwaysCreateBlendShapeVariant)	ctx.variants.Add(new(MeshVertexDataFlags.BasicSurfaceData | MeshVertexDataFlags.BlendShapes));
-		if (_config.alwaysCreateAnimatedVariant)	ctx.variants.Add(new(MeshVertexDataFlags.BasicSurfaceData | MeshVertexDataFlags.Animations));
-
-		// Add universal header defines and compiler instructions:
-		success &= ShaderGenUtility.WriteLanguageCodeLines(finalBuilder, language,
-			// HLSL:
-			[
-				"#pragma pack_matrix( column_major )"
-			],
-			// Metal:
-			[
-				"#include <metal_stdlib>",
-				"using namespace metal;",
-			],
-			[]);
-		finalBuilder.AppendLine();
-
-		success &= ShaderGenVertexOutputs.WriteVertexOutput_Basic(in ctx);
-
-		success &= ShaderGenAlbedo.WriteVariable_Albedo(in ctx, in _config);
-
-		if (_config.useNormalMap)
+			ShaderGenLanguage.HLSL => $"{MODULAR_SURFACE_SHADER_PS_NAME_BASE}.hlsl",
+			ShaderGenLanguage.Metal => $"{MODULAR_SURFACE_SHADER_PS_NAME_BASE}.metal",
+			ShaderGenLanguage.GLSL => $"{MODULAR_SURFACE_SHADER_PS_NAME_BASE}.glsl",
+			_ => string.Empty,
+		};
+		if (string.IsNullOrEmpty(templateFileName))
 		{
-			success &= ShaderGenNormals.WriteVariable_NormalMap(in ctx, in _config);
+			_resourceManager.engine.Logger.LogError($"Cannot load default pixel shader template code; file name could not be found! (Shader language: '{language}')");
+			_outShaderCode = string.Empty;
+			return false;
 		}
 
-		if (_config.applyLighting)
+		// Construct full file path inside core shader resource folder:
+		string coreResourcePath = _resourceManager.fileGatherer.coreResourcePath ?? string.Empty;
+		string coreShadersPath = Path.Combine(coreResourcePath, "shaders");
+		string templateFilePath = Path.Combine(coreShadersPath, templateFileName);
+
+		if (!File.Exists(templateFilePath))
 		{
-			success &= ShaderGenLighting.WriteVariable_Lighting(in ctx, in _config);
-			success &= ShaderGenLighting.ApplyLighting(in ctx);
+			_resourceManager.engine.Logger.LogError($"Template code file for default pixel shader could not be found! (File path: '{templateFilePath}')");
+			_outShaderCode = string.Empty;
+			return false;
 		}
 
-		// Ensure that all required vertex output definitions are defined:
-		MeshVertexDataFlags allVertexDataFlags = MeshVertexDataFlags.BasicSurfaceData;
-		foreach (ShaderGenVariant variant in ctx.variants)
+		// Read full template code file:
+		string templateCodeTxt;
+		try
 		{
-			allVertexDataFlags |= variant.vertexDataFlags;
+			templateCodeTxt = File.ReadAllText(templateFilePath, Encoding.ASCII);
 		}
-		success &= ShaderGenVertexOutputs.WriteVertexOutput_Basic(in ctx);
-		if (allVertexDataFlags.HasFlag(MeshVertexDataFlags.ExtendedSurfaceData))
-			success &= ShaderGenVertexOutputs.WriteVertexOutput_Extended(in ctx);
-		if (allVertexDataFlags.HasFlag(MeshVertexDataFlags.BlendShapes))
-			success &= ShaderGenVertexOutputs.WriteVertexOutput_BlendShapes(in ctx);
-		if (allVertexDataFlags.HasFlag(MeshVertexDataFlags.Animations))
-			success &= ShaderGenVertexOutputs.WriteVertexOutput_Animated(in ctx);
-
-		// Assemble full shader code file:
-		finalBuilder.Append(ctx.constants).AppendLine();
-		finalBuilder.Append(ctx.vertexOutputs).AppendLine();
-		if (language != ShaderGenLanguage.Metal)
+		catch (Exception ex)
 		{
-			finalBuilder.Append(ctx.resources).AppendLine();
+			_resourceManager.engine.Logger.LogException($"Failed to read template code file for default pixel shader! (File path: '{templateFilePath}')", ex);
+			_outShaderCode = string.Empty;
+			return false;
 		}
-		finalBuilder.Append(ctx.functions).AppendLine();
+		//^TODO: Only do this once, then cache template code for subsequent shader imports!
+		
+		StringBuilder codeBuilder = new(templateCodeTxt);
+		int definesMaxEndIdx = Math.Min(1800, codeBuilder.Length);
 
-		// Add entrypoint function:
-		success &= ctx.WriteFunction_MainPixel(finalBuilder);
+		// Drop all flags in config that are based on other feature flags that are disabled:
+		_config.PropagateFlagStatesToHierarchy();
 
-		// Output resulting shader code:
-		_outShaderCode = finalBuilder.ToString();
+		// Remove and update preprocessor defines of features that are not needed:
+		{
+			// Albedo:
+			if (_config.albedoSource != ShaderGenAlbedoSource.SampleTexMain)
+			{
+				ReplaceDefine(
+					codeBuilder,
+					"#define FEATURE_ALBEDO_TEXTURE 1",
+					"#define FEATURE_ALBEDO_TEXTURE 0",
+					definesMaxEndIdx);
+			}
+			if (_config.albedoSource == ShaderGenAlbedoSource.Color && _config.albedoColor != RgbaFloat.White)
+			{
+				ReplaceDefine(
+					codeBuilder,
+					"#define FEATURE_ALBEDO_COLOR half4(1, 1, 1, 1)",
+					$"#define FEATURE_ALBEDO_COLOR half4({_config.albedoColor.R:0.###}, {_config.albedoColor.G:0.###}, {_config.albedoColor.B:0.###}, {_config.albedoColor.A:0.###})",
+					definesMaxEndIdx);
+			}
 
-		// Clear and return context to pool for later re-use:
-		ctx.Clear();
-		contextPool.Push(ctx);
-		return success;
+			// Normals:
+			if (!_config.useNormalMap)
+			{
+				RemoveDefine(codeBuilder, "#define FEATURE_NORMALS", definesMaxEndIdx);
+			}
+
+			// Lighting:
+			if (!_config.useAmbientLight)
+			{
+				RemoveDefine(codeBuilder, "#define FEATURE_LIGHT_AMBIENT", definesMaxEndIdx);
+			}
+			if (!_config.useLightMaps)
+			{
+				RemoveDefine(codeBuilder, "#define FEATURE_LIGHT_LIGHTMAPS", definesMaxEndIdx);
+			}
+			if (!_config.useLightSources)
+			{
+				RemoveDefine(codeBuilder, "#define FEATURE_LIGHT_SOURCES", definesMaxEndIdx);
+				RemoveDefine(codeBuilder, "#define FEATURE_LIGHT_MODEL Phong", definesMaxEndIdx);
+			}
+			if (!_config.useShadowMaps)
+			{
+				RemoveDefine(codeBuilder, "#define FEATURE_LIGHT_SHADOWMAPS", definesMaxEndIdx);
+			}
+			if (_config.useLightSources && _config.lightingModel != ShaderGenLightingModel.Phong)
+			{
+				ReplaceDefine(
+					codeBuilder,
+					"#define FEATURE_LIGHT_MODEL Phong",
+					$"#define FEATURE_LIGHT_MODEL {_config.lightingModel}",
+					definesMaxEndIdx);
+			}
+			if (!_config.applyLighting)
+			{
+				RemoveDefine(codeBuilder, "#define FEATURE_LIGHT", definesMaxEndIdx);
+			}
+		}
+
+		// Output updated shader code and return success:
+		_outShaderCode = codeBuilder.ToString();
+		return true;
+	}
+
+	private static void ReplaceDefine(StringBuilder _builder, string _oldDefineTxt, string _newDefineTxt, int _maxEndIdx)
+	{
+		_builder.Replace(_oldDefineTxt, _newDefineTxt, 0, _maxEndIdx);
+	}
+
+	private static void RemoveDefine(StringBuilder _builder, string _defineTxt, int _maxEndIdx)
+	{
+		_builder.Replace(_defineTxt, string.Empty, 0, _maxEndIdx);
 	}
 
 	#endregion

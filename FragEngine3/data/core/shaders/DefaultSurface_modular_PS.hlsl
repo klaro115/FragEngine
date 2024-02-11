@@ -3,7 +3,7 @@
 /******************* DEFINES: ******************/
 
 // Albedo:
-#define FEATURE_ALBEDO_TEXTURE true             // Whether to initialize albedo color from main texture. If false, a color literal is used
+#define FEATURE_ALBEDO_TEXTURE 1                // Whether to initialize albedo color from main texture. If false, a color literal is used
 #define FEATURE_ALBEDO_COLOR half4(1, 1, 1, 1)  // Color literal from which albedo may be initialized
 
 // Normals:
@@ -22,7 +22,7 @@
 #define VARIANT_BLENDSHAPES                     // Whether to always create a shader variant using blend shape data
 #define VARIANT_ANIMATED                        // Whether to always create a shader variant using bone animation data    
 
-#if FEATURE_ALBEDO_TEXTURE == false
+#if FEATURE_ALBEDO_TEXTURE == 0
     #ifndef FEATURE_ALBEDO_COLOR
         #define FEATURE_ALBEDO_COLOR half4(1, 1, 1, 1)
     #endif
@@ -101,7 +101,7 @@ SamplerState SamplerShadowMaps : register(ps, s0);
 
 // ResSetBound:
 
-#if FEATURE_ALBEDO_TEXTURE == true
+#if FEATURE_ALBEDO_TEXTURE == 1
 Texture2D<half4> TexMain : register(ps, t2);
 #ifndef HAS_SAMPLER
     #define HAS_SAMPLER
@@ -297,12 +297,12 @@ half3 ApplyNormalMap(in half3 _worldNormal, in half3 _worldTangent, in half3 _wo
 
 half4 Main_Pixel(in VertexOutput_Basic inputBasic) : SV_Target0
 {
-    #if FEATURE_ALBEDO_TEXTURE == true
+    #if FEATURE_ALBEDO_TEXTURE == 1
     // Sample base color from main texture:
     half4 albedo = TexMain.Sample(SamplerMain, inputBasic.uv);
     #else
     half4 albedo = FEATURE_ALBEDO_COLOR;
-    #endif //FEATURE_ALBEDO_TEXTURE == true
+    #endif //FEATURE_ALBEDO_TEXTURE == 1
 
     #ifdef FEATURE_NORMALS
     // Calculate normals from normal map:
@@ -326,12 +326,12 @@ half4 Main_Pixel(in VertexOutput_Basic inputBasic) : SV_Target0
 #ifdef VARIANT_EXTENDED
 half4 Main_Pixel_Ext(in VertexOutput_Basic inputBasic, in VertexOutput_Extended inputExt) : SV_Target0
 {
-    #if FEATURE_ALBEDO_TEXTURE == true
+    #if FEATURE_ALBEDO_TEXTURE == 1
     // Sample base color from main texture:
     half4 albedo = TexMain.Sample(SamplerMain, inputBasic.uv);
     #else
     half4 albedo = FEATURE_ALBEDO_COLOR;
-    #endif //FEATURE_ALBEDO_TEXTURE == true
+    #endif //FEATURE_ALBEDO_TEXTURE == 1
 
     #ifdef FEATURE_NORMALS
     // Calculate normals from normal map:

@@ -236,7 +236,7 @@ public static class ShaderResourceFactory
 
 		// Try to generate shader code from parsed configuration:
 		EnginePlatformFlag platformFlags = _graphicsCore.graphicsSystem.engine.PlatformSystem.PlatformFlags;
-		if (!ShaderGenerator.CreatePixelShaderVariation(in config, platformFlags, out string shaderCode))
+		if (!ShaderGenerator.CreatePixelShaderVariation(_graphicsCore.graphicsSystem.engine.ResourceManager, in config, platformFlags, out string shaderCode))
 		{
 			logger.LogError($"Failed to generate default shader code resource '{_resourceKey}' using config '{configDescTxt}'!");
 			_outShaderRes = null;

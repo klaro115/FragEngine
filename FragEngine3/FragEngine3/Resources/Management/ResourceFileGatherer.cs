@@ -51,7 +51,7 @@ namespace FragEngine3.Resources.Management
 
 		public readonly string applicationPath = string.Empty;
 		public readonly string rootResourcePath = string.Empty;
-		private readonly string coreResourcePath = string.Empty;
+		public readonly string coreResourcePath = string.Empty;
 		private readonly string modsResourcePath = string.Empty;
 
 		private CancellationTokenSource? gatherThreadCancellationSrc = null;

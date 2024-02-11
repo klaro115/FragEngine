@@ -176,8 +176,8 @@ public sealed class TestApplicationLogic : ApplicationLogic
 			//rabbit.node.SetEnabled(false);
 
 			rabbit.SetMesh("Rabbit.obj");
-			//rabbit.SetMaterial("Mtl_DefaultSurface");
-			rabbit.SetMaterial("Mtl_FeatureTest");
+			rabbit.SetMaterial("Mtl_DefaultSurface");
+			//rabbit.SetMaterial("Mtl_FeatureTest");
 			rabbit.DontDrawUnlessFullyLoaded = true;
 		}
 

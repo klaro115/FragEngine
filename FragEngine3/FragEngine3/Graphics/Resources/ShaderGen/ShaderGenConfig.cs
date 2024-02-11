@@ -85,6 +85,31 @@ public struct ShaderGenConfig
 	#endregion
 	#region Methods
 
+	public void PropagateFlagStatesToHierarchy()
+	{
+		// Albedo:
+		if (albedoSource != ShaderGenAlbedoSource.SampleTexMain)
+		{
+			samplerTexMain = null;
+		}
+
+		// Normals:
+		if (!useNormalMap)
+		{
+			samplerTexNormal = null;
+		}
+
+		// Lighting:
+		useAmbientLight &= applyLighting;
+		useLightMaps &= applyLighting;
+		useLightSources &= applyLighting;
+		useShadowMaps &= useLightSources;
+		if (!useLightSources)
+		{
+			lightingModel = ShaderGenLightingModel.Phong;
+		}
+	}
+
 	public readonly string CreateDescriptionTxt()
 	{
 		// Albedo:
