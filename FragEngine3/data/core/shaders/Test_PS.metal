@@ -7,9 +7,9 @@ using namespace metal;
 struct VertexOutput_Basic
 {
     float4 position         [[ position ]];
-    float3 worldPosition;
-    float3 normal;
-    float2 uv;
+    float3 worldPosition    [[ user(worldPosition) ]];
+    float3 normal           [[ user(normal) ]];
+    float2 uv               [[ user(uv) ]];
 };
 
 /******************* SHADERS: ******************/

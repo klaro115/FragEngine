@@ -4,22 +4,25 @@ using namespace metal;
 
 /****************** CONSTANTS: *****************/
 
-struct CBGlobal
+// Constant buffer containing all settings that apply for everything drawn by currently active camera:
+struct CBCamera
 {
     // Camera vectors & matrices:
-    float4x4 mtxWorld2Clip;     // Camera's full projection matrix, transforming from world space to clip space coordinates.
-    float4 cameraPosition;      // Camera position, in world space.
-    float4 cameraDirection;     // Camera forward facing direction, in world space.
+    float4x4 mtxWorld2Clip;         // Camera's full projection matrix, transforming from world space to clip space coordinates.
+    float4 cameraPosition;          // Camera position, in world space.
+    float4 cameraDirection;         // Camera forward facing direction, in world space.
+    float4x4 mtxCameraMotion;       // Camera movement matrix, encoding motion/transformation from previous to current frame.
 
 	// Camera parameters:
-    uint resolutionX;           // Render target width, in pixels.
-    uint resolutionY;           // Render target height, in pixels.
-    float nearClipPlane;        // Camera's near clipping plane distance.
-    float farClipPlane;         // Camera's far clipping plane distance.
+    uint cameraIdx;                 // Index of the currently drawing camera.
+    uint resolutionX;               // Render target width, in pixels.
+    uint resolutionY;               // Render target height, in pixels.
+    float nearClipPlane;            // Camera's near clipping plane distance.
+    float farClipPlane;             // Camera's far clipping plane distance.
 
-    // Lighting:
-    float3 ambientLight;
-    uint lightCount;
+    // Per-camera lighting:
+    uint lightCount;                // Total number of lights affecting this camera.
+    uint shadowMappedLightCount;    // Total number of lights that have a layer of the shadow map texture array assigned.
 };
 
 struct CBObject
@@ -61,23 +64,28 @@ struct VertexInput_BoneWeights
 struct VertexOutput_Basic
 {
     float4 position         [[ position ]];
-    float3 worldPosition;
-    float3 normal;
-    float2 uv;
+    float3 worldPosition    [[ user(worldPosition) ]];
+    float3 normal           [[ user(normal) ]];
+    float2 uv               [[ user(uv) ]];
 };
 
 struct VertexOutput_Extended
 {
-    float3 tangent;
-    float3 binormal;
-    float2 uv2;
+    float4 position         [[ position ]];
+    float3 worldPosition    [[ user(worldPosition) ]];
+    float3 normal           [[ user(normal) ]];
+    float2 uv               [[ user(uv) ]];
+
+    float3 tangent          [[ user(tangent) ]];
+    float3 binormal         [[ user(binormal) ]];
+    float2 uv2              [[ user(uv2) ]];
 };
 
 /******************* SHADERS: ******************/
 
 VertexOutput_Basic vertex Main_Vertex(
     device const VertexInput_Basic* pInputBasic [[ buffer( 0 ) ]],
-    device const CBGlobal& cbGlobal             [[ buffer( 1 ) ]],
+    device const CBCamera& cbCamera             [[ buffer( 1 ) ]],
     device const CBObject& cbObject             [[ buffer( 2 ) ]],
     uint vertexId                               [[ vertex_id ]])
 {
@@ -86,7 +94,7 @@ VertexOutput_Basic vertex Main_Vertex(
 
     const device VertexInput_Basic& inputBasic = pInputBasic[vertexId];
 
-    float4x4 mtxLocal2Clip = cbGlobal.mtxWorld2Clip * cbObject.mtxLocal2World;
+    float4x4 mtxLocal2Clip = cbCamera.mtxWorld2Clip * cbObject.mtxLocal2World;
 
     float4 projResult = mtxLocal2Clip * float4(inputBasic.position, 1);
 

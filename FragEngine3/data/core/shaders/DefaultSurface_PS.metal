@@ -41,27 +41,33 @@ struct Light
     float3 lightPosition;
     uint lightType;
     float3 lightDirection;
-    float lightSpotAngleAcos;
-    float4x4 mtxShadowWorld2Uv;
+    float lightSpotMinDot;
+    float4x4 mtxShadowWorld2Clip;
     uint shadowMapIdx;
+    float shadowBias;
 };
 
 /**************** VERTEX OUTPUT: ***************/
 
 struct VertexOutput_Basic
 {
-    float4 position                     [[ position ]];
-    float3 worldPosition;
-    float3 normal;
-    float2 uv;
+    float4 position         [[ position ]];
+    float3 worldPosition    [[ user(worldPosition) ]];
+    float3 normal           [[ user(normal) ]];
+    float2 uv               [[ user(uv) ]];
 };
 
-//struct VertexOutput_Extended
-//{
-//    float3 tangent;
-//    float3 binormal;
-//    float2 uv2;
-//};
+struct VertexOutput_Extended
+{
+    float4 position         [[ position ]];
+    float3 worldPosition    [[ user(worldPosition) ]];
+    float3 normal           [[ user(normal) ]];
+    float2 uv               [[ user(uv) ]];
+
+    float3 tangent          [[ user(tangent) ]];
+    float3 binormal         [[ user(binormal) ]];
+    float2 uv2              [[ user(uv2) ]];
+};
 
 /******************* SHADERS: ******************/
 

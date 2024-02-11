@@ -113,18 +113,23 @@ struct Light
 
 struct VertexOutput_Basic
 {
-    float4 position                     [[ position ]];
-    float3 worldPosition;
-    float3 normal;
-    float2 uv;
+    float4 position         [[ position ]];
+    float3 worldPosition    [[ user(worldPosition) ]];
+    float3 normal           [[ user(normal) ]];
+    float2 uv               [[ user(uv) ]];
 };
 
 #ifdef VARIANT_EXTENDED
 struct VertexOutput_Extended
 {
-    float3 tangent;
-    float3 binormal;
-    float2 uv2;
+    float4 position         [[ position ]];
+    float3 worldPosition    [[ user(worldPosition) ]];
+    float3 normal           [[ user(normal) ]];
+    float2 uv               [[ user(uv) ]];
+
+    float3 tangent          [[ user(tangent) ]];
+    float3 binormal         [[ user(binormal) ]];
+    float2 uv2              [[ user(uv2) ]];
 };
 #endif //VARIANT_EXTENDED
 

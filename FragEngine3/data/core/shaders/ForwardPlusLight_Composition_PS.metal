@@ -4,26 +4,25 @@ using namespace metal;
 
 /****************** CONSTANTS: *****************/
 
-struct CBGlobal
+// Constant buffer containing all settings that apply for everything drawn by currently active camera:
+struct CBCamera
 {
-	// Camera vectors & matrices:
-    float4x4 mtxCamera;         // Camera's full projection matrix, transforming from world space to clip space coordinates.
-    float4 cameraPosition;      // Camera position, in world space.
-    float4 cameraDirection;     // Camera forward facing direction, in world space.
+    // Camera vectors & matrices:
+    float4x4 mtxWorld2Clip;         // Camera's full projection matrix, transforming from world space to clip space coordinates.
+    float4 cameraPosition;          // Camera position, in world space.
+    float4 cameraDirection;         // Camera forward facing direction, in world space.
+    float4x4 mtxCameraMotion;       // Camera movement matrix, encoding motion/transformation from previous to current frame.
 
 	// Camera parameters:
-    uint resolutionX;           // Render target width, in pixels.
-    uint resolutionY;           // Render target height, in pixels.
-    float nearClipPlane;        // Camera's near clipping plane distance.
-    float farClipPlane;         // Camera's far clipping plane distance.
+    uint cameraIdx;                 // Index of the currently drawing camera.
+    uint resolutionX;               // Render target width, in pixels.
+    uint resolutionY;               // Render target height, in pixels.
+    float nearClipPlane;            // Camera's near clipping plane distance.
+    float farClipPlane;             // Camera's far clipping plane distance.
 
-    // Lighting:
-    //float3 ambientLight;
-    float4 ambientLightLow;
-    float4 ambientLightMid;
-    float4 ambientLightHigh;
-    uint lightCount;
-    float shadowFadeStart;      // Percentage of the shadow distance in projection space where they start fading out.
+    // Per-camera lighting:
+    uint lightCount;                // Total number of lights affecting this camera.
+    uint shadowMappedLightCount;    // Total number of lights that have a layer of the shadow map texture array assigned.
 };
 
 /**************** VERTEX OUTPUT: ***************/
@@ -31,9 +30,9 @@ struct CBGlobal
 struct VertexOutput_Basic
 {
     float4 position         [[ position ]];
-    float3 worldPosition;
-    float3 normal;
-    float2 uv;
+    float3 worldPosition    [[ user(worldPosition) ]];
+    float3 normal           [[ user(normal) ]];
+    float2 uv               [[ user(uv) ]];
 };
 
 /***************** PIXEL OUTPUT: ***************/
@@ -48,7 +47,7 @@ struct VertexOutput_Basic
 
 half4 fragment Main_Pixel(
     VertexOutput_Basic inputBasic                       [[ stage_in ]],
-    device const CBGlobal& cbGlobal                     [[ buffer( 1 ) ]],
+    device const CBCamera& cbCamera                     [[ buffer( 1 ) ]],
     texture2d<half, access::read> TexOpaqueColor        [[ texture( 1 ) ]],     // texture slot 0 occupied by shadow maps
     texture2d<float, access::read> TexOpaqueDepth       [[ texture( 2 ) ]],
     texture2d<half, access::read> TexTransparentColor   [[ texture( 3 ) ]],
@@ -56,7 +55,7 @@ half4 fragment Main_Pixel(
     texture2d<half, access::read> TexUIColor            [[ texture( 5 ) ]])
 {
     // Determine source pixel location from fullscreen quad's UV:
-    uint2 posPixel = (uint2)(inputBasic.uv * float2(cbGlobal.resolutionX, cbGlobal.resolutionY));
+    uint2 posPixel = (uint2)(inputBasic.uv * float2(cbCamera.resolutionX, cbCamera.resolutionY));
 
     // Load pixel color and depth for all textures:
     half4 colOpaque = TexOpaqueColor.read(posPixel);
