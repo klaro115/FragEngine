@@ -91,24 +91,6 @@ struct Light
 };
 #endif
 
-#if FEATURE_ALBEDO_TEXTURE == 1
-    ifndef HAS_SAMPLER
-        #define HAS_SAMPLER
-    #endif
-#endif
-
-#ifdef FEATURE_NORMALS
-    ifndef HAS_SAMPLER
-        #define HAS_SAMPLER
-    #endif
-#endif
-
-#ifdef FEATURE_LIGHT_LIGHTMAPS
-    ifndef HAS_SAMPLER
-        #define HAS_SAMPLER
-    #endif
-#endif
-
 /**************** VERTEX OUTPUT: ***************/
 
 struct VertexOutput_Basic
@@ -131,22 +113,24 @@ struct VertexOutput_Extended
     float3 binormal         [[ user(binormal) ]];
     float2 uv2              [[ user(uv2) ]];
 };
+#else
 #endif //VARIANT_EXTENDED
 
 #ifdef FEATURE_LIGHT
 /****************** LIGHTING: ******************/
 
 half3 CalculateAmbientLight(
-    device const CBGlobal& cbGlobal,
+    device const CBScene& cbScene,
     float3 _normal)
 {
     half dotY = (half)dot(_normal, float3(0, 1, 0));
     half wLow = max(-dotY, (half)0);
     half wHigh = max(dotY, (half)0);
     half wMid = 1 - wHigh - wLow;
-    return (wLow * (half4)cbGlobal.ambientLightLow + wHigh * (half4)cbGlobal.ambientLightHigh + wMid * (half4)cbGlobal.ambientLightMid).xyz;
+    return (wLow * (half4)cbScene.ambientLightLow + wHigh * (half4)cbScene.ambientLightHigh + wMid * (half4)cbScene.ambientLightMid).xyz;
 }
 
+#else
 #endif //FEATURE_LIGHT
 
 #ifdef FEATURE_NORMALS
@@ -172,13 +156,15 @@ half3 ApplyNormalMap(const half3& _worldNormal, const half3& _worldTangent, cons
     half3 normal = mtxNormalRot * _texNormal;
     return normal;
 }
+#else
 #endif //FEATURE_NORMALS
 
 /******************* SHADERS: ******************/
 
 half4 fragment Main_Pixel(
     VertexOutput_Basic inputBasic                       [[ stage_in ]],
-    device const CBGlobal& cbGlobal                     [[ buffer( 1 ) ]],
+    device const CBScene& cbScene                       [[ buffer( 0 ) ]],
+    device const CBCamera& cbCamera                     [[ buffer( 1 ) ]],
     device const CBObject& cbObject                     [[ buffer( 2 ) ]],
     device const Light* BufLights                       [[ buffer( 3 ) ]],
     texture2d_array<half, access::sample> TexShadowMaps [[ texture( 0 ) ]])
@@ -186,8 +172,8 @@ half4 fragment Main_Pixel(
     half4 albedo = {1, 1, 1, 1};
 
     // Apply basic phong lighting:
-    half3 totalLightIntensity = CalculateAmbientLight(cbGlobal, inputBasic.normal);
-    for (uint i = 0; i < cbGlobal.lightCount; ++i)
+    half3 totalLightIntensity = CalculateAmbientLight(cbScene, inputBasic.normal);
+    for (uint i = 0; i < cbCamera.lightCount; ++i)
     {
         device const Light& light = BufLights[i];
 
@@ -207,7 +193,7 @@ half4 fragment Main_Pixel(
             lightRayDir = normalize(lightOffset);
 
             // Spot light angle:
-            if (light.lightType == 1 && dot(light.lightDirection, lightRayDir) < light.lightSpotAngleAcos)
+            if (light.lightType == 1 && dot(light.lightDirection, lightRayDir) < light.lightSpotMinDot)
             {
                 lightIntens = half3(0, 0, 0);
             }

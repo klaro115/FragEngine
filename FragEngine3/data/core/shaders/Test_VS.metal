@@ -70,9 +70,7 @@ VertexOutput_Extended vertex Main_Vertex_Ext(
     outputExt.uv = inputBasic.uv;
 
     outputExt.tangent = inputExt.tangent;
-    outputExt.binormal = cross(outputBasic.normal, outputExt.tangent);
+    outputExt.binormal = cross(outputExt.normal, outputExt.tangent);
     outputExt.uv2 = inputExt.uv2;
-
-    //TODO: Check how multiple vertex outputs are implemented in MSL, then also output extended data.
-    return outputBasic;
+    return outputExt;
 }

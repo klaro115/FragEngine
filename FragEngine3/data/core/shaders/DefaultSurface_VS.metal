@@ -127,7 +127,7 @@ VertexOutput_Extended vertex Main_Vertex_Ext(
     outputExt.uv = inputBasic.uv;
 
     outputExt.tangent = normalize((cbObject.mtxLocal2World * float4(inputExt.tangent, 0)).xyz);
-    outputExt.binormal = cross(outputBasic.normal, outputExt.tangent);
+    outputExt.binormal = cross(outputExt.normal, outputExt.tangent);
     outputExt.uv2 = inputExt.uv2;
     return outputExt;
 }
