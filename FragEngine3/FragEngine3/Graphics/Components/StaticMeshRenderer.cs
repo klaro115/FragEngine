@@ -338,6 +338,7 @@ public sealed class StaticMeshRenderer(SceneNode _node) : Component(_node), IRen
 		// Update or (re)create the constant buffer containing object data:
 		if (!MeshRendererUtility.UpdateConstantBuffer_CBObject(
 			in core,
+			in _cameraPassCtx.cmdList,
 			in node,
 			BoundingRadius,
 			ref cbObjectData,
