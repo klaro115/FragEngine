@@ -85,7 +85,7 @@ struct VertexOutput_Extended
 VertexOutput_Basic vertex Main_Vertex(
     device const VertexInput_Basic* pInputBasic [[ buffer( 0 ) ]],
     device const CBCamera& cbCamera             [[ buffer( 1 ) ]],
-    device const CBObject& cbObject             [[ buffer( 2 ) ]],
+    device const CBObject& cbObject             [[ buffer( 3 ) ]],
     uint vertexId                               [[ vertex_id ]])
 {
     //^NOTE: Using 'ResourceBindingModel.Default', vertex buffers come before actual resources.
@@ -93,9 +93,7 @@ VertexOutput_Basic vertex Main_Vertex(
 
     const device VertexInput_Basic& inputBasic = pInputBasic[vertexId];
 
-    float4x4 mtxLocal2Clip = cbCamera.mtxWorld2Clip * cbObject.mtxLocal2World;
-
-    float4 projResult = mtxLocal2Clip * float4(inputBasic.position, 1);
+    float4 projResult = cbCamera.mtxWorld2Clip * (cbObject.mtxLocal2World * float4(inputBasic.position, 1));
 
     VertexOutput_Basic outputBasic;
     outputBasic.position = projResult;
@@ -109,15 +107,13 @@ VertexOutput_Extended vertex Main_Vertex_Ext(
     device const VertexInput_Basic* pInputBasic     [[ buffer( 0 ) ]],
     device const VertexInput_Extended* pInputExt    [[ buffer( 1 ) ]],
     device const CBCamera& cbCamera                 [[ buffer( 2 ) ]],
-    device const CBObject& cbObject                 [[ buffer( 3 ) ]],
+    device const CBObject& cbObject                 [[ buffer( 4 ) ]],
     uint vertexId                                   [[ vertex_id ]])
 {
     const device VertexInput_Basic& inputBasic = pInputBasic[vertexId];
     const device VertexInput_Extended& inputExt = pInputExt[vertexId];
 
-    float4x4 mtxLocal2Clip = cbCamera.mtxWorld2Clip * cbObject.mtxLocal2World;
-
-    float4 projResult = mtxLocal2Clip * float4(inputBasic.position, 1);
+    float4 projResult = cbCamera.mtxWorld2Clip * (cbObject.mtxLocal2World * float4(inputBasic.position, 1));
 
     VertexOutput_Extended outputExt;
     outputExt.position = projResult;

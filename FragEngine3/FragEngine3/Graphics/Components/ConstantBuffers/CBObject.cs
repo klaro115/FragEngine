@@ -4,14 +4,17 @@ using Veldrid;
 
 namespace FragEngine3.Graphics.Components.ConstantBuffers;
 
-[StructLayout(LayoutKind.Sequential, Pack = 4, Size = byteSize)]
+[StructLayout(LayoutKind.Explicit, Pack = 4, Size = byteSize)]
 public struct CBObject
 {
 	#region Fields
 
+	[FieldOffset(0)]
 	public Matrix4x4 mtxLocal2World;	// Object world matrix, transforming vertices from model space to world space.
+	[FieldOffset(16 * sizeof(float))]
 	public Vector3 worldPosition;		// World space position of the object.
-	public float boundingRadius;		// Bounding sphere radius of the object.
+	[FieldOffset(19 * sizeof(float))]
+	public float boundingRadius;        // Bounding sphere radius of the object.
 
 	#endregion
 	#region Constants

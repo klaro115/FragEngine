@@ -38,18 +38,18 @@ MATERIAL:                                 owned by material, semi-persistent
 ############################################
 # Resource Binding:
 
-- SET 0:    (ResSetCamera)                owned by camera, different for each pass, may be recreated each frame
-  Name:                     Slot:         Updated:    Owner:
-  - CBScene                 b0            f           stack
-  - CBCamera                b1            p           cam
-  - BufLights               t0            f           cam
-  - TexShadowMaps           t1            f           stack
-  - SamplerShadowMaps       s0            -           stack
+- SET 0:    (ResSetCamera)                              owned by camera, different for each pass, may be recreated each frame
+  Name:                     HLSL Slot:    Mtl Slot:     Updated:    Owner:
+  - CBScene                 b0            b+0           f           stack
+  - CBCamera                b1            b+1           p           cam
+  - BufLights               t0            b+2           f           cam
+  - TexShadowMaps           t1            t0            f           stack
+  - SamplerShadowMaps       s0            s0            -           stack
 
-- SET 1:    (ResSetObject)                owned by renderer, same across passes, created once
-  Name:                     Slot:         Updated:    Owner:
-  - CBObject                b2            f           rend
+- SET 1:    (ResSetObject)                              owned by renderer, same across passes, created once
+  Name:                     HLSL Slot:    Mtl Slot:     Updated:    Owner:
+  - CBObject                b2            b+3           f           rend
 
-- SET 2:    (ResSetBound)                 owned by renderer, different for each material (main + shadow)
-  Name:                     Slot:         Updated:    Owner:
-  - [...] Bound Resources   b3+, t2+, s1+ -           mat
+- SET 2:    (ResSetBound)                               owned by renderer, different for each material (main + shadow)
+  Name:                     HLSL Slot:    Mtl Slot:     Updated:    Owner:
+  - [...] Bound Resources   b3+, t2+, s1+ b4+, t1+, s1+ -           mat

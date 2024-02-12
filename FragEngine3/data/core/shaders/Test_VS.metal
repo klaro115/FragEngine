@@ -47,16 +47,8 @@ VertexOutput_Basic vertex Main_Vertex(
 {
     const device VertexInput_Basic& inputBasic = pInputBasic[vertexId];
 
-    const float4 test[4] = {
-        float4(-1, -1, 0.5, 1),
-        float4( 1, -1, 0.5, 1),
-        float4(-1,  1, 0.5, 1),
-        float4( 1,  1, 0.5, 1),
-    };
-
     VertexOutput_Basic outputBasic;
     outputBasic.position = float4(inputBasic.position, 1);
-    //outputBasic.position = test[vertexId];
     outputBasic.worldPosition = inputBasic.position;
     outputBasic.normal = inputBasic.normal;
     outputBasic.uv = inputBasic.uv;
