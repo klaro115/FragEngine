@@ -12,7 +12,7 @@ namespace FragEngine3.Graphics.Resources
 	/// in the corresponding data arrays must be zero or an identity transformation.
 	/// </summary>
 	[Serializable]
-	[StructLayout(LayoutKind.Sequential, Pack = 4, Size = (int)byteSize)]
+	[StructLayout(LayoutKind.Explicit, Pack = 4, Size = (int)byteSize)]
 	public struct VertexWeightIndices
 	{
 		#region Constructors
@@ -35,9 +35,13 @@ namespace FragEngine3.Graphics.Resources
 		#endregion
 		#region Fields
 
+		[FieldOffset(0)]
 		public uint index0;
+		[FieldOffset(1 * sizeof(uint))]
 		public uint index1;
+		[FieldOffset(2 * sizeof(uint))]
 		public uint index2;
+		[FieldOffset(3 * sizeof(uint))]
 		public uint index3;
 
 		#endregion
@@ -60,13 +64,16 @@ namespace FragEngine3.Graphics.Resources
 	/// Vertex data definition for basic surface geometry. This is what one element in the primary vertex buffer looks like.
 	/// </summary>
 	[Serializable]
-	[StructLayout(LayoutKind.Sequential, Pack = 4, Size = (int)byteSize)]
+	[StructLayout(LayoutKind.Explicit, Pack = 4, Size = (int)byteSize)]
 	public struct BasicVertex(Vector3 _position, Vector3 _normal, Vector2 _uv)
 	{
 		#region Fields
 
+		[FieldOffset(0)]
 		public Vector3 position = _position;
+		[FieldOffset(3 * sizeof(float))]
 		public Vector3 normal = _normal;
+		[FieldOffset(6 * sizeof(float))]
 		public Vector2 uv = _uv;
 
 		#endregion
@@ -98,12 +105,14 @@ namespace FragEngine3.Graphics.Resources
 	/// Vertex data definition for extended surface geometry. This is what one element in a secondary vertex buffer may look like.
 	/// </summary>
 	[Serializable]
-	[StructLayout(LayoutKind.Sequential, Pack = 4, Size = (int)byteSize)]
+	[StructLayout(LayoutKind.Explicit, Pack = 4, Size = (int)byteSize)]
 	public struct ExtendedVertex(Vector3 _tangent, Vector2 _uv2)
 	{
 		#region Fields
 
+		[FieldOffset(0)]
 		public Vector3 tangent = _tangent;
+		[FieldOffset(3 * sizeof(float))]
 		public Vector2 uv2 = _uv2;
 
 		#endregion
@@ -134,7 +143,7 @@ namespace FragEngine3.Graphics.Resources
 	/// Vertex data definition for indexed and weighted surface data, such as for blend shapes or bone animations.
 	/// </summary>
 	[Serializable]
-	[StructLayout(LayoutKind.Sequential, Pack = 4, Size = (int)byteSize)]
+	[StructLayout(LayoutKind.Explicit, Pack = 4, Size = (int)byteSize)]
 	public struct IndexedWeightedVertex
 	{
 		#region Constructors
@@ -153,7 +162,9 @@ namespace FragEngine3.Graphics.Resources
 		#endregion
 		#region Fields
 
+		[FieldOffset(0)]
 		public VertexWeightIndices indices;
+		[FieldOffset(4 * sizeof(uint))]
 		public Vector4 weights;
 
 		#endregion

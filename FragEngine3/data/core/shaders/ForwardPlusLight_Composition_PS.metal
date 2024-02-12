@@ -72,9 +72,16 @@ half4 fragment Main_Pixel(
 
     // Overlay UI:
     const half alphaFinal = clamp(colGeometry.w + colUI.w, (half)0, (half)1);
-    const half4 colFinal = half4(mix(colGeometry.xyz, colUI.xyz, colUI.w), alphaFinal);
+    half4 colFinal = half4(mix(colGeometry.xyz, colUI.xyz, colUI.w), alphaFinal);
     const float depthFinal = colUI.w <= 0.001 ? depthGeometry : 0;
     
+    //if (inputBasic.uv.x < 0.5 && inputBasic.uv.y < 0.5)
+    {
+        colFinal = half4(abs((half2)inputBasic.position.xy / half2(cbCamera.resolutionX, cbCamera.resolutionY)), 0, 1);
+        //colFinal.xy *= (half2)inputBasic.uv;
+        //colFinal = half4(0.5 + 0.5 * colFinal.x, colFinal.yz * (half2)inputBasic.uv, 1);
+    }
+
     // Assemble final output:
     return colFinal;
 }
