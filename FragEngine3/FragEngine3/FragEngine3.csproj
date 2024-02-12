@@ -5,15 +5,27 @@
     <TargetFramework>net8.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
+    <Configurations>Debug;Release;Debug_MacOS;Release_MacOS</Configurations>
   </PropertyGroup>
 
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <WarningLevel>4</WarningLevel>
   </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug_MacOS|AnyCPU'">
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <WarningLevel>4</WarningLevel>
+		<DefineConstants>MACOS</DefineConstants>
+	</PropertyGroup>
+	
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
   </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release_MacOS|AnyCPU'">
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+		<DefineConstants>MACOS</DefineConstants>
+  </PropertyGroup>
+	
   <ItemGroup>
     <None Remove="Graphics\" />
     <None Remove="Graphics\Config\" />

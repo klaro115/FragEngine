@@ -1,8 +1,8 @@
-﻿using System.Numerics;
+﻿#if MACOS || MACCATALYST
+using System.Numerics;
 using System.Runtime.InteropServices;
 using Veldrid;
 
-#if MACOS || MACCATALYST
 namespace FragEngine3.Graphics.Resources;
 
 /// <summary>
