@@ -45,8 +45,7 @@ namespace FragEngine3.Graphics.Utility
 				boundingRadius = _boundingRadius,
 			};
 
-			_cmdList.UpdateBuffer(_cbObject, 0, ref _cbObjectData, CBObject.byteSize);
-			//_core.Device.UpdateBuffer(_cbObject, 0, ref _cbObjectData, CBObject.byteSize);
+			_core.Device.UpdateBuffer(_cbObject, 0, ref _cbObjectData, CBObject.byteSize);
 
 			return true;
 		}

@@ -114,6 +114,7 @@ VertexOutput_Extended vertex Main_Vertex_Ext(
     const device VertexInput_Extended& inputExt = pInputExt[vertexId];
 
     float4 projResult = cbCamera.mtxWorld2Clip * (cbObject.mtxLocal2World * float4(inputBasic.position, 1));
+    //float4 projResult = cbCamera.mtxWorld2Clip * float4(inputBasic.position, 1);
 
     VertexOutput_Extended outputExt;
     outputExt.position = projResult;

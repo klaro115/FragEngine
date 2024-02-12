@@ -1,7 +1,7 @@
 ############################################
 # Resource Origins & Updates:
 
-  Name:                     Slot:         Updated:
+  Name:                     HLSL Slot:    Updated:
 
 SCENE:                                    owned by stack, persistent
   - ResLayoutCamera         LAYOUT 0
