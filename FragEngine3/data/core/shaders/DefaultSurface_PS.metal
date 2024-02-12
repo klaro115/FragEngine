@@ -4,25 +4,34 @@ using namespace metal;
 
 /****************** CONSTANTS: *****************/
 
-struct CBGlobal
+struct CBScene
+{
+    // Scene lighting:
+    float4 ambientLightLow;         // Ambient light color and intensity coming from bottom-up.
+    float4 ambientLightMid;         // Ambient light color and intensity coming from all sides.
+    float4 ambientLightHigh;        // Ambient light color and intensity coming from top-down.
+    float shadowFadeStart;          // Percentage of the shadow distance in projection space where they start fading out.
+};
+
+// Constant buffer containing all settings that apply for everything drawn by currently active camera:
+struct CBCamera
 {
     // Camera vectors & matrices:
-    float4x4 mtxWorld2Clip;     // Camera's full projection matrix, transforming from world space to clip space coordinates.
-    float4 cameraPosition;      // Camera position, in world space.
-    float4 cameraDirection;     // Camera forward facing direction, in world space.
+    float4x4 mtxWorld2Clip;         // Camera's full projection matrix, transforming from world space to clip space coordinates.
+    float4 cameraPosition;          // Camera position, in world space.
+    float4 cameraDirection;         // Camera forward facing direction, in world space.
+    float4x4 mtxCameraMotion;       // Camera movement matrix, encoding motion/transformation from previous to current frame.
 
 	// Camera parameters:
-    uint resolutionX;           // Render target width, in pixels.
-    uint resolutionY;           // Render target height, in pixels.
-    float nearClipPlane;        // Camera's near clipping plane distance.
-    float farClipPlane;         // Camera's far clipping plane distance.
+    uint cameraIdx;                 // Index of the currently drawing camera.
+    uint resolutionX;               // Render target width, in pixels.
+    uint resolutionY;               // Render target height, in pixels.
+    float nearClipPlane;            // Camera's near clipping plane distance.
+    float farClipPlane;             // Camera's far clipping plane distance.
 
-    // Lighting:
-    float4 ambientLightLow;
-    float4 ambientLightMid;
-    float4 ambientLightHigh;
-    uint lightCount;
-    float shadowFadeStart;      // Percentage of the shadow distance in projection space where they start fading out.
+    // Per-camera lighting:
+    uint lightCount;                // Total number of lights affecting this camera.
+    uint shadowMappedLightCount;    // Total number of lights that have a layer of the shadow map texture array assigned.
 };
 
 struct CBObject
@@ -72,19 +81,20 @@ struct VertexOutput_Extended
 /******************* SHADERS: ******************/
 
 half3 CalculateAmbientLight(
-    device const CBGlobal& cbGlobal,
+    device const CBScene& cbScene,
     float3 _normal)
 {
     half dotY = (half)dot(_normal, float3(0, 1, 0));
     half wLow = max(-dotY, (half)0);
     half wHigh = max(dotY, (half)0);
     half wMid = 1 - wHigh - wLow;
-    return (wLow * (half4)cbGlobal.ambientLightLow + wHigh * (half4)cbGlobal.ambientLightHigh + wMid * (half4)cbGlobal.ambientLightMid).xyz;
+    return (wLow * (half4)cbScene.ambientLightLow + wHigh * (half4)cbScene.ambientLightHigh + wMid * (half4)cbScene.ambientLightMid).xyz;
 }
 
 half4 fragment Main_Pixel(
     VertexOutput_Basic inputBasic                       [[ stage_in ]],
-    device const CBGlobal& cbGlobal                     [[ buffer( 1 ) ]],
+    device const CBScene& cbScene                       [[ buffer( 0 ) ]],
+    device const CBCamera& cbCamera                     [[ buffer( 1 ) ]],
     device const CBObject& cbObject                     [[ buffer( 2 ) ]],
     device const Light* BufLights                       [[ buffer( 3 ) ]],
     texture2d_array<half, access::sample> TexShadowMaps [[ texture( 0 ) ]])
@@ -92,8 +102,8 @@ half4 fragment Main_Pixel(
     half4 albedo = {1, 1, 1, 1};
 
     // Apply basic phong lighting:
-    half3 totalLightIntensity = CalculateAmbientLight(cbGlobal, inputBasic.normal);
-    for (uint i = 0; i < cbGlobal.lightCount; ++i)
+    half3 totalLightIntensity = CalculateAmbientLight(cbScene, inputBasic.normal);
+    for (uint i = 0; i < cbCamera.lightCount; ++i)
     {
         device const Light& light = BufLights[i];
 
@@ -113,7 +123,7 @@ half4 fragment Main_Pixel(
             lightRayDir = normalize(lightOffset);
 
             // Spot light angle:
-            if (light.lightType == 1 && dot(light.lightDirection, lightRayDir) < light.lightSpotAngleAcos)
+            if (light.lightType == 1 && dot(light.lightDirection, lightRayDir) < light.lightSpotMinDot)
             {
                 lightIntens = half3(0, 0, 0);
             }
