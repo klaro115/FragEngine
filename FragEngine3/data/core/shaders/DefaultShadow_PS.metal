@@ -1,4 +1,3 @@
-//#pragma pack_matrix( column_major )
 #include <metal_stdlib>
 using namespace metal;
 

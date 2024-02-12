@@ -52,6 +52,7 @@ VertexOutput_Basic vertex Main_Vertex(
     outputBasic.worldPosition = inputBasic.position;
     outputBasic.normal = inputBasic.normal;
     outputBasic.uv = inputBasic.uv;
+
     return outputBasic;
 }
 
@@ -72,5 +73,6 @@ VertexOutput_Extended vertex Main_Vertex_Ext(
     outputExt.tangent = inputExt.tangent;
     outputExt.binormal = cross(outputExt.normal, outputExt.tangent);
     outputExt.uv2 = inputExt.uv2;
+    
     return outputExt;
 }

@@ -1,5 +1,5 @@
 {
-    "DataFilePath": "./DefaultSurface_PS.hlsl",
+    "DataFilePath": "./TexBrickWall_disp.png",
     "DataFileType": 0,
     "DataFileSize": 0,
     "UncompressedFileSize": 0,
@@ -9,13 +9,14 @@
     "Resources":
     [
         {
-            "ResourceKey": "DefaultSurface_PS",
-            "ResourceType": 4,
+            "ResourceKey": "TexBrickWall_disp",
+            "ResourceType": 2,
             "PlatformFlags": 0,
             "DataOffset": 0,
             "DataSize": 0,
             "DependencyCount": 0,
-            "Dependencies": null
+            "Dependencies": null,
+            "ImportFlags": "SDR"
         }
     ]
 }

@@ -1,4 +1,3 @@
-//#pragma pack_matrix( column_major )
 #include <metal_stdlib>
 using namespace metal;
 
@@ -55,26 +54,26 @@ half4 fragment Main_Pixel(
     texture2d<half, access::read> TexUIColor            [[ texture( 5 ) ]])
 {
     // Determine source pixel location from fullscreen quad's UV:
-    uint2 posPixel = (uint2)(inputBasic.uv * float2(cbCamera.resolutionX, cbCamera.resolutionY));
+    const uint2 posPixel = (uint2)(inputBasic.uv * float2(cbCamera.resolutionX, cbCamera.resolutionY));
 
     // Load pixel color and depth for all textures:
-    half4 colOpaque = TexOpaqueColor.read(posPixel);
-    float depthOpaque = TexOpaqueDepth.read(posPixel).r;
+    const half4 colOpaque = TexOpaqueColor.read(posPixel);
+    const float depthOpaque = TexOpaqueDepth.read(posPixel).r;
 
-    half4 colTransparent = TexTransparentColor.read(posPixel);
-    float depthTransparent = TexTransparentDepth.read(posPixel).r;
+    const half4 colTransparent = TexTransparentColor.read(posPixel);
+    const float depthTransparent = TexTransparentDepth.read(posPixel).r;
 
-    half4 colUI = TexUIColor.read(posPixel);
+    const half4 colUI = TexUIColor.read(posPixel);
 
     // Composite geometry: (opaque & transparent)
-    half k = depthTransparent > depthOpaque ? colTransparent.w : 0;
-    half4 colGeometry = mix(colOpaque, colTransparent, k);
-    float depthGeometry = min(depthTransparent, depthOpaque);
+    const half k = depthTransparent > depthOpaque ? colTransparent.w : 0;
+    const half4 colGeometry = mix(colOpaque, colTransparent, k);
+    const float depthGeometry = min(depthTransparent, depthOpaque);
 
     // Overlay UI:
-    half alphaFinal = clamp(colGeometry.w + colUI.w, (half)0, (half)1);
-    half4 colFinal = half4(mix(colGeometry.xyz, colUI.xyz, colUI.w), alphaFinal);
-    float depthFinal = colUI.w <= 0.001 ? depthGeometry : 0;
+    const half alphaFinal = clamp(colGeometry.w + colUI.w, (half)0, (half)1);
+    const half4 colFinal = half4(mix(colGeometry.xyz, colUI.xyz, colUI.w), alphaFinal);
+    const float depthFinal = colUI.w <= 0.001 ? depthGeometry : 0;
     
     // Assemble final output:
     return colFinal;

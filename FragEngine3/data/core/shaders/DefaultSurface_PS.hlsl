@@ -89,21 +89,21 @@ struct VertexOutput_Extended
 
 /****************** LIGHTING: ******************/
 
-half3 CalculateAmbientLight(in float3 _worldNormal)
+half3 CalculateAmbientLight(const in float3 _worldNormal)
 {
-    half dotY = (half)dot(_worldNormal, float3(0, 1, 0));
-    half wLow = max(-dotY, 0);
-    half wHigh = max(dotY, 0);
-    half wMid = 1.0 - wHigh - wLow;
+    const half dotY = (half)dot(_worldNormal, float3(0, 1, 0));
+    const half wLow = max(-dotY, 0);
+    const half wHigh = max(dotY, 0);
+    const half wMid = 1.0 - wHigh - wLow;
     return (wLow * (half4)ambientLightLow + wHigh * (half4)ambientLightHigh + wMid * (half4)ambientLightMid).xyz;
 }
 
-half3 CalculateLightmaps(in float2 _uv)
+half3 CalculateLightmaps(const in float2 _uv)
 {
     return TexLightmap.Sample(SamplerMain, _uv);
 }
 
-half3 CalculatePhongLighting(in Light _light, in float3 _worldPosition, in float3 _worldNormal)
+half3 CalculatePhongLighting(const in Light _light, const in float3 _worldPosition, const in float3 _worldNormal)
 {
     half3 lightIntens = (half3)(_light.lightColor * _light.lightIntensity);
     float3 lightRayDir;
@@ -116,7 +116,7 @@ half3 CalculatePhongLighting(in Light _light, in float3 _worldPosition, in float
     // Point or Spot light:
     else
     {
-        float3 lightOffset = _worldPosition - _light.lightPosition;
+        const float3 lightOffset = _worldPosition - _light.lightPosition;
         lightIntens /= (half)dot(lightOffset, lightOffset);
         lightRayDir = normalize(lightOffset);
 
@@ -127,38 +127,38 @@ half3 CalculatePhongLighting(in Light _light, in float3 _worldPosition, in float
         }
     }
 
-    half lightDot = max(-(half)dot(lightRayDir, _worldNormal), 0.0);
+    const half lightDot = max(-(half)dot(lightRayDir, _worldNormal), 0.0);
     return lightIntens.xyz * lightDot;
 }
 
 #define SHADOW_EDGE_FACE_SCALE 10.0
 
-half CalculateShadowMapLightWeight(in Light _light, in float3 _worldPosition, in float3 _surfaceNormal)
+half CalculateShadowMapLightWeight(const in Light _light, const in float3 _worldPosition, const in float3 _surfaceNormal)
 {
     // Add a bias to position along surface normal, to counter-act stair-stepping artifacts:
-    float4 worldPosBiased = float4(_worldPosition + _surfaceNormal * _light.shadowBias, 1);
+    const float4 worldPosBiased = float4(_worldPosition + _surfaceNormal * _light.shadowBias, 1);
 
     // Transform pixel position to light's clip space, then to UV space:
     float4 shadowProj = mul(_light.mtxShadowWorld2Clip, worldPosBiased);
     shadowProj /= shadowProj.w;
-    float2 shadowUv = float2(shadowProj.x + 1, 1 - shadowProj.y) * 0.5;
+    const float2 shadowUv = float2(shadowProj.x + 1, 1 - shadowProj.y) * 0.5;
     
     // Load corresponding depth value from shadow texture array:
-    half shadowDepth = TexShadowMaps.Sample(SamplerShadowMaps, float3(shadowUv.x, shadowUv.y, _light.shadowMapIdx));
+    const half shadowDepth = TexShadowMaps.Sample(SamplerShadowMaps, float3(shadowUv.x, shadowUv.y, _light.shadowMapIdx));
     half lightWeight = shadowDepth > shadowProj.z ? 1 : 0;
 
     // Fade shadows out near boundaries of UV/Depth space:
     if (_light.lightType == 2)
     {
-        half3 edgeUv = half3(shadowUv, shadowProj.z) * SHADOW_EDGE_FACE_SCALE;
-        half3 edgeMax = min(min(edgeUv, SHADOW_EDGE_FACE_SCALE - edgeUv), 1);
-        half k = 1 - min(min(edgeMax.x, edgeMax.y), edgeMax.z);
+        const half3 edgeUv = half3(shadowUv, shadowProj.z) * SHADOW_EDGE_FACE_SCALE;
+        const half3 edgeMax = min(min(edgeUv, SHADOW_EDGE_FACE_SCALE - edgeUv), 1);
+        const half k = 1 - min(min(edgeMax.x, edgeMax.y), edgeMax.z);
         lightWeight = lerp(lightWeight, 1.0, clamp(k, 0, 1));
     }
     return lightWeight;
 }
 
-half3 CalculateTotalLightIntensity(in float3 _worldPosition, in float3 _worldNormal, in float3 _surfaceNormal, in float2 _uv)
+half3 CalculateTotalLightIntensity(const in float3 _worldPosition, const in float3 _worldNormal, const in float3 _surfaceNormal, const in float2 _uv)
 {
     half3 totalLightIntensity = CalculateAmbientLight(_worldNormal);
 
@@ -170,8 +170,8 @@ half3 CalculateTotalLightIntensity(in float3 _worldPosition, in float3 _worldNor
     {
         Light light = BufLights[i];
 
-        half3 lightIntensity = CalculatePhongLighting(light, _worldPosition, _worldNormal);
-        half lightWeight = CalculateShadowMapLightWeight(light, _worldPosition, _surfaceNormal);
+        const half3 lightIntensity = CalculatePhongLighting(light, _worldPosition, _worldNormal);
+        const half lightWeight = CalculateShadowMapLightWeight(light, _worldPosition, _surfaceNormal);
         totalLightIntensity += lightIntensity * lightWeight;
     }
     // Simple light sources:
@@ -185,24 +185,24 @@ half3 CalculateTotalLightIntensity(in float3 _worldPosition, in float3 _worldNor
 
 /******************* NORMALS: ******************/
 
-half3 UnpackNormalMap(in half3 _texNormal)
+half3 UnpackNormalMap(const in half3 _texNormal)
 {
     // Unpack direction vector from normal map colors:
     return half3(_texNormal.x * 2 - 1, _texNormal.z, _texNormal.y * 2 - 1); // NOTE: Texture normals are expected to be in OpenGL standard.
 }
 
-half3 ApplyNormalMap(in half3 _worldNormal, in half3 _worldTangent, in half3 _worldBinormal, in half3 _texNormal)
+half3 ApplyNormalMap(const in half3 _worldNormal, const in half3 _worldTangent, const in half3 _worldBinormal, in half3 _texNormal)
 {
     _texNormal = UnpackNormalMap(_texNormal);
 
     // Create rotation matrix, projecting from flat surface (UV) space to surface in world space:
-    half3x3 mtxNormalRot =
+    const half3x3 mtxNormalRot =
     {
         _worldBinormal.x, _worldNormal.x, _worldTangent.x,
         _worldBinormal.y, _worldNormal.y, _worldTangent.y,
         _worldBinormal.z, _worldNormal.z, _worldTangent.z,
     };
-    half3 normal = mul(mtxNormalRot, _texNormal);
+    const half3 normal = mul(mtxNormalRot, _texNormal);
     return normal;
 }
 
@@ -218,7 +218,7 @@ half4 Main_Pixel(in VertexOutput_Basic inputBasic) : SV_Target0
     normal = ApplyNormalMap(inputBasic.normal, half3(0, 0, 1), half3(1, 0, 0), normal);
 
     // Apply basic phong lighting:
-    half3 totalLightIntensity = CalculateTotalLightIntensity(inputBasic.worldPosition, normal, inputBasic.normal, inputBasic.uv);
+    const half3 totalLightIntensity = CalculateTotalLightIntensity(inputBasic.worldPosition, normal, inputBasic.normal, inputBasic.uv);
 
     albedo *= half4(totalLightIntensity, 1);
 
@@ -236,7 +236,7 @@ half4 Main_Pixel_Ext(in VertexOutput_Basic inputBasic, in VertexOutput_Extended 
     normal = ApplyNormalMap(inputBasic.normal, inputExt.tangent, inputExt.binormal, normal);
 
     // Apply basic phong lighting:
-    half3 totalLightIntensity = CalculateTotalLightIntensity(inputBasic.worldPosition, normal, inputBasic.normal, inputBasic.uv);
+    const half3 totalLightIntensity = CalculateTotalLightIntensity(inputBasic.worldPosition, normal, inputBasic.normal, inputBasic.uv);
 
     albedo *= half4(totalLightIntensity, 1);
 

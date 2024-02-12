@@ -1,4 +1,3 @@
-//#pragma pack_matrix( column_major )
 #include <metal_stdlib>
 using namespace metal;
 
@@ -121,12 +120,12 @@ struct VertexOutput_Extended
 
 half3 CalculateAmbientLight(
     device const CBScene& cbScene,
-    float3 _normal)
+    const float3& _normal)
 {
-    half dotY = (half)dot(_normal, float3(0, 1, 0));
-    half wLow = max(-dotY, (half)0);
-    half wHigh = max(dotY, (half)0);
-    half wMid = 1 - wHigh - wLow;
+    const half dotY = (half)dot(_normal, float3(0, 1, 0));
+    const half wLow = max(-dotY, (half)0);
+    const half wHigh = max(dotY, (half)0);
+    const half wMid = 1 - wHigh - wLow;
     return (wLow * (half4)cbScene.ambientLightLow + wHigh * (half4)cbScene.ambientLightHigh + wMid * (half4)cbScene.ambientLightMid).xyz;
 }
 
@@ -147,13 +146,13 @@ half3 ApplyNormalMap(const half3& _worldNormal, const half3& _worldTangent, cons
     _texNormal = UnpackNormalMap(_texNormal);
 
     // Create rotation matrix, projecting from flat surface (UV) space to surface in world space:
-    half3x3 mtxNormalRot =
+    const half3x3 mtxNormalRot =
     {
         _worldBinormal.x, _worldNormal.x, _worldTangent.x,
         _worldBinormal.y, _worldNormal.y, _worldTangent.y,
         _worldBinormal.z, _worldNormal.z, _worldTangent.z,
     };
-    half3 normal = mtxNormalRot * _texNormal;
+    const half3 normal = mtxNormalRot * _texNormal;
     return normal;
 }
 #else
@@ -188,7 +187,7 @@ half4 fragment Main_Pixel(
         // Point or Spot light:
         else
         {
-            float3 lightOffset = inputBasic.worldPosition - light.lightPosition;
+            const float3 lightOffset = inputBasic.worldPosition - light.lightPosition;
             lightIntens /= (half)dot(lightOffset, lightOffset);
             lightRayDir = normalize(lightOffset);
 
@@ -199,7 +198,7 @@ half4 fragment Main_Pixel(
             }
         }
 
-        half lightDot = max(-(half)dot(lightRayDir, inputBasic.normal), (half)0.0);
+        const half lightDot = max(-(half)dot(lightRayDir, inputBasic.normal), (half)0.0);
         totalLightIntensity += lightIntens.xyz * lightDot;
     }
     albedo *= half4(totalLightIntensity, 1);

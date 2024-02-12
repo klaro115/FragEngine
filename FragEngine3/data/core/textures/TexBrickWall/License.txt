@@ -1,0 +1,13 @@
+### Asset License:
+
+Brick wall texture assets by JosipKladaric, provided through the OpenGameArt website.
+
+These assets will be removed from the FragEngine project upon release, or after completion
+of features that used these assets for testing. The license and authorship pertains to all
+image files whose names start with "TexBrickWall_" within this file's directory.
+
+Asset source link:
+https://opengameart.org/content/brick-wall
+
+Asset license link:
+https://creativecommons.org/licenses/by/3.0/

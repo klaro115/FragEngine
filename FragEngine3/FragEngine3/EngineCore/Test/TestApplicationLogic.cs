@@ -246,8 +246,8 @@ public sealed class TestApplicationLogic : ApplicationLogic
 			//plane.node.SetEnabled(false);
 
 			plane.SetMesh(planeHandle);
-			//plane.SetMaterial("Mtl_FeatureTest");
-			plane.SetMaterial("Mtl_DefaultSurface");
+			plane.SetMaterial("Mtl_BrickWall");
+			//plane.SetMaterial("Mtl_DefaultSurface");
 		}
 		if (SceneSpawner.CreateStaticMeshRenderer(scene, out plane))
 		{
@@ -258,8 +258,8 @@ public sealed class TestApplicationLogic : ApplicationLogic
 			//plane.node.SetEnabled(false);
 
 			plane.SetMesh(planeHandle);
-			//plane.SetMaterial("Mtl_FeatureTest");
-			plane.SetMaterial("Mtl_DefaultSurface");
+			plane.SetMaterial("Mtl_BrickWall");
+			//plane.SetMaterial("Mtl_DefaultSurface");
 		}
 
 		// Create two-sided quad:

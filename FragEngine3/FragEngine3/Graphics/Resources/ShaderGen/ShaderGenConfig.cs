@@ -12,7 +12,8 @@ public struct ShaderGenConfig
 	public string? samplerTexMain;						// If albedo source is TexMain, use a sampler with this name. "SamplerMain" is used if null or empty.
 
 	// Normals:
-	public bool useNormalMap;							// Whether to use normal maps, which will be used for all further shading. "VertexOutput_Extended" and "TexNormal" are added.
+	public bool useNormalMap;                           // Whether to use normal maps, which will be used for all further shading. "TexNormal" is added.
+	public bool useParallaxMap;							// Whether to use height maps to offset UVs for additional simulated depth. "TexParallax" is added.
 	public string? samplerTexNormal;					// For normal maps, use a sampler with this name. Main texture sampler (or "SamplerMain") is used if null or empty.
 
 	// Lighting:
@@ -113,12 +114,16 @@ public struct ShaderGenConfig
 	public readonly string CreateDescriptionTxt()
 	{
 		// Albedo:
+		// Format: "Ac"
 		char albedoSrc = BoolToCustom(albedoSource == ShaderGenAlbedoSource.SampleTexMain, 't', 'c');
 
 		// Normals:
+		// Format: "Nyn"
 		char normalsYN = BoolToYN(useNormalMap);
+		char parallaxYN = BoolToYN(useParallaxMap);
 
 		// Lighting:
+		// Format: "Ly101p1"
 		char lightingYN = BoolToYN(applyLighting);
 		char useAmbient = BoolTo01(applyLighting && useAmbientLight);
 		char useLgtMaps = BoolTo01(applyLighting && useLightMaps);
@@ -127,31 +132,38 @@ public struct ShaderGenConfig
 		char useShaMaps = BoolTo01(applyLighting && useLightSources && useShadowMaps);
 
 		// Variants:
+		// Format: "V100"
 		char variantExt = BoolTo01(alwaysCreateExtendedVariant);
 		char variantBle = BoolTo01(alwaysCreateBlendShapeVariant);
 		char variantAni = BoolTo01(alwaysCreateAnimatedVariant);
 
 		// Assemble base text containing only flags:
-		string txt = $"A{albedoSrc}_N{normalsYN}_L{lightingYN}{useAmbient}{useLgtMaps}{useLgtSrcs}{lightModel}{useShaMaps}_V{variantExt}{variantBle}{variantAni}";
+		// Format: "Ac_Nyn_Ly101p1_V100"
+		string txt = $"A{albedoSrc}_N{normalsYN}{parallaxYN}_L{lightingYN}{useAmbient}{useLgtMaps}{useLgtSrcs}{lightModel}{useShaMaps}_V{variantExt}{variantBle}{variantAni}";
 
 		// Albedo start color literal or sampler name:
 		if (albedoSource == ShaderGenAlbedoSource.SampleTexMain && !string.IsNullOrEmpty(samplerTexMain))
 		{
+			// Format: "As_SamplerMain"
 			txt += $"_As={samplerTexMain}";
 		}
 		else if (albedoSource == ShaderGenAlbedoSource.Color)
 		{
+			// Format: "As_0xFF0000FF"
 			txt += $"_Al={new Color32(albedoColor).ToHexStringLower()}";
 		}
 
 		// Normal map sampler name:
 		if (useNormalMap && !string.IsNullOrEmpty(samplerTexNormal) && string.CompareOrdinal(samplerTexMain, samplerTexNormal) != 0)
 		{
+			// Format: "Ns_SamplerNormals"
 			txt += $"_Ns={samplerTexNormal}";
 		}
 
 		return txt;
 
+
+		// Local helper methods for converting values to parsable characters:
 		static char BoolToYN(bool _value) => _value ? 'y' : 'n';
 		static char BoolTo01(bool _value) => _value ? '1' : '0';
 		static char BoolToCustom(bool _value, char _y, char _n) => _value ? _y : _n;
@@ -217,16 +229,21 @@ public struct ShaderGenConfig
 			{
 				case 'n':
 					config.useNormalMap = false;
-					return true;
+					break;
 				case 's':
 					config.samplerTexNormal = _part.Substring(3);
 					return true;
 				case 'y':
 					config.useNormalMap = true;
-					return true;
+					break;
 				default:
 					return false;
 			}
+			if (cType != 's')
+			{
+				config.useParallaxMap = _part.Length >= 3 && _part[2] == 'y';
+			}
+			return true;
 		}
 		bool TryParseLighting(string _part)
 		{

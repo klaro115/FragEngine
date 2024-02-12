@@ -104,6 +104,10 @@ public static class ShaderGenerator
 			{
 				RemoveDefine(codeBuilder, "#define FEATURE_NORMALS", definesMaxEndIdx);
 			}
+			if (!_config.useParallaxMap)
+			{
+				RemoveDefine(codeBuilder, "#define FEATURE_PARALLAX", definesMaxEndIdx);
+			}
 
 			// Lighting:
 			if (!_config.useAmbientLight)
