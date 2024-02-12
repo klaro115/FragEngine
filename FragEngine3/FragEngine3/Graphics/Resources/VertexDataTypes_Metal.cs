@@ -2,7 +2,7 @@
 using System.Runtime.InteropServices;
 using Veldrid;
 
-#if !MACOS && !MACCATALYST
+#if MACOS || MACCATALYST
 namespace FragEngine3.Graphics.Resources;
 
 /// <summary>
@@ -72,21 +72,21 @@ public struct BasicVertex(Vector3 _position, Vector3 _normal, Vector2 _uv)
 
 	[FieldOffset(0)]
 	public Vector3 position = _position;
-	[FieldOffset(3 * sizeof(float))]
+	[FieldOffset(4 * sizeof(float))]
 	public Vector3 normal = _normal;
-	[FieldOffset(6 * sizeof(float))]
+	[FieldOffset(8 * sizeof(float))]
 	public Vector2 uv = _uv;
 
 	#endregion
 	#region Constants
 
-	public const uint byteSize = 8 * sizeof(float);
+	public const uint byteSize = 12 * sizeof(float);
 
 	public static readonly VertexLayoutDescription vertexLayoutDesc = new(
 		byteSize,
 		new VertexElementDescription("Position", VertexElementSemantic.Position, VertexElementFormat.Float3, 0),
-		new VertexElementDescription("Normal", VertexElementSemantic.Normal, VertexElementFormat.Float3, 3 * sizeof(float)),
-		new VertexElementDescription("UV", VertexElementSemantic.TextureCoordinate, VertexElementFormat.Float2, 6 * sizeof(float)));
+		new VertexElementDescription("Normal", VertexElementSemantic.Normal, VertexElementFormat.Float3, 4 * sizeof(float)),
+		new VertexElementDescription("UV", VertexElementSemantic.TextureCoordinate, VertexElementFormat.Float2, 8 * sizeof(float)));
 
 	public const string shaderEntryPointSuffix = "";
 	public const string shaderVertexOuputName = "VertexOutput_Basic";
