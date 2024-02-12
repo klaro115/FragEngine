@@ -86,6 +86,7 @@ namespace FragEngine3.Graphics.Components
 		private CameraInstance? shadowCameraInstance = null;
 		private Framebuffer? shadowMapFrameBuffer = null;
 		private DeviceBuffer? shadowCbCamera = null;
+		private CBCamera shadowCbCameraData = default;
 		private ResourceSet? shadowResSetCamera = null;
 		private Matrix4x4 mtxShadowWorld2Clip = Matrix4x4.Identity;
 		private uint shadowMapIdx = 0;
@@ -348,6 +349,7 @@ namespace FragEngine3.Graphics.Components
 				shadowMapIdx,
 				0,
 				0,
+				ref shadowCbCameraData,
 				ref shadowCbCamera,
 				out bool cbCameraChanged))
 			{

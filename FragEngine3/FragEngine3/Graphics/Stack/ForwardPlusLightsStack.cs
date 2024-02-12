@@ -43,6 +43,7 @@ public sealed class ForwardPlusLightsStack(GraphicsCore _core) : IGraphicsStack
 
 	// Global resources:
 	private DeviceBuffer? cbScene = null;
+	private CBScene cbSceneData = default;
 	private readonly Stack<CommandList> commandListPool = new();
 	private readonly Stack<CommandList> commandListsInUse = new();
 	private ResourceLayout? resLayoutCamera = null;
@@ -498,6 +499,7 @@ public sealed class ForwardPlusLightsStack(GraphicsCore _core) : IGraphicsStack
 		if (!CameraUtility.UpdateConstantBuffer_CBScene(
 			in core,
 			in Scene!.settings,
+			ref cbSceneData,
 			ref cbScene,
 			out _outRebuildResSetCamera))
 		{

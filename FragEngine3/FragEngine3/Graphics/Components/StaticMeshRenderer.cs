@@ -1,4 +1,5 @@
-﻿using FragEngine3.Graphics.Components.Data;
+﻿using FragEngine3.Graphics.Components.ConstantBuffers;
+using FragEngine3.Graphics.Components.Data;
 using FragEngine3.Graphics.Contexts;
 using FragEngine3.Graphics.Internal;
 using FragEngine3.Graphics.Resources;
@@ -25,6 +26,7 @@ public sealed class StaticMeshRenderer(SceneNode _node) : Component(_node), IRen
 
 	private DeviceBuffer? cbObject = null;
 	private ResourceSet? resSetObject = null;
+	private CBObject cbObjectData = default;
 
 	private PipelineState? pipeline = null;
 	private PipelineState? shadowPipeline = null;
@@ -338,6 +340,7 @@ public sealed class StaticMeshRenderer(SceneNode _node) : Component(_node), IRen
 			in core,
 			in node,
 			BoundingRadius,
+			ref cbObjectData,
 			ref cbObject,
 			out bool cbObjectChanged))
 		{

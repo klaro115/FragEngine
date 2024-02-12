@@ -13,6 +13,7 @@ namespace FragEngine3.Graphics.Cameras
 		public static bool UpdateConstantBuffer_CBScene(		// Called once per scene frame.
 			in GraphicsCore _graphicsCore,
 			in SceneSettings _sceneSettings,
+			ref CBScene _cbSceneData,
 			ref DeviceBuffer? _cbScene,
 			out bool _outCbSceneChanged)
 		{
@@ -42,7 +43,7 @@ namespace FragEngine3.Graphics.Cameras
 			Vector3 ambientLightMid = _sceneSettings.AmbientLightIntensityMid;
 			Vector3 ambientLightHigh = _sceneSettings.AmbientLightIntensityHigh;
 
-			CBScene cbData = new()
+			_cbSceneData = new()
 			{
 				// Scene lighting:
 				ambientLightLow = new RgbaFloat(new(ambientLightLow, 0)),
@@ -51,7 +52,7 @@ namespace FragEngine3.Graphics.Cameras
 				shadowFadeStart = 0.9f,
 			};
 
-			_graphicsCore.Device.UpdateBuffer(_cbScene, 0, ref cbData, CBScene.byteSize);
+			_graphicsCore.Device.UpdateBuffer(_cbScene, 0, ref _cbSceneData, CBScene.byteSize);
 
 			return true;
 		}
@@ -64,6 +65,7 @@ namespace FragEngine3.Graphics.Cameras
 			uint _cameraIdx,
 			uint _activeLightCount,
 			uint _shadowMappedLightCount,
+			ref CBCamera _cbCameraData,
 			ref DeviceBuffer? _cbCamera,
 			out bool _outCbCameraChanged)
 		{
@@ -89,7 +91,7 @@ namespace FragEngine3.Graphics.Cameras
 				}
 			}
 
-			CBCamera cbData = new()
+			_cbCameraData = new()
 			{
 				// Camera vectors & matrices:
 				mtxWorld2Clip = _mtxWorld2Clip,
@@ -109,7 +111,7 @@ namespace FragEngine3.Graphics.Cameras
 				shadowMappedLightCount = Math.Min(_shadowMappedLightCount, _activeLightCount),
 			};
 
-			_cameraInstance.graphicsCore.Device.UpdateBuffer(_cbCamera, 0, ref cbData, CBCamera.packedByteSize);
+			_cameraInstance.graphicsCore.Device.UpdateBuffer(_cbCamera, 0, ref _cbCameraData, CBCamera.packedByteSize);
 
 			return true;
 		}

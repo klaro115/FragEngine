@@ -1,4 +1,5 @@
-﻿using Veldrid;
+﻿using FragEngine3.Graphics.Components.ConstantBuffers;
+using Veldrid;
 
 namespace FragEngine3.Graphics.Components.Internal
 {
@@ -14,6 +15,7 @@ namespace FragEngine3.Graphics.Components.Internal
 		#endregion
 		#region Fields
 
+		public CBCamera cbCameraData = default;
 		public DeviceBuffer? cbCamera;
 		public ResourceSet? resSetCamera;
 

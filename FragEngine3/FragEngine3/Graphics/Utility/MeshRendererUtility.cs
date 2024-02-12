@@ -12,6 +12,7 @@ namespace FragEngine3.Graphics.Utility
 			in GraphicsCore _core,
 			in SceneNode _node,
 			float _boundingRadius,
+			ref CBObject _cbObjectData,
 			ref DeviceBuffer? _cbObject,
 			out bool _outCbObjectChanged)
 		{
@@ -36,14 +37,14 @@ namespace FragEngine3.Graphics.Utility
 
 			Pose worldPose = _node.WorldTransformation;
 
-			CBObject objectData = new()
+			_cbObjectData = new()
 			{
 				mtxLocal2World = worldPose.Matrix,
 				worldPosition = worldPose.position,
 				boundingRadius = _boundingRadius,
 			};
 
-			_core.Device.UpdateBuffer(_cbObject, 0, ref objectData, CBObject.byteSize);
+			_core.Device.UpdateBuffer(_cbObject, 0, ref _cbObjectData, CBObject.byteSize);
 
 			return true;
 		}

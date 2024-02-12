@@ -426,6 +426,7 @@ public sealed class Camera : Component
 			_cameraIdx_,
 			_activeLightCount,
 			_shadowMappedLightCount,
+			ref passResources.cbCameraData,
 			ref passResources.cbCamera!,
 			out bool cbCameraChanged))
 		{
