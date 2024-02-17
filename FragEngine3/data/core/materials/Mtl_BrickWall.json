@@ -64,21 +64,21 @@
                 "IsBoundBySystem": false
             },
             {
-                "ResourceKey": "",
-                "SlotName": "SamplerMain",
-                "SlotIndex": 1,
-                "ResourceKind": 5,
-                "ShaderStageFlags": 16,
-                "Description": "WWW_7_N_W",
-                "IsBoundBySystem": false
-            },
-            {
                 "ResourceKey": "TexBrickWall_disp",
                 "SlotName": "TexParallax",
                 "SlotIndex": 4,
                 "ResourceKind": 3,
                 "ShaderStageFlags": 16,
                 "Description": null,
+                "IsBoundBySystem": false
+            },
+            {
+                "ResourceKey": "",
+                "SlotName": "SamplerMain",
+                "SlotIndex": 1,
+                "ResourceKind": 5,
+                "ShaderStageFlags": 16,
+                "Description": "WWW_7_N_W",
                 "IsBoundBySystem": false
             }
         ]

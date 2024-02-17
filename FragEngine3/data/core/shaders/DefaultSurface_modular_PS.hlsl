@@ -43,7 +43,7 @@ cbuffer CBScene : register(b0)
 };
 #endif //FEATURE_LIGHT_AMBIENT
 
-#ifdef FEATURE_LIGHT_SOURCES
+#if defined(FEATURE_LIGHT_SOURCES) || defined(FEATURE_PARALLAX)
 // Constant buffer containing all settings that apply for everything drawn by currently active camera:
 cbuffer CBCamera : register(b1)
 {
@@ -104,35 +104,25 @@ SamplerState SamplerShadowMaps : register(ps, s0);
 
 #if FEATURE_ALBEDO_TEXTURE == 1
 Texture2D<half4> TexMain : register(ps, t2);
-#ifndef HAS_SAMPLER
-    #define HAS_SAMPLER
-    SamplerState SamplerMain : register(s1);
-#endif
-#endif
+#endif //FEATURE_ALBEDO_TEXTURE == 1
 
 #ifdef FEATURE_NORMALS
 Texture2D<half3> TexNormal : register(ps, t3);
-#ifndef HAS_SAMPLER
-    #define HAS_SAMPLER
-    SamplerState SamplerMain : register(s1);
-#endif
-#endif
-
-#ifdef FEATURE_LIGHT_LIGHTMAPS
-Texture2D<half3> TexLightmap : register(ps, t4);
-#ifndef HAS_SAMPLER
-    #define HAS_SAMPLER
-    SamplerState SamplerMain : register(s1);
-#endif
-#endif
+#endif //FEATURE_NORMALS
 
 #ifdef FEATURE_PARALLAX
-Texture2D<half3> TexParallax : register(ps, t5);
-#ifndef HAS_SAMPLER
-    #define HAS_SAMPLER
+Texture2D<half> TexParallax : register(ps, t4);
+#endif //FEATURE_PARALLAX
+
+#ifdef FEATURE_LIGHT_LIGHTMAPS
+Texture2D<half3> TexLightmap : register(ps, t5);
+#endif //FEATURE_LIGHT_LIGHTMAPS
+
+#if FEATURE_ALBEDO_TEXTURE == 1 || defined(FEATURE_NORMALS) || defined(FEATURE_PARALLAX) || defined(FEATURE_LIGHT_LIGHTMAPS)
+    #define HAS_SAMPLER_MAIN
     SamplerState SamplerMain : register(s1);
-#endif
-#endif
+#endif //HAS_SAMPLER_MAIN
+
 
 /**************** VERTEX OUTPUT: ***************/
 
@@ -154,6 +144,7 @@ struct VertexOutput_Extended
 #endif //VARIANT_EXTENDED
 
 #ifdef FEATURE_LIGHT
+
 /****************** LIGHTING: ******************/
 
 #ifdef FEATURE_LIGHT_AMBIENT
@@ -305,9 +296,87 @@ half3 ApplyNormalMap(const in half3 _worldNormal, const in half3 _worldTangent, 
 #ifdef FEATURE_PARALLAX
 /****************** PARALLAX: ******************/
 
-half2 ApplyParallaxMap(const in half2 _uv)
+float3 ProjectOnPlane(const float3 _vector, const float3 _planeNormal)
 {
-    return _uv;
+    return _vector - dot(_vector, _planeNormal);
+}
+
+half2 WorldOffset2Pixel(
+    const float3 _worldOffset,
+    const in float3 _ddxPos,
+    const in float3 _ddyPos,
+    const in half2 _ddxUV,
+    const in half2 _ddyUV)
+{
+    return
+        _ddxUV * (half)dot(_worldOffset, _ddxPos) +
+        _ddyUV * (half)dot(_worldOffset, _ddyPos);
+}
+
+half2 ApplyParallaxMap(const in float3 _worldPosition, const in float3 _surfaceNormal, const half2 _uv)
+{
+    static const float MAX_DEPTH = 1;
+
+    const half height = TexParallax.Sample(SamplerMain, _uv) * MAX_DEPTH;
+
+    const float3 viewDir = normalize(_worldPosition - cameraPosition.xyz);
+    const float3 viewBinormal = cross(_surfaceNormal, viewDir);
+    const float3 viewTangent = normalize(cross(_surfaceNormal, viewBinormal));
+
+    half2 offset = viewTangent.xy * height;
+
+    return _uv * (1 + height);
+
+
+
+    /*
+    static const uint MAX_ITERATIONS = 10;
+    static const float INV_MAX_ITERATIONS = 1.0 / MAX_ITERATIONS;
+
+    // Calculate spatial resolution of UV around current pixel:
+    const half2 ddxUV = ddx(_uv);
+    const half2 ddyUV = ddy(_uv);
+    const float3 ddxPos = ddx(_worldPosition);
+    const float3 ddyPos = ddy(_worldPosition);
+    
+    // Determine upper and lower boundaries for intersect:
+    const float3 viewDir = normalize(_worldPosition - cameraPosition.xyz);
+    const float maxDist = MAX_DEPTH / dot(viewDir, _surfaceNormal);
+
+    const float intervalStep = 0.01;// maxDist * INV_MAX_ITERATIONS;
+    const float3 intervalOffsetPos = viewDir * intervalStep;
+    const half2 intervalOffsetUV = WorldOffset2Pixel(intervalOffsetPos, ddxPos, ddyPos, ddxUV, ddyUV);
+
+    half2 lastSurfaceUV = _uv;
+
+    // Iteratively approach intersect point using Newton approximation:
+    for (uint i = 0; i < MAX_ITERATIONS; ++i)
+    {
+        float k = i * intervalStep;
+
+        // Determine physical position on mid:
+        float3 offsetPos = i * intervalOffsetPos;
+        half2 offsetUV = i * intervalOffsetUV;
+
+        // Sample actual height from texture:
+        half2 uvAtOffset = _uv + offsetUV;
+        half heightSampled = TexParallax.Sample(SamplerMain, uvAtOffset) * (half)MAX_DEPTH;
+
+        // Calculate physical height of mid point:
+        half heightPhysical = (half)-dot(_surfaceNormal, offsetPos);
+
+        // Progressively advance or retract sampling point:
+        if (heightPhysical >= heightSampled)
+        {
+            lastSurfaceUV = uvAtOffset;
+        }
+    }
+
+    half heightSampled = TexParallax.Sample(SamplerMain, uvAtOffset) * (half)MAX_DEPTH;
+
+
+    return lastSurfaceUV;
+    */
 }
 #endif
 
@@ -315,16 +384,30 @@ half2 ApplyParallaxMap(const in half2 _uv)
 
 half4 Main_Pixel(in VertexOutput_Basic inputBasic) : SV_Target0
 {
+    #ifdef FEATURE_PARALLAX
+    // Recalculate UV from parallax map:
+    float2 uv = ApplyParallaxMap(inputBasic.worldPosition, inputBasic.normal, inputBasic.uv);
+    #else
+    float2 uv = inputBasic.uv;
+    #endif //FEATURE_PARALLAX
+
     #if FEATURE_ALBEDO_TEXTURE == 1
     // Sample base color from main texture:
-    half4 albedo = TexMain.Sample(SamplerMain, inputBasic.uv);
+    half4 albedo = TexMain.Sample(SamplerMain, uv);
     #else
     half4 albedo = FEATURE_ALBEDO_COLOR;
     #endif //FEATURE_ALBEDO_TEXTURE == 1
 
+    //TEST TEST TEST TEST
+    #ifdef FEATURE_PARALLAX
+    const half height = TexParallax.Sample(SamplerMain, inputBasic.uv);
+    //albedo.xyz *= height;
+    #endif //FEATURE_PARALLAX
+    //TEST TEST TEST TEST
+
     #ifdef FEATURE_NORMALS
     // Calculate normals from normal map:
-    half3 normal = TexNormal.Sample(SamplerMain, inputBasic.uv);
+    half3 normal = TexNormal.Sample(SamplerMain, uv);
     normal = ApplyNormalMap(inputBasic.normal, half3(0, 0, 1), half3(1, 0, 0), normal);
     #else
     half3 normal = inputBasic.normal;
@@ -332,7 +415,7 @@ half4 Main_Pixel(in VertexOutput_Basic inputBasic) : SV_Target0
 
     #ifdef FEATURE_LIGHT
     // Apply basic phong lighting:
-    const half3 totalLightIntensity = CalculateTotalLightIntensity(inputBasic.worldPosition, normal, inputBasic.normal, inputBasic.uv);
+    const half3 totalLightIntensity = CalculateTotalLightIntensity(inputBasic.worldPosition, normal, inputBasic.normal, uv);
 
     albedo *= half4(totalLightIntensity, 1);
     #endif //FEATURE_LIGHT
@@ -344,16 +427,30 @@ half4 Main_Pixel(in VertexOutput_Basic inputBasic) : SV_Target0
 #ifdef VARIANT_EXTENDED
 half4 Main_Pixel_Ext(in VertexOutput_Basic inputBasic, in VertexOutput_Extended inputExt) : SV_Target0
 {
+    #ifdef FEATURE_PARALLAX
+    // Recalculate UV from parallax map:
+    float2 uv = ApplyParallaxMap(inputBasic.worldPosition, inputBasic.normal, inputBasic.uv);
+    #else
+    float2 uv = inputBasic.uv;
+    #endif //FEATURE_PARALLAX
+
     #if FEATURE_ALBEDO_TEXTURE == 1
     // Sample base color from main texture:
-    half4 albedo = TexMain.Sample(SamplerMain, inputBasic.uv);
+    half4 albedo = TexMain.Sample(SamplerMain, uv);
     #else
     half4 albedo = FEATURE_ALBEDO_COLOR;
     #endif //FEATURE_ALBEDO_TEXTURE == 1
 
+    //TEST TEST TEST TEST
+    #ifdef FEATURE_PARALLAX
+    const half height = TexParallax.Sample(SamplerMain, inputBasic.uv);
+    //albedo.xyz *= height;
+    #endif //FEATURE_PARALLAX
+    //TEST TEST TEST TEST
+
     #ifdef FEATURE_NORMALS
     // Calculate normals from normal map:
-    half3 normal = TexNormal.Sample(SamplerMain, inputBasic.uv);
+    half3 normal = TexNormal.Sample(SamplerMain, uv);
     normal = ApplyNormalMap(inputBasic.normal, inputExt.tangent, inputExt.binormal, normal);
     #else
     half3 normal = inputBasic.normal;
@@ -361,7 +458,7 @@ half4 Main_Pixel_Ext(in VertexOutput_Basic inputBasic, in VertexOutput_Extended 
 
     #ifdef FEATURE_LIGHT
     // Apply basic phong lighting:
-    const half3 totalLightIntensity = CalculateTotalLightIntensity(inputBasic.worldPosition, normal, inputBasic.normal, inputBasic.uv);
+    const half3 totalLightIntensity = CalculateTotalLightIntensity(inputBasic.worldPosition, normal, inputBasic.normal, uv);
 
     albedo *= half4(totalLightIntensity, 1);
     #endif //FEATURE_LIGHT

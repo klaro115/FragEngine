@@ -28,44 +28,45 @@ public static class ShaderGenerator
 
 	public static bool CreatePixelShaderVariation(ResourceManager _resourceManager, in ShaderGenConfig _config, EnginePlatformFlag _platformFlags, out string _outShaderCode)
 	{
-		// Identify the shader language of choice for current platform setup:
-		ShaderGenLanguage language;
-		if (_platformFlags.HasFlag(EnginePlatformFlag.GraphicsAPI_D3D))
-			language = ShaderGenLanguage.HLSL;
-		else if (_platformFlags.HasFlag(EnginePlatformFlag.GraphicsAPI_Metal))
-			language = ShaderGenLanguage.Metal;
-		else
-			language = ShaderGenLanguage.GLSL;
-
-		// Determine name and extension for template shader code file:
-		string templateFileName = language switch
-		{
-			ShaderGenLanguage.HLSL => $"{MODULAR_SURFACE_SHADER_PS_NAME_BASE}.hlsl",
-			ShaderGenLanguage.Metal => $"{MODULAR_SURFACE_SHADER_PS_NAME_BASE}.metal",
-			ShaderGenLanguage.GLSL => $"{MODULAR_SURFACE_SHADER_PS_NAME_BASE}.glsl",
-			_ => string.Empty,
-		};
-		if (string.IsNullOrEmpty(templateFileName))
-		{
-			_resourceManager.engine.Logger.LogError($"Cannot load default pixel shader template code; file name could not be found! (Shader language: '{language}')");
-			_outShaderCode = string.Empty;
-			return false;
-		}
-
-		// Construct full file path inside core shader resource folder:
-		string coreResourcePath = _resourceManager.fileGatherer.coreResourcePath ?? string.Empty;
-		string coreShadersPath = Path.Combine(coreResourcePath, "shaders");
-		string templateFilePath = Path.Combine(coreShadersPath, templateFileName);
-
-		if (!File.Exists(templateFilePath))
-		{
-			_resourceManager.engine.Logger.LogError($"Template code file for default pixel shader could not be found! (File path: '{templateFilePath}')");
-			_outShaderCode = string.Empty;
-			return false;
-		}
-
+		// Only load template code file once, cached code is used for all subsequent shader imports:
 		if (string.IsNullOrEmpty(templateCodePS))
 		{
+			// Identify the shader language of choice for current platform setup:
+			ShaderGenLanguage language;
+			if (_platformFlags.HasFlag(EnginePlatformFlag.GraphicsAPI_D3D))
+				language = ShaderGenLanguage.HLSL;
+			else if (_platformFlags.HasFlag(EnginePlatformFlag.GraphicsAPI_Metal))
+				language = ShaderGenLanguage.Metal;
+			else
+				language = ShaderGenLanguage.GLSL;
+
+			// Determine name and extension for template shader code file:
+			string templateFileName = language switch
+			{
+				ShaderGenLanguage.HLSL => $"{MODULAR_SURFACE_SHADER_PS_NAME_BASE}.hlsl",
+				ShaderGenLanguage.Metal => $"{MODULAR_SURFACE_SHADER_PS_NAME_BASE}.metal",
+				ShaderGenLanguage.GLSL => $"{MODULAR_SURFACE_SHADER_PS_NAME_BASE}.glsl",
+				_ => string.Empty,
+			};
+			if (string.IsNullOrEmpty(templateFileName))
+			{
+				_resourceManager.engine.Logger.LogError($"Cannot load default pixel shader template code; file name could not be found! (Shader language: '{language}')");
+				_outShaderCode = string.Empty;
+				return false;
+			}
+
+			// Construct full file path inside core shader resource folder:
+			string coreResourcePath = _resourceManager.fileGatherer.coreResourcePath ?? string.Empty;
+			string coreShadersPath = Path.Combine(coreResourcePath, "shaders");
+			string templateFilePath = Path.Combine(coreShadersPath, templateFileName);
+
+			if (!File.Exists(templateFilePath))
+			{
+				_resourceManager.engine.Logger.LogError($"Template code file for default pixel shader could not be found! (File path: '{templateFilePath}')");
+				_outShaderCode = string.Empty;
+				return false;
+			}
+
 			// Read full template code file:
 			try
 			{
@@ -78,7 +79,6 @@ public static class ShaderGenerator
 				return false;
 			}
 		}
-		// ^Note: Only loaded once, cached template code is used all for subsequent shader imports.
 		
 		StringBuilder codeBuilder = new(templateCodePS);
 		int definesMaxEndIdx = Math.Min(1800, codeBuilder.Length);

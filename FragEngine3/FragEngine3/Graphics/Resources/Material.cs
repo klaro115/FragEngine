@@ -609,6 +609,7 @@ public class Material(GraphicsCore _core, ResourceHandle _handle) : Resource(_ha
 			catch (Exception ex)
 			{
 				logger.LogException($"Failed to create resource layout for material resource '{_handle}'!", ex);
+				boundResourceLayout?.Dispose();
 				_outMaterial = null;
 				return false;
 			}

@@ -168,31 +168,33 @@ namespace FragEngine3.Graphics.Resources.Data
 				return false;
 			}
 
-			ResourceLayoutElementDescription[] elements = new ResourceLayoutElementDescription[resourceCount];
+			// Assemble resource layout description and binding keys:
+			ResourceLayoutElementDescription[] layoutElements = new ResourceLayoutElementDescription[resourceCount];
 			_outResourceKeysAndIndices = new BoundResourceKeys[resourceCount];
 			for (int i = 0; i < resourceCount; i++)
 			{
 				BoundResourceData resData = Resources.BoundResources![i];
 
-				elements[i] = new(
+				layoutElements[i] = new ResourceLayoutElementDescription(
 					resData.SlotName,
 					resData.ResourceKind,
 					resData.ShaderStageFlags);
 
-				_outResourceKeysAndIndices[i] = new(
+				_outResourceKeysAndIndices[i] = new BoundResourceKeys(
 					resData.ResourceKey ?? string.Empty,
 					i,
 					resData.SlotIndex,
 					resData.ResourceKind,
 					resData.Description);
 
+				// If the data is flagged as such, or if there is a texture resource without a key, mark resource set as being bound by the system:
 				if (resData.IsBoundBySystem || (string.IsNullOrEmpty(resData.ResourceKey) && resData.ResourceKind != ResourceKind.Sampler))
 				{
 					_outUseExternalBoundResources = true;
 				}
 			}
 
-			_outLayoutDesc = new(elements);
+			_outLayoutDesc = new(layoutElements);
 			return true;
 		}
 

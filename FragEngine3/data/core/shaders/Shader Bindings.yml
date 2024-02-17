@@ -53,3 +53,27 @@ MATERIAL:                                 owned by material, semi-persistent
 - SET 2:    (ResSetBound)                               owned by renderer, different for each material (main + shadow)
   Name:                     HLSL Slot:    Mtl Slot:     Updated:    Owner:
   - [...] Bound Resources   b3+, t2+, s1+ b4+, t1+, s1+ -           mat
+
+
+############################################
+# ShaderGen Example:
+
+Import:     shadergen=At_Nyy_Ly100p0
+Backend:    D3D11, HLSL
+
+- SET 0:    ResSetCamera
+  - CBScene                 b0
+  - CBCamera                b1
+  - BufLights               t0    unused
+  - TexShadowMaps           t1    unused
+  - SamplerShadowMaps       s0    unused
+
+- SET 1:    ResSetObject
+  - CBObject                b2    VS only
+
+- SET 2:    ResSetBound
+  - TexMain                 t2
+  - TexNormals              t3
+  - TexParallax             t4
+  - TexLightmap             t5    unused
+  - SamplerMain             s1
