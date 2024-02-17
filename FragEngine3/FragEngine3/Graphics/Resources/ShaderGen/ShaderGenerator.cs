@@ -7,6 +7,11 @@ namespace FragEngine3.Graphics.Resources.ShaderGen;
 
 public static class ShaderGenerator
 {
+	#region Fields
+
+	private static string templateCodePS = string.Empty;
+
+	#endregion
 	#region Constants
 
 	public const string MODULAR_SURFACE_SHADER_PS_NAME_BASE = "DefaultSurface_modular_PS";
@@ -59,21 +64,23 @@ public static class ShaderGenerator
 			return false;
 		}
 
-		// Read full template code file:
-		string templateCodeTxt;
-		try
+		if (string.IsNullOrEmpty(templateCodePS))
 		{
-			templateCodeTxt = File.ReadAllText(templateFilePath, Encoding.ASCII);
+			// Read full template code file:
+			try
+			{
+				templateCodePS = File.ReadAllText(templateFilePath, Encoding.ASCII);
+			}
+			catch (Exception ex)
+			{
+				_resourceManager.engine.Logger.LogException($"Failed to read template code file for default pixel shader! (File path: '{templateFilePath}')", ex);
+				_outShaderCode = string.Empty;
+				return false;
+			}
 		}
-		catch (Exception ex)
-		{
-			_resourceManager.engine.Logger.LogException($"Failed to read template code file for default pixel shader! (File path: '{templateFilePath}')", ex);
-			_outShaderCode = string.Empty;
-			return false;
-		}
-		//^TODO: Only do this once, then cache template code for subsequent shader imports!
+		// ^Note: Only loaded once, cached template code is used all for subsequent shader imports.
 		
-		StringBuilder codeBuilder = new(templateCodeTxt);
+		StringBuilder codeBuilder = new(templateCodePS);
 		int definesMaxEndIdx = Math.Min(1800, codeBuilder.Length);
 
 		// Drop all flags in config that are based on other feature flags that are disabled:

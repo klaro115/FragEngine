@@ -15,8 +15,7 @@
             "DataOffset": 0,
             "DataSize": 0,
             "DependencyCount": 0,
-            "Dependencies": null,
-            "ImportFlags": "shaderGen=At_Nyy_Ly101p1"
+            "Dependencies": null
         }
     ]
 }

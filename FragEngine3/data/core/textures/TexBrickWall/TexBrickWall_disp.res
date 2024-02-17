@@ -1,5 +1,5 @@
 {
-    "DataFilePath": "./TexBrickWall_disp.png",
+    "DataFilePath": "./TexBrickWall_disp.bmp",
     "DataFileType": 0,
     "DataFileSize": 0,
     "UncompressedFileSize": 0,
