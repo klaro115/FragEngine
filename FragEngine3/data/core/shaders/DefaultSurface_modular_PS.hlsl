@@ -137,8 +137,8 @@ struct VertexOutput_Basic
 #ifdef VARIANT_EXTENDED
 struct VertexOutput_Extended
 {
-    float3 tangent : NORMAL1;
-    float3 binormal : NORMAL2;
+    float3 tangent : TANGENT0;
+    float3 binormal : NORMAL1;
     float2 uv2 : TEXCOORD1;
 };
 #endif //VARIANT_EXTENDED
@@ -303,80 +303,65 @@ float3 ProjectOnPlane(const float3 _vector, const float3 _planeNormal)
 
 half2 WorldOffset2Pixel(
     const float3 _worldOffset,
-    const in float3 _ddxPos,
-    const in float3 _ddyPos,
-    const in half2 _ddxUV,
-    const in half2 _ddyUV)
+    const in float3 _worldPosition,
+    const in half2 _uv)
 {
+    const float3 ddxPos = ddx(_worldPosition);
+    const float3 ddyPos = ddy(_worldPosition);
+    const float invWorldPerPixelX = 1.0 / length(ddxPos);
+    const float invWorldPerPixelY = 1.0 / length(ddyPos);
     return
-        _ddxUV * (half)dot(_worldOffset, _ddxPos) +
-        _ddyUV * (half)dot(_worldOffset, _ddyPos);
+        ddx(_uv) * (half)dot(_worldOffset, ddxPos * invWorldPerPixelX) +
+        ddy(_uv) * (half)dot(_worldOffset, ddyPos * invWorldPerPixelY);
 }
 
 half2 ApplyParallaxMap(const in float3 _worldPosition, const in float3 _surfaceNormal, const half2 _uv)
 {
-    static const float MAX_DEPTH = 1;
+    static const float MAX_DEPTH = 0.05;
+    static const uint MAX_ITERATIONS = 6;
 
-    const half height = TexParallax.Sample(SamplerMain, _uv) * MAX_DEPTH;
-
-    const float3 viewDir = normalize(_worldPosition - cameraPosition.xyz);
-    const float3 viewBinormal = cross(_surfaceNormal, viewDir);
-    const float3 viewTangent = normalize(cross(_surfaceNormal, viewBinormal));
-
-    half2 offset = viewTangent.xy * height;
-
-    return _uv * (1 + height);
-
-
+    const float3 viewOffset = _worldPosition - cameraPosition.xyz;
+    const float invViewDist = 1.0 / length(viewOffset);
+    const float3 viewDir = viewOffset * invViewDist;
 
     /*
-    static const uint MAX_ITERATIONS = 10;
-    static const float INV_MAX_ITERATIONS = 1.0 / MAX_ITERATIONS;
-
-    // Calculate spatial resolution of UV around current pixel:
-    const half2 ddxUV = ddx(_uv);
-    const half2 ddyUV = ddy(_uv);
-    const float3 ddxPos = ddx(_worldPosition);
-    const float3 ddyPos = ddy(_worldPosition);
+    const float3 surfaceDir = _viewTangent;
     
-    // Determine upper and lower boundaries for intersect:
-    const float3 viewDir = normalize(_worldPosition - cameraPosition.xyz);
-    const float maxDist = MAX_DEPTH / dot(viewDir, _surfaceNormal);
+    const half depth = TexParallax.Sample(SamplerMain, _uv) * MAX_DEPTH;
 
-    const float intervalStep = 0.01;// maxDist * INV_MAX_ITERATIONS;
-    const float3 intervalOffsetPos = viewDir * intervalStep;
-    const half2 intervalOffsetUV = WorldOffset2Pixel(intervalOffsetPos, ddxPos, ddyPos, ddxUV, ddyUV);
+    return _uv - WorldOffset2Pixel(surfaceDir * depth, _worldPosition, _uv) * 100;
+    */
 
-    half2 lastSurfaceUV = _uv;
+    const float3 maxRayOffset = viewDir * abs(MAX_DEPTH / dot(viewDir, _surfaceNormal));
+    const float3 maxSurfaceOffset = ProjectOnPlane(maxRayOffset, _surfaceNormal);
+    const half2 maxUvOffset = WorldOffset2Pixel(maxSurfaceOffset, _worldPosition, _uv) * 200 * invViewDist;
 
-    // Iteratively approach intersect point using Newton approximation:
+    half2 uvOffset;
+    half2 curUV = _uv;
+    float minK = 0.0;
+    float maxK = 1.0;
+
     for (uint i = 0; i < MAX_ITERATIONS; ++i)
     {
-        float k = i * intervalStep;
+        float k = 0.5 * (minK + maxK);
+        
+        const float3 rayOffset = k * maxRayOffset;
+        uvOffset = k * maxUvOffset;
+        curUV = _uv + uvOffset;
 
-        // Determine physical position on mid:
-        float3 offsetPos = i * intervalOffsetPos;
-        half2 offsetUV = i * intervalOffsetUV;
+        const half sampledHeight = (1.0 - TexParallax.Sample(SamplerMain, curUV)) * MAX_DEPTH;
+        const half rayHeight = abs(dot(rayOffset, _surfaceNormal));
 
-        // Sample actual height from texture:
-        half2 uvAtOffset = _uv + offsetUV;
-        half heightSampled = TexParallax.Sample(SamplerMain, uvAtOffset) * (half)MAX_DEPTH;
-
-        // Calculate physical height of mid point:
-        half heightPhysical = (half)-dot(_surfaceNormal, offsetPos);
-
-        // Progressively advance or retract sampling point:
-        if (heightPhysical >= heightSampled)
+        if (sampledHeight > rayHeight)
         {
-            lastSurfaceUV = uvAtOffset;
+            minK = k;
+        }
+        else
+        {
+            maxK = k;
         }
     }
-
-    half heightSampled = TexParallax.Sample(SamplerMain, uvAtOffset) * (half)MAX_DEPTH;
-
-
-    return lastSurfaceUV;
-    */
+    return curUV + normalize(uvOffset) * 0.002;
 }
 #endif
 
@@ -397,13 +382,6 @@ half4 Main_Pixel(in VertexOutput_Basic inputBasic) : SV_Target0
     #else
     half4 albedo = FEATURE_ALBEDO_COLOR;
     #endif //FEATURE_ALBEDO_TEXTURE == 1
-
-    //TEST TEST TEST TEST
-    #ifdef FEATURE_PARALLAX
-    const half height = TexParallax.Sample(SamplerMain, inputBasic.uv);
-    //albedo.xyz *= height;
-    #endif //FEATURE_PARALLAX
-    //TEST TEST TEST TEST
 
     #ifdef FEATURE_NORMALS
     // Calculate normals from normal map:
@@ -440,13 +418,6 @@ half4 Main_Pixel_Ext(in VertexOutput_Basic inputBasic, in VertexOutput_Extended 
     #else
     half4 albedo = FEATURE_ALBEDO_COLOR;
     #endif //FEATURE_ALBEDO_TEXTURE == 1
-
-    //TEST TEST TEST TEST
-    #ifdef FEATURE_PARALLAX
-    const half height = TexParallax.Sample(SamplerMain, inputBasic.uv);
-    //albedo.xyz *= height;
-    #endif //FEATURE_PARALLAX
-    //TEST TEST TEST TEST
 
     #ifdef FEATURE_NORMALS
     // Calculate normals from normal map:

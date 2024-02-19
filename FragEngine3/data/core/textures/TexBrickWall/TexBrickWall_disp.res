@@ -16,7 +16,7 @@
             "DataSize": 0,
             "DependencyCount": 0,
             "Dependencies": null,
-            "ImportFlags": "SDR"
+            "ImportFlags": "SDR;mirrorY"
         }
     ]
 }

@@ -82,8 +82,8 @@ struct VertexOutput_Basic
 
 struct VertexOutput_Extended
 {
-    float3 tangent : NORMAL1;
-    float3 binormal : NORMAL2;
+    float3 tangent : TANGENT0;
+    float3 binormal : NORMAL1;
     float2 uv2 : TEXCOORD1;
 };
 

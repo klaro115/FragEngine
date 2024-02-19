@@ -80,8 +80,8 @@ struct VertexOutput_Basic
 
 struct VertexOutput_Extended
 {
-    float3 tangent : NORMAL1;
-    float3 binormal : NORMAL2;
+    float3 tangent : TANGENT0;
+    float3 binormal : NORMAL1;
     float2 uv2 : TEXCOORD1;
 };
 
@@ -92,10 +92,9 @@ void Main_Vertex(
     out VertexOutput_Basic outputBasic)
 {
     float4x4 mtxLocal2Clip = mul(mtxWorld2Clip, mtxLocal2World);
+    float3 viewDir = worldPosition - cameraPosition.xyz;
 
-    float4 projResult = mul(mtxLocal2Clip, float4(inputBasic.position, 1));
-
-    outputBasic.position = projResult;
+    outputBasic.position = mul(mtxLocal2Clip, float4(inputBasic.position, 1));
     outputBasic.worldPosition = mul(mtxLocal2World, float4(inputBasic.position, 1)).xyz;
     outputBasic.normal = normalize(mul(mtxLocal2World, float4(inputBasic.normal, 0)).xyz);
     outputBasic.uv = inputBasic.uv;
@@ -108,10 +107,9 @@ void Main_Vertex_Ext(
     out VertexOutput_Extended outputExt)
 {
     float4x4 mtxLocal2Clip = mul(mtxWorld2Clip, mtxLocal2World);
+    float3 viewDir = worldPosition - cameraPosition.xyz;
 
-    float4 projResult = mul(mtxLocal2Clip, float4(inputBasic.position, 1));
-
-    outputBasic.position = projResult;
+    outputBasic.position = mul(mtxLocal2Clip, float4(inputBasic.position, 1));
     outputBasic.worldPosition = mul(mtxLocal2World, float4(inputBasic.position, 1)).xyz;
     outputBasic.normal = normalize(mul(mtxLocal2World, float4(inputBasic.normal, 0)).xyz);
     outputBasic.uv = inputBasic.uv;
