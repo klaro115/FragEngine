@@ -14,6 +14,7 @@ public struct ShaderGenConfig
 	// Normals:
 	public bool useNormalMap;                           // Whether to use normal maps, which will be used for all further shading. "TexNormal" is added.
 	public bool useParallaxMap;							// Whether to use height maps to offset UVs for additional simulated depth. "TexParallax" is added.
+	public bool useParallaxMapFull;                     // Whether to use full iteratively traced parallax with occlusion, instead of just simple UV offsetting.
 	public string? samplerTexNormal;					// For normal maps, use a sampler with this name. Main texture sampler (or "SamplerMain") is used if null or empty.
 
 	// Lighting:
@@ -39,6 +40,8 @@ public struct ShaderGenConfig
 		samplerTexMain = null,
 
 		useNormalMap = false,
+		useParallaxMap = false,
+		useParallaxMapFull = false,
 		samplerTexNormal = null,
 
 		applyLighting = true,
@@ -56,6 +59,8 @@ public struct ShaderGenConfig
 		samplerTexMain = null,
 
 		useNormalMap = false,
+		useParallaxMap = false,
+		useParallaxMapFull = false,
 		samplerTexNormal = null,
 
 		applyLighting = true,
@@ -73,6 +78,8 @@ public struct ShaderGenConfig
 		samplerTexMain = null,
 
 		useNormalMap = true,
+		useParallaxMap = false,
+		useParallaxMapFull = false,
 		samplerTexNormal = null,
 
 		applyLighting = true,
@@ -99,6 +106,7 @@ public struct ShaderGenConfig
 		{
 			samplerTexNormal = null;
 		}
+		useParallaxMapFull &= useParallaxMap;
 
 		// Lighting:
 		useAmbientLight &= applyLighting;
@@ -121,6 +129,7 @@ public struct ShaderGenConfig
 		// Format: "Nyn"
 		char normalsYN = BoolToYN(useNormalMap);
 		char parallaxYN = BoolToYN(useParallaxMap);
+		char parallaxFull = BoolTo01(useParallaxMap && useParallaxMapFull);
 
 		// Lighting:
 		// Format: "Ly101p1"
@@ -139,7 +148,7 @@ public struct ShaderGenConfig
 
 		// Assemble base text containing only flags:
 		// Format: "Ac_Nyn_Ly101p1_V100"
-		string txt = $"A{albedoSrc}_N{normalsYN}{parallaxYN}_L{lightingYN}{useAmbient}{useLgtMaps}{useLgtSrcs}{lightModel}{useShaMaps}_V{variantExt}{variantBle}{variantAni}";
+		string txt = $"A{albedoSrc}_N{normalsYN}{parallaxYN}{parallaxFull}_L{lightingYN}{useAmbient}{useLgtMaps}{useLgtSrcs}{lightModel}{useShaMaps}_V{variantExt}{variantBle}{variantAni}";
 
 		// Albedo start color literal or sampler name:
 		if (albedoSource == ShaderGenAlbedoSource.SampleTexMain && !string.IsNullOrEmpty(samplerTexMain))
@@ -242,6 +251,7 @@ public struct ShaderGenConfig
 			if (cType != 's')
 			{
 				config.useParallaxMap = _part.Length >= 3 && _part[2] == 'y';
+				config.useParallaxMapFull = _part.Length >= 4 && _part[3] == '1';
 			}
 			return true;
 		}

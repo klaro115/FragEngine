@@ -111,6 +111,10 @@ public static class ShaderGenerator
 			{
 				RemoveDefine(codeBuilder, "#define FEATURE_NORMALS", definesMaxEndIdx);
 			}
+			if (!_config.useParallaxMap || !_config.useParallaxMapFull)
+			{
+				RemoveDefine(codeBuilder, "#define FEATURE_PARALLAX_FULL", definesMaxEndIdx);
+			}
 			if (!_config.useParallaxMap)
 			{
 				RemoveDefine(codeBuilder, "#define FEATURE_PARALLAX", definesMaxEndIdx);

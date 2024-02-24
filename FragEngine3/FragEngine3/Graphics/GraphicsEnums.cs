@@ -34,14 +34,21 @@ namespace FragEngine3.Graphics
 		/// </summary>
 		Volumetric,
 		/// <summary>
-		/// Post-processing and screen-space effects, added after the scene has been fully composited.
+		/// Post-processing and screen-space effects, added after the scene has been fully composited.<para/>
+		/// Examples: Depth of field, bloom, motion blur, and other visual effects that only apply to the scene,
+		/// but not to the UI.
 		/// </summary>
-		PostProcessing,
+		PostProcessing_Scene,
 		/// <summary>
 		/// User-interface content should generally be drawn last, as it is composited on top of all scene
 		/// visuals, and is usually not affected by post-processing and lighting effects.
 		/// </summary>
 		UI,
+		/// <summary>
+		/// Post-processing effects, applied to the final output after the scene, compositing, and UI have been fully rendered.<para/>
+		/// Example: A blur effect that also affects the UI.
+		/// </summary>
+		PostProcessing_PostUI,
 		/// <summary>
 		/// Custom render order and processing methods, defined through user-side code. A specicialized layer
 		/// must be added to the graphics stack to identify and handle these cases as the engine's built-in

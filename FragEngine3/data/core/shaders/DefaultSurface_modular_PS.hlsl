@@ -9,6 +9,7 @@
 // Normals:
 #define FEATURE_NORMALS                         // Whether to use normal maps in all further shading
 #define FEATURE_PARALLAX                        // Whether to use height/parallax maps to modulate UV sampling
+#define FEATURE_PARALLAX_FULL                   // Whether to use full iteratively traced parallax with occlusion, instead of just simple UV offsetting.
 
 // Lighting:
 #define FEATURE_LIGHT                           // Whether to apply lighting
@@ -318,19 +319,14 @@ half2 WorldOffset2Pixel(
 half2 ApplyParallaxMap(const in float3 _worldPosition, const in float3 _surfaceNormal, const half2 _uv)
 {
     static const float MAX_DEPTH = 0.05;
-    static const uint MAX_ITERATIONS = 6;
 
     const float3 viewOffset = _worldPosition - cameraPosition.xyz;
+    
+#ifdef FEATURE_PARALLAX_FULL
+    static const uint MAX_ITERATIONS = 6;
+
     const float invViewDist = 1.0 / length(viewOffset);
     const float3 viewDir = viewOffset * invViewDist;
-
-    /*
-    const float3 surfaceDir = _viewTangent;
-    
-    const half depth = TexParallax.Sample(SamplerMain, _uv) * MAX_DEPTH;
-
-    return _uv - WorldOffset2Pixel(surfaceDir * depth, _worldPosition, _uv) * 100;
-    */
 
     const float3 maxRayOffset = viewDir * abs(MAX_DEPTH / dot(viewDir, _surfaceNormal));
     const float3 maxSurfaceOffset = ProjectOnPlane(maxRayOffset, _surfaceNormal);
@@ -362,6 +358,13 @@ half2 ApplyParallaxMap(const in float3 _worldPosition, const in float3 _surfaceN
         }
     }
     return curUV + normalize(uvOffset) * 0.002;
+#else
+    const float3 surfaceDir = normalize(ProjectOnPlane(viewOffset, _surfaceNormal));
+    
+    const half depth = TexParallax.Sample(SamplerMain, _uv) * MAX_DEPTH;
+
+    return _uv - WorldOffset2Pixel(surfaceDir * depth, _worldPosition, _uv) * 100;
+#endif //FEATURE_PARALLAX_FULL
 }
 #endif
 
