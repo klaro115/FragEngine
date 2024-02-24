@@ -45,6 +45,10 @@ namespace FragEngine3.Graphics
 		/// </summary>
 		UI,
 		/// <summary>
+		/// Compositing the final image from the scene render and any UI or post-processing passes.
+		/// </summary>
+		Composition,
+		/// <summary>
 		/// Post-processing effects, applied to the final output after the scene, compositing, and UI have been fully rendered.<para/>
 		/// Example: A blur effect that also affects the UI.
 		/// </summary>
