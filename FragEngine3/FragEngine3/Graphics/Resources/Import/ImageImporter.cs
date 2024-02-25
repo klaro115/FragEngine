@@ -123,6 +123,10 @@ namespace FragEngine3.Graphics.Resources.Import
 			{
 				return BitmapImporter.ImportImage(_stream, out _outImageData);
 			}
+			else if (_formatExt == ".qoi")
+			{
+				return QoiImporter.ImportImage(_stream, out _outImageData);
+			}
 			//...
 			else if (MagickImporter.SupportsFormat(_formatExt))
 			{
