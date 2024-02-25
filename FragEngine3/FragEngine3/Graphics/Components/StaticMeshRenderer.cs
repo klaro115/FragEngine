@@ -23,6 +23,8 @@ public sealed class StaticMeshRenderer(SceneNode _node) : Component(_node), IRen
 
 	private Material? material = null;
 	private Material? shadowMaterial = null;
+	private StaticMesh? mesh = null;
+	private float meshBoundingRadius = 0.0f;
 
 	private DeviceBuffer? cbObject = null;
 	private ResourceSet? resSetObject = null;
@@ -55,11 +57,19 @@ public sealed class StaticMeshRenderer(SceneNode _node) : Component(_node), IRen
 	/// Gets a handle to mesh resource that is drawn by this renderer. A mesh provides the surface geometry of a 3D model.
 	/// </summary>
 	public ResourceHandle? MeshHandle { get; private set; } = null;
-	public StaticMesh? Mesh { get; private set; } = null;
+	public StaticMesh? Mesh
+	{
+		get => mesh;
+		private set => mesh = value;
+	}
 	/// <summary>
 	/// Gets the bounding sphere radius enclosing the renderer's mesh.
 	/// </summary>
-	public float BoundingRadius { get; private set; } = 0.0f;
+	public float BoundingRadius
+	{
+		get => meshBoundingRadius;
+		private set => meshBoundingRadius = value;
+	}
 
 	#endregion
 	#region Methods
@@ -293,30 +303,14 @@ public sealed class StaticMeshRenderer(SceneNode _node) : Component(_node), IRen
 		ref PipelineState? _currentPipeline)
 	{
 		// Check mesh and load it now if necessary:
-		if (Mesh == null || Mesh.IsDisposed)
+		if (!ResourceLoadUtility.EnsureMeshIsLoaded(MeshHandle, ref mesh, ref meshBoundingRadius, DontDrawUnlessFullyLoaded, out bool meshIsReady))
 		{
-			if (MeshHandle == null || !MeshHandle.IsValid)
-			{
-				return false;
-			}
-			// Abort drawing until mesh is ready, queue it up for background loading:
-			if (DontDrawUnlessFullyLoaded && !MeshHandle.IsLoaded)
-			{
-				if (MeshHandle.LoadState == ResourceLoadState.NotLoaded) MeshHandle.Load(false);
-				return true;
-			}
-
-			if (MeshHandle.GetResource(true, true) is not StaticMesh mesh || !mesh.IsInitialized)
-			{
-				Logger.LogError($"Failed to load static mesh resource from handle '{MeshHandle}'!");
-				return false;
-			}
-			Mesh = mesh;
-			BoundingRadius = Mesh.BoundingRadius;
+			return false;
 		}
-		
+		if (!meshIsReady) return true;
+
 		// Fetch geometry buffers:
-		if (!Mesh.GetGeometryBuffers(out DeviceBuffer[] vertexBuffers, out DeviceBuffer indexBuffer, out MeshVertexDataFlags vertexDataFlags))
+		if (!Mesh!.GetGeometryBuffers(out DeviceBuffer[] vertexBuffers, out DeviceBuffer indexBuffer, out MeshVertexDataFlags vertexDataFlags))
 		{
 			Logger.LogError($"Failed to retrieve geometry buffers for static mesh '{Mesh}'!");
 			return false;
