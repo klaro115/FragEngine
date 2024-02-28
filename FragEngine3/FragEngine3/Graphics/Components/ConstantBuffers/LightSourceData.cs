@@ -18,12 +18,13 @@ namespace FragEngine3.Graphics.Components.ConstantBuffers
 		public float spotMinDot;				// Minimum dot product between light ray direction and direction to pixel/fragment for a spot light to apply.
 		public Matrix4x4 mtxShadowWorld2Clip;	// Projection matrix, transforming world space position to clip space coordinates.
 		public uint shadowMapIdx;               // Index of the shadow map in texture array. Default=0, map at index 0 is always a 'blank' placeholder.
+		public uint shadowCascades;             // Number of shadow cascades used by this light source. Default=0, maps at indices after current will contain cascades.
 		public float shadowBias;				// Bias distance along surface normal when comparing against shadow depth. (this reduces stair-stepping artifacts)
 
 		#endregion
 		#region Constants
 
-		public const int byteSize = 3 * 3 * sizeof(float) + 3 * sizeof(float) + 2 * sizeof(uint) + 16 * sizeof(float);   // 120 bytes
+		public const int byteSize = 3 * 3 * sizeof(float) + 3 * sizeof(float) + 3 * sizeof(uint) + 16 * sizeof(float);   // 124 bytes
 		public const int packedByteSize = 128;
 		
 		public static readonly ResourceLayoutElementDescription ResourceLayoutElementDescLightBuffer = new("BufLights", ResourceKind.StructuredBufferReadOnly, ShaderStages.Fragment);

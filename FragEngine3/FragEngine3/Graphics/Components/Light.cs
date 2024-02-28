@@ -1,6 +1,7 @@
 ﻿using FragEngine3.Graphics.Cameras;
 using FragEngine3.Graphics.Components.ConstantBuffers;
 using FragEngine3.Graphics.Components.Data;
+using FragEngine3.Graphics.Components.Internal;
 using FragEngine3.Graphics.Contexts;
 using FragEngine3.Graphics.Utility;
 using FragEngine3.Scenes;
@@ -57,10 +58,11 @@ namespace FragEngine3.Graphics.Components
 		#endregion
 		#region Fields
 
-		private readonly GraphicsCore core;
+		internal readonly GraphicsCore core;
 
 		private LightType type = LightType.Point;
 		private bool castShadows = false;
+		private uint shadowCascadeCount = 0;
 
 		/// <summary>
 		/// Priority rating to indicate which light sources are more important. Higher priority lights will
@@ -84,11 +86,7 @@ namespace FragEngine3.Graphics.Components
 
 		// Shadow resources:
 		private CameraInstance? shadowCameraInstance = null;
-		private Framebuffer? shadowMapFrameBuffer = null;
-		private DeviceBuffer? shadowCbCamera = null;
-		private CBCamera shadowCbCameraData = default;
-		private ResourceSet? shadowResSetCamera = null;
-		private Matrix4x4 mtxShadowWorld2Clip = Matrix4x4.Identity;
+		private ShadowCascadeResources[]? shadowCascades = null;
 		private uint shadowMapIdx = 0;
 
 		private static readonly bool rotateProjectionAlongCamera = false;
@@ -184,13 +182,16 @@ namespace FragEngine3.Graphics.Components
 					shadowMapIdx = 0;
 
 					shadowCameraInstance?.Dispose();
-					shadowMapFrameBuffer?.Dispose();
-					shadowCbCamera?.Dispose();
 					shadowCameraInstance = null;
-					shadowMapFrameBuffer = null;
-					shadowCbCamera = null;
+					DisposeShadowCascades();
 				}
 			}
+		}
+
+		public uint ShadowCascades
+		{
+			get => shadowCascadeCount;
+			set => shadowCascadeCount = type != LightType.Point ? Math.Min(value, 4) : 0;
 		}
 
 		public float ShadowBias
@@ -216,9 +217,19 @@ namespace FragEngine3.Graphics.Components
 			base.Dispose(_disposing);
 
 			shadowCameraInstance?.Dispose();
-			shadowMapFrameBuffer?.Dispose();
-			shadowCbCamera?.Dispose();
-			shadowResSetCamera?.Dispose();
+			DisposeShadowCascades();
+		}
+
+		private void DisposeShadowCascades()
+		{
+			if (shadowCascades != null)
+			{
+				foreach (ShadowCascadeResources cascade in shadowCascades)
+				{
+					cascade.Dispose();
+				}
+				shadowCascades = null;
+			}
 		}
 
 		public override void ReceiveSceneEvent(SceneEventType _eventType, object? _eventData)
@@ -254,7 +265,9 @@ namespace FragEngine3.Graphics.Components
 				type = (uint)type,
 				direction = type != LightType.Point ? Direction : Vector3.UnitZ,
 				spotMinDot = spotMinDot,
-				mtxShadowWorld2Clip = mtxShadowWorld2Clip,
+				mtxShadowWorld2Clip = CastShadows
+					? shadowCascades![0].mtxShadowWorld2Clip
+					: Matrix4x4.Identity,
 				shadowMapIdx = shadowMapIdx,
 				shadowBias = shadowBias,
 			};
@@ -262,60 +275,35 @@ namespace FragEngine3.Graphics.Components
 
 		public bool BeginDrawShadowMap(
 			in SceneContext _sceneCtx,
-			in CommandList _cmdList,
-			in DeviceBuffer _dummyBufLights,
-			Vector3 _shadingFocalPoint,
 			float _shadingFocalPointRadius,
-			uint _newShadowMapIdx,
-			out CameraPassContext _outCameraPassCtx,
-			bool _rebuildResSetCamera = false,
-			bool _texShadowMapsHasChanged = false)
+			uint _newShadowMapIdx)
 		{
 			if (IsDisposed)
 			{
-				_outCameraPassCtx = null!;
 				Logger.LogError("Can't begin drawing shadow map for disposed light source!");
 				return false;
 			}
 			if (!CastShadows)
 			{
-				_outCameraPassCtx = null!;
 				return false;
 			}
 			if (_sceneCtx.texShadowMaps == null || _sceneCtx.texShadowMaps.IsDisposed)
 			{
 				Logger.LogError("Can't begin drawing shadow map using null shadow map texture array!");
-				_outCameraPassCtx = null!;
 				return false;
 			}
 
-			// Recalculate projection matrix for 
-			RecalculateShadowProjectionMatrix(_shadingFocalPoint);
 			shadowMapIdx = _newShadowMapIdx;
 
-			// Ensure render targets are created and assigned:
-			if (_texShadowMapsHasChanged || shadowMapFrameBuffer == null || shadowMapFrameBuffer.IsDisposed)
+			// Ensure shadow cascades are all ready to go:
+			if (shadowCascades == null || shadowCascades.Length < shadowCascadeCount + 1)
 			{
-				_rebuildResSetCamera = true;
+				DisposeShadowCascades();
 
-				shadowCameraInstance?.Dispose();
-				shadowCameraInstance = null;
-
-				FramebufferAttachmentDescription depthTargetDesc = new(_sceneCtx.texShadowMaps, shadowMapIdx, 0);
-				FramebufferDescription shadowMapFrameBufferDesc = new(depthTargetDesc, []);
-
-				try
+				shadowCascades = new ShadowCascadeResources[shadowCascadeCount + 1];
+				for (uint i = 0; i < shadowCascadeCount + 1; ++i)
 				{
-					shadowMapFrameBuffer = core.MainFactory.CreateFramebuffer(ref shadowMapFrameBufferDesc);
-					shadowMapFrameBuffer.Name = $"Framebuffer_ShadowMap_Layer{shadowMapIdx}";
-				}
-				catch (Exception ex)
-				{
-					shadowMapFrameBuffer?.Dispose();
-					shadowMapFrameBuffer = null;
-					Logger.LogException("Failed to create framebuffer for drawing light component's shadow map!", ex);
-					_outCameraPassCtx = null!;
-					return false;
+					shadowCascades[i] = new ShadowCascadeResources(this, i);
 				}
 			}
 
@@ -324,51 +312,67 @@ namespace FragEngine3.Graphics.Components
 			{
 				if (!ShadowMapUtility.UpdateOrCreateShadowMapCameraInstance(
 					in core,
-					in shadowMapFrameBuffer,
-					in mtxShadowWorld2Clip,
+					null,
+					Matrix4x4.Identity,
 					type == LightType.Directional,
 					_shadingFocalPointRadius,
 					spotAngleRad,
 					ref shadowCameraInstance))
 				{
-					_outCameraPassCtx = null!;
 					return false;
 				}
 			}
-			if (_texShadowMapsHasChanged)
-			{
-				shadowCameraInstance!.SetOverrideFramebuffer(shadowMapFrameBuffer, true);
-			}
 
-			// Update or create global constant buffer with scene and camera information for the shaders:
-			if (!CameraUtility.UpdateConstantBuffer_CBCamera(
+			return true;
+		}
+
+		public bool BeginDrawShadowCascade(
+			in SceneContext _sceneCtx,
+			in CommandList _cmdList,
+			in DeviceBuffer _dummyBufLights,
+			Vector3 _shadingFocalPoint,
+			uint _cascadeIdx,
+			out CameraPassContext _outCameraPassCtx,
+			bool _rebuildResSetCamera = false,
+			bool _texShadowMapsHasChanged = false)
+		{
+			// Select the right shadow cascade resource container:
+			_cascadeIdx = type == LightType.Directional
+				? Math.Min(_cascadeIdx, shadowCascadeCount)
+				: 0;
+
+			ShadowCascadeResources cascade = shadowCascades![_cascadeIdx];
+
+			// Recalculate projection for this cascade:
+			RecalculateShadowProjectionMatrix(_shadingFocalPoint, _cascadeIdx, out cascade.mtxShadowWorld2Clip);
+
+			// Update framebuffer, constant buffers and resource sets:
+			if (!cascade.UpdateResources(
+				in _sceneCtx,
+				in _dummyBufLights,
 				in shadowCameraInstance!,
-				node.WorldTransformation,
-				in mtxShadowWorld2Clip,
-				Matrix4x4.Identity,
 				shadowMapIdx,
-				0,
-				0,
-				ref shadowCbCameraData,
-				ref shadowCbCamera,
-				out bool cbCameraChanged))
+				_rebuildResSetCamera,
+				_texShadowMapsHasChanged,
+				out bool _,
+				out bool _))
 			{
-				Logger.LogError("Failed to update camera constant buffer for drawing light component's shadow map!");
+				Logger.LogError($"Failed to update shadow cascade resources for cascade {_cascadeIdx} of shadow map index {shadowMapIdx}!");
 				_outCameraPassCtx = null!;
 				return false;
 			}
-			_rebuildResSetCamera |= cbCameraChanged;
 
-			// Camera's default resource set:
-			if (!CameraUtility.UpdateOrCreateCameraResourceSet(
-				in core,
-				in _sceneCtx,
-				in shadowCbCamera!,
-				in _dummyBufLights!,
-				ref shadowResSetCamera,
-				_rebuildResSetCamera))
+			if (!shadowCameraInstance!.SetOverrideFramebuffer(cascade.ShadowMapFrameBuffer, true))
 			{
-				Logger.LogError("Failed to allocate or update camera's default resource set!");
+				Logger.LogError($"Failed to set framebuffer for shadow cascade {_cascadeIdx} of shadow map index {shadowMapIdx}!");
+				_outCameraPassCtx = null!;
+				return false;
+			}
+
+			// Bind framebuffers and clear targets:
+			if (!shadowCameraInstance!.BeginDrawing(_cmdList, true, false, out _))
+			{
+				Logger.LogError("Failed to begin drawing light component's shadow map!");
 				_outCameraPassCtx = null!;
 				return false;
 			}
@@ -377,38 +381,36 @@ namespace FragEngine3.Graphics.Components
 			_outCameraPassCtx = new(
 				shadowCameraInstance!,
 				_cmdList,
-				shadowMapFrameBuffer,
-				shadowResSetCamera!,
-				shadowCbCamera!,
+				cascade.ShadowMapFrameBuffer!,
+				cascade.ShadowResSetCamera!,
+				cascade.ShadowCbCamera!,
 				_dummyBufLights,
 				0,
-				_newShadowMapIdx,
+				shadowMapIdx,
 				0,
 				0);
-
-			// Bind framebuffers and clear targets:
-			if (!shadowCameraInstance!.BeginDrawing(_cmdList, true, false, out _))
-			{
-				Logger.LogError("Failed to begin drawing light component's shadow map!");
-				return false;
-			}
 
 			return true;
 		}
 
-		public bool EndDrawShadowMap()
+		public bool EndDrawShadowCascade()
 		{
 			return !IsDisposed && shadowCameraInstance != null && shadowCameraInstance.EndDrawing();
 		}
 
-		private void RecalculateShadowProjectionMatrix(Vector3 _shadingFocalPoint)
+		public bool EndDrawShadowMap()
+		{
+			return !IsDisposed && shadowCameraInstance != null;
+		}
+
+		private void RecalculateShadowProjectionMatrix(Vector3 _shadingFocalPoint, uint _shadowCascadeIdx, out Matrix4x4 _outMtxShadowWorld2Clip)
 		{
 			switch (type)
 			{
 				case LightType.Point:
 					{
 						// NOTE: Not supported at this time, as there is no linear way of evenly projecting a sphere surface to a square framebuffer.
-						mtxShadowWorld2Clip = Matrix4x4.Identity;
+						_outMtxShadowWorld2Clip = Matrix4x4.Identity;
 					}
 					break;
 				case LightType.Spot:
@@ -419,12 +421,12 @@ namespace FragEngine3.Graphics.Components
 							mtxWorld2Local = Matrix4x4.Identity;
 						}
 						Matrix4x4 mtxLocal2Clip = Matrix4x4.CreatePerspectiveFieldOfViewLeftHanded(spotAngleRad, 1, 0.01f, MaxLightRange);
-						mtxShadowWorld2Clip = mtxWorld2Local * mtxLocal2Clip;
+						_outMtxShadowWorld2Clip = mtxWorld2Local * mtxLocal2Clip;
 					}
 					break;
 				case LightType.Directional:
 					{
-						const float maxDirectionalRange = ShadowMapUtility.directionalLightSize;
+						float maxDirectionalRange = ShadowMapUtility.directionalLightSize * (int)Math.Pow(2, _shadowCascadeIdx);
 
 						Vector3 lightDir = Direction;
 						Quaternion worldRot = node.WorldRotation;
@@ -448,18 +450,18 @@ namespace FragEngine3.Graphics.Components
 						{
 							mtxWorld2Local = Matrix4x4.Identity;
 						}
-						Matrix4x4 mtxLocal2Clip = Matrix4x4.CreateOrthographicLeftHanded(maxDirectionalRange, maxDirectionalRange, 0.01f, maxDirectionalRange);		//TODO [later]: this works, but it's pretty bad.
-						mtxShadowWorld2Clip = mtxWorld2Local * mtxLocal2Clip;
+						Matrix4x4 mtxLocal2Clip = Matrix4x4.CreateOrthographicLeftHanded(maxDirectionalRange, maxDirectionalRange, 0.01f, maxDirectionalRange);     //TODO [later]: this works, but it's pretty bad.
+						_outMtxShadowWorld2Clip = mtxWorld2Local * mtxLocal2Clip;
 					}
 					break;
 				default:
 					{
-						mtxShadowWorld2Clip = Matrix4x4.Identity;
+						_outMtxShadowWorld2Clip = Matrix4x4.Identity;
 					}
 					break;
 			}
 
-			mtxShadowWorld2Clip *= Matrix4x4.CreateScale(1, -1, 1);
+			_outMtxShadowWorld2Clip *= Matrix4x4.CreateScale(1, -1, 1);
 		}
 
 		/// <summary>
@@ -502,6 +504,8 @@ namespace FragEngine3.Graphics.Components
 			SpotAngleDegrees = data.SpotAngleDegrees;
 
 			CastShadows = data.CastShadows;
+			ShadowCascades = data.ShadowCascades;
+			shadowBias = data.ShadowBias;
 
 			// Re-register camera with the scene:
 			node.scene.drawManager.UnregisterLight(this);
@@ -520,6 +524,8 @@ namespace FragEngine3.Graphics.Components
 				SpotAngleDegrees = SpotAngleDegrees,
 
 				CastShadows = castShadows,
+				ShadowCascades = shadowCascadeCount,
+				ShadowBias = shadowBias,
 			};
 
 			if (!Serializer.SerializeToJson(data, out string dataJson))

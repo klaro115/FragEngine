@@ -129,6 +129,7 @@ public sealed class TestApplicationLogic : ApplicationLogic
 
 			light.LightIntensity = 0.5f;
 			light.CastShadows = true;
+			light.ShadowCascades = 1;																						// TODO: Phantom shadows caused by cascades being counted as lights, when they should only be selectively picked per pixel!
 		}
 		if (SceneSpawner.CreateLight(scene, Light.LightType.Directional, out light))
 		{

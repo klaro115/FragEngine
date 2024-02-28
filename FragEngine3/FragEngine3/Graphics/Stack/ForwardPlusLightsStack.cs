@@ -53,6 +53,7 @@ public sealed class ForwardPlusLightsStack(GraphicsCore _core) : IGraphicsStack
 	// Shadow maps:
 	private Texture? texShadowMaps = null;
 	private uint texShadowMapsCapacity = 0;
+	private uint texShadowMapsCount = 0;
 	private DeviceBuffer? dummyBufLights = null;
 	private Sampler? samplerShadowMaps = null;
 
@@ -205,6 +206,7 @@ public sealed class ForwardPlusLightsStack(GraphicsCore _core) : IGraphicsStack
 			}
 			texShadowMapsCapacity = 1;
 		}
+		texShadowMapsCount = 0;
 
 		if (samplerShadowMaps == null || samplerShadowMaps.IsDisposed)
 		{
@@ -285,6 +287,7 @@ public sealed class ForwardPlusLightsStack(GraphicsCore _core) : IGraphicsStack
 		compositeUIResourceSet?.Dispose();
 		dummyBufLights?.Dispose();
 		texShadowMaps?.Dispose();
+		texShadowMapsCount = 0;
 		texShadowMapsCapacity = 0;
 		samplerShadowMaps?.Dispose();
 
@@ -565,8 +568,41 @@ public sealed class ForwardPlusLightsStack(GraphicsCore _core) : IGraphicsStack
 		}
 
 		// Resize shadow map texture array to reflect maximum number of shadow-casting lights:
+		if (!PrepareShadowMaps(
+			_maxActiveLightCount,
+			ref _outRebuildResSetCamera,
+			out _outTexShadowsHasChanged))
+		{
+			_outSceneCtx = null!;
+			return false;
+		}
+
+		_outSceneCtx = new(
+			Scene,
+			resLayoutCamera!,
+			resLayoutObject!,
+			cbScene!,
+			texShadowMaps!,
+			samplerShadowMaps!,
+			(uint)activeLights.Count,
+			(uint)activeLightsShadowMapped.Count);
+
+		return true;
+	}
+
+	private bool PrepareShadowMaps(uint _maxActiveLightCount, ref bool _outRebuildResSetCamera, out bool _outTexShadowsHasChanged)
+	{
 		_outTexShadowsHasChanged = false;
-		uint lightCountShadowMapped = Math.Min((uint)activeLightsShadowMapped.Count, _maxActiveLightCount);
+		texShadowMapsCount = 0;
+
+		uint minLightCountShadowMapped = Math.Min((uint)activeLightsShadowMapped.Count, _maxActiveLightCount);
+		uint lightCountShadowMapped = minLightCountShadowMapped;
+
+		foreach (Light light in activeLightsShadowMapped)
+		{
+			lightCountShadowMapped += light.ShadowCascades;
+		}
+
 		if (texShadowMaps == null || texShadowMaps.IsDisposed || texShadowMapsCapacity < lightCountShadowMapped)
 		{
 			_outRebuildResSetCamera = true;
@@ -582,22 +618,12 @@ public sealed class ForwardPlusLightsStack(GraphicsCore _core) : IGraphicsStack
 				out texShadowMaps))
 			{
 				Logger.LogError("Failed to create shadow map texture array for graphics stack!");
-				_outSceneCtx = null!;
 				_outTexShadowsHasChanged = false;
 				return false;
 			}
 			texShadowMapsCapacity = lightCountShadowMapped;
 		}
 
-		_outSceneCtx = new(
-			Scene,
-			resLayoutCamera!,
-			resLayoutObject!,
-			cbScene!,
-			texShadowMaps!,
-			samplerShadowMaps!,
-			(uint)activeLights.Count,
-			(uint)activeLightsShadowMapped.Count);
 		return true;
 	}
 	
@@ -630,34 +656,53 @@ public sealed class ForwardPlusLightsStack(GraphicsCore _core) : IGraphicsStack
 
 		try
 		{
-			for (int i = 0; i < shadowMappedLightCount; ++i)
+			bool result = true;
+			int i = 0; 
+
+			while (i < shadowMappedLightCount && result)
 			{
+				// Begin drawing shadow maps for the current light source:
 				Light light = activeLightsShadowMapped[i];
-				success &= light.BeginDrawShadowMap(
+				result &= light.BeginDrawShadowMap(
 					in _sceneCtx,
-					in cmdList,
-					in dummyBufLights!,
-					_renderFocalPoint,
 					_renderFocalRadius,
-					_outShadowMapLightCount,
-					out CameraPassContext lightCtx,
-					_rebuildResSetCamera,
-					_texShadowsHasChanged);
-				if (!success) break;
+					_outShadowMapLightCount);
+
+				if (!result) break;
 
 				//TODO [later]: Exclude renderers that are entirely outside of point/spot lights' maximum range.
 
-				// Draw renderers for opaque and tranparent geometry, ignore UI:
-				foreach (IRenderer renderer in activeShadowCasters)
+				// Render shadow cascades one at after the other:
+				uint shadowCascadeCount = light.ShadowCascades + 1;
+
+				for (uint cascadeIdx = 0; cascadeIdx < shadowCascadeCount; ++cascadeIdx)
 				{
-					if ((light.layerMask & renderer.LayerFlags) != 0)
+					// Begin drawing shadow maps for the current casacade:
+					result &= light.BeginDrawShadowCascade(
+						in _sceneCtx,
+						in cmdList,
+						in dummyBufLights!,
+						_renderFocalPoint,
+						cascadeIdx,
+						out CameraPassContext lightCtx,
+						_rebuildResSetCamera,
+						_texShadowsHasChanged);
+
+					// Draw renderers for opaque and tranparent geometry, ignore UI:
+					foreach (IRenderer renderer in activeShadowCasters)
 					{
-						success &= renderer.DrawShadowMap(_sceneCtx, lightCtx);			//TODO [important]: Change this to not crash the game if a single renderer fails to draw!
+						if ((light.layerMask & renderer.LayerFlags) != 0)
+						{
+							result &= renderer.DrawShadowMap(_sceneCtx, lightCtx);
+						}
 					}
+
+					result &= light.EndDrawShadowCascade();
 				}
 
-				success &= light.EndDrawShadowMap();
-				_outShadowMapLightCount++;
+				result &= light.EndDrawShadowMap();
+				_outShadowMapLightCount += shadowCascadeCount;
+				i++;
 			}
 		}
 		catch (Exception ex)

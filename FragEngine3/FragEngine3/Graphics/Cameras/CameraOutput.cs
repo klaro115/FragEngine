@@ -37,9 +37,10 @@ public struct CameraOutput
 
 		OutputDescription outputDesc = _framebuffer.OutputDescription;
 
+		bool descHasColor = outputDesc.ColorAttachments != null && outputDesc.ColorAttachments.Length != 0;
 		if (_framebuffer.Width != resolutionX ||
 			_framebuffer.Height != resolutionY ||
-			(colorFormat != null && colorFormat != outputDesc.ColorAttachments[0].Format))
+			(descHasColor && colorFormat != null && colorFormat != outputDesc.ColorAttachments[0].Format))
 		{
 			return true;
 		}

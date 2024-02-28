@@ -17,7 +17,7 @@ namespace FragEngine3.Graphics.Utility
 
 		public static bool UpdateOrCreateShadowMapCameraInstance(
 			in GraphicsCore _graphicsCore,
-			in Framebuffer _shadowMapFramebuffer,
+			in Framebuffer? _shadowMapFramebuffer,
 			in Matrix4x4 _mtxShadowWorld2Clip,
 			bool _isDirectional,
 			float _farClipPlane,
@@ -40,33 +40,48 @@ namespace FragEngine3.Graphics.Utility
 
 			if (_cameraInstance == null || _cameraInstance.IsDisposed)
 			{
+				CameraOutput outputSettings = new CameraOutput()
+				{
+					resolutionX = shadowResolution,
+					resolutionY = shadowResolution,
+
+					colorFormat = _graphicsCore.DefaultColorTargetPixelFormat,
+					depthFormat = _graphicsCore.DefaultShadowMapDepthTargetFormat,
+					hasDepth = true,
+					hasStencil = false,
+				};
+				CameraClearing clearingSettings = new CameraClearing()
+				{
+					clearColor = false,
+					clearColorValue = new RgbaFloat(0, 0, 0, 0),
+
+					clearDepth = true,
+					clearDepthValue = 1.0f,
+
+					clearStencil = false,
+					clearStencilValue = 0x00,
+				};
+
 				try
 				{
-					_cameraInstance = new(_graphicsCore, _shadowMapFramebuffer, false)
+					if (_shadowMapFramebuffer != null && !_shadowMapFramebuffer.IsDisposed)
 					{
-						OutputSettings = new CameraOutput()
+						_cameraInstance = new(_graphicsCore, _shadowMapFramebuffer, false)
 						{
-							resolutionX = shadowResolution,
-							resolutionY = shadowResolution,
-
-							colorFormat = _graphicsCore.DefaultColorTargetPixelFormat,
-							depthFormat = _graphicsCore.DefaultShadowMapDepthTargetFormat,
-							hasDepth = true,
-							hasStencil = false,
-						},
-						ClearingSettings = new CameraClearing()
+							OutputSettings = outputSettings,
+							ClearingSettings = clearingSettings,
+							MtxWorld = Matrix4x4.Identity,
+						};
+					}
+					else
+					{
+						_cameraInstance = new(_graphicsCore, false)
 						{
-							clearColor = false,
-							clearColorValue = new RgbaFloat(0, 0, 0, 0),
-
-							clearDepth = true,
-							clearDepthValue = 1.0f,
-
-							clearStencil = false,
-							clearStencilValue = 0x00,
-						},
-						MtxWorld = Matrix4x4.Identity,
-					};
+							OutputSettings = outputSettings,
+							ClearingSettings = clearingSettings,
+							MtxWorld = Matrix4x4.Identity,
+						};
+					}
 					_cameraInstance.MarkDirty();
 				}
 				catch (Exception ex)

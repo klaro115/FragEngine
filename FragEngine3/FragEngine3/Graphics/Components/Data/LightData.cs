@@ -16,6 +16,8 @@ namespace FragEngine3.Graphics.Components.Data
 		public float SpotAngleDegrees { get; set; } = 30.0f;
 
 		public bool CastShadows {  get; set; } = false;
+		public uint ShadowCascades { get; set; } = 0;
+		public float ShadowBias { get; set; } = 0.02f;
 
 		#endregion
 		#region Methods
