@@ -12,6 +12,7 @@ namespace FragEngine3.Graphics.Contexts
 		ResourceLayout _resLayoutObject,
 		DeviceBuffer _cbScene,
 		Texture _texShadowMaps,
+		DeviceBuffer _bufShadowMatrices,
 		Sampler _samplerShadowMaps,
 
 		// Parameters:
@@ -28,6 +29,7 @@ namespace FragEngine3.Graphics.Contexts
 		public readonly ResourceLayout resLayoutObject = _resLayoutObject;
 		public readonly DeviceBuffer cbScene = _cbScene;
 		public readonly Texture texShadowMaps = _texShadowMaps;
+		public readonly DeviceBuffer bufShadowMatrices = _bufShadowMatrices;
 		public readonly Sampler samplerShadowMaps = _samplerShadowMaps;
 
 		// Parameters:

@@ -70,11 +70,12 @@ namespace FragEngine3.Graphics
 		[
 			CBScene.resourceLayoutElementDesc,							// Constant buffer with scene-wide data.
 			CBCamera.resourceLayoutElementDesc,							// Constant buffer with camera-specific data.
-			LightSourceData.ResourceLayoutElementDescLightBuffer,		// Structured buffer containing light data.
+			LightSourceData.ResourceLayoutElementDescBufLights,			// Structured buffer containing light data.
 			LightSourceData.ResourceLayoutElementDescTexShadowMaps,		// Texture array containing shadow maps.
+			LightSourceData.ResourceLayoutElementDescBufShadowMatrices,	// Structured buffer containing shadow projection matrices.
 			LightSourceData.ResourceLayoutElementDescSamplerShadowMaps,	// Sampler used for reading shadow maps.
 		];
-		public static readonly ResourceLayoutElementDescription[] DEFAULT_OBJECT_RESOURCE_LAYOUT_DESC =								//TODO: Change material's resource layouts and renderers' resource sets to use this instead.
+		public static readonly ResourceLayoutElementDescription[] DEFAULT_OBJECT_RESOURCE_LAYOUT_DESC =
 		[
 			CBObject.resourceLayoutElementDesc,							// Constant buffer with object-specific data.
 		];

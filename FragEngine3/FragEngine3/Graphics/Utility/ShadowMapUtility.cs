@@ -10,7 +10,7 @@ namespace FragEngine3.Graphics.Utility
 		#region Constants
 
 		public const uint shadowResolution = 1024;
-		public const float directionalLightSize = 25;		//TEMP
+		public const float directionalLightSize = 10;		//TEMP
 
 		#endregion
 		#region Methods
@@ -157,6 +157,39 @@ namespace FragEngine3.Graphics.Utility
 				_graphicsCore?.graphicsSystem.engine.Logger.LogError("Failed to clear first layer of shadow map texture array to maximum depth!");
 			}
 			return wasCleared;
+		}
+
+		public static bool CreateShadowMatrixBuffer(
+			in GraphicsCore _graphicsCore,
+			uint _totalCascadeCount,
+			ref DeviceBuffer? _bufShadowMatrices)
+		{
+			const uint matrixByteSize = 16 * sizeof(float);
+
+			_totalCascadeCount = Math.Max(_totalCascadeCount, 1);
+			uint totalByteSize = _totalCascadeCount * matrixByteSize;
+
+			if (_bufShadowMatrices == null || _bufShadowMatrices.IsDisposed || _bufShadowMatrices.SizeInBytes < totalByteSize)
+			{
+				_bufShadowMatrices?.Dispose();
+
+				BufferDescription bufferDesc = new(
+					totalByteSize,
+					BufferUsage.StructuredBufferReadOnly | BufferUsage.Dynamic,
+					matrixByteSize);
+
+				try
+				{
+					_bufShadowMatrices = _graphicsCore.MainFactory.CreateBuffer(ref bufferDesc);
+					_bufShadowMatrices.Name = $"BufShadowMatrices_Capacity={_totalCascadeCount}";
+				}
+				catch (Exception ex)
+				{
+					_graphicsCore.graphicsSystem.engine.Logger.LogException("Failed to create shadow projection matrix buffer!", ex);
+					return false;
+				}
+			}
+			return true;
 		}
 
 		public static bool CreateShadowSampler(

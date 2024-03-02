@@ -11,6 +11,7 @@ SCENE:                                    owned by stack, persistent
 - => FRAME:                               owned by scene, may change each frame
   - CBScene                 b0
   - TexShadowMaps           t1
+  - BufShadowMatrices       t2
 
 
 CAMERA:
@@ -39,20 +40,21 @@ MATERIAL:                                 owned by material, semi-persistent
 # Resource Binding:
 
 - SET 0:    (ResSetCamera)                              owned by camera, different for each pass, may be recreated each frame
-  Name:                     HLSL Slot:    Mtl Slot:     Updated:    Owner:
-  - CBScene                 b0            b+0           f           stack
-  - CBCamera                b1            b+1           p           cam
-  - BufLights               t0            b+2           f           cam
-  - TexShadowMaps           t1            t0            f           stack
-  - SamplerShadowMaps       s0            s0            -           stack
+  Name:                     HLSL Slot:      Mtl Slot:     Updated:    Owner:
+  - CBScene                 b0              b+1           f           stack
+  - CBCamera                b1              b+2           p           cam
+  - BufLights               t0              b+3           f           cam
+  - TexShadowMaps           t1              t0            f           stack
+  - BufShadowMatrices       t2              b+4           f           stack
+  - SamplerShadowMaps       s0              s0            -           stack
 
-- SET 1:    (ResSetObject)                              owned by renderer, same across passes, created once
-  Name:                     HLSL Slot:    Mtl Slot:     Updated:    Owner:
-  - CBObject                b2            b+3           f           rend
+- SET 1:    (ResSetObject)                                owned by renderer, same across passes, created once
+  Name:                     HLSL Slot:      Mtl Slot:     Updated:    Owner:
+  - CBObject                b2              b+5           f           rend
 
-- SET 2:    (ResSetBound)                               owned by renderer, different for each material (main + shadow)
-  Name:                     HLSL Slot:    Mtl Slot:     Updated:    Owner:
-  - [...] Bound Resources   b3+, t2+, s1+ b4+, t1+, s1+ -           mat
+- SET 2:    (ResSetBound)                                 owned by renderer, different for each material (main + shadow)
+  Name:                     HLSL Slot:      Mtl Slot:     Updated:    Owner:
+  - [...] Bound Resources   b3+, t3+, s1+   b6+, t1+, s1+ -           mat
 
 
 ############################################
@@ -66,14 +68,15 @@ Backend:    D3D11, HLSL
   - CBCamera                b1
   - BufLights               t0    unused
   - TexShadowMaps           t1    unused
+  - BufShadowMatrices       t2    unused
   - SamplerShadowMaps       s0    unused
 
 - SET 1:    ResSetObject
   - CBObject                b2    VS only
 
 - SET 2:    ResSetBound
-  - TexMain                 t2
-  - TexNormals              t3
-  - TexParallax             t4
-  - TexLightmap             t5    unused
+  - TexMain                 t3
+  - TexNormals              t4
+  - TexParallax             t5
+  - TexLightmap             t6    unused
   - SamplerMain             s1

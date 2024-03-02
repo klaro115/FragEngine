@@ -265,11 +265,13 @@ namespace FragEngine3.Graphics.Components
 				type = (uint)type,
 				direction = type != LightType.Point ? Direction : Vector3.UnitZ,
 				spotMinDot = spotMinDot,
-				mtxShadowWorld2Clip = CastShadows
-					? shadowCascades![0].mtxShadowWorld2Clip
-					: Matrix4x4.Identity,
+				//mtxShadowWorld2Clip = CastShadows
+				//	? shadowCascades![0].mtxShadowWorld2Clip
+				//	: Matrix4x4.Identity,
 				shadowMapIdx = shadowMapIdx,
 				shadowBias = shadowBias,
+				shadowCascades = ShadowCascades,
+				shadowCascadeRange = ShadowMapUtility.directionalLightSize,
 			};
 		}
 
@@ -388,7 +390,8 @@ namespace FragEngine3.Graphics.Components
 				0,
 				shadowMapIdx,
 				0,
-				0);
+				0,
+				in cascade.mtxShadowWorld2Clip);
 
 			return true;
 		}
@@ -410,6 +413,7 @@ namespace FragEngine3.Graphics.Components
 				case LightType.Point:
 					{
 						// NOTE: Not supported at this time, as there is no linear way of evenly projecting a sphere surface to a square framebuffer.
+						// Yes, I know that cubemaps exist, but I kind of don't feel like doing that just yet. Might repurpose cascade-like mapping for it though...
 						_outMtxShadowWorld2Clip = Matrix4x4.Identity;
 					}
 					break;
@@ -426,7 +430,7 @@ namespace FragEngine3.Graphics.Components
 					break;
 				case LightType.Directional:
 					{
-						float maxDirectionalRange = ShadowMapUtility.directionalLightSize * (int)Math.Pow(2, _shadowCascadeIdx);
+						float maxDirectionalRange = ShadowMapUtility.directionalLightSize * MathF.Floor(MathF.Pow(2, _shadowCascadeIdx));
 
 						Vector3 lightDir = Direction;
 						Quaternion worldRot = node.WorldRotation;

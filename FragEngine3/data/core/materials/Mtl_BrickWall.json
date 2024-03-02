@@ -48,7 +48,7 @@
             {
                 "ResourceKey": "TexBrickWall_diff",
                 "SlotName": "TexMain",
-                "SlotIndex": 2,
+                "SlotIndex": 3,
                 "ResourceKind": 3,
                 "ShaderStageFlags": 16,
                 "Description": null,
@@ -57,7 +57,7 @@
             {
                 "ResourceKey": "TexBrickWall_norm",
                 "SlotName": "TexNormal",
-                "SlotIndex": 3,
+                "SlotIndex": 4,
                 "ResourceKind": 3,
                 "ShaderStageFlags": 16,
                 "Description": null,
@@ -66,7 +66,7 @@
             {
                 "ResourceKey": "TexBrickWall_disp",
                 "SlotName": "TexParallax",
-                "SlotIndex": 4,
+                "SlotIndex": 5,
                 "ResourceKind": 3,
                 "ShaderStageFlags": 16,
                 "Description": null,

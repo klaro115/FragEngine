@@ -53,20 +53,22 @@ struct Light
     uint lightType;
     float3 lightDirection;
     float lightSpotMinDot;
-    float4x4 mtxShadowWorld2Clip;
     uint shadowMapIdx;
     float shadowBias;
+    uint shadowCascades;
+    float shadowCascadeRange;
 };
 
 StructuredBuffer<Light> BufLights : register(ps, t0);   // Buffer containing an array of light source data. Number of lights is given in 'CBGlobal.lightCount'.
 
 Texture2DArray<half> TexShadowMaps : register(ps, t1);
+StructuredBuffer<float4x4> BufShadowMatrices : register(ps, t2);
 SamplerState SamplerShadowMaps : register(ps, s0);
 
 // ResSetBound:
 
-Texture2D<half4> TexMain : register(ps, t2);
-Texture2D<half3> TexNormal : register(ps, t3);
+Texture2D<half4> TexMain : register(ps, t3);
+Texture2D<half3> TexNormal : register(ps, t4);
 SamplerState SamplerMain : register(s1);
 
 /**************** VERTEX OUTPUT: ***************/
@@ -139,11 +141,18 @@ half3 CalculateTotalLightIntensity(in float3 _worldPosition, in float3 _worldNor
 
         const half3 lightIntensity = CalculatePhongLighting(light, _worldPosition, _worldNormal);
 
+        // Determine shadow cascade for this pixel:
+        //const float cameraDist = length(_worldPosition - cameraPosition.xyz);
+        //const uint cascadeOffset = (uint)(2 * cameraDist / _light.shadowCascadeRange);
+        //const uint cascadeIdx = min(cascadeOffset, _light.shadowCascades);
+        const uint cascadeIdx = light.shadowCascades;
+        const uint shadowMapIdx = light.shadowMapIdx + cascadeIdx;
+
         // Add a bias to position along surface normal, to counter-act stair-stepping artifacts:
         const float4 worldPosBiased = float4(_worldPosition + _worldNormal * light.shadowBias, 1);
 
         // Transform pixel position to light's clip space, then to UV space:
-        float4 shadowProj = mul(light.mtxShadowWorld2Clip, worldPosBiased);
+        float4 shadowProj = mul(BufShadowMatrices[shadowMapIdx], worldPosBiased);
         shadowProj /= shadowProj.w;
         const float2 shadowUv = float2(shadowProj.x + 1, 1 - shadowProj.y) * 0.5;
         

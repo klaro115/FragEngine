@@ -218,6 +218,7 @@ namespace FragEngine3.Graphics.Cameras
 						_cbCamera,
 						_lightDataBuffer,
 						_sceneCtx.texShadowMaps,
+						_sceneCtx.bufShadowMatrices,
 						_sceneCtx.samplerShadowMaps);
 
 					_resSetCamera = _graphicsCore.MainFactory.CreateResourceSet(ref resSetDesc);

@@ -124,12 +124,13 @@ public sealed class TestApplicationLogic : ApplicationLogic
 		if (SceneSpawner.CreateLight(scene, Light.LightType.Directional, out Light light))
 		{
 			light.node.WorldPosition = new Vector3(0, 5, 0);
-			light.node.SetRotationFromYawPitchRoll(-22.5f, 45, 0, true, true);
+			//light.node.SetRotationFromYawPitchRoll(-22.5f, 45, 0, true, true);
+			light.node.SetRotationFromYawPitchRoll(0, 90, 0, true, true);
 			//light.node.SetEnabled(false);
 
 			light.LightIntensity = 0.5f;
 			light.CastShadows = true;
-			light.ShadowCascades = 1;																						// TODO: Phantom shadows caused by cascades being counted as lights, when they should only be selectively picked per pixel!
+			light.ShadowCascades = 1;
 		}
 		if (SceneSpawner.CreateLight(scene, Light.LightType.Directional, out light))
 		{
@@ -142,7 +143,7 @@ public sealed class TestApplicationLogic : ApplicationLogic
 		{
 			light.node.WorldPosition = new Vector3(0, 0, -3);
 			light.node.LocalRotation = Quaternion.Identity;
-			//light.node.SetEnabled(false);
+			light.node.SetEnabled(false);
 
 			light.LightIntensity = 15;
 			light.SpotAngleDegrees = 35;
@@ -249,6 +250,7 @@ public sealed class TestApplicationLogic : ApplicationLogic
 			plane.SetMesh(planeHandle);
 			plane.SetMaterial("Mtl_BrickWall");
 			//plane.SetMaterial("Mtl_DefaultSurface");
+			plane.DontDrawUnlessFullyLoaded = true;
 		}
 		if (SceneSpawner.CreateStaticMeshRenderer(scene, out plane))
 		{
@@ -261,6 +263,7 @@ public sealed class TestApplicationLogic : ApplicationLogic
 			plane.SetMesh(planeHandle);
 			plane.SetMaterial("Mtl_BrickWall");
 			//plane.SetMaterial("Mtl_DefaultSurface");
+			plane.DontDrawUnlessFullyLoaded = true;
 		}
 
 		// Create two-sided quad:

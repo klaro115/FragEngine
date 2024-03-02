@@ -48,7 +48,7 @@ internal sealed class ShadowCascadeResources(Light _light, uint _shadowCascadeId
 		GC.SuppressFinalize(this);
 		Dispose(true);
 	}
-	private void Dispose(bool _disposing)
+	private void Dispose(bool _)
 	{
 		IsDisposed = true;
 
@@ -77,7 +77,7 @@ internal sealed class ShadowCascadeResources(Light _light, uint _shadowCascadeId
 			
 			ShadowMapIdx = _shadowMapIdx;
 
-			FramebufferAttachmentDescription depthTargetDesc = new(_sceneCtx.texShadowMaps, _shadowMapIdx, 0);
+			FramebufferAttachmentDescription depthTargetDesc = new(_sceneCtx.texShadowMaps, _shadowMapIdx + shadowCascadeIdx, 0);
 			FramebufferDescription shadowMapFrameBufferDesc = new(depthTargetDesc, []);
 
 			try

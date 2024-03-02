@@ -1,4 +1,5 @@
 ﻿using FragEngine3.Graphics.Cameras;
+using System.Numerics;
 using Veldrid;
 
 namespace FragEngine3.Graphics.Contexts
@@ -18,7 +19,8 @@ namespace FragEngine3.Graphics.Contexts
 		uint _frameIdx,
 		uint _passIdx,
 		uint _lightCount,
-		uint _lightCountShadowMapped)
+		uint _lightCountShadowMapped,
+		in Matrix4x4 _mtxWorld2Clip)
 	{
 		#region Fields
 
@@ -37,6 +39,7 @@ namespace FragEngine3.Graphics.Contexts
 		public readonly uint passIdx = _passIdx;
 		public readonly uint lightCount = _lightCount;
 		public readonly uint lightCountShadowMapped = Math.Min(_lightCountShadowMapped, _lightCount);
+		public readonly Matrix4x4 mtxWorld2Clip = _mtxWorld2Clip;
 		public readonly OutputDescription outputDesc = _framebuffer.OutputDescription;
 		public readonly bool mirrorY = _cameraInstance.ProjectionSettings.mirrorY;
 

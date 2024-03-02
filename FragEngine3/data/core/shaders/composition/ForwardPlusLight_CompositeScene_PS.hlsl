@@ -44,12 +44,12 @@ struct PixelOutput
 /****************** TEXTURES: ******************/
 
 // Opaque geometry:
-Texture2D<half4> TexOpaqueColor : register(ps, t2);
-Texture2D<float2> TexOpaqueDepth : register(ps, t3);
+Texture2D<half4> TexOpaqueColor : register(ps, t3);
+Texture2D<float2> TexOpaqueDepth : register(ps, t4);
 
 // Transparent geometry:
-Texture2D<half4> TexTransparentColor : register(ps, t4);
-Texture2D<float2> TexTransparentDepth : register(ps, t5);
+Texture2D<half4> TexTransparentColor : register(ps, t5);
+Texture2D<float2> TexTransparentDepth : register(ps, t6);
 
 /******************* SHADERS: ******************/
 

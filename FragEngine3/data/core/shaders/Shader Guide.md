@@ -1,6 +1,6 @@
 ### Shader Buffer Order:
 
-**OUT-DATED! Some of the following information no longer applies; major changes have been made, and this document needs to be updated once those changes are fully implemented.**
+**SLIGHTLY OUT-DATED! Some of the following information no longer applies; major changes have been made, and this document needs to be updated once those changes are fully implemented.**
 
 ####Vertex Buffers:
 
@@ -26,17 +26,21 @@ After these 2 constant buffers comes a read-only structured buffer with light da
 
 On Vulkan and Direct3D, the light buffer buffer is always bound to the first texture register. On MacOS/Metal, it is bound as a buffer right after the constant buffers.
 
-| **HLSL Struct** | **Type** | **C\# Type** | **HLSL Register** | **MSL Index** |
-| --- | --- | --- | --- | --- |
-| ```CBGlobal``` | Constant Buffer | ```GlobalConstantBuffer``` | b0 | buffer(+1) |
-| ```CBObject``` | Constant Buffer | ```ObjectDataConstantBuffer``` | b1 | buffer(+2) |
-| ```BufLights``` | Structured Buffer (readonly) | ```Light.LightSourceData``` | t0 | buffer(+3) |
+| **HLSL Resource** | **Type** | **C\# Type** | **HLSL Register** | **MSL Index** | **Owner** |
+| --- | --- | --- | --- | --- | --- |
+| ```CBScene``` | Constant Buffer | ```CBScene``` | b0 | buffer(+1) | Graphics Stack |
+| ```CBCamera``` | Constant Buffer | ```CBCamera``` | b1 | buffer(+2) | Camera |
+| ```CBObject``` | Constant Buffer | ```CBObject``` | b2 | buffer(+3) | Renderer |
+| ```BufLights``` | Structured Buffer (readonly) | ```LightSourceData``` | t0 | buffer(+3) | Camera |
+| ```TexShadowMaps``` | Texture2DArray | ```Texture``` | t1 | texture(0) | Graphics Stack |
+| ```BufShadowMatrices``` | Structured Buffer (readonly) | ```Matrix4x4``` | t2 | buffer(+4) | Graphics Stack |
+| ```SamplerShadowMaps``` | Sampler | ```Sampler``` | s0 | sampler(0) | Graphics Stack |
 
 
 ####User-bound Resources:
 
 Any additional buffers may be bound by user code or the graphics stack after the above buffers' slots.
 
-| **HLSL Buffer** | **Type** | **C\# Type** | **HLSL Register** | **MSL Index** |
-| --- | --- | --- | --- | --- |
-| ```[BufCustom]``` | Structured Buffer (readonly) | ```<T>``` | t1+ | buffer(+4) |
+| **HLSL Buffer** | **Type** | **C\# Type** | **HLSL Register** | **MSL Index** | **Owner** |
+| --- | --- | --- | --- | --- | --- |
+| ```[BufCustom]``` | Structured Buffer (readonly) | ```<T>``` | t3+ | buffer(6+), texture(1+), sampler(1+) | Material |

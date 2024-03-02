@@ -463,7 +463,8 @@ public sealed class Camera : Component
 			FrameCounter,
 			PassCounter,
 			_activeLightCount,
-			_shadowMappedLightCount);
+			_shadowMappedLightCount,
+			in mtxWorld2Clip);
 		return true;
 	}
 

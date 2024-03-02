@@ -88,36 +88,37 @@ struct Light
     uint lightType;
     float3 lightDirection;
     float lightSpotMinDot;
-    float4x4 mtxShadowWorld2Clip;
     uint shadowMapIdx;
-    uint shadowCascades;
     float shadowBias;
+    uint shadowCascades;
+    float shadowCascadeRange;
 };
 
-StructuredBuffer<Light> BufLights : register(ps, t0);   // Buffer containing an array of light source data. Number of lights is given in 'CBGlobal.lightCount'.
+StructuredBuffer<Light> BufLights : register(ps, t0);               // Buffer containing an array of light source data. Number of lights is given in 'CBGlobal.lightCount'.
 #endif
 
 #ifdef FEATURE_LIGHT_SHADOWMAPS
 Texture2DArray<half> TexShadowMaps : register(ps, t1);
+StructuredBuffer<float4x4> BufShadowMatrices : register(ps, t2);    // Buffer containing an array of projectionm matrices for shadow maps, transforming world position to clip space.
 SamplerState SamplerShadowMaps : register(ps, s0);
 #endif
 
 // ResSetBound:
 
 #if FEATURE_ALBEDO_TEXTURE == 1
-Texture2D<half4> TexMain : register(ps, t2);
+Texture2D<half4> TexMain : register(ps, t3);
 #endif //FEATURE_ALBEDO_TEXTURE == 1
 
 #ifdef FEATURE_NORMALS
-Texture2D<half3> TexNormal : register(ps, t3);
+Texture2D<half3> TexNormal : register(ps, t4);
 #endif //FEATURE_NORMALS
 
 #ifdef FEATURE_PARALLAX
-Texture2D<half> TexParallax : register(ps, t4);
+Texture2D<half> TexParallax : register(ps, t5);
 #endif //FEATURE_PARALLAX
 
 #ifdef FEATURE_LIGHT_LIGHTMAPS
-Texture2D<half3> TexLightmap : register(ps, t5);
+Texture2D<half3> TexLightmap : register(ps, t6);
 #endif //FEATURE_LIGHT_LIGHTMAPS
 
 #if FEATURE_ALBEDO_TEXTURE == 1 || defined(FEATURE_NORMALS) || defined(FEATURE_PARALLAX) || defined(FEATURE_LIGHT_LIGHTMAPS)
@@ -203,26 +204,41 @@ half3 CalculatePhongLighting(const in Light _light, const in float3 _worldPositi
 
 half CalculateShadowMapLightWeight(const in Light _light, const in float3 _worldPosition, const in float3 _surfaceNormal)
 {
+    // Determine shadow cascade for this pixel:
+    const float cameraDist = length(_worldPosition - cameraPosition.xyz);
+    const uint cascadeOffset = (uint)(2 * cameraDist / _light.shadowCascadeRange);
+    const uint cascadeIdx = min(cascadeOffset, _light.shadowCascades);
+    //const uint cascadeIdx = _light.shadowCascades;
+    const uint shadowMapIdx = _light.shadowMapIdx + cascadeIdx;
+
     // Add a bias to position along surface normal, to counter-act stair-stepping artifacts:
     const float4 worldPosBiased = float4(_worldPosition + _surfaceNormal * _light.shadowBias, 1);
 
     // Transform pixel position to light's clip space, then to UV space:
-    float4 shadowProj = mul(_light.mtxShadowWorld2Clip, worldPosBiased);
+    float4 shadowProj = mul(BufShadowMatrices[shadowMapIdx], worldPosBiased);
     shadowProj /= shadowProj.w;
     const float2 shadowUv = float2(shadowProj.x + 1, 1 - shadowProj.y) * 0.5;
     
     // Load corresponding depth value from shadow texture array:
-    const half shadowDepth = TexShadowMaps.Sample(SamplerShadowMaps, float3(shadowUv.x, shadowUv.y, _light.shadowMapIdx));
+    const half shadowDepth = TexShadowMaps.Sample(SamplerShadowMaps, float3(shadowUv.x, shadowUv.y, shadowMapIdx));
     half lightWeight = shadowDepth > shadowProj.z ? 1 : 0;
+    //half lightWeight = shadowDepth > 0.5;
 
     // Fade shadows out near boundaries of UV/Depth space:
-    if (_light.lightType == 2)
+    if (_light.lightType == 2 && shadowMapIdx == _light.shadowCascades)
     {
         const half3 edgeUv = half3(shadowUv, shadowProj.z) * SHADOW_EDGE_FACE_SCALE;
         const half3 edgeMax = min(min(edgeUv, SHADOW_EDGE_FACE_SCALE - edgeUv), 1);
         const half k = 1 - min(min(edgeMax.x, edgeMax.y), edgeMax.z);
         lightWeight = lerp(lightWeight, 1.0, clamp(k, 0, 1));
     }
+
+    //TEST
+    //if (cascadeIdx != 0)
+    //{
+    //    lightWeight *= sin(_worldPosition.x * 10) * 0.5 + 0.5;
+    //}
+
     return lightWeight;
 }
 #endif //FEATURE_LIGHT_SHADOWMAPS
