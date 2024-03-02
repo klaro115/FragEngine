@@ -78,10 +78,6 @@ public sealed class TestApplicationLogic : ApplicationLogic
 	protected override bool BeginRunningState()
 	{
 		// Import 3D models:
-		Engine.ResourceManager.GetAndLoadResource("TexFlauschi512", true, out _);
-		Engine.ResourceManager.GetAndLoadResource("Mtl_TestMaterial", true, out _);
-		Engine.ResourceManager.GetAndLoadResource("Mtl_DefaultSurface", true, out _);
-		Engine.ResourceManager.GetAndLoadResource("Mtl_FeatureTest", true, out _);
 		Engine.ResourceManager.GetAndLoadResource("ForwardPlusLight_Composition_PS", true, out _);
 
 		Scene scene = Engine.SceneManager.MainScene!;
@@ -124,13 +120,13 @@ public sealed class TestApplicationLogic : ApplicationLogic
 		if (SceneSpawner.CreateLight(scene, Light.LightType.Directional, out Light light))
 		{
 			light.node.WorldPosition = new Vector3(0, 5, 0);
-			//light.node.SetRotationFromYawPitchRoll(-22.5f, 45, 0, true, true);
-			light.node.SetRotationFromYawPitchRoll(0, 90, 0, true, true);
+			light.node.SetRotationFromYawPitchRoll(-22.5f, 45, 0, true, true);
+			//light.node.SetRotationFromYawPitchRoll(0, 90, 0, true, true);
 			//light.node.SetEnabled(false);
 
 			light.LightIntensity = 0.5f;
 			light.CastShadows = true;
-			light.ShadowCascades = 1;
+			light.ShadowCascades = 2;
 		}
 		if (SceneSpawner.CreateLight(scene, Light.LightType.Directional, out light))
 		{
@@ -143,7 +139,7 @@ public sealed class TestApplicationLogic : ApplicationLogic
 		{
 			light.node.WorldPosition = new Vector3(0, 0, -3);
 			light.node.LocalRotation = Quaternion.Identity;
-			light.node.SetEnabled(false);
+			//light.node.SetEnabled(false);
 
 			light.LightIntensity = 15;
 			light.SpotAngleDegrees = 35;

@@ -142,10 +142,9 @@ half3 CalculateTotalLightIntensity(in float3 _worldPosition, in float3 _worldNor
         const half3 lightIntensity = CalculatePhongLighting(light, _worldPosition, _worldNormal);
 
         // Determine shadow cascade for this pixel:
-        //const float cameraDist = length(_worldPosition - cameraPosition.xyz);
-        //const uint cascadeOffset = (uint)(2 * cameraDist / _light.shadowCascadeRange);
-        //const uint cascadeIdx = min(cascadeOffset, _light.shadowCascades);
-        const uint cascadeIdx = light.shadowCascades;
+        const float cameraDist = length(_worldPosition - cameraPosition.xyz);
+        const uint cascadeOffset = (uint)(2 * cameraDist / light.shadowCascadeRange);
+        const uint cascadeIdx = min(cascadeOffset, light.shadowCascades);
         const uint shadowMapIdx = light.shadowMapIdx + cascadeIdx;
 
         // Add a bias to position along surface normal, to counter-act stair-stepping artifacts:
@@ -161,7 +160,7 @@ half3 CalculateTotalLightIntensity(in float3 _worldPosition, in float3 _worldNor
         half lightWeight = shadowDepth > shadowProj.z ? 1 : 0;
 
         // Fade shadows out near boundaries of UV/Depth space:
-        if (light.lightType == 2)
+        if (light.lightType == 2 && shadowMapIdx == light.shadowCascades)
         {
             const half3 edgeUv = half3(shadowUv, shadowProj.z) * SHADOW_EDGE_FACE_SCALE;
             const half3 edgeMax = min(min(edgeUv, SHADOW_EDGE_FACE_SCALE - edgeUv), 1);

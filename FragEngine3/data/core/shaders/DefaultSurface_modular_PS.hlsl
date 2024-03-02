@@ -222,7 +222,6 @@ half CalculateShadowMapLightWeight(const in Light _light, const in float3 _world
     // Load corresponding depth value from shadow texture array:
     const half shadowDepth = TexShadowMaps.Sample(SamplerShadowMaps, float3(shadowUv.x, shadowUv.y, shadowMapIdx));
     half lightWeight = shadowDepth > shadowProj.z ? 1 : 0;
-    //half lightWeight = shadowDepth > 0.5;
 
     // Fade shadows out near boundaries of UV/Depth space:
     if (_light.lightType == 2 && shadowMapIdx == _light.shadowCascades)
@@ -232,12 +231,6 @@ half CalculateShadowMapLightWeight(const in Light _light, const in float3 _world
         const half k = 1 - min(min(edgeMax.x, edgeMax.y), edgeMax.z);
         lightWeight = lerp(lightWeight, 1.0, clamp(k, 0, 1));
     }
-
-    //TEST
-    //if (cascadeIdx != 0)
-    //{
-    //    lightWeight *= sin(_worldPosition.x * 10) * 0.5 + 0.5;
-    //}
 
     return lightWeight;
 }
