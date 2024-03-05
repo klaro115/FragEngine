@@ -70,17 +70,21 @@ public static class QoiImporter
 		// Initialize pixel buffer and settings:
 		int pixelCount = (int)(header.width * header.height);
 
+		_outRawImage.width = header.width;
+		_outRawImage.height = header.height;
 		_outRawImage.channelCount = header.channels;
 		_outRawImage.isSrgb = !header.isLinear;
 		_outRawImage.pixelData_RgbaByte = new RgbaByte[pixelCount];
 
+		RgbaByte[] pixels = _outRawImage.pixelData_RgbaByte;
 		RgbaByte[] colorTable = new RgbaByte[64];
 		Array.Fill(colorTable, new RgbaByte(0, 0, 0, 0));
 
 		RgbaByte curColor = new(0, 0, 0, 255);
 		int x;
 		int pixelIndex = 0;
-		while ((x = reader.ReadByte()) != -1 && pixelIndex < pixelCount)
+		int endZeroCounter = 0;
+		while ((x = reader.ReadByte()) != -1 && pixelIndex < pixelCount && _byteStream.Position < _byteStream.Length)
 		{
 			if (x == TAG_QOI_OP_RGB)
 			{
@@ -90,8 +94,8 @@ public static class QoiImporter
 					reader.ReadByte(),
 					reader.ReadByte(),
 					curColor.A);
-				_outRawImage.pixelData_RgbaByte[pixelIndex++] = curColor;
-				colorTable[GetColorIndexPosition(curColor)] = curColor;
+				pixels[pixelIndex++] = curColor;
+				UpdateColorTable(curColor);
 			}
 			else if (x == TAG_QOI_OP_RGBA)
 			{
@@ -101,16 +105,16 @@ public static class QoiImporter
 					reader.ReadByte(),
 					reader.ReadByte(),
 					reader.ReadByte());
-				_outRawImage.pixelData_RgbaByte[pixelIndex++] = curColor;
-				colorTable[GetColorIndexPosition(curColor)] = curColor;
+				pixels[pixelIndex++] = curColor;
+				UpdateColorTable(curColor);
 			}
 			else if ((x & 0xC0) == TAG_QOI_OP_INDEX)
 			{
 				// Load color from table:
 				int colorIndex = x & 0x3F;
 				curColor = colorTable[colorIndex];
-				_outRawImage.pixelData_RgbaByte[pixelIndex++] = curColor;
-				colorTable[GetColorIndexPosition(curColor)] = curColor;
+				pixels[pixelIndex++] = curColor;
+				UpdateColorTable(curColor);
 			}
 			else if ((x & 0xC0) == TAG_QOI_OP_DIFF)
 			{
@@ -120,8 +124,8 @@ public static class QoiImporter
 					(byte)(curColor.R + ((x >> 2) & 0x3) - 2),
 					(byte)(curColor.R + ((x >> 0) & 0x3) - 2),
 					curColor.A);
-				_outRawImage.pixelData_RgbaByte[pixelIndex++] = curColor;
-				colorTable[GetColorIndexPosition(curColor)] = curColor;
+				pixels[pixelIndex++] = curColor;
+				UpdateColorTable(curColor);
 			}
 			else if ((x & 0xC0) == TAG_QOI_OP_LUMA)
 			{
@@ -143,40 +147,55 @@ public static class QoiImporter
 				byte b = (byte)(curColor.B + dg + dbdg);
 
 				curColor = new(r, g, b, curColor.A);
-				_outRawImage.pixelData_RgbaByte[pixelIndex++] = curColor;
-				colorTable[GetColorIndexPosition(curColor)] = curColor;
+				pixels[pixelIndex++] = curColor;
+				UpdateColorTable(curColor);
 			}
 			else if ((x & 0xC0) == TAG_QOI_OP_RUN)
 			{
 				// Repeat current pixel:
 				int runLength = x & 0x3F;
-				Array.Fill(_outRawImage.pixelData_RgbaByte, curColor, pixelIndex, runLength);
-				pixelIndex += runLength;
+				if (runLength == 0)
+				{
+					pixels[pixelIndex++] = curColor;
+				}
+				else
+				{
+					Array.Fill(_outRawImage.pixelData_RgbaByte, curColor, pixelIndex, runLength + 1);
+					pixelIndex += runLength;
+				}
+			}
+			else if (x == 0)
+			{
+				endZeroCounter++;
+				if (endZeroCounter >= 8) break;
 			}
 		}
 
 		return true;
+
+
+		int UpdateColorTable(RgbaByte _color)
+		{
+			int index = GetColorIndexPosition(_color);
+			colorTable[index] = _color;
+			return index;
+		}
 	}
 
 	[MethodImpl(MethodImplOptions.AggressiveInlining)]
 	private static uint BigToLittleEndian(uint _valueBE)
 	{
 		return
-			((_valueBE >> 24) & 0xFFu) |
-			((_valueBE >>  8) & 0xFFu) |
-			((_valueBE <<  8) & 0xFFu) |
-			((_valueBE >> 24) & 0xFFu);
+			((_valueBE >> 24) & 0x000000FFu) |
+			((_valueBE >>  8) & 0x0000FF00u) |
+			((_valueBE <<  8) & 0x00FF0000u) |
+			((_valueBE >> 24) & 0xFF000000u);
 	}
-	//[MethodImpl(MethodImplOptions.AggressiveInlining)]
-	//private static ushort BigToLittleEndian(ushort _valueBE)
-	//{
-	//	return (ushort)(((_valueBE >> 8) & 0xFFu) | ((_valueBE << 8) & 0xFFu));
-	//}
 
 	[MethodImpl(MethodImplOptions.AggressiveInlining)]
 	private static int GetColorIndexPosition(RgbaByte _color)
 	{
-		return _color.R * 3 + _color.G * 5 + _color.B * 7 + _color.A * 11;
+		return (_color.R * 3 + _color.G * 5 + _color.B * 7 + _color.A * 11) % 64;
 	}
 
 	private static bool ReadFileHeader(BinaryReader _reader, out QoiHeader _outHeader)

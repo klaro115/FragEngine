@@ -189,8 +189,8 @@ public sealed class TestApplicationLogic : ApplicationLogic
 			//cube.node.SetEnabled(false);
 
 			cube.SetMesh(cubeHandle);
-			//cube.SetMaterial("Mtl_FeatureTest");
-			cube.SetMaterial("Mtl_DefaultSurface");
+			cube.SetMaterial("Mtl_DiffuseImage");
+			//cube.SetMaterial("Mtl_DefaultSurface");
 		}
 
 		MeshPrimitiveFactory.CreateCylinderMesh("Cylinder", Engine, 0.5f, 2, 32, true, out _, out _, out ResourceHandle cylinderHandle);
