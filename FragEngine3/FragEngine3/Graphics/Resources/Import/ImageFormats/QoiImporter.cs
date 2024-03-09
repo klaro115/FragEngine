@@ -31,9 +31,10 @@ public static class QoiImporter
 	#endregion
 	#region Methods
 
-	public static bool ImportImage(Stream _byteStream, out RawImageData? _outRawImage)				//TESTED
+	public static bool ImportImage(Stream _byteStream, out RawImageData? _outRawImage)				//UNTESTED
 	{
 		// Link with format reference: https://qoiformat.org/
+		// Link to reference implementation: https://github.com/phoboslab/qoi/blob/master/qoi.h
 		if (_byteStream == null)
 		{
 			Logger.Instance?.LogError("Cannot import QOI image from null stream!");
@@ -51,7 +52,7 @@ public static class QoiImporter
 		{
 			channelCount = 4,
 			bitsPerPixel = 32,
-			isSrgb = false,
+			isSRgb = false,
 
 			pixelData_MonoByte = null,
 			pixelData_MonoFloat = null,
@@ -73,7 +74,7 @@ public static class QoiImporter
 		_outRawImage.width = header.width;
 		_outRawImage.height = header.height;
 		_outRawImage.channelCount = header.channels;
-		_outRawImage.isSrgb = !header.isLinear;
+		_outRawImage.isSRgb = !header.isLinear;
 		_outRawImage.pixelData_RgbaByte = new RgbaByte[pixelCount];
 
 		RgbaByte[] pixels = _outRawImage.pixelData_RgbaByte;
@@ -82,10 +83,9 @@ public static class QoiImporter
 
 		RgbaByte curColor = new(0, 0, 0, 255);
 		int x;
-		int pixelIndex = 0;
-		int endZeroCounter = 0;
-		while ((x = reader.ReadByte()) != -1 && pixelIndex < pixelCount && _byteStream.Position < _byteStream.Length)
+		for (int pixelIndex = 0; pixelIndex < pixelCount;)
 		{
+			x = reader.ReadByte();
 			if (x == TAG_QOI_OP_RGB)
 			{
 				// Set new RGB color, retain previous alpha:
@@ -95,7 +95,6 @@ public static class QoiImporter
 					reader.ReadByte(),
 					curColor.A);
 				pixels[pixelIndex++] = curColor;
-				UpdateColorTable(curColor);
 			}
 			else if (x == TAG_QOI_OP_RGBA)
 			{
@@ -106,7 +105,6 @@ public static class QoiImporter
 					reader.ReadByte(),
 					reader.ReadByte());
 				pixels[pixelIndex++] = curColor;
-				UpdateColorTable(curColor);
 			}
 			else if ((x & 0xC0) == TAG_QOI_OP_INDEX)
 			{
@@ -114,72 +112,45 @@ public static class QoiImporter
 				int colorIndex = x & 0x3F;
 				curColor = colorTable[colorIndex];
 				pixels[pixelIndex++] = curColor;
-				UpdateColorTable(curColor);
 			}
 			else if ((x & 0xC0) == TAG_QOI_OP_DIFF)
 			{
 				// Apply minor difference to color:
 				curColor = new(
 					(byte)(curColor.R + ((x >> 4) & 0x3) - 2),
-					(byte)(curColor.R + ((x >> 2) & 0x3) - 2),
-					(byte)(curColor.R + ((x >> 0) & 0x3) - 2),
+					(byte)(curColor.G + ((x >> 2) & 0x3) - 2),
+					(byte)(curColor.B + ((x >> 0) & 0x3) - 2),
 					curColor.A);
 				pixels[pixelIndex++] = curColor;
-				UpdateColorTable(curColor);
 			}
 			else if ((x & 0xC0) == TAG_QOI_OP_LUMA)
 			{
 				byte y = reader.ReadByte();
 
-				// Read diffs to previous pixel:
-				int dg = x & 0x3F;
-				int drdg = (y >> 4) & 0x0F;
-				int dbdg = (y >> 0) & 0x0F;
-
-				// Apply signs to diff values:
-				if ((dg & 0x20) == 0x20) dg = -(dg & 0x1F);
-				if ((drdg & 0x8) == 0x8) drdg = -(drdg & 0x7);
-				if ((dbdg & 0x8) == 0x8) dbdg = -(dbdg & 0x7);
-
-				// Calculate new color values:
-				byte g = (byte)(curColor.G + dg);
-				byte r = (byte)(curColor.R + dg + drdg);
-				byte b = (byte)(curColor.B + dg + dbdg);
+				int vg = (x & 0x3F) - 32;
+				byte r = (byte)(curColor.R + vg - 8 + ((y >> 4) & 0x0F));
+				byte g = (byte)(curColor.G + vg);
+				byte b = (byte)(curColor.B + vg - 8 + (y & 0x0F));
 
 				curColor = new(r, g, b, curColor.A);
 				pixels[pixelIndex++] = curColor;
-				UpdateColorTable(curColor);
 			}
 			else if ((x & 0xC0) == TAG_QOI_OP_RUN)
 			{
 				// Repeat current pixel:
-				int runLength = x & 0x3F;
-				if (runLength == 0)
-				{
-					pixels[pixelIndex++] = curColor;
-				}
-				else
-				{
-					Array.Fill(_outRawImage.pixelData_RgbaByte, curColor, pixelIndex, runLength + 1);
-					pixelIndex += runLength;
-				}
+				int runLength = (x & 0x3F) + 1;
+				Array.Fill(_outRawImage.pixelData_RgbaByte, curColor, pixelIndex, runLength);
+				pixelIndex += runLength;
 			}
-			else if (x == 0)
-			{
-				endZeroCounter++;
-				if (endZeroCounter >= 8) break;
-			}
+
+			int tableIndex = GetColorIndexPosition(curColor);
+			colorTable[tableIndex] = curColor;
 		}
+
+		//TEMP: This should happen on-the-fly instead.
+		_outRawImage.MirrorVertically();
 
 		return true;
-
-
-		int UpdateColorTable(RgbaByte _color)
-		{
-			int index = GetColorIndexPosition(_color);
-			colorTable[index] = _color;
-			return index;
-		}
 	}
 
 	[MethodImpl(MethodImplOptions.AggressiveInlining)]

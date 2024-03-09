@@ -83,7 +83,7 @@ public static class BitmapImporter
 		{
 			channelCount = 4,
 			bitsPerPixel = 32,
-			isSrgb = false,
+			isSRgb = false,
 
 			pixelData_MonoByte = null,
 			pixelData_MonoFloat = null,

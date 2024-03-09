@@ -122,7 +122,7 @@ public static class MagickImporter
 				};
 			}
 			_outRawImage.channelCount = (uint)img.ChannelCount;
-			_outRawImage.isSrgb = false;// img.ColorSpace == ColorSpace.sRGB;		// note: ignoring sRGB appears to be right, pixels seem to be converted on read.
+			_outRawImage.isSRgb = false;// img.ColorSpace == ColorSpace.sRGB;		// note: ignoring sRGB appears to be right, pixels seem to be converted on read.
 
 			// Get a collection of all image pixels:
 			using IPixelCollection<ushort> pixelColl = img.GetPixelsUnsafe();

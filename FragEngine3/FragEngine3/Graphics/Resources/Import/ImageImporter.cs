@@ -50,7 +50,7 @@ namespace FragEngine3.Graphics.Resources.Import
 				}
 			}
 
-			Stream stream = null!;
+			Stream? stream = null;
 			try
 			{
 				// Open file stream:
@@ -90,9 +90,20 @@ namespace FragEngine3.Graphics.Resources.Import
 				{
 					_outImageData.MirrorVertically();
 				}
+				// Normals are using D3D standard, convert to OpenGL standard: (inverts green color value)
 				if (_handle.importFlags.Contains("normalsDX", StringComparison.Ordinal))
 				{
 					_outImageData.ConvertNormalMapDxAndGL();
+				}
+				// Dimensions need padding to next higher power-of-two value: (pads content with black pixels)
+				if (_handle.importFlags.Contains("padPowerOf2", StringComparison.Ordinal))
+				{
+					_outImageData.PadSizeToNextPowerOfTwo();
+				}
+				// Dimensions need padding to next higher power-of-two value: (pads content with black pixels)
+				if (_handle.importFlags.Contains("sRgbToLinear", StringComparison.Ordinal))
+				{
+					_outImageData.ConvertSRgbToLinearColorSpace();
 				}
 			}
 			return true;
