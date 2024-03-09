@@ -147,7 +147,7 @@ public static class QoiImporter
 			colorTable[tableIndex] = curColor;
 		}
 
-		//TEMP: This should happen on-the-fly instead.
+		// Flip image since we're using a vertically mirrored standard:
 		_outRawImage.MirrorVertically();
 
 		return true;

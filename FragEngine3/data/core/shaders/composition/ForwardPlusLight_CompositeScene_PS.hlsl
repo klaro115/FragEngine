@@ -64,11 +64,12 @@ PixelOutput Main_Pixel(in VertexOutput_Basic inputBasic)
 
     const half4 colTransparent = TexTransparentColor.Load(posPixel);
     const float depthTransparent = TexTransparentDepth.Load(posPixel).r;
+    const bool isVisible = colTransparent.w > 0.003;
 
     // Composite geometry: (opaque & transparent)
-    const half k = depthTransparent > depthOpaque ? colTransparent.w : 0;
+    const half k = depthTransparent < depthOpaque && isVisible ? colTransparent.w : 0;
     const half4 colGeometry = lerp(colOpaque, colTransparent, k);
-    const float depthGeometry = min(depthTransparent, depthOpaque);
+    const float depthGeometry = isVisible ? min(depthTransparent, depthOpaque) : depthOpaque;
 
     // Assemble final output:
     PixelOutput o;

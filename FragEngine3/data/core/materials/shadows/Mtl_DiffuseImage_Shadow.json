@@ -1,5 +1,5 @@
 {
-    "Key": "Mtl_DiffuseImage",
+    "Key": "Mtl_DiffuseImage_Shadow",
     "States":
     {
         "EnableDepthTest": true,
@@ -33,12 +33,12 @@
         "Geometry": "",
         "TesselationCtrl": "",
         "TesselationEval": "",
-        "Pixel": "DefaultSurface_PS"
+        "Pixel": "AlphaShadow_PS"
     },
     "Replacements":
     {
         "SimplifiedVersion": "",
-        "ShadowMap": "Mtl_DiffuseImage_Shadow"
+        "ShadowMap": ""
     },
     "Resources":
     {
