@@ -167,7 +167,8 @@ namespace FragEngine3.Graphics.Utility
 			const uint matrixByteSize = 16 * sizeof(float);
 
 			_totalCascadeCount = Math.Max(_totalCascadeCount, 1);
-			uint totalByteSize = _totalCascadeCount * matrixByteSize;
+			uint totalMatrixCount = 2 * _totalCascadeCount;
+			uint totalByteSize = totalMatrixCount * matrixByteSize;
 
 			if (_bufShadowMatrices == null || _bufShadowMatrices.IsDisposed || _bufShadowMatrices.SizeInBytes < totalByteSize)
 			{

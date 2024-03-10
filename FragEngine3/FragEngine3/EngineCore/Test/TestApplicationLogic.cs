@@ -109,7 +109,7 @@ public sealed class TestApplicationLogic : ApplicationLogic
 
 				ClearColor = true,
 				ClearDepth = true,
-				ClearColorValue = RgbaFloat.CornflowerBlue,
+				ClearColorValue = RgbaFloat.Black,
 				ClearDepthValue = 1.0f,
 			};
 			camera.IsMainCamera = true;
@@ -122,7 +122,7 @@ public sealed class TestApplicationLogic : ApplicationLogic
 			light.node.WorldPosition = new Vector3(0, 5, 0);
 			light.node.SetRotationFromYawPitchRoll(-22.5f, 45, 0, true, true);
 			//light.node.SetRotationFromYawPitchRoll(0, 90, 0, true, true);
-			//light.node.SetEnabled(false);
+			light.node.SetEnabled(false);
 
 			light.LightIntensity = 0.5f;
 			light.CastShadows = true;
@@ -141,9 +141,10 @@ public sealed class TestApplicationLogic : ApplicationLogic
 			light.node.LocalRotation = Quaternion.Identity;
 			//light.node.SetEnabled(false);
 
-			light.LightIntensity = 15;
+			light.LightIntensity = 25;
 			light.SpotAngleDegrees = 35;
 			light.CastShadows = true;
+			light.ShadowBias = 0.02f;
 		}
 		if (SceneSpawner.CreateLight(scene, Light.LightType.Spot, out light))
 		{
@@ -179,18 +180,18 @@ public sealed class TestApplicationLogic : ApplicationLogic
 			rabbit.DontDrawUnlessFullyLoaded = true;
 		}
 
-		MeshPrimitiveFactory.CreateCubeMesh("Cube", Engine, new(1, 1, 1), true, out _, out _, out ResourceHandle cubeHandle);
+		MeshPrimitiveFactory.CreateCubeMesh("Cube", Engine, new(2, 2, 2), true, out _, out _, out ResourceHandle cubeHandle);
 		if (SceneSpawner.CreateStaticMeshRenderer(scene, out StaticMeshRenderer cube))
 		{
 			cube.node.Name = "Cube";
-			cube.node.LocalPosition = new Vector3(2.5f, 0, 2);
+			cube.node.LocalPosition = new Vector3(2.5f, -0.5f, 2);
 			//cube.node.SetRotationFromYawPitchRoll(45, 45, 0, true, true);
 			cube.node.LocalScale = Vector3.One;
 			//cube.node.SetEnabled(false);
 
 			cube.SetMesh(cubeHandle);
-			cube.SetMaterial("Mtl_DiffuseImage");
-			//cube.SetMaterial("Mtl_DefaultSurface");
+			//cube.SetMaterial("Mtl_DiffuseImage");
+			cube.SetMaterial("Mtl_DefaultSurface");
 		}
 
 		MeshPrimitiveFactory.CreateCylinderMesh("Cylinder", Engine, 0.5f, 2, 32, true, out _, out _, out ResourceHandle cylinderHandle);
@@ -250,7 +251,7 @@ public sealed class TestApplicationLogic : ApplicationLogic
 		}
 		if (SceneSpawner.CreateStaticMeshRenderer(scene, out plane))
 		{
-			plane.node.Name = "Wall";
+			plane.node.Name = "Wall_B";
 			plane.node.LocalPosition = new Vector3(0, 1, 4.5f);
 			plane.node.SetRotationFromAxisAngle(Vector3.UnitX, -90, false, true);
 			plane.node.LocalScale = Vector3.One;
@@ -259,6 +260,18 @@ public sealed class TestApplicationLogic : ApplicationLogic
 			plane.SetMesh(planeHandle);
 			plane.SetMaterial("Mtl_BrickWall");
 			//plane.SetMaterial("Mtl_DefaultSurface");
+			plane.DontDrawUnlessFullyLoaded = true;
+		}
+		if (SceneSpawner.CreateStaticMeshRenderer(scene, out plane))
+		{
+			plane.node.Name = "Wall_L";
+			plane.node.LocalPosition = new Vector3(-2.5f, 1, 2);
+			plane.node.SetRotationFromAxisAngle(Vector3.UnitZ, -90, false, true);
+			plane.node.LocalScale = Vector3.One;
+			//plane.node.SetEnabled(false);
+
+			plane.SetMesh(planeHandle);
+			plane.SetMaterial("Mtl_BrickWall");
 			plane.DontDrawUnlessFullyLoaded = true;
 		}
 

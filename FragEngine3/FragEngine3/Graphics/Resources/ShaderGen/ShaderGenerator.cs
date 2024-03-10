@@ -19,14 +19,14 @@ public static class ShaderGenerator
 	#endregion
 	#region Methods
 
-	public static bool CreatePixelShader(ResourceManager _resourceManager, EnginePlatformFlag _platformFlags, out string _outShaderCode)
+	public static bool CreatePixelShader(ResourceManager _resourceManager, EnginePlatformFlag _platformFlags, out byte[] _outShaderCode)
 	{
 		ShaderGenConfig config = ShaderGenConfig.ConfigWhiteLit;
 
 		return CreatePixelShaderVariation(_resourceManager, config, _platformFlags, out _outShaderCode);
 	}
 
-	public static bool CreatePixelShaderVariation(ResourceManager _resourceManager, in ShaderGenConfig _config, EnginePlatformFlag _platformFlags, out string _outShaderCode)
+	public static bool CreatePixelShaderVariation(ResourceManager _resourceManager, in ShaderGenConfig _config, EnginePlatformFlag _platformFlags, out byte[] _outShaderCode)
 	{
 		// Only load template code file once, cached code is used for all subsequent shader imports:
 		if (string.IsNullOrEmpty(templateCodePS))
@@ -51,7 +51,7 @@ public static class ShaderGenerator
 			if (string.IsNullOrEmpty(templateFileName))
 			{
 				_resourceManager.engine.Logger.LogError($"Cannot load default pixel shader template code; file name could not be found! (Shader language: '{language}')");
-				_outShaderCode = string.Empty;
+				_outShaderCode = [];
 				return false;
 			}
 
@@ -63,7 +63,7 @@ public static class ShaderGenerator
 			if (!File.Exists(templateFilePath))
 			{
 				_resourceManager.engine.Logger.LogError($"Template code file for default pixel shader could not be found! (File path: '{templateFilePath}')");
-				_outShaderCode = string.Empty;
+				_outShaderCode = [];
 				return false;
 			}
 
@@ -75,7 +75,7 @@ public static class ShaderGenerator
 			catch (Exception ex)
 			{
 				_resourceManager.engine.Logger.LogException($"Failed to read template code file for default pixel shader! (File path: '{templateFilePath}')", ex);
-				_outShaderCode = string.Empty;
+				_outShaderCode = [];
 				return false;
 			}
 		}
@@ -146,6 +146,11 @@ public static class ShaderGenerator
 					$"#define FEATURE_LIGHT_MODEL {_config.lightingModel}",
 					definesMaxEndIdx);
 			}
+			//int indirectStartIdx = RemoveLine(codeBuilder, "#define FEATURE_LIGHT_INDIRECT", definesMaxEndIdx);
+			//if (_config.indirectLightResolution > 1)
+			//{
+			//	codeBuilder.Insert(indirectStartIdx, $"#define FEATURE_LIGHT_INDIRECT {_config.indirectLightResolution}\n");
+			//}
 			if (!_config.applyLighting)
 			{
 				RemoveDefine(codeBuilder, "#define FEATURE_LIGHT", definesMaxEndIdx);
@@ -153,7 +158,12 @@ public static class ShaderGenerator
 		}
 
 		// Output updated shader code and return success:
-		_outShaderCode = codeBuilder.ToString();
+		_outShaderCode = new byte[codeBuilder.Length + 1];
+		for (int i = 0; i < codeBuilder.Length; ++i)
+		{
+			_outShaderCode[i] = (byte)codeBuilder[i];
+		}
+		_outShaderCode[^1] = (byte)'\0';
 		return true;
 	}
 
@@ -165,6 +175,55 @@ public static class ShaderGenerator
 	private static void RemoveDefine(StringBuilder _builder, string _defineTxt, int _maxEndIdx)
 	{
 		_builder.Replace(_defineTxt, string.Empty, 0, _maxEndIdx);
+	}
+
+	private static int IndexOf(StringBuilder _builder, string _text, int _maxEndIdx)
+	{
+		int startIdx = -1;
+		int maxStartIdx = _maxEndIdx - _text.Length;
+		if (maxStartIdx < 0) return -1;
+
+		for (int i = 0; i < maxStartIdx; ++i)
+		{
+			if (_builder[i] == _text[0])
+			{
+				for (int j = 1; j < _text.Length; ++j)
+				{
+					if (_builder[i + j] != _text[j])
+						goto mismatch;
+				}
+				startIdx = i;
+				break;
+			}
+		mismatch:
+			;
+		}
+		return startIdx;
+	}
+
+	private static int RemoveLine(StringBuilder _builder, string _defineTxt, int _maxEndIdx)
+	{
+		int startIdx = IndexOf(_builder, _defineTxt, _maxEndIdx);
+		if (startIdx >= 0)
+		{
+			// Find start and end of the line:
+			int endIdx = startIdx + _defineTxt.Length;
+			char c;
+			for (; startIdx >= 0; startIdx--)
+			{
+				c = _builder[startIdx];
+				if (char.IsControl(c))
+					break;
+			}
+			for (; endIdx < _maxEndIdx; endIdx++)
+			{
+				c = _builder[endIdx];
+				if (char.IsControl(c))
+					break;
+			}
+			_builder.Remove(startIdx, endIdx - startIdx);
+		}
+		return startIdx;
 	}
 
 	#endregion

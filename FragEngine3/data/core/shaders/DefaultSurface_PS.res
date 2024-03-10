@@ -1,5 +1,5 @@
 {
-    "DataFilePath": "./DefaultSurface_PS.hlsl",
+    "DataFilePath": "./DefaultSurface_modular_PS.hlsl",
     "DataFileType": 0,
     "DataFileSize": 0,
     "UncompressedFileSize": 0,
@@ -16,7 +16,7 @@
             "DataSize": 0,
             "DependencyCount": 0,
             "Dependencies": null,
-            "ImportFlags": "shaderGen='At_Nyn0_Ly101p1'"
+            "ImportFlags": "shaderGen='At_Nyn0_Ly101p15'"
         }
     ]
 }

@@ -24,6 +24,7 @@ public struct ShaderGenConfig
 	public bool useLightSources;						// For lighting, whether to use light sources in the scene to light up surfaces. "BufLights" buffer and "Light" struct are added.
 	public ShaderGenLightingModel lightingModel;		// For lighting, which lighting model to use for light sources.
 	public bool useShadowMaps;                          // For lighting, whether to use shadow maps to mask out light coming from light sources.
+	public uint indirectLightResolution;				// For indirect lighting, how many samples per side of a grid to use for approximating nearby indirect light scattering.
 
 	// Variants:
 	public bool alwaysCreateExtendedVariant;			// Whether to always also create an '_Ext' variant, even if no feature requires the additional geometry data.
@@ -50,6 +51,7 @@ public struct ShaderGenConfig
 		useLightSources = true,
 		lightingModel = ShaderGenLightingModel.Phong,
 		useShadowMaps = true,
+		indirectLightResolution = 0u,
 	};
 
 	public static ShaderGenConfig ConfigMainLit => new()
@@ -69,6 +71,7 @@ public struct ShaderGenConfig
 		useLightSources = true,
 		lightingModel = ShaderGenLightingModel.Phong,
 		useShadowMaps = true,
+		indirectLightResolution = 0u,
 	};
 
 	public static ShaderGenConfig ConfigMainNormalsLit => new()
@@ -88,6 +91,7 @@ public struct ShaderGenConfig
 		useLightSources = true,
 		lightingModel = ShaderGenLightingModel.Phong,
 		useShadowMaps = true,
+		indirectLightResolution = 0u,
 	};
 
 	#endregion
@@ -116,6 +120,7 @@ public struct ShaderGenConfig
 		if (!useLightSources)
 		{
 			lightingModel = ShaderGenLightingModel.Phong;
+			indirectLightResolution = 0u;
 		}
 	}
 
@@ -139,6 +144,7 @@ public struct ShaderGenConfig
 		char useLgtSrcs = BoolTo01(applyLighting && useLightSources);
 		char lightModel = BoolToCustom(applyLighting && useLightSources && lightingModel == ShaderGenLightingModel.Phong, 'p', '?');
 		char useShaMaps = BoolTo01(applyLighting && useLightSources && useShadowMaps);
+		char indirectRes = UintToHex(Math.Min(indirectLightResolution, 15));
 
 		// Variants:
 		// Format: "V100"
@@ -148,7 +154,7 @@ public struct ShaderGenConfig
 
 		// Assemble base text containing only flags:
 		// Format: "Ac_Nyn_Ly101p1_V100"
-		string txt = $"A{albedoSrc}_N{normalsYN}{parallaxYN}{parallaxFull}_L{lightingYN}{useAmbient}{useLgtMaps}{useLgtSrcs}{lightModel}{useShaMaps}_V{variantExt}{variantBle}{variantAni}";
+		string txt = $"A{albedoSrc}_N{normalsYN}{parallaxYN}{parallaxFull}_L{lightingYN}{useAmbient}{useLgtMaps}{useLgtSrcs}{lightModel}{useShaMaps}{indirectRes}_V{variantExt}{variantBle}{variantAni}";
 
 		// Albedo start color literal or sampler name:
 		if (albedoSource == ShaderGenAlbedoSource.SampleTexMain && !string.IsNullOrEmpty(samplerTexMain))
@@ -176,6 +182,9 @@ public struct ShaderGenConfig
 		static char BoolToYN(bool _value) => _value ? 'y' : 'n';
 		static char BoolTo01(bool _value) => _value ? '1' : '0';
 		static char BoolToCustom(bool _value, char _y, char _n) => _value ? _y : _n;
+		static char UintToHex(uint _value) => _value < 10
+			? (char)('0' + _value)
+			: (char)('A' + _value);
 	}
 
 	public static bool TryParseDescriptionTxt(string _txt, out ShaderGenConfig _outConfig)
@@ -273,8 +282,13 @@ public struct ShaderGenConfig
 						return false;
 				}
 				config.useShadowMaps = _part[6] == '1';
+				config.indirectLightResolution = _part.Length > 7 ? HexToUint(_part[7]) : 0;
 			}
 			return true;
+
+			static uint HexToUint(char _hex) => _hex >= 'A' && _hex <= 'F'
+				? (uint)(10 + _hex - 'A')
+				: (uint)(_hex - '0');
 		}
 		bool TryParseVariants(string _part)
 		{

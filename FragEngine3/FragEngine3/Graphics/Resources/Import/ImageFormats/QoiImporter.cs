@@ -31,7 +31,7 @@ public static class QoiImporter
 	#endregion
 	#region Methods
 
-	public static bool ImportImage(Stream _byteStream, out RawImageData? _outRawImage)				//UNTESTED
+	public static bool ImportImage(Stream _byteStream, out RawImageData? _outRawImage)
 	{
 		// Link with format reference: https://qoiformat.org/
 		// Link to reference implementation: https://github.com/phoboslab/qoi/blob/master/qoi.h

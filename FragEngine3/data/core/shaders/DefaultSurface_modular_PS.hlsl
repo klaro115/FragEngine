@@ -16,9 +16,9 @@
 #define FEATURE_LIGHT_AMBIENT                   // Whether to add directional ambient intensity to base lighting
 #define FEATURE_LIGHT_LIGHTMAPS                 // Whether to add light map intensity to base lighting
 #define FEATURE_LIGHT_SOURCES                   // Whether to use light sources from the scene to light up the object
-#define FEATURE_LIGHT_MODEL Phong               // Which lighting model to use for light sources. Default is "Phong"
+#define FEATURE_LIGHT_MODEL Phong
 #define FEATURE_LIGHT_SHADOWMAPS                // Whether to use shadow maps to mask out light rays coming from light sources
-#define FEATURE_LIGHT_INDIRECT 5                // Whether to add an approximation of indirect lighting from shadow map in shadow maps
+#define FEATURE_LIGHT_INDIRECT 5
 
 // Variants:
 #define VARIANT_EXTENDED                        // Whether to always create a shader variant using extended surface data
@@ -206,15 +206,21 @@ half3 CalculatePhongLighting(const in Light _light, const in float3 _worldPositi
 #endif //FEATURE_LIGHT_MODEL == Phong
 
 #ifdef FEATURE_LIGHT_SHADOWMAPS
-#ifdef FEATURE_LIGHT_INDIRECT
+#if defined(FEATURE_LIGHT_INDIRECT) && FEATURE_LIGHT_INDIRECT > 1
 half3 CalculateIndirectLightScatter(const in Light _light, const in float3 _worldPosition, const in float3 _surfaceNormal)
 {
     static const int halfKernel = FEATURE_LIGHT_INDIRECT / 2;
     static const half uvKernelSteps = 1.0 / 256;
-    static const float bounceAmount = 0.1;
+    static const float bounceAmount = 0.025;
 
-    const float4x4 mtxShadowWorld2Clip = BufShadowMatrices[2 * _light.shadowMapIdx];
-    const float4x4 mtxShadowClip2World = BufShadowMatrices[2 * _light.shadowMapIdx + 1];
+    // Determine shadow cascade for this pixel:
+    const float cameraDist = length(_worldPosition - cameraPosition.xyz);
+    const uint cascadeOffset = (uint)(2 * cameraDist / _light.shadowCascadeRange);
+    const uint cascadeIdx = min(cascadeOffset, _light.shadowCascades);
+    const uint shadowMapIdx = _light.shadowMapIdx + cascadeIdx;
+
+    const float4x4 mtxShadowWorld2Clip = BufShadowMatrices[2 * shadowMapIdx];
+    const float4x4 mtxShadowClip2World = BufShadowMatrices[2 * shadowMapIdx + 1];
 
     // Add a bias to position along surface normal, to counter-act stair-stepping artifacts:
     const float4 worldPosBiased = float4(_worldPosition + _surfaceNormal * _light.shadowBias, 1);
@@ -236,7 +242,7 @@ half3 CalculateIndirectLightScatter(const in Light _light, const in float3 _worl
             const half4 posClipSpace = half4(uvX * 2 - 1, 1 - uvY * 2, depth, 1);
 
             const float3 posWorld = mul(mtxShadowClip2World, posClipSpace).xyz;
-            const float3 lightOffset = worldPosBiased.xyz - posWorld;
+            const float3 lightOffset = _worldPosition - posWorld;
 
             // Determine approximate lighting at sampled point, pre-bounce:
             const float3 offsetPreBounce = posWorld - _light.lightPosition;

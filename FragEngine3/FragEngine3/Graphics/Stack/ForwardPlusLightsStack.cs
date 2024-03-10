@@ -36,7 +36,7 @@ public sealed class ForwardPlusLightsStack(GraphicsCore _core) : IGraphicsStack
 	private readonly List<Light> activeLights = new(10);
 	private readonly List<Light> activeLightsShadowMapped = new(5);
 	private LightSourceData[] activeLightData = [];
-	private Matrix4x4[] shadowProjectionMatrices = [];
+	private Matrix4x4[] shadowProjectionMatrices = new Matrix4x4[2];
 
 	private readonly List<IRenderer> activeRenderersOpaque = new(128);
 	private readonly List<IRenderer> activeRenderersTransparent = new(128);
@@ -647,7 +647,7 @@ public sealed class ForwardPlusLightsStack(GraphicsCore _core) : IGraphicsStack
 				return false;
 			}
 
-			shadowProjectionMatrices = new Matrix4x4[totalShadowCascadeCount];
+			shadowProjectionMatrices = new Matrix4x4[totalShadowCascadeCount * 2];
 			Array.Fill(shadowProjectionMatrices, Matrix4x4.Identity);
 		}
 
@@ -685,7 +685,7 @@ public sealed class ForwardPlusLightsStack(GraphicsCore _core) : IGraphicsStack
 		{
 			bool result = true;
 			int i = 0;
-			int totalCascadeIdx = 0;
+			int totalShadowMatrixCount = 0;
 
 			while (i < shadowMappedLightCount && result)
 			{
@@ -728,7 +728,10 @@ public sealed class ForwardPlusLightsStack(GraphicsCore _core) : IGraphicsStack
 					result &= light.EndDrawShadowCascade();
 
 					// Store projection matrix for later scene rendering calls:
-					shadowProjectionMatrices[totalCascadeIdx++] = lightCtx.mtxWorld2Clip;
+					shadowProjectionMatrices[totalShadowMatrixCount++] = lightCtx.mtxWorld2Clip;
+					shadowProjectionMatrices[totalShadowMatrixCount++] = Matrix4x4.Invert(lightCtx.mtxWorld2Clip, out Matrix4x4 mtxClip2World)
+						? mtxClip2World
+						: Matrix4x4.Identity;
 				}
 
 				result &= light.EndDrawShadowMap();
