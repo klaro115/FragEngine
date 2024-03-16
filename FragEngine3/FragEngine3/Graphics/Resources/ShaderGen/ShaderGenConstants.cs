@@ -4,7 +4,7 @@ public static class ShaderGenConstants
 {
 	#region Constants
 
-	public const string shaderGenImportFlag = "shaderGen";
+	public const string shaderGenPrefix = "ShaderGen";
 
 	#endregion
 }

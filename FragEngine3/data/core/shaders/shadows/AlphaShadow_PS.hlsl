@@ -28,20 +28,22 @@ SamplerState SamplerMain : register(s1);
 
 half4 Main_Pixel(in VertexOutput_Basic inputBasic) : SV_Target0
 {
-    half4 albedo = TexMain.Sample(SamplerMain, inputBasic.uv);
-    if (albedo.w < MIN_ALPHA)
+    half depth = TexMain.Sample(SamplerMain, inputBasic.uv).w;
+    if (depth < MIN_ALPHA)
     {
         discard;
     }
-    return albedo;
+    half3 normal = ((half3)inputBasic.normal + 1) * 0.5;
+    return half4(normal, depth);
 };
 
 half4 Main_Pixel_Ext(in VertexOutput_Basic inputBasic, in VertexOutput_Extended inputExt) : SV_Target0
 {
-    half4 albedo = TexMain.Sample(SamplerMain, inputBasic.uv);
-    if (albedo.w < MIN_ALPHA)
+    half depth = TexMain.Sample(SamplerMain, inputBasic.uv).w;
+    if (depth < MIN_ALPHA)
     {
         discard;
     }
-    return albedo;
+    half3 normal = ((half3)inputBasic.normal + 1) * 0.5;
+    return half4(normal, depth);
 };

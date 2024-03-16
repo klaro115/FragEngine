@@ -4,6 +4,7 @@ using FragEngine3.Graphics.Contexts;
 using FragEngine3.Graphics.Internal;
 using FragEngine3.Graphics.Resources.Data;
 using FragEngine3.Resources;
+using FragEngine3.Resources.Data;
 using FragEngine3.Utility.Serialization;
 using Veldrid;
 
@@ -165,6 +166,35 @@ public class Material(GraphicsCore _core, ResourceHandle _handle) : Resource(_ha
 		}
 	}
 
+	private bool LoadShaderVariant(ResourceHandle? _handle, ShaderStages _stageFlag, bool _fallbackToBasicVariant, ref MeshVertexDataFlags _vertexDataFlags, out Shader? _outShader)
+	{
+		if (_handle == null || !_handle.IsValid)
+		{
+			_outShader = null;
+			return false;
+		}
+
+		if (_handle.GetResource(true, true) is not ShaderResource shaderRes)
+		{
+			Logger.LogWarning($"Shader resource '{_handle}' could not be found! (Stage: {_stageFlag}");
+			_outShader = null;
+			return false;
+		}
+		if (!shaderRes.GetShaderProgram(_vertexDataFlags, out _outShader) || _outShader == null)
+		{
+			// If allowed, try falling back to basic variant, see if that can be loaded:
+			if (!_fallbackToBasicVariant || !shaderRes.GetShaderProgram(MeshVertexDataFlags.BasicSurfaceData, out _outShader) || _outShader == null)
+			{
+				Logger.LogWarning($"Shader variant program '{_vertexDataFlags}' of shader resource '{_handle.resourceKey}' could not be loaded! (Stage: {_stageFlag}");
+				_outShader = null!;
+				return false;
+			}
+			// Change vertex flags for all subsequent stages to basic-only:
+			_vertexDataFlags = MeshVertexDataFlags.BasicSurfaceData;
+		}
+		return true;
+	}
+
 	private bool CreateShaderSetDesc(uint _newVersion, MeshVertexDataFlags _vertexDataFlags)
 	{
 		uint variantIdx = _vertexDataFlags.GetVariantIndex();
@@ -243,29 +273,10 @@ public class Material(GraphicsCore _core, ResourceHandle _handle) : Resource(_ha
 			// Local helper method for fetching and loading a shader variant:
 			bool AddShaderVariant(ResourceHandle? _handle, ShaderStages _stageFlag, bool _fallbackToBasicVariant)
 			{
-				if (_handle == null || !_handle.IsValid)
+				if (!LoadShaderVariant(_handle, _stageFlag, _fallbackToBasicVariant, ref _vertexDataFlags, out Shader? shader) || shader == null)
 				{
 					errorStages |= _stageFlag;
 					return false;
-				}
-
-				if (_handle.GetResource(true, true) is not ShaderResource shaderRes)
-				{
-					Logger.LogWarning($"Shader resource '{_handle}' could not be found! (Stage: {_stageFlag}");
-					errorStages |= _stageFlag;
-					return false;
-				}
-				if (!shaderRes.GetShaderProgram(_vertexDataFlags, out Shader? shader) || shader == null)
-				{
-					// If allowed, try falling back to basic variant, see if that can be loaded:
-					if (!_fallbackToBasicVariant || !shaderRes.GetShaderProgram(MeshVertexDataFlags.BasicSurfaceData, out shader) || shader == null)
-					{
-						Logger.LogWarning($"Shader variant program '{_vertexDataFlags}' of shader resource '{_handle.resourceKey}' could not be loaded! (Stage: {_stageFlag}");
-						errorStages |= _stageFlag;
-						return false;
-					}
-					// Change vertex flags for all subsequent stages to basic-only:
-					_vertexDataFlags = MeshVertexDataFlags.BasicSurfaceData;
 				}
 
 				shaders[i++] = shader;
@@ -646,11 +657,11 @@ public class Material(GraphicsCore _core, ResourceHandle _handle) : Resource(_ha
 		{
 			materialVersion = 1,
 
-			vertexShader = GetResourceHandle(data.Shaders.Vertex) ?? ResourceHandle.None,
-			geometryShader = GetResourceHandle(data.Shaders.Geometry),
-			tesselationShaderCtrl = GetResourceHandle(data.Shaders.TesselationCtrl),
-			tesselationShaderEval = GetResourceHandle(data.Shaders.TesselationEval),
-			pixelShader = GetResourceHandle(data.Shaders.Pixel) ?? ResourceHandle.None,
+			vertexShader = GetShaderResourceHandle(data.Shaders.Vertex) ?? ResourceHandle.None,
+			geometryShader = GetShaderResourceHandle(data.Shaders.Geometry),
+			tesselationShaderCtrl = GetShaderResourceHandle(data.Shaders.TesselationCtrl),
+			tesselationShaderEval = GetShaderResourceHandle(data.Shaders.TesselationEval),
+			pixelShader = GetShaderResourceHandle(data.Shaders.Pixel) ?? ResourceHandle.None,
 
 			depthStencilDesc = new(new()
 			{
@@ -684,6 +695,32 @@ public class Material(GraphicsCore _core, ResourceHandle _handle) : Resource(_ha
 			return !string.IsNullOrEmpty(_resourceKey) && _handle.resourceManager.GetResource(_resourceKey, out ResourceHandle handle)
 				? handle
 				: null;
+		}
+		ResourceHandle? GetShaderResourceHandle(string? _resourceKey)
+		{
+			// Try loading as a regular resource first:
+			ResourceHandle? handle = GetResourceHandle(_resourceKey);
+			if (handle is not null)
+			{
+				return handle;
+			}
+
+			// If the resource does not exist (yet), check if it's a procedurally created ShaderGen shader instead:
+			if (!string.IsNullOrEmpty(_resourceKey) &&
+				_resourceKey.StartsWith(ShaderGen.ShaderGenConstants.shaderGenPrefix, StringComparison.OrdinalIgnoreCase))
+			{
+				ResourceManager resourceManager = _graphicsCore.graphicsSystem.engine.ResourceManager;
+				handle = new(
+					resourceManager,
+					new ResourceHandleData()
+					{
+						ResourceKey = _resourceKey,
+						ResourceType = ResourceType.Shader,
+					},
+					ShaderGen.ShaderGenerator.MODULAR_SURFACE_SHADER_PS_NAME_BASE);
+				resourceManager.AddResource(handle);
+			}
+			return handle;
 		}
 	}
 
