@@ -13,7 +13,7 @@ using Veldrid;
 
 namespace FragEngine3.Graphics.Components
 {
-	public sealed class Light : Component
+	public sealed class Light : Component			//TODO: Consider splitting this into different components based on type.
 	{
 		#region Types
 
@@ -188,12 +188,20 @@ namespace FragEngine3.Graphics.Components
 			}
 		}
 
+		/// <summary>
+		/// Gets or sets the number of shadow cascades to create and render for this light source.
+		/// Directional and spot lights only. Must be a value between 0 and 4, where 0 disables cascades for this light.
+		/// </summary>
 		public uint ShadowCascades
 		{
 			get => shadowCascadeCount;
 			set => shadowCascadeCount = type != LightType.Point ? Math.Min(value, 4) : 0;
 		}
 
+		/// <summary>
+		/// A bias for shadow map evaluation in the shader, which is implemented as a distance offset away from a mesh's surface.
+		/// Setting this value too low may cause stair-stepping artifacts in lighting calculations.
+		/// </summary>
 		public float ShadowBias
 		{
 			get => shadowBias;
@@ -265,9 +273,6 @@ namespace FragEngine3.Graphics.Components
 				type = (uint)type,
 				direction = type != LightType.Point ? Direction : Vector3.UnitZ,
 				spotMinDot = spotMinDot,
-				//mtxShadowWorld2Clip = CastShadows
-				//	? shadowCascades![0].mtxShadowWorld2Clip
-				//	: Matrix4x4.Identity,
 				shadowMapIdx = shadowMapIdx,
 				shadowBias = shadowBias,
 				shadowCascades = ShadowCascades,
@@ -477,7 +482,17 @@ namespace FragEngine3.Graphics.Components
 		{
 			if (_camera == null) return false;
 
-			return true;	//TEMP / TODO [later]
+			switch (type)
+			{
+				case LightType.Point:
+					// TODO [later]
+					return true;
+				case LightType.Spot:
+					// TODO [later]
+					return true;
+				default:
+					return true;
+			}
 		}
 
 		public override bool LoadFromData(in ComponentData _componentData, in Dictionary<int, ISceneElement> _idDataMap)

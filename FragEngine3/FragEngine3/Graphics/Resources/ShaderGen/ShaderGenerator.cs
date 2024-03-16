@@ -12,11 +12,6 @@ public static class ShaderGenerator
 	private static string templateCodePS = string.Empty;
 
 	#endregion
-	#region Constants
-
-	public const string MODULAR_SURFACE_SHADER_PS_NAME_BASE = "DefaultSurface_modular_PS";
-
-	#endregion
 	#region Methods
 
 	public static bool CreatePixelShader(ResourceManager _resourceManager, EnginePlatformFlag _platformFlags, out byte[] _outShaderCode)
@@ -43,9 +38,9 @@ public static class ShaderGenerator
 			// Determine name and extension for template shader code file:
 			string templateFileName = language switch
 			{
-				ShaderGenLanguage.HLSL => $"{MODULAR_SURFACE_SHADER_PS_NAME_BASE}.hlsl",
-				ShaderGenLanguage.Metal => $"{MODULAR_SURFACE_SHADER_PS_NAME_BASE}.metal",
-				ShaderGenLanguage.GLSL => $"{MODULAR_SURFACE_SHADER_PS_NAME_BASE}.glsl",
+				ShaderGenLanguage.HLSL => $"{ShaderGenConstants.MODULAR_SURFACE_SHADER_PS_NAME_BASE}.hlsl",
+				ShaderGenLanguage.Metal => $"{ShaderGenConstants.MODULAR_SURFACE_SHADER_PS_NAME_BASE}.metal",
+				ShaderGenLanguage.GLSL => $"{ShaderGenConstants.MODULAR_SURFACE_SHADER_PS_NAME_BASE}.glsl",
 				_ => string.Empty,
 			};
 			if (string.IsNullOrEmpty(templateFileName))

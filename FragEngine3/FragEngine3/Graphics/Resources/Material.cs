@@ -717,7 +717,7 @@ public class Material(GraphicsCore _core, ResourceHandle _handle) : Resource(_ha
 						ResourceKey = _resourceKey,
 						ResourceType = ResourceType.Shader,
 					},
-					ShaderGen.ShaderGenerator.MODULAR_SURFACE_SHADER_PS_NAME_BASE);
+					ShaderGen.ShaderGenConstants.MODULAR_SURFACE_SHADER_PS_NAME_BASE);
 				resourceManager.AddResource(handle);
 			}
 			return handle;
