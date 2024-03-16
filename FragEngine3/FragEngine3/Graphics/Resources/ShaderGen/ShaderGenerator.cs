@@ -1,5 +1,6 @@
 ﻿using FragEngine3.EngineCore;
 using FragEngine3.Resources;
+using FragEngine3.Utility;
 using System.Text;
 using Veldrid;
 
@@ -141,14 +142,18 @@ public static class ShaderGenerator
 					$"#define FEATURE_LIGHT_MODEL {_config.lightingModel}",
 					definesMaxEndIdx);
 			}
-			//int indirectStartIdx = RemoveLine(codeBuilder, "#define FEATURE_LIGHT_INDIRECT", definesMaxEndIdx);
-			//if (_config.indirectLightResolution > 1)
-			//{
-			//	codeBuilder.Insert(indirectStartIdx, $"#define FEATURE_LIGHT_INDIRECT {_config.indirectLightResolution}\n");
-			//}
+			Range indirectLineIndices = codeBuilder.GetFirstLineIndicesOf("#define FEATURE_LIGHT_INDIRECT");
+			if (indirectLineIndices.Start.Value >= 0)
+			{
+				codeBuilder.Remove(indirectLineIndices);
+				if (_config.indirectLightResolution > 1)
+				{
+					codeBuilder.Insert(indirectLineIndices.Start.Value, $"#define FEATURE_LIGHT_INDIRECT {_config.indirectLightResolution}\n");
+				}
+			}
 			if (!_config.applyLighting)
 			{
-				RemoveDefine(codeBuilder, "#define FEATURE_LIGHT", definesMaxEndIdx);
+				codeBuilder.RemoveAllLines("#define FEATURE_LIGHT");
 			}
 		}
 
@@ -170,55 +175,6 @@ public static class ShaderGenerator
 	private static void RemoveDefine(StringBuilder _builder, string _defineTxt, int _maxEndIdx)
 	{
 		_builder.Replace(_defineTxt, string.Empty, 0, _maxEndIdx);
-	}
-
-	private static int IndexOf(StringBuilder _builder, string _text, int _maxEndIdx)
-	{
-		int startIdx = -1;
-		int maxStartIdx = _maxEndIdx - _text.Length;
-		if (maxStartIdx < 0) return -1;
-
-		for (int i = 0; i < maxStartIdx; ++i)
-		{
-			if (_builder[i] == _text[0])
-			{
-				for (int j = 1; j < _text.Length; ++j)
-				{
-					if (_builder[i + j] != _text[j])
-						goto mismatch;
-				}
-				startIdx = i;
-				break;
-			}
-		mismatch:
-			;
-		}
-		return startIdx;
-	}
-
-	private static int RemoveLine(StringBuilder _builder, string _defineTxt, int _maxEndIdx)
-	{
-		int startIdx = IndexOf(_builder, _defineTxt, _maxEndIdx);
-		if (startIdx >= 0)
-		{
-			// Find start and end of the line:
-			int endIdx = startIdx + _defineTxt.Length;
-			char c;
-			for (; startIdx >= 0; startIdx--)
-			{
-				c = _builder[startIdx];
-				if (char.IsControl(c))
-					break;
-			}
-			for (; endIdx < _maxEndIdx; endIdx++)
-			{
-				c = _builder[endIdx];
-				if (char.IsControl(c))
-					break;
-			}
-			_builder.Remove(startIdx, endIdx - startIdx);
-		}
-		return startIdx;
 	}
 
 	#endregion
