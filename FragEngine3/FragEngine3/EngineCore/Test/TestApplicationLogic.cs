@@ -1,6 +1,7 @@
 ﻿using FragEngine3.EngineCore.Input;
 using FragEngine3.Graphics;
 using FragEngine3.Graphics.Components;
+using FragEngine3.Graphics.Lighting;
 using FragEngine3.Graphics.Resources;
 using FragEngine3.Graphics.Resources.Data;
 using FragEngine3.Graphics.Stack;
@@ -117,36 +118,36 @@ public sealed class TestApplicationLogic : ApplicationLogic
 		}
 
 		// Create a directional light:
-		if (SceneSpawner.CreateLight(scene, Light.LightType.Directional, out Light light))
+		if (SceneSpawner.CreateLight(scene, LightType.Directional, out Light light))
 		{
 			light.node.WorldPosition = new Vector3(0, 5, 0);
 			light.node.SetRotationFromYawPitchRoll(-22.5f, 45, 0, true, true);
 			//light.node.SetRotationFromYawPitchRoll(0, 90, 0, true, true);
-			light.node.SetEnabled(false);
+			//light.node.SetEnabled(false);
 
 			light.LightIntensity = 0.5f;
 			light.CastShadows = true;
 			light.ShadowCascades = 2;
 		}
-		if (SceneSpawner.CreateLight(scene, Light.LightType.Directional, out light))
+		if (SceneSpawner.CreateLight(scene, LightType.Directional, out light))
 		{
 			light.node.WorldPosition = new Vector3(0, 5, 0);
 			light.node.SetRotationFromYawPitchRoll(-70, -30, 0, true, true);
 			light.node.SetEnabled(false);
 		}
 		// Create a spot light:
-		if (SceneSpawner.CreateLight(scene, Light.LightType.Spot, out light))
+		if (SceneSpawner.CreateLight(scene, LightType.Spot, out light))
 		{
 			light.node.WorldPosition = new Vector3(0, 0, -3);
 			light.node.LocalRotation = Quaternion.Identity;
 			//light.node.SetEnabled(false);
 
-			light.LightIntensity = 25;
+			light.LightIntensity = 5;
 			light.SpotAngleDegrees = 35;
 			light.CastShadows = true;
 			light.ShadowBias = 0.02f;
 		}
-		if (SceneSpawner.CreateLight(scene, Light.LightType.Spot, out light))
+		if (SceneSpawner.CreateLight(scene, LightType.Spot, out light))
 		{
 			light.node.WorldPosition = new Vector3(-4, 5, -4);
 			light.node.SetRotationFromYawPitchRoll(22.5f, 45, 0, true, true);
@@ -158,7 +159,7 @@ public sealed class TestApplicationLogic : ApplicationLogic
 			light.CastShadows = true;
 		}
 		// Create a point light:
-		if (SceneSpawner.CreateLight(scene, Light.LightType.Point, out light))
+		if (SceneSpawner.CreateLight(scene, LightType.Point, out light))
 		{
 			light.node.WorldPosition = new Vector3(0, 2, -1);
 			light.node.SetEnabled(false);

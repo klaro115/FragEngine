@@ -1,4 +1,5 @@
-﻿using FragEngine3.Scenes.Data;
+﻿using FragEngine3.Graphics.Lighting;
+using FragEngine3.Scenes.Data;
 using Veldrid;
 
 namespace FragEngine3.Graphics.Components.Data
@@ -8,7 +9,7 @@ namespace FragEngine3.Graphics.Components.Data
 	{
 		#region Properties
 
-		public Light.LightType Type { get; set; } = Light.LightType.Point;
+		public LightType Type { get; set; } = LightType.Point;
 		public uint LayerMask { get; set; } = 0xFFu;
 
 		public RgbaFloat LightColor { get; set; } = RgbaFloat.White;

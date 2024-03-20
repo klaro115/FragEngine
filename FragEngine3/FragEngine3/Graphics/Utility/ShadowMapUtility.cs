@@ -17,8 +17,6 @@ namespace FragEngine3.Graphics.Utility
 
 		public static bool UpdateOrCreateShadowMapCameraInstance(
 			in GraphicsCore _graphicsCore,
-			in Framebuffer? _shadowMapFramebuffer,
-			in Matrix4x4 _mtxShadowWorld2Clip,
 			bool _isDirectional,
 			float _farClipPlane,
 			float _spotAngleRad,
@@ -34,8 +32,8 @@ namespace FragEngine3.Graphics.Utility
 				FieldOfViewRadians = _spotAngleRad,
 				mirrorY = true,
 
-				mtxWorld2Clip = _mtxShadowWorld2Clip,
-				mtxWorld2Pixel = _mtxShadowWorld2Clip,
+				mtxWorld2Clip = Matrix4x4.Identity,
+				mtxWorld2Pixel = Matrix4x4.Identity,
 			};
 
 			if (_cameraInstance == null || _cameraInstance.IsDisposed)
@@ -64,24 +62,12 @@ namespace FragEngine3.Graphics.Utility
 
 				try
 				{
-					if (_shadowMapFramebuffer != null && !_shadowMapFramebuffer.IsDisposed)
+					_cameraInstance = new(_graphicsCore, false)
 					{
-						_cameraInstance = new(_graphicsCore, _shadowMapFramebuffer, false)
-						{
-							OutputSettings = outputSettings,
-							ClearingSettings = clearingSettings,
-							MtxWorld = Matrix4x4.Identity,
-						};
-					}
-					else
-					{
-						_cameraInstance = new(_graphicsCore, false)
-						{
-							OutputSettings = outputSettings,
-							ClearingSettings = clearingSettings,
-							MtxWorld = Matrix4x4.Identity,
-						};
-					}
+						OutputSettings = outputSettings,
+						ClearingSettings = clearingSettings,
+						MtxWorld = Matrix4x4.Identity,
+					};
 					_cameraInstance.MarkDirty();
 				}
 				catch (Exception ex)

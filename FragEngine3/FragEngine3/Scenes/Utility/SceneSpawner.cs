@@ -1,4 +1,5 @@
 ﻿using FragEngine3.Graphics.Components;
+using FragEngine3.Graphics.Lighting;
 
 namespace FragEngine3.Scenes.Utility
 {
@@ -35,7 +36,7 @@ namespace FragEngine3.Scenes.Utility
 
 		// LIGHTS:
 
-		public static bool CreateLight(in Scene _scene, Light.LightType _type, out Light _outLight)
+		public static bool CreateLight(in Scene _scene, LightType _type, out Light _outLight)
 		{
 			if (_scene == null || _scene.IsDisposed)
 			{
@@ -53,7 +54,7 @@ namespace FragEngine3.Scenes.Utility
 			_outLight.Type = _type;
 			return true;
 		}
-		public static bool CreateLight(in SceneNode _parent, Light.LightType _type, out Light _outLight)
+		public static bool CreateLight(in SceneNode _parent, LightType _type, out Light _outLight)
 		{
 			if (_parent == null || _parent.IsDisposed)
 			{

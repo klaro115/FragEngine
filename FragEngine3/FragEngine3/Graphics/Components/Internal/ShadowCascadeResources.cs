@@ -2,12 +2,14 @@
 using FragEngine3.Graphics.Cameras;
 using FragEngine3.Graphics.Components.ConstantBuffers;
 using FragEngine3.Graphics.Contexts;
+using FragEngine3.Graphics.Lighting;
+using FragEngine3.Scenes;
 using System.Numerics;
 using Veldrid;
 
 namespace FragEngine3.Graphics.Components.Internal;
 
-internal sealed class ShadowCascadeResources(Light _light, uint _shadowCascadeIdx) : IDisposable
+internal sealed class ShadowCascadeResources(LightInstance _light, uint _shadowCascadeIdx) : IDisposable
 {
 	#region Constructors
 
@@ -21,7 +23,7 @@ internal sealed class ShadowCascadeResources(Light _light, uint _shadowCascadeId
 
 	private readonly GraphicsCore core = _light.core;
 
-	public readonly Light light = _light;
+	public readonly LightInstance light = _light;
 	public readonly uint shadowCascadeIdx = _shadowCascadeIdx;
 
 	private CBCamera shadowCbCameraData = default;
@@ -61,6 +63,7 @@ internal sealed class ShadowCascadeResources(Light _light, uint _shadowCascadeId
 		in SceneContext _sceneCtx,
 		in DeviceBuffer _dummyBufLights,
 		in CameraInstance _cameraInstance,
+		in Pose _lightSourceWorldPose,
 		uint _shadowMapIdx,
 		bool _rebuildResSetCamera,
 		bool _texShadowMapsHasChanged,
@@ -99,7 +102,7 @@ internal sealed class ShadowCascadeResources(Light _light, uint _shadowCascadeId
 		// Update or create global constant buffer with scene and camera information for the shaders:
 		if (!CameraUtility.UpdateConstantBuffer_CBCamera(
 			in _cameraInstance!,
-			light.node.WorldTransformation,
+			in _lightSourceWorldPose,
 			in mtxShadowWorld2Clip,
 			Matrix4x4.Identity,
 			ShadowMapIdx,
