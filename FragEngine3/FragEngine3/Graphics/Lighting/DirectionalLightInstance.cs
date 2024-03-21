@@ -36,7 +36,7 @@ internal sealed class DirectionalLightInstance(GraphicsCore _core) : LightInstan
 		{
 			color = new Vector3(lightColor.R, lightColor.G, lightColor.B),
 			intensity = LightIntensity,
-			position = Vector3.Zero,
+			position = worldPose.position,
 			type = (uint)LightType.Directional,
 			direction = worldPose.Forward,
 			spotMinDot = 0,
@@ -54,10 +54,11 @@ internal sealed class DirectionalLightInstance(GraphicsCore _core) : LightInstan
 
 	protected override Matrix4x4 RecalculateShadowProjectionMatrix(Vector3 _shadingFocalPoint, uint _cascadeIdx)
 	{
-		float maxDirectionalRange = ShadowMapUtility.directionalLightSize * MathF.Floor(MathF.Pow(2, _cascadeIdx));				// TODO: Maximum depth/distance should remain constant across all cascades! Near cascades may clip distant shadow casters right now!
+		float maxRange = ShadowMapUtility.directionalLightSize * Math.Max(MathF.Pow(2, ShadowCascades), 1);
+		float maxDirectionalRange = ShadowMapUtility.directionalLightSize * MathF.Floor(MathF.Pow(2, _cascadeIdx));
 
 		Vector3 lightDir = worldPose.Forward;
-		Quaternion worldRot = QuaternionExt.CreateFromLookAt(lightDir, false);
+		Quaternion worldRot = worldPose.rotation;
 
 		// Orient light map projection to have its pixel grid roughly aligned with the camera's direction:
 		if (rotateProjectionAlongCamera && Camera.MainCamera != null)
@@ -72,16 +73,17 @@ internal sealed class DirectionalLightInstance(GraphicsCore _core) : LightInstan
 		}
 
 		// Transform from a world space position (relative to a given focal point), to orthographics projection space, to shadow map UV coordinates:
-		Vector3 posOrigin = _shadingFocalPoint - lightDir * maxDirectionalRange * 0.5f;
+		Vector3 posOrigin = _shadingFocalPoint - lightDir * maxRange * 0.5f;
 		Pose originPose = new(posOrigin, worldRot, Vector3.One, false);
 		if (!Matrix4x4.Invert(originPose.Matrix, out Matrix4x4 mtxWorld2Local))
 		{
 			mtxWorld2Local = Matrix4x4.Identity;
 		}
-		Matrix4x4 mtxLocal2Clip = Matrix4x4.CreateOrthographicLeftHanded(maxDirectionalRange, maxDirectionalRange, 0.01f, maxDirectionalRange);
+		Matrix4x4 mtxLocal2Clip = Matrix4x4.CreateOrthographicLeftHanded(maxDirectionalRange, maxDirectionalRange, 0.01f, maxRange);
 		Matrix4x4 mtxWorld2Clip = mtxWorld2Local * mtxLocal2Clip;
 
-		return mtxWorld2Clip * Matrix4x4.CreateScale(1, -1, 1);
+		mtxWorld2Clip *= Matrix4x4.CreateScale(1, -1, 1);
+		return mtxWorld2Clip;
 	}
 
 	protected override bool UpdateShadowMapCameraInstance(float _shadingFocalPointRadius)

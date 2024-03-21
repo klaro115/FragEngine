@@ -10,14 +10,9 @@ using Veldrid;
 
 namespace FragEngine3.Graphics.Lighting;
 
-internal abstract class LightInstance : IDisposable
+internal abstract class LightInstance(GraphicsCore _core) : IDisposable
 {
 	#region Constructors
-
-	protected LightInstance(GraphicsCore _core)
-	{
-		core = _core;
-	}
 
 	~LightInstance()
 	{
@@ -27,7 +22,7 @@ internal abstract class LightInstance : IDisposable
 	#endregion
 	#region Fields
 
-	public readonly GraphicsCore core;
+	public readonly GraphicsCore core = _core;
 
 	public RgbaFloat lightColor = RgbaFloat.White;
 	protected float lightIntensity = 1.0f;
@@ -187,7 +182,6 @@ internal abstract class LightInstance : IDisposable
 			in SceneContext _sceneCtx,
 			in CommandList _cmdList,
 			in DeviceBuffer _dummyBufLights,
-			in Pose _lightSourceWorldPose,
 			Vector3 _shadingFocalPoint,
 			uint _cascadeIdx,
 			out CameraPassContext _outCameraPassCtx,
@@ -207,7 +201,7 @@ internal abstract class LightInstance : IDisposable
 			in _sceneCtx,
 			in _dummyBufLights,
 			in shadowCameraInstance!,
-			in _lightSourceWorldPose,
+			in worldPose,
 			ShadowMapIdx,
 			_rebuildResSetCamera,
 			_texShadowMapsHasChanged,

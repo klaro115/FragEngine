@@ -200,6 +200,7 @@ namespace FragEngine3.Graphics.Components
 			uint _newShadowMapIdx)
 		{
 			lightInstance.worldPose = node.WorldTransformation;
+			lightInstance.worldPose.scale = Vector3.One;
 
 			return lightInstance.BeginDrawShadowMap(
 				in _sceneCtx,
@@ -217,11 +218,13 @@ namespace FragEngine3.Graphics.Components
 			bool _rebuildResSetCamera = false,
 			bool _texShadowMapsHasChanged = false)
 		{
+			lightInstance.worldPose = node.WorldTransformation;
+			lightInstance.worldPose.scale = Vector3.One;
+
 			return lightInstance.BeginDrawShadowCascade(
 				in _sceneCtx,
 				in _cmdList,
 				in _dummyBufLights,
-				node.WorldTransformation,
 				_shadingFocalPoint,
 				_cascadeIdx,
 				out _outCameraPassCtx,

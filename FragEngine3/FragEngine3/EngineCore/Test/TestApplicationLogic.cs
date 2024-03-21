@@ -5,6 +5,7 @@ using FragEngine3.Graphics.Lighting;
 using FragEngine3.Graphics.Resources;
 using FragEngine3.Graphics.Resources.Data;
 using FragEngine3.Graphics.Stack;
+using FragEngine3.Graphics.Utility;
 using FragEngine3.Resources;
 using FragEngine3.Scenes;
 using FragEngine3.Scenes.Utility;
@@ -120,9 +121,10 @@ public sealed class TestApplicationLogic : ApplicationLogic
 		// Create a directional light:
 		if (SceneSpawner.CreateLight(scene, LightType.Directional, out Light light))
 		{
+			light.node.Name = "Sun";
 			light.node.WorldPosition = new Vector3(0, 5, 0);
 			light.node.SetRotationFromYawPitchRoll(-22.5f, 45, 0, true, true);
-			//light.node.SetRotationFromYawPitchRoll(0, 90, 0, true, true);
+			//light.node.SetRotationFromYawPitchRoll(0, -25, 0, true, true);
 			//light.node.SetEnabled(false);
 
 			light.LightIntensity = 0.5f;
@@ -303,8 +305,8 @@ public sealed class TestApplicationLogic : ApplicationLogic
 			quad.node.SetEnabled(false);
 
 			quad.SetMesh(quadHandle);
-			//quad.SetMaterial("Mtl_DefaultSurface");
-			quad.SetMaterial("Mtl_TestMaterial");
+			quad.SetMaterial("Mtl_DefaultSurface");
+			//quad.SetMaterial("Mtl_TestMaterial");
 		}
 
 		return true;
@@ -367,6 +369,23 @@ public sealed class TestApplicationLogic : ApplicationLogic
 
 			Camera.MainCamera.node.LocalTransformation = p;
 		}
+
+		/*
+		// Reposition quad to visualize directional light's far-clip-plane:
+		if (scene.FindNode("Quad", out SceneNode? quadNode) && quadNode != null &&
+			scene.FindNode("Sun", out SceneNode? sunNode) && sunNode != null)
+		{
+			Light sunLight = sunNode.GetComponent<Light>()!;
+			float range = ShadowMapUtility.directionalLightSize * Math.Max(MathF.Pow(2, sunLight.ShadowCascades), 1);
+
+			Pose sunPose = sunNode.WorldTransformation;
+			Pose quadPose = new(
+				Camera.MainCamera!.node.WorldPosition + sunPose.Forward * 0.5f * range,
+				sunPose.rotation,
+				Vector3.One * 0.5f * range);
+			quadNode.WorldTransformation = quadPose;
+		}
+		*/
 
 		return true;
 	}

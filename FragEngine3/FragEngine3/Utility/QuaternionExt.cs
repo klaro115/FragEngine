@@ -25,7 +25,7 @@ namespace FragEngine3
 			return new Vector3(r.X, r.Y, r.Z);
 		}
 
-		public static Quaternion CreateFromLookAt(Vector3 _forward, bool _normalizeVectors = true)
+		public static Quaternion CreateFromLookAt(Vector3 _forward, bool _normalizeVectors = true)			//TODO: not properly tested, has weird behaviour glitches. Might need additional vector normalizations?
 		{
 			if (_normalizeVectors)
 			{
@@ -34,7 +34,7 @@ namespace FragEngine3
 
 			// Create the shortest rotation from Z unit vector and forward:
 			Vector3 axis = Vector3.Cross(_forward, Vector3.UnitZ);
-			float angleRad = VectorExt.Angle(_forward, Vector3.UnitZ);
+			float angleRad = -VectorExt.Angle(_forward, Vector3.UnitZ);
 
 			return Quaternion.CreateFromAxisAngle(axis, angleRad);
 		}
