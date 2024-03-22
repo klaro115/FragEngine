@@ -50,6 +50,19 @@ namespace FragEngine3.Graphics
 			packedValue = (r << 24) | (g << 16) | (b << 8) | (a << 0);
 		}
 
+		/// <summary>
+		/// Creates a new color structure.
+		/// </summary>
+		/// <param name="_vectorRgba">A 4-dimensional vector where components XYZW map to RGBA respectively.
+		/// All values are expected to be in the range of [0, 1], component values exceeding this will be clamped to the permissive range.</param>
+		public Color32(Vector3 _vectorRgb)
+		{
+			uint r = (uint)Math.Clamp(_vectorRgb.X * 255, 0, 0xFF);
+			uint g = (uint)Math.Clamp(_vectorRgb.Y * 255, 0, 0xFF);
+			uint b = (uint)Math.Clamp(_vectorRgb.Z * 255, 0, 0xFF);
+			packedValue = (r << 24) | (g << 16) | (b << 8) | 0xFF;
+		}
+
 		public Color32(RgbaByte _color)
 		{
 			packedValue = ((uint)_color.R << 24) | ((uint)_color.G << 16) | ((uint)_color.B << 8) | ((uint)_color.A << 0);
@@ -255,8 +268,10 @@ namespace FragEngine3.Graphics
 		public static bool operator ==(Color32 left, Color32 right) => left.packedValue == right.packedValue;
 		public static bool operator !=(Color32 left, Color32 right) => left.packedValue != right.packedValue;
 
+		public static explicit operator Vector3(Color32 _color32) => new Vector3(_color32.R, _color32.G, _color32.B) * inv255;
 		public static explicit operator Vector4(Color32 _color32) => new Vector4(_color32.R, _color32.G, _color32.B, _color32.A) * inv255;
 		public static explicit operator Color32(Vector4 _vectorRgba) => new(_vectorRgba);
+		public static explicit operator Color32(Vector3 _vectorRgb) => new(_vectorRgb);
 
 		public override readonly bool Equals(object? obj) => obj is Color32 other && packedValue == other.packedValue;
 		public readonly bool Equals(Color32 other) => packedValue == other.packedValue;

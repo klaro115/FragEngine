@@ -144,7 +144,7 @@ public sealed class TestApplicationLogic : ApplicationLogic
 			light.node.LocalRotation = Quaternion.Identity;
 			//light.node.SetEnabled(false);
 
-			light.LightIntensity = 5;
+			light.LightIntensity = 10;
 			light.SpotAngleDegrees = 35;
 			light.CastShadows = true;
 			light.ShadowBias = 0.02f;

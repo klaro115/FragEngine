@@ -6,8 +6,18 @@ using System.Numerics;
 
 namespace FragEngine3.Graphics.Lighting;
 
-internal sealed class DirectionalLightInstance(GraphicsCore _core) : LightInstance(_core)
+internal sealed class DirectionalLightInstance : LightInstance
 {
+	#region Constructors
+
+	public DirectionalLightInstance(GraphicsCore _core) : base(_core)
+	{
+		data.type = (uint)LightType.Directional;
+		data.direction = worldPose.Forward;
+		data.shadowCascadeRange = LightConstants.directionalLightSize;
+	}
+
+	#endregion
 	#region Fields
 
 	private static readonly bool rotateProjectionAlongCamera = false;
@@ -19,10 +29,10 @@ internal sealed class DirectionalLightInstance(GraphicsCore _core) : LightInstan
 
 	public override float LightIntensity
 	{
-		get => lightIntensity;
+		get => data.intensity;
 		set
 		{
-			lightIntensity = Math.Max(value, 0.0f);
+			data.intensity = Math.Max(value, 0.0f);
 			MaxLightRange = 1.0e+8f;
 		}
 	}
@@ -32,19 +42,12 @@ internal sealed class DirectionalLightInstance(GraphicsCore _core) : LightInstan
 
 	public override LightSourceData GetLightSourceData()
 	{
-		return new()
-		{
-			color = new Vector3(lightColor.R, lightColor.G, lightColor.B),
-			intensity = LightIntensity,
-			position = worldPose.position,
-			type = (uint)LightType.Directional,
-			direction = worldPose.Forward,
-			spotMinDot = 0,
-			shadowMapIdx = ShadowMapIdx,
-			shadowBias = ShadowBias,
-			shadowCascades = ShadowCascades,
-			shadowCascadeRange = ShadowMapUtility.directionalLightSize,
-		};
+		data.direction = worldPose.Forward;
+		data.shadowMapIdx = ShadowMapIdx;
+		data.shadowCascades = ShadowCascades;
+		data.shadowCascadeRange = LightConstants.directionalLightSize;
+
+		return data;
 	}
 
 	public override bool CheckVisibilityByCamera(in Camera _camera)
@@ -54,8 +57,8 @@ internal sealed class DirectionalLightInstance(GraphicsCore _core) : LightInstan
 
 	protected override Matrix4x4 RecalculateShadowProjectionMatrix(Vector3 _shadingFocalPoint, uint _cascadeIdx)
 	{
-		float maxRange = ShadowMapUtility.directionalLightSize * Math.Max(MathF.Pow(2, ShadowCascades), 1);
-		float maxDirectionalRange = ShadowMapUtility.directionalLightSize * MathF.Floor(MathF.Pow(2, _cascadeIdx));
+		float maxRange = LightConstants.directionalLightSize * Math.Max(MathF.Pow(2, ShadowCascades), 1);
+		float maxDirectionalRange = LightConstants.directionalLightSize * MathF.Floor(MathF.Pow(2, _cascadeIdx));
 
 		Vector3 lightDir = worldPose.Forward;
 		Quaternion worldRot = worldPose.rotation;
@@ -108,7 +111,7 @@ internal sealed class DirectionalLightInstance(GraphicsCore _core) : LightInstan
 	{
 		if (_lightData is null) return false;
 
-		lightColor = _lightData.LightColor;
+		data.color = (Vector3)Color32.ParseHexString(_lightData.LightColor);
 		LightIntensity = _lightData.LightIntensity;
 
 		CastShadows = _lightData.CastShadows;
@@ -124,8 +127,8 @@ internal sealed class DirectionalLightInstance(GraphicsCore _core) : LightInstan
 		{
 			Type = LightType.Directional,
 
-			LightColor = lightColor,
-			LightIntensity = LightIntensity,
+			LightColor = new Color32(data.color).ToHexString(),
+			LightIntensity = data.intensity,
 			SpotAngleDegrees = 0,
 
 			CastShadows = CastShadows,

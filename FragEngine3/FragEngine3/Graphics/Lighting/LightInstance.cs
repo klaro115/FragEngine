@@ -24,17 +24,26 @@ internal abstract class LightInstance(GraphicsCore _core) : IDisposable
 
 	public readonly GraphicsCore core = _core;
 
-	public RgbaFloat lightColor = RgbaFloat.White;
-	protected float lightIntensity = 1.0f;
+	protected LightSourceData data = new()
+	{
+		color = Vector3.One,
+		intensity = 5.0f,
+		position = Vector3.Zero,
+		type = (uint)LightType.Point,
+		direction = Vector3.UnitZ,
+		spotMinDot = 0,
+		shadowMapIdx = 0,
+		shadowBias = 0.02f,
+		shadowCascades = 0,
+		shadowCascadeRange = LightConstants.directionalLightSize,
+	};
 
 	protected CameraInstance? shadowCameraInstance = null;
 	protected ShadowCascadeResources[]? shadowCascades = null;
 
 	protected bool castShadows = false;
-	protected uint shadowCascadeCount = 0;
-	private float shadowBias = 0.02f;
 
-	public Pose worldPose = Pose.Identity;
+	protected Pose worldPose = Pose.Identity;
 
 	#endregion
 	#region Properties
@@ -48,13 +57,19 @@ internal abstract class LightInstance(GraphicsCore _core) : IDisposable
 	/// <summary>
 	/// Gets or sets the intensity of light emitted by this light source. TODO: Figure out which unit to use for this.
 	/// </summary>
-	public virtual float LightIntensity
-	{
-		get => lightIntensity;
-		set => lightIntensity = Math.Max(value, 0.0f);
-	}
+	public abstract float LightIntensity { get; set; }
 
 	public float MaxLightRange { get; protected set; } = MathF.Sqrt(1.0f / LightConstants.MIN_LIGHT_INTENSITY);
+
+	public Pose WorldPose
+	{
+		get => worldPose;
+		set
+		{
+			worldPose = value;
+			worldPose.scale = Vector3.One;
+		}
+	}
 
 	// SHADOWS:
 
@@ -75,7 +90,11 @@ internal abstract class LightInstance(GraphicsCore _core) : IDisposable
 		}
 	}
 
-	public uint ShadowMapIdx { get; protected set; } = 0;
+	public uint ShadowMapIdx
+	{
+		get => data.shadowMapIdx;
+		protected set => data.shadowMapIdx = value;
+	}
 
 	/// <summary>
 	/// Gets or sets the number of shadow cascades to create and render for this light source.
@@ -83,8 +102,8 @@ internal abstract class LightInstance(GraphicsCore _core) : IDisposable
 	/// </summary>
 	public uint ShadowCascades
 	{
-		get => shadowCascadeCount;
-		set => shadowCascadeCount = Math.Min(value, MaxShadowCascades);
+		get => data.shadowCascades;
+		set => data.shadowCascades = Math.Min(value, MaxShadowCascades);
 	}
 	public virtual uint MaxShadowCascades => 4;
 
@@ -94,8 +113,8 @@ internal abstract class LightInstance(GraphicsCore _core) : IDisposable
 	/// </summary>
 	public float ShadowBias
 	{
-		get => shadowBias;
-		set => shadowBias = Math.Clamp(value, 0, 10);
+		get => data.shadowBias;
+		set => data.shadowBias = Math.Clamp(value, 0, 10);
 	}
 
 	// MISC:
@@ -158,12 +177,12 @@ internal abstract class LightInstance(GraphicsCore _core) : IDisposable
 		ShadowMapIdx = _newShadowMapIdx;
 
 		// Ensure shadow cascades are all ready to go:
-		if (shadowCascades == null || shadowCascades.Length < shadowCascadeCount + 1)
+		if (shadowCascades == null || shadowCascades.Length < data.shadowCascades + 1)
 		{
 			DisposeShadowCascades();
 
-			shadowCascades = new ShadowCascadeResources[shadowCascadeCount + 1];
-			for (uint i = 0; i < shadowCascadeCount + 1; ++i)
+			shadowCascades = new ShadowCascadeResources[data.shadowCascades + 1];
+			for (uint i = 0; i < data.shadowCascades + 1; ++i)
 			{
 				shadowCascades[i] = new ShadowCascadeResources(this, i);
 			}
@@ -189,7 +208,7 @@ internal abstract class LightInstance(GraphicsCore _core) : IDisposable
 			bool _texShadowMapsHasChanged = false)
 	{
 		// Select the right shadow cascade resource container:
-		_cascadeIdx = Math.Min(_cascadeIdx, shadowCascadeCount);
+		_cascadeIdx = Math.Min(_cascadeIdx, data.shadowCascades);
 
 		ShadowCascadeResources cascade = shadowCascades![_cascadeIdx];
 

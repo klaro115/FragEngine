@@ -202,7 +202,7 @@ public sealed class ForwardPlusLightsStack(GraphicsCore _core) : IGraphicsStack
 
 		if (texShadowMaps == null || texShadowMaps.IsDisposed || texShadowMapsCapacity == 0)
 		{
-			const uint shadowResolution = ShadowMapUtility.shadowResolution;
+			const uint shadowResolution = LightConstants.shadowResolution;
 			if (!ShadowMapUtility.CreateShadowMapArray(in core, shadowResolution, shadowResolution, 1, out texShadowMaps))
 			{
 				Logger.LogError("Failed to create initial shadow map texture array for graphics stack!");
@@ -564,7 +564,7 @@ public sealed class ForwardPlusLightsStack(GraphicsCore _core) : IGraphicsStack
 
 			float cameraFarClipPlane = focalCamera.ProjectionSettings.farClipPlane;
 			Pose cameraWorldPose = focalCamera.node.WorldTransformation;
-			_outRenderFocalRadius = ShadowMapUtility.directionalLightSize;
+			_outRenderFocalRadius = LightConstants.directionalLightSize;
 			_outRenderFocalPoint = cameraWorldPose.position;
 		}
 
@@ -625,7 +625,7 @@ public sealed class ForwardPlusLightsStack(GraphicsCore _core) : IGraphicsStack
 			_outTexShadowsHasChanged = true;
 			texShadowMaps?.Dispose();
 
-			const uint shadowResolution = ShadowMapUtility.shadowResolution;
+			const uint shadowResolution = LightConstants.shadowResolution;
 			if (!ShadowMapUtility.CreateShadowMapArray(
 				in core,
 				shadowResolution,

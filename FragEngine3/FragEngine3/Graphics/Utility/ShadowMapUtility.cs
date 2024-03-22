@@ -1,5 +1,6 @@
 ﻿using FragEngine3.EngineCore;
 using FragEngine3.Graphics.Cameras;
+using FragEngine3.Graphics.Lighting;
 using System.Numerics;
 using Veldrid;
 
@@ -7,12 +8,6 @@ namespace FragEngine3.Graphics.Utility
 {
 	public static class ShadowMapUtility
 	{
-		#region Constants
-
-		public const uint shadowResolution = 1024;
-		public const float directionalLightSize = 10;		//TEMP
-
-		#endregion
 		#region Methods
 
 		public static bool UpdateOrCreateShadowMapCameraInstance(
@@ -40,8 +35,8 @@ namespace FragEngine3.Graphics.Utility
 			{
 				CameraOutput outputSettings = new CameraOutput()
 				{
-					resolutionX = shadowResolution,
-					resolutionY = shadowResolution,
+					resolutionX = LightConstants.shadowResolution,
+					resolutionY = LightConstants.shadowResolution,
 
 					colorFormat = _graphicsCore.DefaultColorTargetPixelFormat,
 					depthFormat = _graphicsCore.DefaultShadowMapDepthTargetFormat,

@@ -5,8 +5,20 @@ using System.Numerics;
 
 namespace FragEngine3.Graphics.Lighting;
 
-internal sealed class PointLightInstance(GraphicsCore _core) : LightInstance(_core)
+internal sealed class PointLightInstance : LightInstance
 {
+	#region Constructors
+
+	public PointLightInstance(GraphicsCore _core) : base(_core)
+	{
+		data.type = (uint)LightType.Point;
+		data.position = worldPose.position;
+		data.direction = worldPose.Forward;
+		data.shadowCascades = 0;
+		data.shadowCascadeRange = MaxLightRange;
+	}
+
+	#endregion
 	#region Fields
 
 	private float maxLightRangeSq = 10.0f;
@@ -18,11 +30,11 @@ internal sealed class PointLightInstance(GraphicsCore _core) : LightInstance(_co
 
 	public override float LightIntensity
 	{
-		get => lightIntensity;
+		get => data.intensity;
 		set
 		{
-			lightIntensity = Math.Max(value, 0.0f);
-			MaxLightRange = MathF.Sqrt(lightIntensity / LightConstants.MIN_LIGHT_INTENSITY);
+			data.intensity = Math.Max(value, 0.0f);
+			MaxLightRange = MathF.Sqrt(data.intensity / LightConstants.MIN_LIGHT_INTENSITY);
 			maxLightRangeSq = MaxLightRange * MaxLightRange;
 		}
 	}
@@ -40,19 +52,10 @@ internal sealed class PointLightInstance(GraphicsCore _core) : LightInstance(_co
 
 	public override LightSourceData GetLightSourceData()
 	{
-		return new()
-		{
-			color = new Vector3(lightColor.R, lightColor.G, lightColor.B),
-			intensity = LightIntensity,
-			position = worldPose.position,
-			type = (uint)LightType.Point,
-			direction = Vector3.UnitZ,
-			spotMinDot = 0,
-			shadowMapIdx = ShadowMapIdx,
-			shadowBias = ShadowBias,
-			shadowCascades = ShadowCascades,
-			shadowCascadeRange = ShadowMapUtility.directionalLightSize,
-		};
+		data.position = worldPose.position;
+		data.shadowMapIdx = ShadowMapIdx;
+
+		return data;
 	}
 
 	public override bool CheckVisibilityByCamera(in Camera _camera)
@@ -89,7 +92,7 @@ internal sealed class PointLightInstance(GraphicsCore _core) : LightInstance(_co
 	{
 		if (_lightData is null) return false;
 
-		lightColor = _lightData.LightColor;
+		data.color = (Vector3)Color32.ParseHexString(_lightData.LightColor);
 		LightIntensity = _lightData.LightIntensity;
 
 		CastShadows = _lightData.CastShadows;
@@ -104,8 +107,8 @@ internal sealed class PointLightInstance(GraphicsCore _core) : LightInstance(_co
 		_outLightData = new()
 		{
 			Type = LightType.Point,
-			
-			LightColor = lightColor,
+
+			LightColor = new Color32(data.color).ToHexString(),
 			LightIntensity = LightIntensity,
 			SpotAngleDegrees = 180,
 

@@ -190,7 +190,7 @@ namespace FragEngine3.Graphics.Components
 		/// </summary>
 		public LightSourceData GetLightSourceData()
 		{
-			lightInstance.worldPose = node.WorldTransformation;
+			lightInstance.WorldPose = node.WorldTransformation;
 			return lightInstance.GetLightSourceData();
 		}
 
@@ -199,8 +199,7 @@ namespace FragEngine3.Graphics.Components
 			float _shadingFocalPointRadius,
 			uint _newShadowMapIdx)
 		{
-			lightInstance.worldPose = node.WorldTransformation;
-			lightInstance.worldPose.scale = Vector3.One;
+			lightInstance.WorldPose = node.WorldTransformation;
 
 			return lightInstance.BeginDrawShadowMap(
 				in _sceneCtx,
@@ -218,8 +217,7 @@ namespace FragEngine3.Graphics.Components
 			bool _rebuildResSetCamera = false,
 			bool _texShadowMapsHasChanged = false)
 		{
-			lightInstance.worldPose = node.WorldTransformation;
-			lightInstance.worldPose.scale = Vector3.One;
+			lightInstance.WorldPose = node.WorldTransformation;			//TODO: Redundant?
 
 			return lightInstance.BeginDrawShadowCascade(
 				in _sceneCtx,
@@ -277,7 +275,7 @@ namespace FragEngine3.Graphics.Components
 				return false;
 			}
 
-			lightInstance.worldPose = node.WorldTransformation;
+			lightInstance.WorldPose = node.WorldTransformation;
 
 			// Re-register camera with the scene:
 			node.scene.drawManager.UnregisterLight(this);

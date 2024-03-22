@@ -5,13 +5,24 @@ using System.Numerics;
 
 namespace FragEngine3.Graphics.Lighting;
 
-internal sealed class SpotLightInstance(GraphicsCore _core) : LightInstance(_core)
+internal sealed class SpotLightInstance : LightInstance
 {
+	#region Constructors
+
+	public SpotLightInstance(GraphicsCore _core) : base(_core)
+	{
+		data.type = (uint)LightType.Spot;
+		data.position = worldPose.position;
+		data.direction = worldPose.Forward;
+		data.spotMinDot = MathF.Cos(spotAngleRad * LightConstants.DEG2RAD);
+		data.shadowCascadeRange = MaxLightRange / Math.Max(ShadowCascades, 1);
+	}
+
+	#endregion
 	#region Fields
 
 	private float maxLightRangeSq = 10.0f;
 	private float spotAngleRad = 30.0f * LightConstants.DEG2RAD;
-	private float spotAngleMinDot = MathF.Cos(15.0f * LightConstants.DEG2RAD);
 
 	#endregion
 	#region Properties
@@ -20,11 +31,11 @@ internal sealed class SpotLightInstance(GraphicsCore _core) : LightInstance(_cor
 
 	public override float LightIntensity
 	{
-		get => lightIntensity;
+		get => data.intensity;
 		set
 		{
-			lightIntensity = Math.Max(value, 0.0f);
-			MaxLightRange = MathF.Sqrt(lightIntensity / LightConstants.MIN_LIGHT_INTENSITY);
+			data.intensity = Math.Max(value, 0.0f);
+			MaxLightRange = MathF.Sqrt(data.intensity / LightConstants.MIN_LIGHT_INTENSITY);
 			maxLightRangeSq = MaxLightRange * MaxLightRange;
 		}
 	}
@@ -35,7 +46,7 @@ internal sealed class SpotLightInstance(GraphicsCore _core) : LightInstance(_cor
 		set
 		{
 			spotAngleRad = Math.Clamp(value, 0.0f, MathF.PI);
-			spotAngleMinDot = MathF.Cos(spotAngleRad);
+			data.spotMinDot = MathF.Cos(spotAngleRad * 0.5f);
 		}
 	}
 	public float SpotAngleDegrees
@@ -49,19 +60,13 @@ internal sealed class SpotLightInstance(GraphicsCore _core) : LightInstance(_cor
 
 	public override LightSourceData GetLightSourceData()
 	{
-		return new()
-		{
-			color = new Vector3(lightColor.R, lightColor.G, lightColor.B),
-			intensity = LightIntensity,
-			position = worldPose.position,
-			type = (uint)LightType.Spot,
-			direction = worldPose.Forward,
-			spotMinDot = spotAngleMinDot,
-			shadowMapIdx = ShadowMapIdx,
-			shadowBias = ShadowBias,
-			shadowCascades = ShadowCascades,
-			shadowCascadeRange = ShadowMapUtility.directionalLightSize,
-		};
+		data.position = worldPose.position;
+		data.direction = worldPose.Forward;
+		data.shadowMapIdx = ShadowMapIdx;
+		data.shadowCascades = ShadowCascades;
+		data.shadowCascadeRange = maxLightRangeSq;
+
+		return data;
 	}
 
 	public override bool CheckVisibilityByCamera(in Camera _camera)
@@ -104,7 +109,7 @@ internal sealed class SpotLightInstance(GraphicsCore _core) : LightInstance(_cor
 	{
 		if (_lightData is null) return false;
 
-		lightColor = _lightData.LightColor;
+		data.color = (Vector3)Color32.ParseHexString(_lightData.LightColor);
 		LightIntensity = _lightData.LightIntensity;
 		SpotAngleDegrees = _lightData.SpotAngleDegrees;
 		
@@ -121,7 +126,7 @@ internal sealed class SpotLightInstance(GraphicsCore _core) : LightInstance(_cor
 		{
 			Type = LightType.Spot,
 
-			LightColor = lightColor,
+			LightColor = new Color32(data.color).ToHexString(),
 			LightIntensity = LightIntensity,
 			SpotAngleDegrees = SpotAngleDegrees,
 			
