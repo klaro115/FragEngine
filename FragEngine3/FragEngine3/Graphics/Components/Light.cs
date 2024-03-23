@@ -1,6 +1,8 @@
 ﻿using FragEngine3.Graphics.Components.Data;
 using FragEngine3.Graphics.Contexts;
 using FragEngine3.Graphics.Lighting;
+using FragEngine3.Graphics.Lighting.Data;
+using FragEngine3.Graphics.Lighting.Instances;
 using FragEngine3.Scenes;
 using FragEngine3.Scenes.Data;
 using FragEngine3.Scenes.EventSystem;

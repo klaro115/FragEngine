@@ -4,6 +4,7 @@ using FragEngine3.Graphics.Components;
 using FragEngine3.Graphics.Components.Data;
 using FragEngine3.Graphics.Components.Internal;
 using FragEngine3.Graphics.Contexts;
+using FragEngine3.Graphics.Lighting.Data;
 using FragEngine3.Scenes;
 using System.Numerics;
 using Veldrid;

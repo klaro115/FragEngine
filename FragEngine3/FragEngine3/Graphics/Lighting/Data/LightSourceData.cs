@@ -2,8 +2,12 @@
 using System.Runtime.InteropServices;
 using Veldrid;
 
-namespace FragEngine3.Graphics.Lighting
+namespace FragEngine3.Graphics.Lighting.Data
 {
+    /// <summary>
+    /// Structure containing packed data for one light source.<para/>
+    /// NOTE: This is the GPU-side data type, for uploading to a device buffer. For serialization of light components, see '<see cref="Components.Data.LightData"/>' instead.
+    /// </summary>
     [Serializable]
     [StructLayout(LayoutKind.Sequential, Pack = 4, Size = byteSize)]
     public struct LightSourceData
