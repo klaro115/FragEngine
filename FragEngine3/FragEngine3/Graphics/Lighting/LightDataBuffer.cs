@@ -14,6 +14,8 @@ public sealed class LightDataBuffer : IDisposable
 
 		Capacity = Math.Max(_initialLightCapacity, 1);
 
+		lightDataBuffer = new LightSourceData[Capacity];
+
 		ResizeLightBuffers();
 	}
 
@@ -23,11 +25,16 @@ public sealed class LightDataBuffer : IDisposable
 	}
 
 	#endregion
+	#region Events
+
+	public event Action? OnRecreatedLightDataBufferEvent = null;
+
+	#endregion
 	#region Fields
 
 	public readonly GraphicsCore core;
 
-	private LightSourceData[] lightDataBuffer = null!;
+	private LightSourceData[] lightDataBuffer;
 
 	#endregion
 	#region Properties
@@ -76,6 +83,7 @@ public sealed class LightDataBuffer : IDisposable
 				return false;
 			}
 			_outRecreatedBufLights = true;
+			OnRecreatedLightDataBufferEvent?.Invoke();
 		}
 
 		Count = _requiredLightCount;

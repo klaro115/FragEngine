@@ -1,7 +1,6 @@
 ﻿using FragEngine3.Graphics.Components.ConstantBuffers;
 using FragEngine3.Graphics.Contexts;
 using FragEngine3.Graphics.Lighting;
-using FragEngine3.Graphics.Lighting.Data;
 using FragEngine3.Scenes;
 using System.Numerics;
 using Veldrid;
@@ -118,70 +117,6 @@ namespace FragEngine3.Graphics.Cameras
 			return true;
 		}
 
-		[Obsolete($"Replaced by {nameof(LightDataBuffer)}")]
-		public static bool CreateOrResizeLightDataBuffer(		// called once per camera frame.
-			in GraphicsCore _graphicsCore,
-			uint _activeLightCount,
-			ref DeviceBuffer? _bufLights,
-			out bool _outBufLightsChanged)
-		{
-			_activeLightCount = Math.Max(_activeLightCount, 1);
-			uint byteSize = LightSourceData.byteSize * _activeLightCount;
-
-			// Create a new buffer if there is none or if the previous one was too small:
-			if (_bufLights == null || _bufLights.IsDisposed || _bufLights.SizeInBytes < byteSize)
-			{
-				_outBufLightsChanged = true;
-
-				// Purge any previously allocated buffer:
-				_bufLights?.Dispose();
-				_bufLights = null;
-
-				try
-				{
-					BufferDescription bufferDesc = new(
-						byteSize,
-						BufferUsage.StructuredBufferReadOnly | BufferUsage.Dynamic,
-						LightSourceData.byteSize);
-
-					_bufLights = _graphicsCore.MainFactory.CreateBuffer(ref bufferDesc);
-					_bufLights.Name = $"BufLights_Capacity={_activeLightCount}";
-					return true;
-				}
-				catch (Exception ex)
-				{
-					_graphicsCore.graphicsSystem.engine.Logger.LogException("Failed to create camera's light data buffer!", ex);
-					_bufLights?.Dispose();
-					return false;
-				}
-			}
-			_outBufLightsChanged = false;
-			return true;
-		}
-
-		[Obsolete($"Replaced by {nameof(LightDataBuffer)}")]
-		public static bool UpdateLightDataBuffer(               // called once per camera frame.
-			in GraphicsCore _graphicsCore,
-			in DeviceBuffer _bufLights,
-			in LightSourceData[] _lightData,
-			uint _lightDataBufferCapacity,
-			uint _maxActiveLightCount)
-		{
-			uint maxLightCount = Math.Min(_lightDataBufferCapacity, _maxActiveLightCount);
-			int copyCount = Math.Min(_lightData.Length, (int)maxLightCount);
-
-			if (copyCount == _lightData.Length)
-			{
-				_graphicsCore.Device.UpdateBuffer(_bufLights, 0, _lightData);
-			}
-			else
-			{
-				ReadOnlySpan<LightSourceData> lightDataSpan = new(_lightData, 0, copyCount);
-				_graphicsCore.Device.UpdateBuffer(_bufLights, 0, lightDataSpan);
-			}
-			return true;
-		}
-
 		public static bool CreateCameraResourceLayout(			// called exactly once on scene initialization.
 			in GraphicsCore _graphicsCore,
 			out ResourceLayout _resLayoutCamera)
@@ -202,14 +137,17 @@ namespace FragEngine3.Graphics.Cameras
 			}
 		}
 
-		public static bool UpdateOrCreateCameraResourceSet(		// called once per camera pass.
+		public static bool UpdateOrCreateCameraResourceSet(     // called once per camera pass.
 			in GraphicsCore _graphicsCore,
 			in SceneContext _sceneCtx,
 			in DeviceBuffer _cbCamera,
 			in LightDataBuffer _lightDataBuffer,
 			ref ResourceSet? _resSetCamera,
+			out bool _outRecreatedResSetObject,
 			bool _forceRecreate = false)
 		{
+			_outRecreatedResSetObject = false;
+
 			if (_forceRecreate || _resSetCamera == null || _resSetCamera.IsDisposed)
 			{
 				_resSetCamera?.Dispose();
@@ -222,10 +160,14 @@ namespace FragEngine3.Graphics.Cameras
 						_cbCamera,
 						_lightDataBuffer.BufLights,
 						_sceneCtx.shadowMapArray.TexDepthMapArray,
+						_sceneCtx.shadowMapArray.TexNormalMapArray,
 						_sceneCtx.shadowMapArray.BufShadowMatrices,
 						_sceneCtx.shadowMapArray.SamplerShadowMaps);
 
 					_resSetCamera = _graphicsCore.MainFactory.CreateResourceSet(ref resSetDesc);
+					_resSetCamera.Name = $"ResSetCamera";
+
+					_outRecreatedResSetObject = true;
 				}
 				catch (Exception ex)
 				{

@@ -12,6 +12,7 @@ namespace FragEngine3.Graphics.Contexts
 		ResourceLayout _resLayoutCamera,
 		ResourceLayout _resLayoutObject,
 		DeviceBuffer _cbScene,
+		LightDataBuffer _dummyLightDataBuffer,
 		ShadowMapArray _shadowMapArray,
 
 		// Parameters:
@@ -27,6 +28,7 @@ namespace FragEngine3.Graphics.Contexts
 		public readonly ResourceLayout resLayoutCamera = _resLayoutCamera;
 		public readonly ResourceLayout resLayoutObject = _resLayoutObject;
 		public readonly DeviceBuffer cbScene = _cbScene;
+		public readonly LightDataBuffer dummyLightDataBuffer = _dummyLightDataBuffer;
 		public readonly ShadowMapArray shadowMapArray = _shadowMapArray;
 
 		// Parameters:

@@ -417,6 +417,7 @@ public sealed class ForwardPlusLightsStack(GraphicsCore _core) : IGraphicsStack
 				resLayoutCamera!,
 				resLayoutObject!,
 				cbScene!,
+				dummyLightDataBuffer!,
 				shadowMapArray!,
 				sceneCtx.lightCount,
 				shadowMapLightCount);
@@ -555,6 +556,7 @@ public sealed class ForwardPlusLightsStack(GraphicsCore _core) : IGraphicsStack
 			resLayoutCamera!,
 			resLayoutObject!,
 			cbScene!,
+			dummyLightDataBuffer!,
 			shadowMapArray!,
 			(uint)activeLights.Count,
 			(uint)activeLightsShadowMapped.Count);
@@ -571,11 +573,11 @@ public sealed class ForwardPlusLightsStack(GraphicsCore _core) : IGraphicsStack
 
 		foreach (Light light in activeLightsShadowMapped)
 		{
-			totalShadowCascadeCount += light.ShadowCascades;
+			totalShadowCascadeCount += Math.Max(light.ShadowCascades, 1);
 		}
 
 		// Prepare shadow map texture arrays, sampler, and matrix buffer:
-		if (!shadowMapArray!.PrepareTextureArrays(_maxActiveLightCount, out _outTexShadowsHasChanged))
+		if (!shadowMapArray!.PrepareTextureArrays(totalShadowCascadeCount, out _outTexShadowsHasChanged))
 		{
 			return false;
 		}
@@ -615,7 +617,7 @@ public sealed class ForwardPlusLightsStack(GraphicsCore _core) : IGraphicsStack
 		{
 			bool result = true;
 			int i = 0;
-			int totalShadowMatrixCount = 0;
+			int shadowMapArrayIdx = 0;
 
 			while (i < shadowMappedLightCount && result)
 			{
@@ -658,7 +660,7 @@ public sealed class ForwardPlusLightsStack(GraphicsCore _core) : IGraphicsStack
 					result &= light.EndDrawShadowCascade();
 
 					// Store projection matrix for later scene rendering calls:
-					shadowMapArray!.SetShadowProjectionMatrices((uint)totalShadowMatrixCount++, lightCtx.mtxWorld2Clip);				//TODO [critical]: Check if matrix indices are correct!
+					shadowMapArray!.SetShadowProjectionMatrices((uint)shadowMapArrayIdx++, lightCtx.mtxWorld2Clip);				//TODO [critical]: Check if matrix indices are correct!
 				}
 
 				result &= light.EndDrawShadowMap();

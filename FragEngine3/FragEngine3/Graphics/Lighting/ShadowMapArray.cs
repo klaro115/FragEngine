@@ -14,7 +14,10 @@ public sealed class ShadowMapArray : IDisposable
 
 		Capacity = Math.Max(_initialCount, 1);
 
+		shadowMatrixBuffer = new Matrix4x4[MatrixCapacity];
+
 		ResizeTextureArrays();
+		ResizeShadowMatrixBuffers();
 		CreateShadowMapSampler();
 	}
 
@@ -34,7 +37,7 @@ public sealed class ShadowMapArray : IDisposable
 	public readonly GraphicsCore core;
 
 	private readonly List<Framebuffer> framebuffers = [];
-	private Matrix4x4[] shadowMatrixBuffer = null!;
+	private Matrix4x4[] shadowMatrixBuffer;
 
 	#endregion
 	#region Properties
@@ -49,6 +52,7 @@ public sealed class ShadowMapArray : IDisposable
 
 	public uint Count {  get; private set; } = 0;
 	public uint Capacity { get; private set; } = 0;
+	public uint MatrixCapacity => Capacity * 2;
 
 	private Logger Logger => core.graphicsSystem.engine.Logger;
 
@@ -116,7 +120,7 @@ public sealed class ShadowMapArray : IDisposable
 		return true;
 	}
 
-	public bool GetFramebuffer(uint _shadowMapIdx, out Framebuffer _outFramebuffer)
+	public bool GetFramebuffer(uint _shadowMapArrayIdx, out Framebuffer _outFramebuffer)
 	{
 		if (IsDisposed)
 		{
@@ -124,14 +128,41 @@ public sealed class ShadowMapArray : IDisposable
 			return false;
 		}
 		
-		if (_shadowMapIdx >= Capacity)		//Note: 'Count' would be more correct here, but 'Capacity' is safer against creashes and aborts.
+		if (_shadowMapArrayIdx >= Capacity)		//Note: 'Count' would be more correct here, but 'Capacity' is safer against creashes and aborts.
 		{
-			Logger.LogError($"Shadow map index {_shadowMapIdx} is out of range! Make sure you call 'Prepare()' with the right number of array elements!");
+			Logger.LogError($"Shadow map index {_shadowMapArrayIdx} is out of range! Make sure you call 'Prepare()' with the right number of array elements!");
 			_outFramebuffer = null!;
 			return false;
 		}
 
-		_outFramebuffer = framebuffers[(int)_shadowMapIdx];
+		_outFramebuffer = framebuffers[(int)_shadowMapArrayIdx];
+		return true;
+	}
+
+	public bool SetShadowProjectionMatrices(uint _shadowMapArrayIdx, in Matrix4x4 _mtxWorld2Clip)
+	{
+		if (_shadowMapArrayIdx >= Capacity)
+		{
+			return false;
+		}
+
+		shadowMatrixBuffer[2 * _shadowMapArrayIdx + 0] = _mtxWorld2Clip;
+		if (Matrix4x4.Invert(_mtxWorld2Clip, out shadowMatrixBuffer[2 * _shadowMapArrayIdx + 1]))
+		{
+			shadowMatrixBuffer[2 * _shadowMapArrayIdx + 1] = Matrix4x4.Identity;
+		}
+		return true;
+	}
+
+	public bool SetShadowProjectionMatrices(uint _shadowMapArrayIdx, in Matrix4x4 _mtxWorld2Clip, in Matrix4x4 _maxClip2World)
+	{
+		if (_shadowMapArrayIdx >= Capacity)
+		{
+			return false;
+		}
+
+		shadowMatrixBuffer[2 * _shadowMapArrayIdx + 0] = _mtxWorld2Clip;
+		shadowMatrixBuffer[2 * _shadowMapArrayIdx + 1] = _maxClip2World;
 		return true;
 	}
 
@@ -163,33 +194,6 @@ public sealed class ShadowMapArray : IDisposable
 			Logger.LogException("Failed to upload light data to GPU buffer!", ex);
 			return false;
 		}
-	}
-
-	public bool SetShadowProjectionMatrices(uint _shadowMapIdx, in Matrix4x4 _mtxWorld2Clip)
-	{
-		if (_shadowMapIdx >= Capacity)
-		{
-			return false;
-		}
-
-		shadowMatrixBuffer[2 * _shadowMapIdx + 0] = _mtxWorld2Clip;
-		if (Matrix4x4.Invert(_mtxWorld2Clip, out shadowMatrixBuffer[2 * _shadowMapIdx + 1]))
-		{
-			shadowMatrixBuffer[2 * _shadowMapIdx + 1] = Matrix4x4.Identity;
-		}
-		return true;
-	}
-
-	public bool SetShadowProjectionMatrices(uint _shadowMapIdx, in Matrix4x4 _mtxWorld2Clip, in Matrix4x4 _maxClip2World)
-	{
-		if (_shadowMapIdx >= Capacity)
-		{
-			return false;
-		}
-
-		shadowMatrixBuffer[2 * _shadowMapIdx + 0] = _mtxWorld2Clip;
-		shadowMatrixBuffer[2 * _shadowMapIdx + 1] = _maxClip2World;
-		return true;
 	}
 
 	private bool ResizeTextureArrays()
@@ -284,13 +288,13 @@ public sealed class ShadowMapArray : IDisposable
 
 		BufShadowMatrices?.Dispose();
 
-		if (shadowMatrixBuffer.Length < Capacity)
+		if (shadowMatrixBuffer.Length < MatrixCapacity)
 		{
-			shadowMatrixBuffer = new Matrix4x4[Capacity];
+			shadowMatrixBuffer = new Matrix4x4[MatrixCapacity];
 			Array.Fill(shadowMatrixBuffer, Matrix4x4.Identity);
 		}
 
-		const uint elementByteSize = 4 * sizeof(float);
+		const uint elementByteSize = 16 * sizeof(float);
 		uint bufferByteSize = 2 * elementByteSize * Capacity;
 
 		BufferDescription bufferDesc = new(
@@ -331,7 +335,8 @@ public sealed class ShadowMapArray : IDisposable
 			Logger.LogError("Failed to create sampler for shadow map texture array!");
 			return false;
 		}
-		samplerShadowMaps.Name = "Sampler_ShadowMaps";
+		SamplerShadowMaps = samplerShadowMaps;
+		SamplerShadowMaps.Name = "Sampler_ShadowMaps";
 		return true;
 	}
 

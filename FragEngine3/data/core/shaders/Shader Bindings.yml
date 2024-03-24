@@ -42,8 +42,8 @@ MATERIAL:                                 owned by material, semi-persistent
 
 - SET 0:    (ResSetCamera)                              owned by camera, different for each pass, may be recreated each frame
   Name:                     HLSL Slot:      Mtl Slot:     Updated:    Owner:    Stages:
-  - CBScene                 b0              b+1           f           stack     all
-  - CBCamera                b1              b+2           p           cam       all
+  - CBScene                 b1              b+1           f           stack     all
+  - CBCamera                b2              b+2           p           cam       all
   - BufLights               t0              b+3           f           cam       ps
   - TexShadowMaps           t1              t0            f           stack     ps
   - TexShadowNormalMaps     t2              t1            f           stack     ps

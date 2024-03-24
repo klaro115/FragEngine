@@ -19,12 +19,17 @@ internal sealed class ShadowCascadeResources(LightInstance _light, uint _shadowC
 	}
 
 	#endregion
+	#region Events
+
+	public Action? OnRecreateResSetObjectEvent = null;
+
+	#endregion
 	#region Fields
 
 	private readonly GraphicsCore core = _light.core;
 
 	public readonly LightInstance light = _light;
-	public readonly uint shadowCascadeIdx = _shadowCascadeIdx;				//TODO [critical]: Change this to fetch framebuffer from ShadowMapArray instead!
+	public readonly uint shadowCascadeIdx = _shadowCascadeIdx;
 
 	private CBCamera shadowCbCameraData = default;
 	private DeviceBuffer? shadowCbCamera = null;
@@ -50,18 +55,21 @@ internal sealed class ShadowCascadeResources(LightInstance _light, uint _shadowC
 		GC.SuppressFinalize(this);
 		Dispose(true);
 	}
-	private void Dispose(bool _)
+	private void Dispose(bool _disposing)
 	{
 		IsDisposed = true;
 
-		ShadowMapFrameBuffer?.Dispose();
 		shadowResSetCamera?.Dispose();
 		shadowCbCamera?.Dispose();
+
+		if (_disposing)
+		{
+			ShadowMapFrameBuffer = null;
+		}
 	}
 
 	public bool UpdateResources(
 		in SceneContext _sceneCtx,
-		in LightDataBuffer _dummyLightDataBuffer,
 		in CameraInstance _cameraInstance,
 		in Pose _lightSourceWorldPose,
 		uint _shadowMapIdx,
@@ -72,32 +80,18 @@ internal sealed class ShadowCascadeResources(LightInstance _light, uint _shadowC
 	{
 		Logger logger = core.graphicsSystem.engine.Logger;
 
-		// Ensure render targets are created and assigned:
-		_outFramebufferChanged = false;
-		if (_shadowMapIdx != ShadowMapIdx || _texShadowMapsHasChanged || ShadowMapFrameBuffer == null || ShadowMapFrameBuffer.IsDisposed)
+		// Select framebuffer:
+		uint shadowMapArrayIdx = _shadowMapIdx + shadowCascadeIdx;
+		if (!_sceneCtx.shadowMapArray.GetFramebuffer(shadowMapArrayIdx, out Framebuffer framebuffer))
 		{
-			ShadowMapFrameBuffer?.Dispose();
-			
-			ShadowMapIdx = _shadowMapIdx;
-
-			FramebufferAttachmentDescription depthTargetDesc = new(_sceneCtx.shadowMapArray.TexDepthMapArray, _shadowMapIdx + shadowCascadeIdx, 0);
-			FramebufferDescription shadowMapFrameBufferDesc = new(depthTargetDesc, []);
-
-			try
-			{
-				ShadowMapFrameBuffer = core.MainFactory.CreateFramebuffer(ref shadowMapFrameBufferDesc);
-				ShadowMapFrameBuffer.Name = $"Framebuffer_ShadowMap_Layer{ShadowMapIdx}_Cascade{shadowCascadeIdx}";
-			}
-			catch (Exception ex)
-			{
-				ShadowMapFrameBuffer?.Dispose();
-				ShadowMapFrameBuffer = null;
-				logger.LogException($"Failed to create framebuffer for drawing shadow map for cascade {shadowCascadeIdx}!", ex);
-				_outCbCameraChanged = false;
-				return false;
-			}
+			logger.LogError($"Failed to select framebuffer for drawing shadow map {_shadowMapIdx} for cascade {shadowCascadeIdx}!");
+			_outCbCameraChanged = false;
 			_outFramebufferChanged = true;
+			return false;
 		}
+		_outFramebufferChanged = framebuffer != ShadowMapFrameBuffer;
+		_rebuildResSetCamera |= _texShadowMapsHasChanged;
+		ShadowMapFrameBuffer = framebuffer;
 
 		// Update or create global constant buffer with scene and camera information for the shaders:
 		if (!CameraUtility.UpdateConstantBuffer_CBCamera(
@@ -122,12 +116,17 @@ internal sealed class ShadowCascadeResources(LightInstance _light, uint _shadowC
 			in core,
 			in _sceneCtx,
 			in shadowCbCamera!,
-			in _dummyLightDataBuffer!,
+			in _sceneCtx.dummyLightDataBuffer!,
 			ref shadowResSetCamera,
+			out bool recreatedResSetCamera,
 			_rebuildResSetCamera))
 		{
 			logger.LogError($"Failed to allocate or update default camera resource set for shadow cascade {shadowCascadeIdx}!");
 			return false;
+		}
+		if (_outCbCameraChanged)
+		{
+			OnRecreateResSetObjectEvent?.Invoke();
 		}
 
 		return true;

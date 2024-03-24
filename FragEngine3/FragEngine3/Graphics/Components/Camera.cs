@@ -447,6 +447,7 @@ public sealed class Camera : Component
 			in passResources.cbCamera,
 			LightDataBuffer,
 			ref passResources.resSetCamera,
+			out bool _,
 			_rebuildResSetCamera))
 		{
 			Logger.LogError("Failed to allocate or update camera's default resource set!");

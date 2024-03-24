@@ -224,7 +224,6 @@ namespace FragEngine3.Graphics.Components
 			return lightInstance.BeginDrawShadowCascade(
 				in _sceneCtx,
 				in _cmdList,
-				in _dummyLightDataBuffer,
 				_shadingFocalPoint,
 				_cascadeIdx,
 				out _outCameraPassCtx,
