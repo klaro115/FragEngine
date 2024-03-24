@@ -44,11 +44,11 @@ struct PixelOutput
 /****************** TEXTURES: ******************/
 
 // Scene geometry:
-Texture2D<half4> TexSceneColor : register(ps, t3);
-Texture2D<float2> TexSceneDepth : register(ps, t4);
+Texture2D<half4> TexSceneColor : register(ps, t4);
+Texture2D<float2> TexSceneDepth : register(ps, t5);
 
 // UI Overlay:
-Texture2D<half4> TexUIColor : register(ps, t5);
+Texture2D<half4> TexUIColor : register(ps, t6);
 
 /******************* SHADERS: ******************/
 

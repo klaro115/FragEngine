@@ -19,7 +19,7 @@ struct VertexOutput_Extended
 
 /****************** RESOURCES: *****************/
 
-Texture2D<half4> TexMain : register(ps, t3);
+Texture2D<half4> TexMain : register(ps, t4);
 SamplerState SamplerMain : register(s1);
 
 /******************* SHADERS: ******************/

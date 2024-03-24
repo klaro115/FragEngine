@@ -100,7 +100,8 @@ StructuredBuffer<Light> BufLights : register(ps, t0);               // Buffer co
 
 #ifdef FEATURE_LIGHT_SHADOWMAPS
 Texture2DArray<half> TexShadowMaps : register(ps, t1);
-StructuredBuffer<float4x4> BufShadowMatrices : register(ps, t2);    // Buffer containing an array of projectionm matrices for shadow maps, transforming world position to clip space.
+Texture2DArray<half3> TexShadowNormalMaps : register(ps, t2);
+StructuredBuffer<float4x4> BufShadowMatrices : register(ps, t3);    // Buffer containing an array of projectionm matrices for shadow maps, transforming world position to clip space.
 SamplerState SamplerShadowMaps : register(ps, s0);
 #endif
 
@@ -111,19 +112,19 @@ SamplerState SamplerShadowMaps : register(ps, s0);
 // ResSetBound:
 
 #if FEATURE_ALBEDO_TEXTURE == 1
-Texture2D<half4> TexMain : register(ps, t3);
+Texture2D<half4> TexMain : register(ps, t4);
 #endif //FEATURE_ALBEDO_TEXTURE == 1
 
 #ifdef FEATURE_NORMALS
-Texture2D<half3> TexNormal : register(ps, t4);
+Texture2D<half3> TexNormal : register(ps, t5);
 #endif //FEATURE_NORMALS
 
 #ifdef FEATURE_PARALLAX
-Texture2D<half> TexParallax : register(ps, t5);
+Texture2D<half> TexParallax : register(ps, t6);
 #endif //FEATURE_PARALLAX
 
 #ifdef FEATURE_LIGHT_LIGHTMAPS
-Texture2D<half3> TexLightmap : register(ps, t6);
+Texture2D<half3> TexLightmap : register(ps, t7);
 #endif //FEATURE_LIGHT_LIGHTMAPS
 
 #if FEATURE_ALBEDO_TEXTURE == 1 || defined(FEATURE_NORMALS) || defined(FEATURE_PARALLAX) || defined(FEATURE_LIGHT_LIGHTMAPS)

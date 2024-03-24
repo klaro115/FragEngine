@@ -48,7 +48,7 @@
             {
                 "ResourceKey": "TexQoiTestcard_rgba",
                 "SlotName": "TexMain",
-                "SlotIndex": 3,
+                "SlotIndex": 4,
                 "ResourceKind": 3,
                 "ShaderStageFlags": 16,
                 "Description": null,
