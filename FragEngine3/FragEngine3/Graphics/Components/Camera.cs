@@ -315,7 +315,7 @@ public sealed class Camera : Component
 			LightDataBuffer = new(instance.graphicsCore, _activeLightCount);
 			_outRebuildResSetCamera = true;
 		}
-		if (!LightDataBuffer.BeginPrepare(_activeLightCount, out bool recreatedLightDataBuffer))
+		if (!LightDataBuffer.PrepareBufLights(_activeLightCount, out bool recreatedLightDataBuffer))
 		{
 			return false;
 		}

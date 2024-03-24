@@ -732,7 +732,7 @@ public sealed class ForwardPlusLightsStack(GraphicsCore _core) : IGraphicsStack
 				{
 					camera.LightDataBuffer.SetLightData(j, in activeLightData[j]);
 				}
-				camera.LightDataBuffer.EndPrepare();
+				camera.LightDataBuffer.FinalizeBufLights();
 
 				// Draw scene geometry and UI passes:
 				result &= DrawSceneRenderers(in _sceneCtx, cmdList, camera, RenderMode.Opaque, activeRenderersOpaque, true, rebuildResSetCamera, i);

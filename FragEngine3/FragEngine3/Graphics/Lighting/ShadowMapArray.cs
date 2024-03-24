@@ -319,16 +319,16 @@ public sealed class ShadowMapArray : IDisposable
 	private bool CreateShadowMapSampler()
 	{
 		SamplerDescription samplerDesc = new(
-				SamplerAddressMode.Clamp,
-				SamplerAddressMode.Clamp,
-				SamplerAddressMode.Clamp,
-				SamplerFilter.MinLinear_MagLinear_MipPoint,
-				null,
-				0,
-				0,
-				uint.MaxValue,
-				0,
-				SamplerBorderColor.OpaqueWhite);
+			SamplerAddressMode.Clamp,
+			SamplerAddressMode.Clamp,
+			SamplerAddressMode.Clamp,
+			SamplerFilter.MinLinear_MagLinear_MipPoint,
+			null,
+			0,
+			0,
+			uint.MaxValue,
+			0,
+			SamplerBorderColor.OpaqueWhite);
 
 		if (!core.SamplerManager.GetSampler(ref samplerDesc, out Sampler samplerShadowMaps))
 		{

@@ -63,7 +63,7 @@ public sealed class LightDataBuffer : IDisposable
 		BufLights?.Dispose();
 	}
 
-	public bool BeginPrepare(uint _requiredLightCount, out bool _outRecreatedBufLights)
+	public bool PrepareBufLights(uint _requiredLightCount, out bool _outRecreatedBufLights)
 	{
 		_outRecreatedBufLights = false;
 
@@ -102,7 +102,7 @@ public sealed class LightDataBuffer : IDisposable
 		return true;
 	}
 
-	public bool EndPrepare(CommandList? _cmdList = null)
+	public bool FinalizeBufLights(CommandList? _cmdList = null)
 	{
 		if (IsDisposed)
 		{
