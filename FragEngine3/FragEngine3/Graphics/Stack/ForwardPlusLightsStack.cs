@@ -660,7 +660,7 @@ public sealed class ForwardPlusLightsStack(GraphicsCore _core) : IGraphicsStack
 					result &= light.EndDrawShadowCascade();
 
 					// Store projection matrix for later scene rendering calls:
-					shadowMapArray!.SetShadowProjectionMatrices((uint)shadowMapArrayIdx++, lightCtx.mtxWorld2Clip);				//TODO [critical]: Check if matrix indices are correct!
+					shadowMapArray!.SetShadowProjectionMatrices((uint)shadowMapArrayIdx++, lightCtx.mtxWorld2Clip);
 				}
 
 				result &= light.EndDrawShadowMap();
@@ -707,16 +707,27 @@ public sealed class ForwardPlusLightsStack(GraphicsCore _core) : IGraphicsStack
 		}
 		cmdList.Begin();
 
+		List<Light> visibleLights = new(activeLights.Count);
+
 		for (uint i = 0; i < activeCameras.Count; ++i)
 		{
+			Camera camera = activeCameras[(int)i];
+
+			// Pre-filter lights to only include those are actually visible by current camera:
+			visibleLights.Clear();
+			foreach (Light light in activeLights)
+			{
+				if (light.CheckVisibilityByCamera(in camera))
+				{
+					visibleLights.Add(light);
+				}
+			}
+			uint visibleLightCount = (uint)visibleLights.Count;
+
+			// Try drawing the camera's frame:
 			try
 			{
-				//TODO [later]: Pre-filter lights to only include those are actually visible by current camera!
-
-				Camera camera = activeCameras[(int)i];
-				uint activeLightCount = (uint)activeLights.Count;
-
-				if (!camera.BeginFrame(activeLightCount, out bool bufLightsChanged))
+				if (!camera.BeginFrame(visibleLightCount, out bool bufLightsChanged))
 				{
 					success = false;
 					continue;
@@ -728,11 +739,11 @@ public sealed class ForwardPlusLightsStack(GraphicsCore _core) : IGraphicsStack
 				result &= camera.SetOverrideCameraTarget(null);
 
 				// Upload per-camera light data to GPU buffer:
-				for (uint j = 0; j < activeLightCount; ++j)
+				for (uint j = 0; j < visibleLightCount; ++j)
 				{
 					camera.LightDataBuffer.SetLightData(j, in activeLightData[j]);
 				}
-				camera.LightDataBuffer.FinalizeBufLights();
+				camera.LightDataBuffer.FinalizeBufLights(cmdList);
 
 				// Draw scene geometry and UI passes:
 				result &= DrawSceneRenderers(in _sceneCtx, cmdList, camera, RenderMode.Opaque, activeRenderersOpaque, true, rebuildResSetCamera, i);

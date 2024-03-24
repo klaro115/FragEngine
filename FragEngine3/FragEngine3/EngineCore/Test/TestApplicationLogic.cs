@@ -150,13 +150,13 @@ public sealed class TestApplicationLogic : ApplicationLogic
 		}
 		if (SceneSpawner.CreateLight(scene, LightType.Spot, out light))
 		{
-			light.node.WorldPosition = new Vector3(-4, 5, -4);
-			light.node.SetRotationFromYawPitchRoll(22.5f, 45, 0, true, true);
+			light.node.WorldPosition = new Vector3(4.8f, 5.5f, -4);
+			light.node.SetRotationFromYawPitchRoll(-22.5f, 45, 0, true, true);
 			light.node.SetEnabled(false);
 
 			//light.lightColor = RgbaFloat.Red;
-			light.LightIntensity = 15;
-			light.SpotAngleDegrees = 30;
+			light.LightIntensity = 25;
+			light.SpotAngleDegrees = 15;
 			light.CastShadows = true;
 		}
 		// Create a point light:

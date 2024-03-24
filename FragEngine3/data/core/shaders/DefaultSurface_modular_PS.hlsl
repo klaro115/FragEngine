@@ -100,14 +100,12 @@ StructuredBuffer<Light> BufLights : register(ps, t0);               // Buffer co
 
 #ifdef FEATURE_LIGHT_SHADOWMAPS
 Texture2DArray<half> TexShadowMaps : register(ps, t1);
-Texture2DArray<half3> TexShadowNormalMaps : register(ps, t2);
 StructuredBuffer<float4x4> BufShadowMatrices : register(ps, t3);    // Buffer containing an array of projectionm matrices for shadow maps, transforming world position to clip space.
 SamplerState SamplerShadowMaps : register(ps, s0);
+    #if defined(FEATURE_LIGHT_INDIRECT) && FEATURE_LIGHT_INDIRECT > 1
+    Texture2DArray<half3> TexShadowNormalMaps : register(ps, t2);
+    #endif
 #endif
-
-//#if defined(FEATURE_LIGHT_SHADOWMAPS) && defined(FEATURE_LIGHT_INDIRECT) && FEATURE_LIGHT_INDIRECT > 1
-//Texture2DArray<half4> TexDiffusionMaps : register(ps, t3);
-//#endif
 
 // ResSetBound:
 
@@ -239,16 +237,17 @@ half3 CalculateIndirectLightScatter(const in Light _light, const in float3 _worl
         for (int x = -halfKernel; x < halfKernel; ++x)
         {
             const half uvX = shadowUv.x + x * uvKernelSteps;
-            const half depth = TexShadowMaps.Sample(SamplerShadowMaps, half3(uvX, uvY, _light.shadowMapIdx));
-            const half4 posClipSpace = half4(uvX * 2 - 1, 1 - uvY * 2, depth, 1);
+            const half3 uv = half3(uvX, uvY, _light.shadowMapIdx);
 
+            const half3 normal = TexShadowNormalMaps.Sample(SamplerShadowMaps, uv) * 2 - 1;
+            const half depth = TexShadowMaps.Sample(SamplerShadowMaps, uv);
+
+            const half4 posClipSpace = half4(uvX * 2 - 1, 1 - uvY * 2, depth, 1);
             const float3 posWorld = mul(mtxShadowClip2World, posClipSpace).xyz;
-            const float3 lightOffset = _worldPosition - posWorld;
 
             // Determine approximate lighting at sampled point, pre-bounce:
-            const float3 offsetPreBounce = posWorld - _light.lightPosition;
-            const float distSqPreBounce = dot(offsetPreBounce, offsetPreBounce);
-            const float intensityPreBounce = 1.0 / distSqPreBounce;
+            const float3 lightOffset = posWorld - _light.lightPosition;
+            const float intensityPreBounce = max(-dot(lightOffset / length(lightOffset), normal), 0) / dot(lightOffset, lightOffset);
 
             // Determine radiated lighting at center point, post-bounce:
             const float3 offsetBounced = worldPosBiased.xyz - posWorld;
