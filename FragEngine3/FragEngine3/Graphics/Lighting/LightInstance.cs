@@ -169,7 +169,7 @@ internal abstract class LightInstance(GraphicsCore _core) : IDisposable
 		{
 			return false;
 		}
-		if (_sceneCtx.texShadowMaps == null || _sceneCtx.texShadowMaps.IsDisposed)
+		if (_sceneCtx.shadowMapArray.TexDepthMapArray == null || _sceneCtx.shadowMapArray.TexDepthMapArray.IsDisposed)
 		{
 			Logger.LogError("Can't begin drawing shadow map using null shadow map texture array!");
 			return false;

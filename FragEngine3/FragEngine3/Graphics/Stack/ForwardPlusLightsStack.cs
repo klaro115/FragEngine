@@ -54,12 +54,9 @@ public sealed class ForwardPlusLightsStack(GraphicsCore _core) : IGraphicsStack
 	private ResourceLayout? resLayoutObject = null;
 
 	// Shadow maps:
-	private Texture? texShadowMaps = null;
-	private uint texShadowMapsCapacity = 0;
-	private uint texShadowMapsCount = 0;
+	private ShadowMapArray? shadowMapArray = null;
 	private DeviceBuffer? bufShadowMatrices = null;
 	private DeviceBuffer? dummyBufLights = null;
-	private Sampler? samplerShadowMaps = null;
 
 	// Output composition:
 	private ResourceSet? compositeSceneResourceSet = null;
@@ -132,10 +129,8 @@ public sealed class ForwardPlusLightsStack(GraphicsCore _core) : IGraphicsStack
 		compositeSceneResourceSet?.Dispose();
 		compositeUIResourceSet?.Dispose();
 		dummyBufLights?.Dispose();
-		texShadowMaps?.Dispose();
-		texShadowMapsCapacity = 0;
+		shadowMapArray?.Dispose();
 		bufShadowMatrices?.Dispose();
-		samplerShadowMaps?.Dispose();
 
 		postProcessingStackScene?.Dispose();
 		postProcessingStackFinal?.Dispose();
@@ -201,32 +196,16 @@ public sealed class ForwardPlusLightsStack(GraphicsCore _core) : IGraphicsStack
 			}
 		}
 
-		if (texShadowMaps == null || texShadowMaps.IsDisposed || texShadowMapsCapacity == 0)
+		if (shadowMapArray == null || shadowMapArray.IsDisposed)
 		{
-			const uint shadowResolution = LightConstants.shadowResolution;
-			if (!ShadowMapUtility.CreateShadowMapArray(in core, shadowResolution, shadowResolution, 1, out texShadowMaps))
-			{
-				Logger.LogError("Failed to create initial shadow map texture array for graphics stack!");
-				return false;
-			}
-			texShadowMapsCapacity = 1;
+			shadowMapArray = new(core, 1);
 		}
-		texShadowMapsCount = 0;
 
 		if (bufShadowMatrices == null || bufShadowMatrices.IsDisposed)
 		{
-			if (!ShadowMapUtility.CreateShadowMatrixBuffer(in core, texShadowMapsCapacity, ref bufShadowMatrices))
+			if (!ShadowMapUtility.CreateShadowMatrixBuffer(in core, shadowMapArray.Capacity, ref bufShadowMatrices))
 			{
 				Logger.LogError("Failed to create initial shadow projection matrix buffer for graphics stack!");
-				return false;
-			}
-		}
-
-		if (samplerShadowMaps == null || samplerShadowMaps.IsDisposed)
-		{
-			if (!ShadowMapUtility.CreateShadowSampler(in core, out samplerShadowMaps))
-			{
-				Logger.LogError("Failed to create shadow map sampler for graphics stack!");
 				return false;
 			}
 		}
@@ -300,11 +279,8 @@ public sealed class ForwardPlusLightsStack(GraphicsCore _core) : IGraphicsStack
 		compositeSceneResourceSet?.Dispose();
 		compositeUIResourceSet?.Dispose();
 		dummyBufLights?.Dispose();
-		texShadowMaps?.Dispose();
-		texShadowMapsCount = 0;
-		texShadowMapsCapacity = 0;
+		shadowMapArray?.Dispose();
 		bufShadowMatrices?.Dispose();
-		samplerShadowMaps?.Dispose();
 
 		foreach (CommandList cmdList in commandListPool)
 		{
@@ -458,9 +434,8 @@ public sealed class ForwardPlusLightsStack(GraphicsCore _core) : IGraphicsStack
 				resLayoutCamera!,
 				resLayoutObject!,
 				cbScene!,
-				texShadowMaps!,
+				shadowMapArray!,
 				bufShadowMatrices!,
-				samplerShadowMaps!,
 				sceneCtx.lightCount,
 				shadowMapLightCount);
 		}
@@ -598,9 +573,8 @@ public sealed class ForwardPlusLightsStack(GraphicsCore _core) : IGraphicsStack
 			resLayoutCamera!,
 			resLayoutObject!,
 			cbScene!,
-			texShadowMaps!,
+			shadowMapArray!,
 			bufShadowMatrices!,
-			samplerShadowMaps!,
 			(uint)activeLights.Count,
 			(uint)activeLightsShadowMapped.Count);
 
@@ -610,7 +584,6 @@ public sealed class ForwardPlusLightsStack(GraphicsCore _core) : IGraphicsStack
 	private bool PrepareShadowMaps(uint _maxActiveLightCount, ref bool _outRebuildResSetCamera, out bool _outTexShadowsHasChanged)
 	{
 		_outTexShadowsHasChanged = false;
-		texShadowMapsCount = 0;
 
 		uint minLightCountShadowMapped = Math.Min((uint)activeLightsShadowMapped.Count, _maxActiveLightCount);
 		uint totalShadowCascadeCount = minLightCountShadowMapped;
@@ -620,25 +593,18 @@ public sealed class ForwardPlusLightsStack(GraphicsCore _core) : IGraphicsStack
 			totalShadowCascadeCount += light.ShadowCascades;
 		}
 
-		if (texShadowMaps == null || texShadowMaps.IsDisposed || texShadowMapsCapacity < totalShadowCascadeCount)
+		// Prepare shadow map texture array:
+		if (!shadowMapArray!.Prepare(_maxActiveLightCount, out _outTexShadowsHasChanged))
+		{
+			return false;
+		}
+		_outRebuildResSetCamera |= _outTexShadowsHasChanged;
+
+		// Prepare shadow projection matrix buffer:
+		uint bufShadowMatricesSize = 16 * sizeof(float) * _maxActiveLightCount;
+		if (bufShadowMatrices == null || bufShadowMatrices.IsDisposed || bufShadowMatrices.SizeInBytes < bufShadowMatricesSize)
 		{
 			_outRebuildResSetCamera = true;
-			_outTexShadowsHasChanged = true;
-			texShadowMaps?.Dispose();
-
-			const uint shadowResolution = LightConstants.shadowResolution;
-			if (!ShadowMapUtility.CreateShadowMapArray(
-				in core,
-				shadowResolution,
-				shadowResolution,
-				totalShadowCascadeCount,
-				out texShadowMaps))
-			{
-				Logger.LogError("Failed to create shadow map texture array for graphics stack!");
-				_outTexShadowsHasChanged = false;
-				return false;
-			}
-			texShadowMapsCapacity = totalShadowCascadeCount;
 
 			if (!ShadowMapUtility.CreateShadowMatrixBuffer(
 				in core,

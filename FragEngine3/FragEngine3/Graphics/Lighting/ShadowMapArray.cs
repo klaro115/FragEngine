@@ -11,15 +11,21 @@ public sealed class ShadowMapArray : IDisposable
 	{
 		core = _core ?? throw new ArgumentNullException(nameof(_core), "Graphics core may not be null!");
 
-		ShadowMapCount = Math.Max(_initialCount, 1);
+		Capacity = Math.Max(_initialCount, 1);
 
 		ResizeTextureArrays();
+		CreateShadowMapSampler();
 	}
 
 	~ShadowMapArray()
 	{
 		if (!IsDisposed) Dispose(false);
 	}
+
+	#endregion
+	#region Events
+
+	public event Action? OnRecreatedShadowMapsEvent = null;
 
 	#endregion
 	#region Fields
@@ -32,11 +38,14 @@ public sealed class ShadowMapArray : IDisposable
 	#region Properties
 
 	public bool IsDisposed { get; private set; } = false;
+	public uint ResourceVersion { get; private set; } = 0;
 
 	public Texture TexNormalMapArray { get; private set; } = null!;
 	public Texture TexDepthMapArray { get; private set; } = null!;
+	public Sampler SamplerShadowMaps { get; private set; } = null!;
 
-	public uint ShadowMapCount { get; private set; } = 0;
+	public uint Count {  get; private set; } = 0;
+	public uint Capacity { get; private set; } = 0;
 
 	private Logger Logger => core.graphicsSystem.engine.Logger;
 
@@ -48,7 +57,7 @@ public sealed class ShadowMapArray : IDisposable
 		GC.SuppressFinalize(this);
 		Dispose(true);
 	}
-	private void Dispose(bool _disposing)
+	private void Dispose(bool _)
 	{
 		IsDisposed = true;
 		DisposeResources();
@@ -66,25 +75,31 @@ public sealed class ShadowMapArray : IDisposable
 		framebuffers.Clear();
 	}
 
-	public bool Prepare(uint _requiredShadowMapCount)
+	public bool Prepare(uint _requiredShadowMapCount, out bool _outRecreatedShadowMaps)
 	{
+		_outRecreatedShadowMaps = false;
 		if (IsDisposed)
 		{
 			Logger.LogError("Cannot prepare disposed shadow map array for use!");
 			return false;
 		}
 
-		if (_requiredShadowMapCount > ShadowMapCount)
+		if (_requiredShadowMapCount > Capacity)
 		{
-			ShadowMapCount = _requiredShadowMapCount;
+			Capacity = _requiredShadowMapCount;
 
 			if (!ResizeTextureArrays())
 			{
 				Logger.LogError("Failed to prepare shadow map texture arrays!");
 				return false;
 			}
+			_outRecreatedShadowMaps = true;
+
+			ResourceVersion++;
+			OnRecreatedShadowMapsEvent?.Invoke();
 		}
 
+		Count = _requiredShadowMapCount;
 		return true;
 	}
 
@@ -96,7 +111,7 @@ public sealed class ShadowMapArray : IDisposable
 			return false;
 		}
 		
-		if (_shadowMapIdx >= ShadowMapCount)
+		if (_shadowMapIdx >= Capacity)		//Note: 'Count' would be more correct here, but 'Capacity' is safer against creashes and aborts.
 		{
 			Logger.LogError($"Shadow map index {_shadowMapIdx} is out of range! Make sure you call 'Prepare()' with the right number of array elements!");
 			_outFramebuffer = null!;
@@ -124,7 +139,7 @@ public sealed class ShadowMapArray : IDisposable
 			resolution,
 			1,
 			1,
-			ShadowMapCount,
+			Capacity,
 			normalFormat,
 			TextureUsage.Sampled | TextureUsage.RenderTarget,
 			TextureType.Texture2D);
@@ -132,7 +147,7 @@ public sealed class ShadowMapArray : IDisposable
 		try
 		{
 			TexNormalMapArray = core.MainFactory.CreateTexture(ref texNormalMapArrayDesc);
-			TexNormalMapArray.Name = $"TexShadowMapArray_Normals_Size={resolution}x{resolution}_Layers={ShadowMapCount}_Format={normalFormat}";
+			TexNormalMapArray.Name = $"TexShadowMapArray_Normals_Size={resolution}x{resolution}_Layers={Capacity}_Format={normalFormat}";
 		}
 		catch (Exception ex)
 		{
@@ -147,7 +162,7 @@ public sealed class ShadowMapArray : IDisposable
 			resolution,
 			1,
 			1,
-			ShadowMapCount,
+			Capacity,
 			depthFormat,
 			TextureUsage.Sampled | TextureUsage.DepthStencil,
 			TextureType.Texture2D);
@@ -155,7 +170,7 @@ public sealed class ShadowMapArray : IDisposable
 		try
 		{
 			TexDepthMapArray = core.MainFactory.CreateTexture(ref texDepthMapArrayDesc);
-			TexDepthMapArray.Name = $"TexShadowMapArray_Depth_Size={resolution}x{resolution}_Layers={ShadowMapCount}_Format={depthFormat}";
+			TexDepthMapArray.Name = $"TexShadowMapArray_Depth_Size={resolution}x{resolution}_Layers={Capacity}_Format={depthFormat}";
 		}
 		catch (Exception ex)
 		{
@@ -165,7 +180,7 @@ public sealed class ShadowMapArray : IDisposable
 
 		// Frame buffers:
 
-		for (uint i = 0; i < ShadowMapCount; ++i)
+		for (uint i = 0; i < Capacity; ++i)
 		{
 			FramebufferDescription frameBufferDesc = new(
 				new FramebufferAttachmentDescription(TexDepthMapArray, i),
@@ -174,11 +189,34 @@ public sealed class ShadowMapArray : IDisposable
 				]);
 
 			Framebuffer framebuffer = core.MainFactory.CreateFramebuffer(ref frameBufferDesc);
-			framebuffer.Name = $"Framebuffer_ShadowMapArray_Size={resolution}x{resolution}_Layer={i}/{ShadowMapCount}";
+			framebuffer.Name = $"Framebuffer_ShadowMapArray_Size={resolution}x{resolution}_Layer={i}/{Capacity}";
 
 			framebuffers.Add(framebuffer);
 		}
 
+		return true;
+	}
+
+	private bool CreateShadowMapSampler()
+	{
+		SamplerDescription samplerDesc = new(
+				SamplerAddressMode.Clamp,
+				SamplerAddressMode.Clamp,
+				SamplerAddressMode.Clamp,
+				SamplerFilter.MinLinear_MagLinear_MipPoint,
+				null,
+				0,
+				0,
+				uint.MaxValue,
+				0,
+				SamplerBorderColor.OpaqueWhite);
+
+		if (!core.SamplerManager.GetSampler(ref samplerDesc, out Sampler samplerShadowMaps))
+		{
+			Logger.LogError("Failed to create sampler for shadow map texture array!");
+			return false;
+		}
+		samplerShadowMaps.Name = "Sampler_ShadowMaps";
 		return true;
 	}
 

@@ -78,6 +78,7 @@ namespace FragEngine3.Graphics.Utility
 			return true;
 		}
 
+		[Obsolete($"Replaced by {nameof(ShadowMapArray)}")]
 		public static bool CreateShadowMapArray(
 			in GraphicsCore _graphicsCore,
 			uint _resolutionX,
@@ -171,31 +172,6 @@ namespace FragEngine3.Graphics.Utility
 					return false;
 				}
 			}
-			return true;
-		}
-
-		public static bool CreateShadowSampler(
-			in GraphicsCore _graphicsCore,
-			out Sampler _outSamplerShadowMaps)
-		{
-			SamplerDescription samplerDesc = new(
-				SamplerAddressMode.Clamp,
-				SamplerAddressMode.Clamp,
-				SamplerAddressMode.Clamp,
-				SamplerFilter.MinLinear_MagLinear_MipPoint,
-				null,
-				0,
-				0,
-				uint.MaxValue,
-				0,
-				SamplerBorderColor.OpaqueWhite);
-
-			if (!_graphicsCore.SamplerManager.GetSampler(samplerDesc, out _outSamplerShadowMaps))
-			{
-				_graphicsCore.graphicsSystem.engine.Logger.LogError("Failed to create sampler for shadow map texture array!");
-				return false;
-			}
-			_outSamplerShadowMaps.Name = "Sampler_ShadowMaps";
 			return true;
 		}
 

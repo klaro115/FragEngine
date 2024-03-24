@@ -80,7 +80,7 @@ internal sealed class ShadowCascadeResources(LightInstance _light, uint _shadowC
 			
 			ShadowMapIdx = _shadowMapIdx;
 
-			FramebufferAttachmentDescription depthTargetDesc = new(_sceneCtx.texShadowMaps, _shadowMapIdx + shadowCascadeIdx, 0);
+			FramebufferAttachmentDescription depthTargetDesc = new(_sceneCtx.shadowMapArray.TexDepthMapArray, _shadowMapIdx + shadowCascadeIdx, 0);
 			FramebufferDescription shadowMapFrameBufferDesc = new(depthTargetDesc, []);
 
 			try

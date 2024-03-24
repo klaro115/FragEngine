@@ -107,7 +107,7 @@ namespace FragEngine3.Graphics.Resources
 			return TryCreateNewSampler(ref desc, out _outSampler);
 		}
 
-		public bool GetSampler(SamplerDescription _desc, out Sampler _outSampler)
+		public bool GetSampler(ref SamplerDescription _desc, out Sampler _outSampler)
 		{
 			if (IsDisposed)
 			{
