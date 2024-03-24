@@ -24,7 +24,7 @@ internal sealed class ShadowCascadeResources(LightInstance _light, uint _shadowC
 	private readonly GraphicsCore core = _light.core;
 
 	public readonly LightInstance light = _light;
-	public readonly uint shadowCascadeIdx = _shadowCascadeIdx;
+	public readonly uint shadowCascadeIdx = _shadowCascadeIdx;				//TODO [critical]: Change this to fetch framebuffer from ShadowMapArray instead!
 
 	private CBCamera shadowCbCameraData = default;
 	private DeviceBuffer? shadowCbCamera = null;
@@ -61,7 +61,7 @@ internal sealed class ShadowCascadeResources(LightInstance _light, uint _shadowC
 
 	public bool UpdateResources(
 		in SceneContext _sceneCtx,
-		in DeviceBuffer _dummyBufLights,
+		in LightDataBuffer _dummyLightDataBuffer,
 		in CameraInstance _cameraInstance,
 		in Pose _lightSourceWorldPose,
 		uint _shadowMapIdx,
@@ -122,7 +122,7 @@ internal sealed class ShadowCascadeResources(LightInstance _light, uint _shadowC
 			in core,
 			in _sceneCtx,
 			in shadowCbCamera!,
-			in _dummyBufLights!,
+			in _dummyLightDataBuffer!,
 			ref shadowResSetCamera,
 			_rebuildResSetCamera))
 		{

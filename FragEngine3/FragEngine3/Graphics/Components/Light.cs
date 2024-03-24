@@ -212,7 +212,7 @@ namespace FragEngine3.Graphics.Components
 		public bool BeginDrawShadowCascade(
 			in SceneContext _sceneCtx,
 			in CommandList _cmdList,
-			in DeviceBuffer _dummyBufLights,
+			in LightDataBuffer _dummyLightDataBuffer,
 			Vector3 _shadingFocalPoint,
 			uint _cascadeIdx,
 			out CameraPassContext _outCameraPassCtx,
@@ -224,7 +224,7 @@ namespace FragEngine3.Graphics.Components
 			return lightInstance.BeginDrawShadowCascade(
 				in _sceneCtx,
 				in _cmdList,
-				in _dummyBufLights,
+				in _dummyLightDataBuffer,
 				_shadingFocalPoint,
 				_cascadeIdx,
 				out _outCameraPassCtx,

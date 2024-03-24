@@ -1,4 +1,5 @@
 ﻿using FragEngine3.Graphics.Cameras;
+using FragEngine3.Graphics.Lighting;
 using System.Numerics;
 using Veldrid;
 
@@ -13,12 +14,11 @@ namespace FragEngine3.Graphics.Contexts
 		Framebuffer _framebuffer,
 		ResourceSet _resSetCamera,
 		DeviceBuffer _cbCamera,
-		DeviceBuffer _bufLights,
+		LightDataBuffer _lightDataBuffer,
 
 		// Parameters:
 		uint _frameIdx,
 		uint _passIdx,
-		uint _lightCount,
 		uint _lightCountShadowMapped,
 		in Matrix4x4 _mtxWorld2Clip)
 	{
@@ -32,13 +32,12 @@ namespace FragEngine3.Graphics.Contexts
 		public readonly Framebuffer framebuffer = _framebuffer;
 		public readonly ResourceSet resSetCamera = _resSetCamera;
 		public readonly DeviceBuffer cbCamera = _cbCamera;
-		public readonly DeviceBuffer bufLights = _bufLights;
+		public readonly LightDataBuffer lightDataBuffer = _lightDataBuffer;
 
 		// Parameters:
 		public readonly uint frameIdx = _frameIdx;
 		public readonly uint passIdx = _passIdx;
-		public readonly uint lightCount = _lightCount;
-		public readonly uint lightCountShadowMapped = Math.Min(_lightCountShadowMapped, _lightCount);
+		public readonly uint lightCountShadowMapped = Math.Min(_lightCountShadowMapped, _lightDataBuffer.Count);
 		public readonly Matrix4x4 mtxWorld2Clip = _mtxWorld2Clip;
 		public readonly OutputDescription outputDesc = _framebuffer.OutputDescription;
 		public readonly bool mirrorY = _cameraInstance.ProjectionSettings.mirrorY;

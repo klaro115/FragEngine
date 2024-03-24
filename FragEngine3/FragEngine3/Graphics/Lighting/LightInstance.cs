@@ -201,7 +201,7 @@ internal abstract class LightInstance(GraphicsCore _core) : IDisposable
 	public bool BeginDrawShadowCascade(
 			in SceneContext _sceneCtx,
 			in CommandList _cmdList,
-			in DeviceBuffer _dummyBufLights,
+			in LightDataBuffer _dummyLightDataBuffer,
 			Vector3 _shadingFocalPoint,
 			uint _cascadeIdx,
 			out CameraPassContext _outCameraPassCtx,
@@ -219,7 +219,7 @@ internal abstract class LightInstance(GraphicsCore _core) : IDisposable
 		// Update framebuffer, constant buffers and resource sets:
 		if (!cascade.UpdateResources(
 			in _sceneCtx,
-			in _dummyBufLights,
+			in _dummyLightDataBuffer,
 			in shadowCameraInstance!,
 			in worldPose,
 			ShadowMapIdx,
@@ -250,15 +250,14 @@ internal abstract class LightInstance(GraphicsCore _core) : IDisposable
 
 		// Assemble context object for renderers to reference when issuing draw calls:
 		_outCameraPassCtx = new(
-			shadowCameraInstance!,
+			shadowCameraInstance,
 			_cmdList,
 			cascade.ShadowMapFrameBuffer!,
 			cascade.ShadowResSetCamera!,
 			cascade.ShadowCbCamera!,
-			_dummyBufLights,
+			_dummyLightDataBuffer,
 			0,
 			ShadowMapIdx,
-			0,
 			0,
 			in cascade.mtxShadowWorld2Clip);
 

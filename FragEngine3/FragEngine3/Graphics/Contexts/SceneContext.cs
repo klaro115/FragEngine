@@ -13,7 +13,6 @@ namespace FragEngine3.Graphics.Contexts
 		ResourceLayout _resLayoutObject,
 		DeviceBuffer _cbScene,
 		ShadowMapArray _shadowMapArray,
-		DeviceBuffer _bufShadowMatrices,
 
 		// Parameters:
 		uint _lightCount,
@@ -29,16 +28,10 @@ namespace FragEngine3.Graphics.Contexts
 		public readonly ResourceLayout resLayoutObject = _resLayoutObject;
 		public readonly DeviceBuffer cbScene = _cbScene;
 		public readonly ShadowMapArray shadowMapArray = _shadowMapArray;
-		public readonly DeviceBuffer bufShadowMatrices = _bufShadowMatrices;
 
 		// Parameters:
 		public readonly uint lightCount = _lightCount;
 		public readonly uint lightCountShadowMapped = Math.Min(_lightCountShadowMapped, _lightCount);
-
-		#endregion
-		#region Properties
-
-		public Sampler SamplerShadowMaps => shadowMapArray.SamplerShadowMaps;
 
 		#endregion
 	}

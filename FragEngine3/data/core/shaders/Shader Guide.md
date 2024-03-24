@@ -34,7 +34,7 @@ On Vulkan and Direct3D, the light buffer buffer is always bound to the first tex
 |      ```BufLights```      | Structured Buffer (readonly) |     ```LightSourceData```    |         t0        |   buffer(+4)  | LightDataBuffer |
 |    ```TexShadowMaps```    |        Texture2DArray        |     ```Texture``` (depth)    |         t1        |   texture(0)  | ShadowMapArray  |
 | ```TexShadowNormalMaps``` |        Texture2DArray        | ```Texture``` (RGBA32_Unorm) |         t2        |   texture(0)  | ShadowMapArray  |
-|  ```BufShadowMatrices```  | Structured Buffer (readonly) |        ```Matrix4x4```       |         t3        |   buffer(+5)  | LightDataBuffer |
+|  ```BufShadowMatrices```  | Structured Buffer (readonly) |        ```Matrix4x4```       |         t3        |   buffer(+5)  | ShadowMapArray  |
 |  ```SamplerShadowMaps```  |            Sampler           |         ```Sampler```        |         s0        |   sampler(0)  | ShadowMapArray  |
 <br>
 

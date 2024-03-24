@@ -38,7 +38,6 @@ public sealed class ForwardPlusLightsStack(GraphicsCore _core) : IGraphicsStack
 	private readonly List<Light> activeLights = new(10);
 	private readonly List<Light> activeLightsShadowMapped = new(5);
 	private LightSourceData[] activeLightData = [];
-	private Matrix4x4[] shadowProjectionMatrices = new Matrix4x4[2];
 
 	private readonly List<IRenderer> activeRenderersOpaque = new(128);
 	private readonly List<IRenderer> activeRenderersTransparent = new(128);
@@ -55,8 +54,7 @@ public sealed class ForwardPlusLightsStack(GraphicsCore _core) : IGraphicsStack
 
 	// Shadow maps:
 	private ShadowMapArray? shadowMapArray = null;
-	private DeviceBuffer? bufShadowMatrices = null;
-	private DeviceBuffer? dummyBufLights = null;
+	private LightDataBuffer? dummyLightDataBuffer = null;
 
 	// Output composition:
 	private ResourceSet? compositeSceneResourceSet = null;
@@ -128,9 +126,8 @@ public sealed class ForwardPlusLightsStack(GraphicsCore _core) : IGraphicsStack
 		resLayoutObject?.Dispose();
 		compositeSceneResourceSet?.Dispose();
 		compositeUIResourceSet?.Dispose();
-		dummyBufLights?.Dispose();
+		dummyLightDataBuffer?.Dispose();
 		shadowMapArray?.Dispose();
-		bufShadowMatrices?.Dispose();
 
 		postProcessingStackScene?.Dispose();
 		postProcessingStackFinal?.Dispose();
@@ -187,27 +184,14 @@ public sealed class ForwardPlusLightsStack(GraphicsCore _core) : IGraphicsStack
 
 		// SHADOW MAPPING:
 
-		if (dummyBufLights == null || dummyBufLights.IsDisposed)
+		if (dummyLightDataBuffer == null || dummyLightDataBuffer.IsDisposed)
 		{
-			if (!CameraUtility.CreateOrResizeLightDataBuffer(in core, 1, ref dummyBufLights, out _))
-			{
-				Logger.LogError("Failed to create dummy light data buffer for graphics stack!");
-				return false;
-			}
+			dummyLightDataBuffer = new(core, 1);
 		}
 
 		if (shadowMapArray == null || shadowMapArray.IsDisposed)
 		{
 			shadowMapArray = new(core, 1);
-		}
-
-		if (bufShadowMatrices == null || bufShadowMatrices.IsDisposed)
-		{
-			if (!ShadowMapUtility.CreateShadowMatrixBuffer(in core, shadowMapArray.Capacity, ref bufShadowMatrices))
-			{
-				Logger.LogError("Failed to create initial shadow projection matrix buffer for graphics stack!");
-				return false;
-			}
 		}
 
 		// OUTPUT COMPOSITION:
@@ -278,9 +262,8 @@ public sealed class ForwardPlusLightsStack(GraphicsCore _core) : IGraphicsStack
 		resLayoutObject?.Dispose();
 		compositeSceneResourceSet?.Dispose();
 		compositeUIResourceSet?.Dispose();
-		dummyBufLights?.Dispose();
+		dummyLightDataBuffer?.Dispose();
 		shadowMapArray?.Dispose();
-		bufShadowMatrices?.Dispose();
 
 		foreach (CommandList cmdList in commandListPool)
 		{
@@ -435,7 +418,6 @@ public sealed class ForwardPlusLightsStack(GraphicsCore _core) : IGraphicsStack
 				resLayoutObject!,
 				cbScene!,
 				shadowMapArray!,
-				bufShadowMatrices!,
 				sceneCtx.lightCount,
 				shadowMapLightCount);
 		}
@@ -574,7 +556,6 @@ public sealed class ForwardPlusLightsStack(GraphicsCore _core) : IGraphicsStack
 			resLayoutObject!,
 			cbScene!,
 			shadowMapArray!,
-			bufShadowMatrices!,
 			(uint)activeLights.Count,
 			(uint)activeLightsShadowMapped.Count);
 
@@ -593,31 +574,12 @@ public sealed class ForwardPlusLightsStack(GraphicsCore _core) : IGraphicsStack
 			totalShadowCascadeCount += light.ShadowCascades;
 		}
 
-		// Prepare shadow map texture array:
-		if (!shadowMapArray!.Prepare(_maxActiveLightCount, out _outTexShadowsHasChanged))
+		// Prepare shadow map texture arrays, sampler, and matrix buffer:
+		if (!shadowMapArray!.PrepareTextureArrays(_maxActiveLightCount, out _outTexShadowsHasChanged))
 		{
 			return false;
 		}
 		_outRebuildResSetCamera |= _outTexShadowsHasChanged;
-
-		// Prepare shadow projection matrix buffer:
-		uint bufShadowMatricesSize = 16 * sizeof(float) * _maxActiveLightCount;
-		if (bufShadowMatrices == null || bufShadowMatrices.IsDisposed || bufShadowMatrices.SizeInBytes < bufShadowMatricesSize)
-		{
-			_outRebuildResSetCamera = true;
-
-			if (!ShadowMapUtility.CreateShadowMatrixBuffer(
-				in core,
-				totalShadowCascadeCount,
-				ref bufShadowMatrices))
-			{
-				Logger.LogError("Failed to resize shadow projection matrix buffer for graphics stack!");
-				return false;
-			}
-
-			shadowProjectionMatrices = new Matrix4x4[totalShadowCascadeCount * 2];
-			Array.Fill(shadowProjectionMatrices, Matrix4x4.Identity);
-		}
 
 		return true;
 	}
@@ -677,7 +639,7 @@ public sealed class ForwardPlusLightsStack(GraphicsCore _core) : IGraphicsStack
 					result &= light.BeginDrawShadowCascade(
 						in _sceneCtx,
 						in cmdList,
-						in dummyBufLights!,
+						in dummyLightDataBuffer!,
 						_renderFocalPoint,
 						cascadeIdx,
 						out CameraPassContext lightCtx,
@@ -696,25 +658,22 @@ public sealed class ForwardPlusLightsStack(GraphicsCore _core) : IGraphicsStack
 					result &= light.EndDrawShadowCascade();
 
 					// Store projection matrix for later scene rendering calls:
-					shadowProjectionMatrices[totalShadowMatrixCount++] = lightCtx.mtxWorld2Clip;
-					shadowProjectionMatrices[totalShadowMatrixCount++] = Matrix4x4.Invert(lightCtx.mtxWorld2Clip, out Matrix4x4 mtxClip2World)
-						? mtxClip2World
-						: Matrix4x4.Identity;
+					shadowMapArray!.SetShadowProjectionMatrices((uint)totalShadowMatrixCount++, lightCtx.mtxWorld2Clip);				//TODO [critical]: Check if matrix indices are correct!
 				}
 
 				result &= light.EndDrawShadowMap();
 				_outShadowMapLightCount += shadowCascadeCount;
 				i++;
 			}
-
-			// Upload all shadow projection matrices to GPU buffer:
-			core.Device.UpdateBuffer(bufShadowMatrices, 0, shadowProjectionMatrices);
 		}
 		catch (Exception ex)
 		{
 			Logger.LogException($"An unhandled exception was caught while drawing shadow maps, around shadow map index {_outShadowMapLightCount}!", ex);
 			success = false;
 		}
+
+		// Upload all shadow projection matrices to GPU buffer:
+		success &= shadowMapArray!.FinalizeProjectionMatrices();
 
 		// If any shadows maps were rendered, submit command list for execution:
 		cmdList.End();
@@ -754,23 +713,24 @@ public sealed class ForwardPlusLightsStack(GraphicsCore _core) : IGraphicsStack
 
 				Camera camera = activeCameras[(int)i];
 				uint activeLightCount = (uint)activeLights.Count;
-				if (!camera.GetLightDataBuffer(activeLightCount, out DeviceBuffer? lightDataBuffer, out bool bufLightsChanged))
+
+				if (!camera.BeginFrame(activeLightCount, out bool bufLightsChanged))
 				{
 					success = false;
 					continue;
 				}
+
 				bool rebuildResSetCamera = _rebuildAllResSetCamera || bufLightsChanged;
-
-				if (!camera.BeginFrame(activeLightCount, false, out _))
-				{
-					success = false;
-					continue;
-				}
-
 				bool result = true;
 
 				result &= camera.SetOverrideCameraTarget(null);
-				result &= CameraUtility.UpdateLightDataBuffer(in core, in lightDataBuffer!, in activeLightData, activeLightCount, _maxActiveLightCount);
+
+				// Upload per-camera light data to GPU buffer:
+				for (uint j = 0; j < activeLightCount; ++j)
+				{
+					camera.LightDataBuffer.SetLightData(j, in activeLightData[j]);
+				}
+				camera.LightDataBuffer.EndPrepare();
 
 				// Draw scene geometry and UI passes:
 				result &= DrawSceneRenderers(in _sceneCtx, cmdList, camera, RenderMode.Opaque, activeRenderersOpaque, true, rebuildResSetCamera, i);

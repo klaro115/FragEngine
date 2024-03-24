@@ -1,5 +1,6 @@
 ﻿using FragEngine3.Graphics.Components.ConstantBuffers;
 using FragEngine3.Graphics.Contexts;
+using FragEngine3.Graphics.Lighting;
 using FragEngine3.Graphics.Lighting.Data;
 using FragEngine3.Scenes;
 using System.Numerics;
@@ -117,6 +118,7 @@ namespace FragEngine3.Graphics.Cameras
 			return true;
 		}
 
+		[Obsolete($"Replaced by {nameof(LightDataBuffer)}")]
 		public static bool CreateOrResizeLightDataBuffer(		// called once per camera frame.
 			in GraphicsCore _graphicsCore,
 			uint _activeLightCount,
@@ -157,7 +159,8 @@ namespace FragEngine3.Graphics.Cameras
 			return true;
 		}
 
-		public static bool UpdateLightDataBuffer(				// called once per camera frame.
+		[Obsolete($"Replaced by {nameof(LightDataBuffer)}")]
+		public static bool UpdateLightDataBuffer(               // called once per camera frame.
 			in GraphicsCore _graphicsCore,
 			in DeviceBuffer _bufLights,
 			in LightSourceData[] _lightData,
@@ -203,7 +206,7 @@ namespace FragEngine3.Graphics.Cameras
 			in GraphicsCore _graphicsCore,
 			in SceneContext _sceneCtx,
 			in DeviceBuffer _cbCamera,
-			in DeviceBuffer _lightDataBuffer,
+			in LightDataBuffer _lightDataBuffer,
 			ref ResourceSet? _resSetCamera,
 			bool _forceRecreate = false)
 		{
@@ -217,10 +220,10 @@ namespace FragEngine3.Graphics.Cameras
 						_sceneCtx.resLayoutCamera,
 						_sceneCtx.cbScene,
 						_cbCamera,
-						_lightDataBuffer,
+						_lightDataBuffer.BufLights,
 						_sceneCtx.shadowMapArray.TexDepthMapArray,
-						_sceneCtx.bufShadowMatrices,
-						_sceneCtx.SamplerShadowMaps);
+						_sceneCtx.shadowMapArray.BufShadowMatrices,
+						_sceneCtx.shadowMapArray.SamplerShadowMaps);
 
 					_resSetCamera = _graphicsCore.MainFactory.CreateResourceSet(ref resSetDesc);
 				}
