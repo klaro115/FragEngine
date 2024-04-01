@@ -38,6 +38,7 @@
     <None Remove="Graphics\Resources\Import\" />
     <None Remove="EngineCore\Logging\" />
     <None Remove="Utility\Unicode\" />
+    <None Remove="Graphics\Resources\Import\ModelFormats\FBX\" />
   </ItemGroup>
   <ItemGroup>
     <Folder Include="Graphics\Config\" />
@@ -45,6 +46,7 @@
     <Folder Include="Graphics\MacOS\" />
     <Folder Include="EngineCore\Logging\" />
     <Folder Include="Utility\Unicode\" />
+    <Folder Include="Graphics\Resources\Import\ModelFormats\FBX\" />
   </ItemGroup>
   <ItemGroup>
     <PackageReference Include="Magick.NET-Q16-AnyCPU" Version="13.5.0" />
