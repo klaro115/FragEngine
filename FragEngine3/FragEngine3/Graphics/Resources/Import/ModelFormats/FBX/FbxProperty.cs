@@ -1,6 +1,6 @@
 ﻿namespace FragEngine3.Graphics.Resources.Import.ModelFormats.FBX;
 
-public abstract class FbxProperty(FbxPropertyType _type, int _valueCount)
+internal abstract class FbxProperty(FbxPropertyType _type, int _valueCount)
 {
 	#region Fields
 
@@ -23,11 +23,11 @@ public abstract class FbxProperty(FbxPropertyType _type, int _valueCount)
 	#endregion
 }
 
-public sealed class FbxPropertyRaw(byte[] _rawBytes) : FbxProperty(FbxPropertyType.RawBytes, _rawBytes!.Length)
+internal sealed class FbxPropertyRaw(byte[] _rawBytes) : FbxProperty(FbxPropertyType.RawBytes, _rawBytes != null ? _rawBytes.Length : 0)
 {
 	#region Fields
 
-	public readonly byte[] rawBytes = _rawBytes ?? Array.Empty<byte>();
+	public readonly byte[] rawBytes = _rawBytes ?? [];
 
 	#endregion
 	#region Properties
@@ -37,7 +37,21 @@ public sealed class FbxPropertyRaw(byte[] _rawBytes) : FbxProperty(FbxPropertyTy
 	#endregion
 }
 
-public sealed class FbxPropertyArray<T>(T[] _values) : FbxProperty(FbxPropertyType.PropertyArray, _values.Length) where T : unmanaged
+internal sealed class FbxPropertyString(string _text) : FbxProperty(FbxPropertyType.String, _text != null ? _text.Length : 0)
+{
+	#region Fields
+
+	public readonly string text = _text ?? string.Empty;
+
+	#endregion
+	#region Properties
+
+	public override object Value => text;
+
+	#endregion
+}
+
+internal sealed class FbxPropertyArray<T>(T[] _values) : FbxProperty(FbxPropertyType.PropertyArray, _values.Length) where T : unmanaged
 {
 	#region Fields
 
@@ -51,7 +65,7 @@ public sealed class FbxPropertyArray<T>(T[] _values) : FbxProperty(FbxPropertyTy
 	#endregion
 }
 
-public sealed class FbxProperty<T>(T _value, FbxPropertyType _primitiveType) : FbxProperty(_primitiveType, 1) where T : unmanaged
+internal sealed class FbxProperty<T>(T _value, FbxPropertyType _primitiveType) : FbxProperty(_primitiveType, 1) where T : unmanaged
 {
 	#region Fields
 

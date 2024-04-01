@@ -3,7 +3,7 @@ using System.IO.Compression;
 
 namespace FragEngine3.Graphics.Resources.Import.ModelFormats.FBX;
 
-public static class FbxPropertyReader
+internal static class FbxPropertyReader
 {
 	#region Types
 
@@ -29,9 +29,13 @@ public static class FbxPropertyReader
 
 		char type = (char)_reader.ReadByte();
 
-		if (type == 'S' || type == 'R')
+		if (type == 'R')
 		{
 			return ReadProperty_Raw(_reader, out _outProperty);
+		}
+		else if (type == 'S')
+		{
+			return ReadProperty_String(_reader, out _outProperty);
 		}
 		else if (type < 'Z')
 		{
@@ -51,6 +55,17 @@ public static class FbxPropertyReader
 		byte[] raw = _reader.ReadBytes((int)length);
 
 		_outProperty = new FbxPropertyRaw(raw);
+		return true;
+	}
+
+	private static bool ReadProperty_String(BinaryReader _reader, out FbxProperty _outProperty)
+	{
+		uint length = _reader.ReadUInt32();
+
+		byte[] utf8Bytes = _reader.ReadBytes((int)length);
+		string text = System.Text.Encoding.UTF8.GetString(utf8Bytes);
+
+		_outProperty = new FbxPropertyString(text);
 		return true;
 	}
 

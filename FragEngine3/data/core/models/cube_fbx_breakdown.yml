@@ -1,0 +1,257 @@
+- Node, Name: 'FBXHeaderExtension', Children: 6, Properties: 0
+        - Node, Name: 'FBXHeaderVersion', Children: 0, Properties: 1, Value: "Type: Int32, Count: 1, Value: 1003"
+        - Node, Name: 'FBXVersion', Children: 0, Properties: 1, Value: "Type: Int32, Count: 1, Value: 7400"
+        - Node, Name: 'EncryptionType', Children: 0, Properties: 1, Value: "Type: Int32, Count: 1, Value: 0"
+        - Node, Name: 'CreationTimeStamp', Children: 8, Properties: 0
+                - Node, Name: 'Version', Children: 0, Properties: 1, Value: "Type: Int32, Count: 1, Value: 1000"
+                - Node, Name: 'Year', Children: 0, Properties: 1, Value: "Type: Int32, Count: 1, Value: 2024"
+                - Node, Name: 'Month', Children: 0, Properties: 1, Value: "Type: Int32, Count: 1, Value: 4"
+                - Node, Name: 'Day', Children: 0, Properties: 1, Value: "Type: Int32, Count: 1, Value: 1"
+                - Node, Name: 'Hour', Children: 0, Properties: 1, Value: "Type: Int32, Count: 1, Value: 13"
+                - Node, Name: 'Minute', Children: 0, Properties: 1, Value: "Type: Int32, Count: 1, Value: 31"
+                - Node, Name: 'Second', Children: 0, Properties: 1, Value: "Type: Int32, Count: 1, Value: 32"
+                - Node, Name: 'Millisecond', Children: 0, Properties: 1, Value: "Type: Int32, Count: 1, Value: 105"
+        - Node, Name: 'Creator', Children: 0, Properties: 1, Value: "Type: String, Count: 39, Value: Blender (stable FBX IO) - 3.6.5 - 5.4.0"
+        - Node, Name: 'SceneInfo', Children: 4, Properties: 2
+                - Node, Name: 'Type', Children: 0, Properties: 1, Value: "Type: String, Count: 8, Value: UserData"
+                - Node, Name: 'Version', Children: 0, Properties: 1, Value: "Type: Int32, Count: 1, Value: 100"
+                - Node, Name: 'MetaData', Children: 7, Properties: 0
+                        - Node, Name: 'Version', Children: 0, Properties: 1, Value: "Type: Int32, Count: 1, Value: 100"
+                        - Node, Name: 'Title', Children: 0, Properties: 1, Value: "Type: String, Count: 0, Value: "
+                        - Node, Name: 'Subject', Children: 0, Properties: 1, Value: "Type: String, Count: 0, Value: "
+                        - Node, Name: 'Author', Children: 0, Properties: 1, Value: "Type: String, Count: 0, Value: "
+                        - Node, Name: 'Keywords', Children: 0, Properties: 1, Value: "Type: String, Count: 0, Value: "
+                        - Node, Name: 'Revision', Children: 0, Properties: 1, Value: "Type: String, Count: 0, Value: "
+                        - Node, Name: 'Comment', Children: 0, Properties: 1, Value: "Type: String, Count: 0, Value: "
+                - Node, Name: 'Properties70', Children: 14, Properties: 0
+                        - Node, Name: 'P', Children: 0, Properties: 5
+                        - Node, Name: 'P', Children: 0, Properties: 5
+                        - Node, Name: 'P', Children: 0, Properties: 4
+                        - Node, Name: 'P', Children: 0, Properties: 5
+                        - Node, Name: 'P', Children: 0, Properties: 5
+                        - Node, Name: 'P', Children: 0, Properties: 5
+                        - Node, Name: 'P', Children: 0, Properties: 5
+                        - Node, Name: 'P', Children: 0, Properties: 5
+                        - Node, Name: 'P', Children: 0, Properties: 4
+                        - Node, Name: 'P', Children: 0, Properties: 5
+                        - Node, Name: 'P', Children: 0, Properties: 5
+                        - Node, Name: 'P', Children: 0, Properties: 5
+                        - Node, Name: 'P', Children: 0, Properties: 5
+                        - Node, Name: 'P', Children: 0, Properties: 5
+- Node, Name: 'FileId', Children: 0, Properties: 1, Value: "Type: RawBytes, Count: 16, Value: System.Byte[]"
+- Node, Name: 'CreationTime', Children: 0, Properties: 1, Value: "Type: String, Count: 23, Value: 1970-01-01 10:00:00:000"
+- Node, Name: 'Creator', Children: 0, Properties: 1, Value: "Type: String, Count: 39, Value: Blender (stable FBX IO) - 3.6.5 - 5.4.0"
+- Node, Name: 'GlobalSettings', Children: 2, Properties: 0
+        - Node, Name: 'Version', Children: 0, Properties: 1, Value: "Type: Int32, Count: 1, Value: 1000"
+        - Node, Name: 'Properties70', Children: 16, Properties: 0
+                - Node, Name: 'P', Children: 0, Properties: 5
+                - Node, Name: 'P', Children: 0, Properties: 5
+                - Node, Name: 'P', Children: 0, Properties: 5
+                - Node, Name: 'P', Children: 0, Properties: 5
+                - Node, Name: 'P', Children: 0, Properties: 5
+                - Node, Name: 'P', Children: 0, Properties: 5
+                - Node, Name: 'P', Children: 0, Properties: 5
+                - Node, Name: 'P', Children: 0, Properties: 5
+                - Node, Name: 'P', Children: 0, Properties: 5
+                - Node, Name: 'P', Children: 0, Properties: 5
+                - Node, Name: 'P', Children: 0, Properties: 7
+                - Node, Name: 'P', Children: 0, Properties: 5
+                - Node, Name: 'P', Children: 0, Properties: 5
+                - Node, Name: 'P', Children: 0, Properties: 5
+                - Node, Name: 'P', Children: 0, Properties: 5
+                - Node, Name: 'P', Children: 0, Properties: 5
+- Node, Name: 'Documents', Children: 2, Properties: 0
+        - Node, Name: 'Count', Children: 0, Properties: 1, Value: "Type: Int32, Count: 1, Value: 1"
+        - Node, Name: 'Document', Children: 2, Properties: 3
+                - Node, Name: 'Properties70', Children: 2, Properties: 0
+                        - Node, Name: 'P', Children: 0, Properties: 4
+                        - Node, Name: 'P', Children: 0, Properties: 5
+                - Node, Name: 'RootNode', Children: 0, Properties: 1, Value: "Type: Int64, Count: 1, Value: 0"
+- Node, Name: 'References', Children: 0, Properties: 0
+- Node, Name: 'Definitions', Children: 6, Properties: 0
+        - Node, Name: 'Version', Children: 0, Properties: 1, Value: "Type: Int32, Count: 1, Value: 100"
+        - Node, Name: 'Count', Children: 0, Properties: 1, Value: "Type: Int32, Count: 1, Value: 4"
+        - Node, Name: 'ObjectType', Children: 1, Properties: 1, Value: "Type: String, Count: 14, Value: GlobalSettings"
+                - Node, Name: 'Count', Children: 0, Properties: 1, Value: "Type: Int32, Count: 1, Value: 1"
+        - Node, Name: 'ObjectType', Children: 2, Properties: 1, Value: "Type: String, Count: 8, Value: Geometry"
+                - Node, Name: 'Count', Children: 0, Properties: 1, Value: "Type: Int32, Count: 1, Value: 1"
+                - Node, Name: 'PropertyTemplate', Children: 1, Properties: 1, Value: "Type: String, Count: 7, Value: FbxMesh"
+                        - Node, Name: 'Properties70', Children: 6, Properties: 0
+                                - Node, Name: 'P', Children: 0, Properties: 7
+                                - Node, Name: 'P', Children: 0, Properties: 7
+                                - Node, Name: 'P', Children: 0, Properties: 7
+                                - Node, Name: 'P', Children: 0, Properties: 5
+                                - Node, Name: 'P', Children: 0, Properties: 5
+                                - Node, Name: 'P', Children: 0, Properties: 5
+        - Node, Name: 'ObjectType', Children: 2, Properties: 1, Value: "Type: String, Count: 5, Value: Model"
+                - Node, Name: 'Count', Children: 0, Properties: 1, Value: "Type: Int32, Count: 1, Value: 1"
+                - Node, Name: 'PropertyTemplate', Children: 1, Properties: 1, Value: "Type: String, Count: 7, Value: FbxNode"
+                        - Node, Name: 'Properties70', Children: 71, Properties: 0
+                                - Node, Name: 'P', Children: 0, Properties: 5
+                                - Node, Name: 'P', Children: 0, Properties: 7
+                                - Node, Name: 'P', Children: 0, Properties: 7
+                                - Node, Name: 'P', Children: 0, Properties: 7
+                                - Node, Name: 'P', Children: 0, Properties: 7
+                                - Node, Name: 'P', Children: 0, Properties: 5
+                                - Node, Name: 'P', Children: 0, Properties: 7
+                                - Node, Name: 'P', Children: 0, Properties: 7
+                                - Node, Name: 'P', Children: 0, Properties: 5
+                                - Node, Name: 'P', Children: 0, Properties: 5
+                                - Node, Name: 'P', Children: 0, Properties: 5
+                                - Node, Name: 'P', Children: 0, Properties: 5
+                                - Node, Name: 'P', Children: 0, Properties: 5
+                                - Node, Name: 'P', Children: 0, Properties: 5
+                                - Node, Name: 'P', Children: 0, Properties: 5
+                                - Node, Name: 'P', Children: 0, Properties: 5
+                                - Node, Name: 'P', Children: 0, Properties: 5
+                                - Node, Name: 'P', Children: 0, Properties: 5
+                                - Node, Name: 'P', Children: 0, Properties: 5
+                                - Node, Name: 'P', Children: 0, Properties: 5
+                                - Node, Name: 'P', Children: 0, Properties: 7
+                                - Node, Name: 'P', Children: 0, Properties: 7
+                                - Node, Name: 'P', Children: 0, Properties: 5
+                                - Node, Name: 'P', Children: 0, Properties: 7
+                                - Node, Name: 'P', Children: 0, Properties: 7
+                                - Node, Name: 'P', Children: 0, Properties: 5
+                                - Node, Name: 'P', Children: 0, Properties: 5
+                                - Node, Name: 'P', Children: 0, Properties: 5
+                                - Node, Name: 'P', Children: 0, Properties: 5
+                                - Node, Name: 'P', Children: 0, Properties: 5
+                                - Node, Name: 'P', Children: 0, Properties: 5
+                                - Node, Name: 'P', Children: 0, Properties: 5
+                                - Node, Name: 'P', Children: 0, Properties: 5
+                                - Node, Name: 'P', Children: 0, Properties: 7
+                                - Node, Name: 'P', Children: 0, Properties: 7
+                                - Node, Name: 'P', Children: 0, Properties: 5
+                                - Node, Name: 'P', Children: 0, Properties: 5
+                                - Node, Name: 'P', Children: 0, Properties: 5
+                                - Node, Name: 'P', Children: 0, Properties: 5
+                                - Node, Name: 'P', Children: 0, Properties: 5
+                                - Node, Name: 'P', Children: 0, Properties: 5
+                                - Node, Name: 'P', Children: 0, Properties: 7
+                                - Node, Name: 'P', Children: 0, Properties: 7
+                                - Node, Name: 'P', Children: 0, Properties: 7
+                                - Node, Name: 'P', Children: 0, Properties: 5
+                                - Node, Name: 'P', Children: 0, Properties: 5
+                                - Node, Name: 'P', Children: 0, Properties: 5
+                                - Node, Name: 'P', Children: 0, Properties: 5
+                                - Node, Name: 'P', Children: 0, Properties: 5
+                                - Node, Name: 'P', Children: 0, Properties: 5
+                                - Node, Name: 'P', Children: 0, Properties: 5
+                                - Node, Name: 'P', Children: 0, Properties: 5
+                                - Node, Name: 'P', Children: 0, Properties: 5
+                                - Node, Name: 'P', Children: 0, Properties: 5
+                                - Node, Name: 'P', Children: 0, Properties: 5
+                                - Node, Name: 'P', Children: 0, Properties: 5
+                                - Node, Name: 'P', Children: 0, Properties: 5
+                                - Node, Name: 'P', Children: 0, Properties: 5
+                                - Node, Name: 'P', Children: 0, Properties: 5
+                                - Node, Name: 'P', Children: 0, Properties: 4
+                                - Node, Name: 'P', Children: 0, Properties: 4
+                                - Node, Name: 'P', Children: 0, Properties: 5
+                                - Node, Name: 'P', Children: 0, Properties: 5
+                                - Node, Name: 'P', Children: 0, Properties: 5
+                                - Node, Name: 'P', Children: 0, Properties: 5
+                                - Node, Name: 'P', Children: 0, Properties: 5
+                                - Node, Name: 'P', Children: 0, Properties: 7
+                                - Node, Name: 'P', Children: 0, Properties: 7
+                                - Node, Name: 'P', Children: 0, Properties: 7
+                                - Node, Name: 'P', Children: 0, Properties: 5
+                                - Node, Name: 'P', Children: 0, Properties: 5
+        - Node, Name: 'ObjectType', Children: 2, Properties: 1, Value: "Type: String, Count: 8, Value: Material"
+                - Node, Name: 'Count', Children: 0, Properties: 1, Value: "Type: Int32, Count: 1, Value: 1"
+                - Node, Name: 'PropertyTemplate', Children: 1, Properties: 1, Value: "Type: String, Count: 15, Value: FbxSurfacePhong"
+                        - Node, Name: 'Properties70', Children: 24, Properties: 0
+                                - Node, Name: 'P', Children: 0, Properties: 5
+                                - Node, Name: 'P', Children: 0, Properties: 5
+                                - Node, Name: 'P', Children: 0, Properties: 7
+                                - Node, Name: 'P', Children: 0, Properties: 5
+                                - Node, Name: 'P', Children: 0, Properties: 7
+                                - Node, Name: 'P', Children: 0, Properties: 5
+                                - Node, Name: 'P', Children: 0, Properties: 7
+                                - Node, Name: 'P', Children: 0, Properties: 5
+                                - Node, Name: 'P', Children: 0, Properties: 7
+                                - Node, Name: 'P', Children: 0, Properties: 5
+                                - Node, Name: 'P', Children: 0, Properties: 5
+                                - Node, Name: 'P', Children: 0, Properties: 7
+                                - Node, Name: 'P', Children: 0, Properties: 7
+                                - Node, Name: 'P', Children: 0, Properties: 5
+                                - Node, Name: 'P', Children: 0, Properties: 7
+                                - Node, Name: 'P', Children: 0, Properties: 5
+                                - Node, Name: 'P', Children: 0, Properties: 7
+                                - Node, Name: 'P', Children: 0, Properties: 5
+                                - Node, Name: 'P', Children: 0, Properties: 7
+                                - Node, Name: 'P', Children: 0, Properties: 5
+                                - Node, Name: 'P', Children: 0, Properties: 5
+                                - Node, Name: 'P', Children: 0, Properties: 5
+                                - Node, Name: 'P', Children: 0, Properties: 7
+                                - Node, Name: 'P', Children: 0, Properties: 5
+- Node, Name: 'Objects', Children: 3, Properties: 0
+        - Node, Name: 'Geometry', Children: 9, Properties: 3
+                - Node, Name: 'Properties70', Children: 0, Properties: 0
+                - Node, Name: 'GeometryVersion', Children: 0, Properties: 1, Value: "Type: Int32, Count: 1, Value: 124"
+                - Node, Name: 'Vertices', Children: 0, Properties: 1, Value: "Type: PropertyArray, Count: 24, Value: System.Double[]"
+                - Node, Name: 'PolygonVertexIndex', Children: 0, Properties: 1, Value: "Type: PropertyArray, Count: 24, Value: System.Int32[]"
+                - Node, Name: 'Edges', Children: 0, Properties: 1, Value: "Type: PropertyArray, Count: 12, Value: System.Int32[]"
+                - Node, Name: 'LayerElementNormal', Children: 5, Properties: 1, Value: "Type: Int32, Count: 1, Value: 0"
+                        - Node, Name: 'Version', Children: 0, Properties: 1, Value: "Type: Int32, Count: 1, Value: 101"
+                        - Node, Name: 'Name', Children: 0, Properties: 1, Value: "Type: String, Count: 0, Value: "
+                        - Node, Name: 'MappingInformationType', Children: 0, Properties: 1, Value: "Type: String, Count: 15, Value: ByPolygonVertex"
+                        - Node, Name: 'ReferenceInformationType', Children: 0, Properties: 1, Value: "Type: String, Count: 6, Value: Direct"
+                        - Node, Name: 'Normals', Children: 0, Properties: 1, Value: "Type: PropertyArray, Count: 72, Value: System.Double[]"
+                - Node, Name: 'LayerElementUV', Children: 6, Properties: 1, Value: "Type: Int32, Count: 1, Value: 0"
+                        - Node, Name: 'Version', Children: 0, Properties: 1, Value: "Type: Int32, Count: 1, Value: 101"
+                        - Node, Name: 'Name', Children: 0, Properties: 1, Value: "Type: String, Count: 5, Value: UVMap"
+                        - Node, Name: 'MappingInformationType', Children: 0, Properties: 1, Value: "Type: String, Count: 15, Value: ByPolygonVertex"
+                        - Node, Name: 'ReferenceInformationType', Children: 0, Properties: 1, Value: "Type: String, Count: 13, Value: IndexToDirect"
+                        - Node, Name: 'UV', Children: 0, Properties: 1, Value: "Type: PropertyArray, Count: 28, Value: System.Double[]"
+                        - Node, Name: 'UVIndex', Children: 0, Properties: 1, Value: "Type: PropertyArray, Count: 24, Value: System.Int32[]"
+                - Node, Name: 'LayerElementMaterial', Children: 5, Properties: 1, Value: "Type: Int32, Count: 1, Value: 0"
+                        - Node, Name: 'Version', Children: 0, Properties: 1, Value: "Type: Int32, Count: 1, Value: 101"
+                        - Node, Name: 'Name', Children: 0, Properties: 1, Value: "Type: String, Count: 0, Value: "
+                        - Node, Name: 'MappingInformationType', Children: 0, Properties: 1, Value: "Type: String, Count: 7, Value: AllSame"
+                        - Node, Name: 'ReferenceInformationType', Children: 0, Properties: 1, Value: "Type: String, Count: 13, Value: IndexToDirect"
+                        - Node, Name: 'Materials', Children: 0, Properties: 1, Value: "Type: PropertyArray, Count: 1, Value: System.Int32[]"
+                - Node, Name: 'Layer', Children: 4, Properties: 1, Value: "Type: Int32, Count: 1, Value: 0"
+                        - Node, Name: 'Version', Children: 0, Properties: 1, Value: "Type: Int32, Count: 1, Value: 100"
+                        - Node, Name: 'LayerElement', Children: 2, Properties: 0
+                                - Node, Name: 'Type', Children: 0, Properties: 1, Value: "Type: String, Count: 18, Value: LayerElementNormal"
+                                - Node, Name: 'TypedIndex', Children: 0, Properties: 1, Value: "Type: Int32, Count: 1, Value: 0"
+                        - Node, Name: 'LayerElement', Children: 2, Properties: 0
+                                - Node, Name: 'Type', Children: 0, Properties: 1, Value: "Type: String, Count: 14, Value: LayerElementUV"
+                                - Node, Name: 'TypedIndex', Children: 0, Properties: 1, Value: "Type: Int32, Count: 1, Value: 0"
+                        - Node, Name: 'LayerElement', Children: 2, Properties: 0
+                                - Node, Name: 'Type', Children: 0, Properties: 1, Value: "Type: String, Count: 20, Value: LayerElementMaterial"
+                                - Node, Name: 'TypedIndex', Children: 0, Properties: 1, Value: "Type: Int32, Count: 1, Value: 0"
+        - Node, Name: 'Model', Children: 6, Properties: 3
+                - Node, Name: 'Version', Children: 0, Properties: 1, Value: "Type: Int32, Count: 1, Value: 232"
+                - Node, Name: 'Properties70', Children: 4, Properties: 0
+                        - Node, Name: 'P', Children: 0, Properties: 7
+                        - Node, Name: 'P', Children: 0, Properties: 7
+                        - Node, Name: 'P', Children: 0, Properties: 5
+                        - Node, Name: 'P', Children: 0, Properties: 5
+                - Node, Name: 'MultiLayer', Children: 0, Properties: 1, Value: "Type: Int32, Count: 1, Value: 0"
+                - Node, Name: 'MultiTake', Children: 0, Properties: 1, Value: "Type: Int32, Count: 1, Value: 0"
+                - Node, Name: 'Shading', Children: 0, Properties: 1, Value: "Type: Boolean, Count: 1, Value: True"
+                - Node, Name: 'Culling', Children: 0, Properties: 1, Value: "Type: String, Count: 10, Value: CullingOff"
+        - Node, Name: 'Material', Children: 4, Properties: 3
+                - Node, Name: 'Version', Children: 0, Properties: 1, Value: "Type: Int32, Count: 1, Value: 102"
+                - Node, Name: 'ShadingModel', Children: 0, Properties: 1, Value: "Type: String, Count: 5, Value: Phong"
+                - Node, Name: 'MultiLayer', Children: 0, Properties: 1, Value: "Type: Int32, Count: 1, Value: 0"
+                - Node, Name: 'Properties70', Children: 10, Properties: 0
+                        - Node, Name: 'P', Children: 0, Properties: 7
+                        - Node, Name: 'P', Children: 0, Properties: 7
+                        - Node, Name: 'P', Children: 0, Properties: 5
+                        - Node, Name: 'P', Children: 0, Properties: 5
+                        - Node, Name: 'P', Children: 0, Properties: 7
+                        - Node, Name: 'P', Children: 0, Properties: 5
+                        - Node, Name: 'P', Children: 0, Properties: 5
+                        - Node, Name: 'P', Children: 0, Properties: 5
+                        - Node, Name: 'P', Children: 0, Properties: 7
+                        - Node, Name: 'P', Children: 0, Properties: 5
+- Node, Name: 'Connections', Children: 3, Properties: 0
+        - Node, Name: 'C', Children: 0, Properties: 3
+        - Node, Name: 'C', Children: 0, Properties: 3
+        - Node, Name: 'C', Children: 0, Properties: 3
+- Node, Name: 'Takes', Children: 1, Properties: 0
+        - Node, Name: 'Current', Children: 0, Properties: 1, Value: "Type: String, Count: 0, Value: "

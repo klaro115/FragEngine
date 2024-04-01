@@ -1,8 +1,9 @@
 ﻿namespace FragEngine3.Graphics.Resources.Import.ModelFormats.FBX;
 
-public enum FbxPropertyType
+internal enum FbxPropertyType
 {
-	RawBytes,		// S, R
+	RawBytes,		// R
+	String,			// S
 
 	PropertyArray,	// other
 

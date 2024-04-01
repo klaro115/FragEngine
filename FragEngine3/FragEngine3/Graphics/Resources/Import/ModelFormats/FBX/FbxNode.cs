@@ -2,7 +2,7 @@
 
 namespace FragEngine3.Graphics.Resources.Import.ModelFormats.FBX;
 
-public sealed class FbxNode(string _name)
+internal sealed class FbxNode(string _name)
 {
 	#region Types
 
@@ -44,6 +44,25 @@ public sealed class FbxNode(string _name)
 		return false;
 	}
 
+	public bool FindChildNode(string _name, out FbxNode? _outNode)
+	{
+		if (!string.IsNullOrEmpty(_name))
+		{
+			for (int i = 0; i < ChildCount; i++)
+			{
+				FbxNode childNode = children![i];
+				if (string.CompareOrdinal(childNode.name, _name) == 0)
+				{
+					_outNode = childNode;
+					return true;
+				}
+			}
+		}
+
+		_outNode = null;
+		return false;
+	}
+
 	public bool GetProperty(uint _propertyIdx, out FbxProperty _outProperty)
 	{
 		if (_propertyIdx < PropertyCount)
@@ -57,7 +76,12 @@ public sealed class FbxNode(string _name)
 
 	public override string ToString()
 	{
-		return $"Node, Name: '{name}', Children: {ChildCount}, Properties: {PropertyCount}";
+		string propertyTxt = string.Empty;
+		if (PropertyCount == 1)
+		{
+			propertyTxt = $", Value: \"{properties![0]}\"";
+		}
+		return $"Node, Name: '{name}', Children: {ChildCount}, Properties: {PropertyCount}{propertyTxt}";
 	}
 
 	public static bool ReadNode(BinaryReader _reader, uint _fileStartOffset, uint _nodeStartOffset, out FbxNode? _outNode)

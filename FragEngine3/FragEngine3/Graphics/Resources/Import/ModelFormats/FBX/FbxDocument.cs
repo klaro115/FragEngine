@@ -6,7 +6,7 @@ namespace FragEngine3.Graphics.Resources.Import.ModelFormats.FBX;
 // This is a C# port of a C++ FBX importer by Jakub Skořepa (MIT license, Copyright 2017).
 // Link: TODO
 
-public sealed class FbxDocument(uint _version)
+internal sealed class FbxDocument(uint _version)
 {
 	#region Fields
 
@@ -29,6 +29,25 @@ public sealed class FbxDocument(uint _version)
 			return true;
 		}
 		_outNode = null!;
+		return false;
+	}
+
+	public bool FindNode(string _name, out FbxNode? _outNode)
+	{
+		if (!string.IsNullOrEmpty(_name))
+		{
+			for (int i = 0; i < NodeCount; i++)
+			{
+				FbxNode node = nodes[i];
+				if (string.CompareOrdinal(node.name, _name) == 0)
+				{
+					_outNode = node;
+					return true;
+				}
+			}
+		}
+
+		_outNode = null;
 		return false;
 	}
 
@@ -104,7 +123,7 @@ public sealed class FbxDocument(uint _version)
 		}
 
 		//TEST
-		//_outDocument.PrintNodeHierarchy();
+		_outDocument.PrintNodeHierarchy();
 
 		return success;
 	}
