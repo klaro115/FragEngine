@@ -10,7 +10,16 @@ public static class FbxImporter
 
 	public static bool ImportModel(Stream _streamBytes, out MeshSurfaceData? _outMeshData)
 	{
-		if (!ImportFbxDocument(_streamBytes, out FbxDocument? document))
+		if (_streamBytes is null || !_streamBytes.CanRead)
+		{
+			Logger.Instance?.LogError("Cannot import FBX document from null or write-only stream!");
+			_outMeshData = null;
+			return false;
+		}
+
+		using BinaryReader reader = new(_streamBytes);
+
+		if (FbxDocument.ReadFbxDocument(reader, out FbxDocument? document))
 		{
 			Logger.Instance?.LogError("Failed to import FBX document, aborting model import!");
 			_outMeshData = null;
@@ -19,16 +28,8 @@ public static class FbxImporter
 
 		//TODO
 
-		_outMeshData = null;
-		return false;			//TEMP
-	}
-
-	public static bool ImportFbxDocument(Stream _streamBytes, out FbxDocument? _outDocument)
-	{
-		//TODO
-
-		_outDocument = null;
-		return false;
+		_outMeshData = null;	//TEMP
+		return true;
 	}
 
 	#endregion

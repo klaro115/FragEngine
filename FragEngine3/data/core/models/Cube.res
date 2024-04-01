@@ -1,5 +1,5 @@
 {
-    "DataFilePath": "./Cube.obj",
+    "DataFilePath": "./Cube.fbx",
     "DataFileType": 0,
     "DataFileSize": 0,
     "UncompressedFileSize": 0,

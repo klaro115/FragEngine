@@ -79,7 +79,7 @@ public sealed class TestApplicationLogic : ApplicationLogic
 	protected override bool BeginRunningState()
 	{
 		// Import 3D models:
-		Engine.ResourceManager.GetAndLoadResource("ForwardPlusLight_Composition_PS", true, out _);
+		Engine.ResourceManager.GetAndLoadResource("Cube.obj", true, out _);
 
 		Scene scene = Engine.SceneManager.MainScene!;
 		

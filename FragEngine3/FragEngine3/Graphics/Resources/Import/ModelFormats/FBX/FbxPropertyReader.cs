@@ -1,8 +1,14 @@
-﻿namespace FragEngine3.Graphics.Resources.Import.ModelFormats.FBX;
+﻿using System.IO.Compression;
+
+namespace FragEngine3.Graphics.Resources.Import.ModelFormats.FBX;
 
 public static class FbxPropertyReader
 {
+	#region Types
 
+	//...
+
+	#endregion
 	#region Methods
 
 	public static bool ReadProperty(BinaryReader _reader, out FbxProperty _outProperty)
@@ -13,7 +19,7 @@ public static class FbxPropertyReader
 			return false;
 		}
 
-		byte type = _reader.ReadByte();
+		char type = (char)_reader.ReadByte();
 
 		if (type == 'S' || type == 'R')
 		{
@@ -21,7 +27,8 @@ public static class FbxPropertyReader
 		}
 		else if (type < 'Z')
 		{
-			return ReadProperty_Primitive(_reader, (FbxPropertyType)type, out _outProperty);
+			FbxPropertyType primitiveType = GetTypeFromChar(type);
+			return ReadProperty_Primitive(_reader, primitiveType, out _outProperty);
 		}
 		else
 		{
@@ -43,20 +50,20 @@ public static class FbxPropertyReader
 	{
 		_outProperty = _primitiveType switch
 		{
-			FbxPropertyType.Boolean => new FbxProperty<bool>(_reader.ReadByte() != 0, FbxPropertyType.Boolean),
-			FbxPropertyType.Int16 => new FbxProperty<bool>(_reader.ReadInt16() != 0, FbxPropertyType.Int16),
-			FbxPropertyType.Int32 => new FbxProperty<bool>(_reader.ReadInt32() != 0, FbxPropertyType.Int32),
-			FbxPropertyType.Int64 => new FbxProperty<bool>(_reader.ReadInt64() != 0, FbxPropertyType.Int64),
-			FbxPropertyType.Float => new FbxProperty<bool>(_reader.ReadSingle() != 0, FbxPropertyType.Float),
-			FbxPropertyType.Double => new FbxProperty<bool>(_reader.ReadDouble() != 0, FbxPropertyType.Double),
+			FbxPropertyType.Boolean => new FbxProperty<bool>(_reader.ReadByte() != 0, _primitiveType),
+			FbxPropertyType.Int16 => new FbxProperty<short>(_reader.ReadInt16(), _primitiveType),
+			FbxPropertyType.Int32 => new FbxProperty<int>(_reader.ReadInt32(), _primitiveType),
+			FbxPropertyType.Int64 => new FbxProperty<long>(_reader.ReadInt64(), _primitiveType),
+			FbxPropertyType.Float => new FbxProperty<float>(_reader.ReadSingle(), _primitiveType),
+			FbxPropertyType.Double => new FbxProperty<double>(_reader.ReadDouble(), _primitiveType),
 			_ => null!,
 		};
 		return _outProperty is not null;
 	}
 
-	private static uint GetListElementSize(byte _type)
+	private static uint GetListElementSize(char _type)
 	{
-		return (char)_type switch
+		return _type switch
 		{
 			'Y' => 2,
 			'C' => 1,
@@ -69,14 +76,29 @@ public static class FbxPropertyReader
 		};
 	}
 
-	private static bool ReadProperty_Array(BinaryReader _reader, byte _type, out FbxProperty _outProperty)
+	private static FbxPropertyType GetTypeFromChar(char _typeChar)
+	{
+		return _typeChar switch
+		{
+			'Y' => FbxPropertyType.Int16,
+			'C' => FbxPropertyType.Boolean,
+			'B' => FbxPropertyType.Boolean,
+			'I' => FbxPropertyType.Int32,
+			'F' => FbxPropertyType.Float,
+			'D' => FbxPropertyType.Double,
+			'L' => FbxPropertyType.Int64,
+			_ => 0,
+		};
+	}
+
+	private static bool ReadProperty_Array(BinaryReader _reader, char _type, out FbxProperty _outProperty)
 	{
 		uint arrayLength = _reader.ReadUInt32();
 		uint encoding = _reader.ReadUInt32();
 		uint compressedLength = _reader.ReadUInt32();
-
-		byte elementType = (byte)(_type - ('a' - 'A'));
-		FbxPropertyType elementPrimitiveType = (FbxPropertyType)elementType;
+		
+		char elementType = (char)(_type - ('a' - 'A'));
+		FbxPropertyType elementPrimitiveType = GetTypeFromChar(elementType);
 
 		FbxProperty[] properties = new FbxProperty[arrayLength];
 
@@ -85,9 +107,15 @@ public static class FbxPropertyReader
 			ulong decompressedLength = GetListElementSize(elementType) * arrayLength;
 			byte[] decompressedBytes = new byte[decompressedLength];
 
-			byte[] compressedBytes = _reader.ReadBytes((int)compressedLength);
+			// Decompress contents using zLib/deflate encoding:
+			{
+				byte[] compressedBytes = _reader.ReadBytes((int)compressedLength);
 
-			//TODO: Implement/Use zLib decompression, then actually decompress buffer here.
+				using MemoryStream compressedStream = new(compressedBytes, false);
+				using DeflateStream decompressedStream = new(compressedStream, CompressionMode.Decompress);
+
+				decompressedStream.Read(decompressedBytes, 0, decompressedBytes.Length);
+			}
 
 			using MemoryStream arrayStream = new(decompressedBytes);
 			using BinaryReader arrayReader = new(arrayStream);

@@ -1,20 +1,11 @@
 ﻿namespace FragEngine3.Graphics.Resources.Import.ModelFormats.FBX;
 
-public abstract class FbxProperty
+public abstract class FbxProperty(FbxPropertyType _type, int _valueCount)
 {
-	#region Constructors
-
-	protected FbxProperty(FbxPropertyType _type, int _valueCount)
-	{
-		type = _type;
-		valueCount = _valueCount;
-	}
-
-	#endregion
 	#region Fields
 
-	public readonly FbxPropertyType type;
-	public readonly int valueCount;
+	public readonly FbxPropertyType type = _type;
+	public readonly int valueCount = _valueCount;
 
 	#region Properties
 	#endregion
@@ -22,21 +13,21 @@ public abstract class FbxProperty
 	public abstract object Value { get; }
 
 	#endregion
-}
+	#region Methods
 
-public sealed class FbxPropertyRaw : FbxProperty
-{
-	#region Constructors
-
-	public FbxPropertyRaw(byte[] _rawBytes) : base(FbxPropertyType.RawBytes, _rawBytes.Length)
+	public override string ToString()
 	{
-		rawBytes = _rawBytes ?? Array.Empty<byte>();
+		return $"Type: {type}, Count: {valueCount}, Value: {Value?.ToString() ?? "NULL"}";
 	}
 
 	#endregion
+}
+
+public sealed class FbxPropertyRaw(byte[] _rawBytes) : FbxProperty(FbxPropertyType.RawBytes, _rawBytes!.Length)
+{
 	#region Fields
 
-	public readonly byte[] rawBytes;
+	public readonly byte[] rawBytes = _rawBytes ?? Array.Empty<byte>();
 
 	#endregion
 	#region Properties
@@ -46,19 +37,11 @@ public sealed class FbxPropertyRaw : FbxProperty
 	#endregion
 }
 
-public sealed class FbxPropertyArray : FbxProperty
+public sealed class FbxPropertyArray(FbxProperty[] _properties) : FbxProperty(FbxPropertyType.PropertyArray, _properties.Length)
 {
-	#region Constructors
-
-	public FbxPropertyArray(FbxProperty[] _properties) : base(FbxPropertyType.PropertyArray, _properties.Length)
-	{
-		properties = _properties;
-	}
-
-	#endregion
 	#region Fields
 
-	public readonly FbxProperty[] properties;
+	public readonly FbxProperty[] properties = _properties;
 
 	#endregion
 	#region Properties
@@ -68,19 +51,11 @@ public sealed class FbxPropertyArray : FbxProperty
 	#endregion
 }
 
-public sealed class FbxProperty<T> : FbxProperty where T : unmanaged
+public sealed class FbxProperty<T>(T _value, FbxPropertyType _primitiveType) : FbxProperty(_primitiveType, 1) where T : unmanaged
 {
-	#region Constructors
-
-	public FbxProperty(T _value, FbxPropertyType _primitiveType) : base(_primitiveType, 1)
-	{
-		value = _value;
-	}
-
-	#endregion
 	#region Fields
 
-	public readonly T value;
+	public readonly T value = _value;
 
 	public readonly List<T>? values = null;
 

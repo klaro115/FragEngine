@@ -123,6 +123,10 @@ namespace FragEngine3.Graphics.Resources.Import
 			{
 				return ObjImporter.ImportModel(_stream, out _outSurfaceData);
 			}
+			else if (_formatExt == ".fbx")
+			{
+				return FbxImporter.ImportModel(_stream, out _outSurfaceData);
+			}
 			//...
 			else
 			{
