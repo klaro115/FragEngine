@@ -73,6 +73,8 @@ public sealed class FbxDocument(uint _version)
 		while ((success &= FbxNode.ReadNode(_reader, fileStartOffset, startOffset, 0, out FbxNode? node)) && !node.IsNull())
 		{
 			_outDocument.nodes.Add(node!);
+
+			startOffset = (uint)_reader.BaseStream.Position;
 		}
 
 		return success;

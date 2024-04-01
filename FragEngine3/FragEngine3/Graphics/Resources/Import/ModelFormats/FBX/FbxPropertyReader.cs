@@ -1,4 +1,5 @@
-﻿using System.IO.Compression;
+﻿using FragEngine3.EngineCore;
+using System.IO.Compression;
 
 namespace FragEngine3.Graphics.Resources.Import.ModelFormats.FBX;
 
@@ -102,19 +103,29 @@ public static class FbxPropertyReader
 
 		FbxProperty[] properties = new FbxProperty[arrayLength];
 
+		bool success = true;
+
 		if (encoding != 0)
 		{
 			ulong decompressedLength = GetListElementSize(elementType) * arrayLength;
 			byte[] decompressedBytes = new byte[decompressedLength];
 
-			// Decompress contents using zLib/deflate encoding:
+			// Decompress contents using zLib:
+			try
 			{
 				byte[] compressedBytes = _reader.ReadBytes((int)compressedLength);
 
 				using MemoryStream compressedStream = new(compressedBytes, false);
-				using DeflateStream decompressedStream = new(compressedStream, CompressionMode.Decompress);
+				using ZLibStream decompressor = new(compressedStream, CompressionMode.Decompress, false);
+				using MemoryStream decompressedStream = new(decompressedBytes, true);
 
-				decompressedStream.Read(decompressedBytes, 0, decompressedBytes.Length);
+				decompressor.CopyTo(decompressedStream, (int)decompressedLength);
+			}
+			catch (Exception ex)
+			{
+				Logger.Instance?.LogException($"Failed to decompress property array data! (Type: '{elementPrimitiveType}', Length: {arrayLength})", ex);
+				_outProperty = null!;
+				return false;
 			}
 
 			using MemoryStream arrayStream = new(decompressedBytes);
@@ -122,7 +133,7 @@ public static class FbxPropertyReader
 
 			for (uint i = 0; i < arrayLength; ++i)
 			{
-				if (ReadProperty_Primitive(arrayReader, elementPrimitiveType, out FbxProperty arrayElement))
+				if (success &= ReadProperty_Primitive(arrayReader, elementPrimitiveType, out FbxProperty arrayElement))
 				{
 					properties[i] = arrayElement;
 				}
@@ -132,7 +143,7 @@ public static class FbxPropertyReader
 		{
 			for (uint i = 0; i < arrayLength; ++i)
 			{
-				if (ReadProperty_Primitive(_reader, elementPrimitiveType, out FbxProperty arrayElement))
+				if (success &= ReadProperty_Primitive(_reader, elementPrimitiveType, out FbxProperty arrayElement))
 				{
 					properties[i] = arrayElement;
 				}
@@ -140,7 +151,7 @@ public static class FbxPropertyReader
 		}
 
 		_outProperty = new FbxPropertyArray(properties);
-		return true;
+		return success;
 	}
 
 	#endregion
