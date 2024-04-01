@@ -32,6 +32,32 @@ public sealed class FbxDocument(uint _version)
 		return false;
 	}
 
+	public void PrintNodeHierarchy()
+	{
+		foreach (FbxNode node in nodes)
+		{
+			PrintNodeRecursively(node, 0);
+		}
+
+
+		static void PrintNodeRecursively(FbxNode _node, uint _depth)
+		{
+			for (uint i = 0; i < _depth; ++i)
+			{
+				Console.Write('\t');
+			}
+			Console.WriteLine($"- {_node}");
+
+			for (uint i = 0; i < _node.ChildCount; ++i)
+			{
+				if (_node.GetChildNode(i, out FbxNode childNode))
+				{
+					PrintNodeRecursively(childNode, _depth + 1);
+				}
+			}
+		}
+	}
+
 	public static bool ReadFbxDocument(BinaryReader _reader, out FbxDocument? _outDocument)
 	{
 		if (_reader is null)
@@ -70,12 +96,15 @@ public sealed class FbxDocument(uint _version)
 		// Read nodes:
 		bool success = true;
 
-		while ((success &= FbxNode.ReadNode(_reader, fileStartOffset, startOffset, 0, out FbxNode? node)) && !node.IsNull())
+		while ((success &= FbxNode.ReadNode(_reader, fileStartOffset, startOffset, out FbxNode? node)) && !node!.IsNull())
 		{
 			_outDocument.nodes.Add(node!);
 
 			startOffset = (uint)_reader.BaseStream.Position;
 		}
+
+		//TEST
+		//_outDocument.PrintNodeHierarchy();
 
 		return success;
 	}

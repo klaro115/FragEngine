@@ -19,7 +19,7 @@ public static class FbxImporter
 
 		using BinaryReader reader = new(_streamBytes);
 
-		if (FbxDocument.ReadFbxDocument(reader, out FbxDocument? document))
+		if (!FbxDocument.ReadFbxDocument(reader, out FbxDocument? document))
 		{
 			Logger.Instance?.LogError("Failed to import FBX document, aborting model import!");
 			_outMeshData = null;

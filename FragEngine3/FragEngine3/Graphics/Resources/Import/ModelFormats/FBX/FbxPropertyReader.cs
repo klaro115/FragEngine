@@ -7,7 +7,14 @@ public static class FbxPropertyReader
 {
 	#region Types
 
-	//...
+	private struct ArrayHeader
+	{
+		public uint arrayLength;
+		public uint encoding;
+		public uint compressedLength;
+	}
+
+	private delegate T FuncReadPrimitiveValue<T>(BinaryReader _reader) where T : unmanaged;
 
 	#endregion
 	#region Methods
@@ -62,21 +69,6 @@ public static class FbxPropertyReader
 		return _outProperty is not null;
 	}
 
-	private static uint GetListElementSize(char _type)
-	{
-		return _type switch
-		{
-			'Y' => 2,
-			'C' => 1,
-			'B' => 1,
-			'I' => 4,
-			'F' => 4,
-			'D' => 8,
-			'L' => 8,
-			_ => 0,
-		};
-	}
-
 	private static FbxPropertyType GetTypeFromChar(char _typeChar)
 	{
 		return _typeChar switch
@@ -94,26 +86,58 @@ public static class FbxPropertyReader
 
 	private static bool ReadProperty_Array(BinaryReader _reader, char _type, out FbxProperty _outProperty)
 	{
-		uint arrayLength = _reader.ReadUInt32();
-		uint encoding = _reader.ReadUInt32();
-		uint compressedLength = _reader.ReadUInt32();
+		ArrayHeader header = new()
+		{
+			arrayLength = _reader.ReadUInt32(),
+			encoding = _reader.ReadUInt32(),
+			compressedLength = _reader.ReadUInt32(),
+		};
 		
 		char elementType = (char)(_type - ('a' - 'A'));
 		FbxPropertyType elementPrimitiveType = GetTypeFromChar(elementType);
 
-		FbxProperty[] properties = new FbxProperty[arrayLength];
+		_outProperty = null!;
 
-		bool success = true;
-
-		if (encoding != 0)
+		return elementPrimitiveType switch
 		{
-			ulong decompressedLength = GetListElementSize(elementType) * arrayLength;
+			FbxPropertyType.Boolean => ReadProperty_Array(_reader, in header, FuncReadPrimitive_Bool, elementPrimitiveType, sizeof(bool), out _outProperty),
+			FbxPropertyType.Int16 => ReadProperty_Array(_reader, in header, FuncReadPrimitive_Int16, elementPrimitiveType, sizeof(short), out _outProperty),
+			FbxPropertyType.Int32 => ReadProperty_Array(_reader, in header, FuncReadPrimitive_Int32, elementPrimitiveType, sizeof(int), out _outProperty),
+			FbxPropertyType.Int64 => ReadProperty_Array(_reader, in header, FuncReadPrimitive_Int64, elementPrimitiveType, sizeof(long), out _outProperty),
+			FbxPropertyType.Float => ReadProperty_Array(_reader, in header, FuncReadPrimitive_Float, elementPrimitiveType, sizeof(float), out _outProperty),
+			FbxPropertyType.Double => ReadProperty_Array(_reader, in header, FuncReadPrimitive_Double, elementPrimitiveType, sizeof(double), out _outProperty),
+			_ => false,
+		};
+
+
+		// Local helper methods for parsing primitives from byte stream:
+		static bool FuncReadPrimitive_Bool(BinaryReader _reader) => _reader.ReadByte() != 0;
+		static short FuncReadPrimitive_Int16(BinaryReader _reader) => _reader.ReadInt16();
+		static int FuncReadPrimitive_Int32(BinaryReader _reader) => _reader.ReadInt32();
+		static long FuncReadPrimitive_Int64(BinaryReader _reader) => _reader.ReadInt16();
+		static float FuncReadPrimitive_Float(BinaryReader _reader) => _reader.ReadSingle();
+		static double FuncReadPrimitive_Double(BinaryReader _reader) => _reader.ReadDouble();
+	}
+	
+	private static bool ReadProperty_Array<T>(
+		BinaryReader _reader,
+		in ArrayHeader _arrayHeader,
+		FuncReadPrimitiveValue<T> _funcReadPrimitiveValue,
+		FbxPropertyType _elementPrimitiveType,
+		uint _elementByteSize,
+		out FbxProperty _outProperty) where T : unmanaged
+	{
+		T[] properties = new T[_arrayHeader.arrayLength];
+
+		if (_arrayHeader.encoding != 0)
+		{
+			ulong decompressedLength = _elementByteSize * _arrayHeader.arrayLength;
 			byte[] decompressedBytes = new byte[decompressedLength];
 
 			// Decompress contents using zLib:
 			try
 			{
-				byte[] compressedBytes = _reader.ReadBytes((int)compressedLength);
+				byte[] compressedBytes = _reader.ReadBytes((int)_arrayHeader.compressedLength);
 
 				using MemoryStream compressedStream = new(compressedBytes, false);
 				using ZLibStream decompressor = new(compressedStream, CompressionMode.Decompress, false);
@@ -123,7 +147,7 @@ public static class FbxPropertyReader
 			}
 			catch (Exception ex)
 			{
-				Logger.Instance?.LogException($"Failed to decompress property array data! (Type: '{elementPrimitiveType}', Length: {arrayLength})", ex);
+				Logger.Instance?.LogException($"Failed to decompress property array data! (Type: '{_elementPrimitiveType}', Length: {_arrayHeader.arrayLength})", ex);
 				_outProperty = null!;
 				return false;
 			}
@@ -131,29 +155,22 @@ public static class FbxPropertyReader
 			using MemoryStream arrayStream = new(decompressedBytes);
 			using BinaryReader arrayReader = new(arrayStream);
 
-			for (uint i = 0; i < arrayLength; ++i)
+			for (uint i = 0; i < _arrayHeader.arrayLength; ++i)
 			{
-				if (success &= ReadProperty_Primitive(arrayReader, elementPrimitiveType, out FbxProperty arrayElement))
-				{
-					properties[i] = arrayElement;
-				}
+				properties[i] = _funcReadPrimitiveValue(arrayReader);
 			}
 		}
 		else
 		{
-			for (uint i = 0; i < arrayLength; ++i)
+			for (uint i = 0; i < _arrayHeader.arrayLength; ++i)
 			{
-				if (success &= ReadProperty_Primitive(_reader, elementPrimitiveType, out FbxProperty arrayElement))
-				{
-					properties[i] = arrayElement;
-				}
+				properties[i] = _funcReadPrimitiveValue(_reader);
 			}
 		}
 
-		_outProperty = new FbxPropertyArray(properties);
-		return success;
+		_outProperty = new FbxPropertyArray<T>(properties);
+		return true;
 	}
 
 	#endregion
 }
-

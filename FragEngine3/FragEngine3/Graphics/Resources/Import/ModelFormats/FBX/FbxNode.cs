@@ -60,7 +60,7 @@ public sealed class FbxNode(string _name)
 		return $"Node, Name: '{name}', Children: {ChildCount}, Properties: {PropertyCount}";
 	}
 
-	public static bool ReadNode(BinaryReader _reader, uint _fileStartOffset, uint _nodeStartOffset, int _depth, out FbxNode? _outNode)
+	public static bool ReadNode(BinaryReader _reader, uint _fileStartOffset, uint _nodeStartOffset, out FbxNode? _outNode)
 	{
 		if (_reader is null)
 		{
@@ -86,15 +86,7 @@ public sealed class FbxNode(string _name)
 			return false;
 		}
 
-		//TEST TEST TEST TEST
-		for (int i = 0; i < _depth; ++i)
-		{
-			Console.Write("  ");
-		}
-		Console.WriteLine($"- {_outNode}");
-		//TEST TEST TEST TEST
-
-		if (!ReadChildren(_reader, _outNode, _fileStartOffset, _nodeStartOffset, _depth + 1, in header))
+		if (!ReadChildren(_reader, _outNode, _fileStartOffset, _nodeStartOffset, in header))
 		{
 			return false;
 		}
@@ -164,7 +156,7 @@ public sealed class FbxNode(string _name)
 		}
 	}
 
-	private static bool ReadChildren(BinaryReader _reader, FbxNode _parentNode, uint _fileStartOffset, uint _nodeStartOffset, int _childDepth, in NodeHeader _header)
+	private static bool ReadChildren(BinaryReader _reader, FbxNode _parentNode, uint _fileStartOffset, uint _nodeStartOffset, in NodeHeader _header)
 	{
 		uint childrenEndOffset = _fileStartOffset + _header.endOffset;
 		if (_reader.BaseStream.Position >= childrenEndOffset)
@@ -187,7 +179,7 @@ public sealed class FbxNode(string _name)
 			while (_reader.BaseStream.Position < childrenEndOffset)
 			{
 				// Recursively read child nodes:
-				if ((success &= ReadNode(_reader, _fileStartOffset, (uint)_reader.BaseStream.Position, _childDepth, out FbxNode? node)) && !node!.IsNull())
+				if ((success &= ReadNode(_reader, _fileStartOffset, (uint)_reader.BaseStream.Position, out FbxNode? node)) && !node!.IsNull())
 				{
 					_parentNode.children.Add(node!);
 				}

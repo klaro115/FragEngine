@@ -37,16 +37,16 @@ public sealed class FbxPropertyRaw(byte[] _rawBytes) : FbxProperty(FbxPropertyTy
 	#endregion
 }
 
-public sealed class FbxPropertyArray(FbxProperty[] _properties) : FbxProperty(FbxPropertyType.PropertyArray, _properties.Length)
+public sealed class FbxPropertyArray<T>(T[] _values) : FbxProperty(FbxPropertyType.PropertyArray, _values.Length) where T : unmanaged
 {
 	#region Fields
 
-	public readonly FbxProperty[] properties = _properties;
+	public readonly T[] values = _values;
 
 	#endregion
 	#region Properties
 
-	public override object Value => properties;
+	public override object Value => values;
 
 	#endregion
 }
