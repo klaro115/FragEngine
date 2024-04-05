@@ -35,7 +35,7 @@ public static class FbxImporter
 			return false;
 		}
 
-		//TODO
+		//TODO [later]: Parse animations.
 
 		return true;
 	}
@@ -56,14 +56,32 @@ public static class FbxImporter
 			return false;
 		}
 
-		// Vertex positions:
-		if (!FindAndUnpackArrayProperty(geometryNode, FbxConstants.NODE_NAME_VERTICES, out double[] vertices))
+		int vertexCount = FbxGeometryParser.TryGetVertexCount(geometryNode);
+
+		// Vertices:
+		IEnumerator<Vector3> positionEnumerator = FbxGeometryParser.EnumerateVertexPositions(geometryNode);
+		IEnumerator<NormalSpace> normalsEnumerator = FbxGeometryParser.EnumerateVertexNormals(geometryNode, vertexCount);
+		IEnumerator<Vector2> uvEnumerator = FbxGeometryParser.EnumerateVertexUVs(geometryNode, vertexCount);
+
+		BasicVertex[] vertsBasic = new BasicVertex[vertexCount];
+		int i = 0;
+
+		// Assemble basic vertex data:
+		while (
+			positionEnumerator.MoveNext() &&
+			normalsEnumerator.MoveNext() &&
+			uvEnumerator.MoveNext())
 		{
-			Logger.Instance?.LogError("Could not find vertex positions in FBX document!");
-			_outMeshData = null;
-			return false;
+			Vector3 position = positionEnumerator.Current;
+			Vector3 normal = normalsEnumerator.Current.normal;
+			Vector2 uv = uvEnumerator.Current;
+
+			vertsBasic[i++] = new BasicVertex(position, normal, uv);
 		}
-		int positionCount = vertices.Length / 3;
+
+
+		//TODO: Assemble extended vertex data.
+
 
 		// Triangle indices:
 		if (!FindAndUnpackArrayProperty(geometryNode, FbxConstants.NODE_NAME_INDICES, out int[] indices32))
@@ -76,34 +94,17 @@ public static class FbxImporter
 		if (indices32.Length <= ushort.MaxValue)
 		{
 			indices16 = new ushort[indices32.Length];
-			for (int i = 0; i < indices32.Length; i++)
+			for (i = 0; i < indices32.Length; i++)
 			{
 				indices16[i] = (ushort)indices32[i];
 			}
 		}
 
 
-		//TODO 1: Parse normals & UVs
-		//TODO 2: Parse extended data
-		//TODO 3 [later]: Parse blend shapes
-		//TODO 3 [later]: Parse bone animations
+		//TODO 1: Parse extended data
+		//TODO 2 [later]: Parse blend shapes
+		//TODO 3 [later]: Parse rigging
 
-
-		// Assemble basic vertex data:
-		BasicVertex[] vertsBasic = new BasicVertex[positionCount];
-		for (int i = 0; i < positionCount; ++i)
-		{
-			Vector3 position = new(
-				(float)vertices[3 * i + 0],
-				(float)vertices[3 * i + 1],
-				(float)vertices[3 * i + 2]);
-			Vector3 normal = Vector3.UnitY;
-			Vector2 uv = Vector2.Zero;
-
-			vertsBasic[i] = new(position, normal, uv);
-		}
-
-		//TODO: Assemble extended vertex data.
 
 		// Assemble mesh data and return success:
 		_outMeshData = new()

@@ -20,5 +20,9 @@ internal static class FbxConstants
 	public const string NODE_NAME_LAYER_UVs = "UV";                         // Objects -> Geometry -> LayerElementUV -> UV
 	public const string NODE_NAME_LAYER_UV_INDEX = "UVIndex";               // Objects -> Geometry -> LayerElementUV -> UVIndex
 
+	// Mapping:
+	public const string NODE_NAME_MAPPING_TYPE = "MappingInformationType";
+	public const string NODE_NAME_REF_INFO_TYPE = "ReferenceInformationType";
+
 	#endregion
 }
