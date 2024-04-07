@@ -14,6 +14,7 @@ internal static class FbxConstants
 	// Normals:
 	public const string NODE_NAME_LAYER_ELEM_NORMAL = "LayerElementNormal";	// Objects -> Geometry -> LayerElementNormal
 	public const string NODE_NAME_LAYER_NORMALS = "Normals";                // Objects -> Geometry -> LayerElementNormal -> Normals
+	public const string NODE_NAME_LAYER_NORMAL_INDEX = "NormalIndex";       // Objects -> Geometry -> LayerElementNormal -> NormalIndex		(untested)
 
 	// UVs:
 	public const string NODE_NAME_LAYER_ELEM_UVs = "LayerElementUV";        // Objects -> Geometry -> LayerElementUV

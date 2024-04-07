@@ -56,52 +56,34 @@ public static class FbxImporter
 			return false;
 		}
 
-		int vertexCount = FbxGeometryParser.TryGetVertexCount(geometryNode);
-
-		// Vertices:
-		IEnumerator<Vector3> positionEnumerator = FbxGeometryParser.EnumerateVertexPositions(geometryNode);
-		IEnumerator<NormalSpace> normalsEnumerator = FbxGeometryParser.EnumerateVertexNormals(geometryNode, vertexCount);
-		IEnumerator<Vector2> uvEnumerator = FbxGeometryParser.EnumerateVertexUVs(geometryNode, vertexCount);
-
-		BasicVertex[] vertsBasic = new BasicVertex[vertexCount];
-		int i = 0;
-
-		// Assemble basic vertex data:
-		while (
-			positionEnumerator.MoveNext() &&			//TODO: This isn't quite right. Vertex count and position count are two different things and need to be remapped to actual vertices accordingly!
-			normalsEnumerator.MoveNext() &&
-			uvEnumerator.MoveNext())
-		{
-			Vector3 position = positionEnumerator.Current;
-			Vector3 normal = normalsEnumerator.Current.normal;
-			Vector2 uv = uvEnumerator.Current;
-
-			vertsBasic[i++] = new BasicVertex(position, normal, uv);
-		}
-
-
-		//TODO: Assemble extended vertex data.
-
-
 		// Triangle indices:
-		if (!FindAndUnpackArrayProperty(geometryNode, FbxConstants.NODE_NAME_INDICES, out int[] indices32))
+		if (!FbxGeometryParser.GetTriangleIndices(geometryNode, out int[] indices32, out ushort[]? indices16))
 		{
-			Logger.Instance?.LogError("Could not find triangle indices in FBX document!");
 			_outMeshData = null;
 			return false;
 		}
-		ushort[]? indices16 = null;
-		if (indices32.Length <= ushort.MaxValue)
+
+		int minVertexCount = FbxGeometryParser.TryGetVertexCount(geometryNode);
+
+		// Vertex data:
+		List<Vector3> positions = FbxGeometryParser.GetVertexPositions(geometryNode);
+		List<Vector3> normals = FbxGeometryParser.GetVertexNormals(geometryNode, indices32);
+		List<Vector2> uvs = FbxGeometryParser.GetVertexUVs(geometryNode, indices32);
+
+		// Assemble basic vertex data:
+		int vertexCount = indices32.Length;     //TEMP
+
+		BasicVertex[] vertsBasic = new BasicVertex[vertexCount];
+
+		for (int i = 0; i < vertexCount; ++i)
 		{
-			indices16 = new ushort[indices32.Length];
-			for (i = 0; i < indices32.Length; i++)
-			{
-				indices16[i] = (ushort)indices32[i];
-			}
+			int positionIdx = indices32[i];
+
+			vertsBasic[i] = new(positions[positionIdx], normals[i], uvs[i]);
 		}
 
 
-		//TODO 1: Parse extended data
+		//TODO 1 [later]: Parse extended vertex data.
 		//TODO 2 [later]: Parse blend shapes
 		//TODO 3 [later]: Parse rigging
 
@@ -110,34 +92,11 @@ public static class FbxImporter
 		_outMeshData = new()
 		{
 			verticesBasic = vertsBasic,
-			verticesExt = null,						//TEMP, TODO
+			verticesExt = null,
 			indices16 = indices16,
 			indices32 = indices32,
 		};
 		return true;
-	}
-
-	private static bool FindAndUnpackArrayProperty<T>(FbxNode _parentNode, string _nodeName, out T[] _outArrayValues) where T : unmanaged
-	{
-		if (!_parentNode.FindChildNode(_nodeName, out FbxNode? node) || node is null)
-		{
-			goto abort;
-		}
-		if (node.PropertyCount == 0)
-		{
-			goto abort;
-		}
-		if (!node.GetProperty(0, out FbxProperty property) || property is not FbxPropertyArray<T> arrayProperty)
-		{
-			goto abort;
-		}
-
-		_outArrayValues = arrayProperty.values;
-		return true;
-
-	abort:
-		_outArrayValues = [];
-		return false;
 	}
 
 	#endregion

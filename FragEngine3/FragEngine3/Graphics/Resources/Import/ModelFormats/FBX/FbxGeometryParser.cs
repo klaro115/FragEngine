@@ -7,57 +7,59 @@ internal static class FbxGeometryParser
 {
 	#region Methods
 
-	public static int TryGetVertexCount(FbxNode _geometryNode)
+	public static int TryGetVertexCount(FbxNode _geometryNode)		//TODO: INCORRECT
 	{
 		return FindAndUnpackArrayProperty(_geometryNode, FbxConstants.NODE_NAME_VERTICES, out double[] vertices)
 			? vertices.Length / 3
 			: 0;
 	}
 
-	public static IEnumerator<Vector3> EnumerateVertexPositions(FbxNode _geometryNode)
+	public static List<Vector3> GetVertexPositions(FbxNode _geometryNode)
 	{
-		if (_geometryNode is null)
-		{
-			yield break;
-		}
+		if (_geometryNode is null) return [];
 
 		if (!FindAndUnpackArrayProperty(_geometryNode, FbxConstants.NODE_NAME_VERTICES, out double[] vertices))
 		{
 			Logger.Instance?.LogError("Could not find vertex positions in FBX document!");
-			yield break;
+			return [];
 		}
 
 		int positionCount = vertices.Length / 3;
+		List<Vector3> positions = new(positionCount);
 
 		for (int i = 0; i < positionCount; i++)
 		{
-			int positionIdx = 3 * i;
-			yield return ReadVector3FromArray(vertices, positionIdx);
+			Vector3 position = ReadVector3FromArray(vertices, 3 * i);
+			positions.Add(position);
 		}
+
+		return positions;
 	}
 
-	public static IEnumerator<Vector2> EnumerateVertexUVs(FbxNode _geometryNode, int _expectedVertexCount)
+	public static List<Vector2> GetVertexUVs(FbxNode _geometryNode, int[] _triangleIndices)
 	{
 		if (_geometryNode is null)
 		{
-			yield break;
+			return [];
 		}
 
 		if (!_geometryNode.FindChildNode(FbxConstants.NODE_NAME_LAYER_ELEM_UVs, out FbxNode? layerNode))
 		{
 			Logger.Instance?.LogError("Could not find UV layer elements in FBX document!");
-			yield break;
+			return [];
 		}
 		if (!FindMappingInfo(layerNode!, out FbxMappingType mappingType, out FbxReferenceInfoType refInfoType) ||
 			!FindAndUnpackArrayProperty(layerNode!, FbxConstants.NODE_NAME_LAYER_UVs, out double[] uvCoords))
 		{
 			Logger.Instance?.LogError("Could not find UV coordinates or indices in FBX document!");
-			yield break;
+			return [];
 		}
 
 		int uvCount = refInfoType == FbxReferenceInfoType.Direct
 			? uvCoords.Length / 2
-			: _expectedVertexCount;
+			: _triangleIndices.Length;
+
+		List<Vector2> uvs = new(uvCount);
 
 		// Same value across all vertices:
 		if (mappingType == FbxMappingType.AllSame)
@@ -65,7 +67,7 @@ internal static class FbxGeometryParser
 			Vector2 uv = ReadVector2FromArray(uvCoords, 0);
 			for (int i = 0; i < uvCount; ++i)
 			{
-				yield return uv;
+				uvs.Add(uv);
 			}
 		}
 		// Value array:
@@ -73,7 +75,8 @@ internal static class FbxGeometryParser
 		{
 			for (int i = 0; i < uvCount; ++i)
 			{
-				yield return ReadVector2FromArray(uvCoords, 2 * i);
+				Vector2 uv = ReadVector2FromArray(uvCoords, 2 * i);
+				uvs.Add(uv);
 			}
 		}
 		// Indexed values:
@@ -82,49 +85,53 @@ internal static class FbxGeometryParser
 			if (!FindAndUnpackArrayProperty(layerNode!, FbxConstants.NODE_NAME_LAYER_UV_INDEX, out int[] uvIndices))
 			{
 				Logger.Instance?.LogError("Could not find UV indices in FBX document!");
-				yield break;
+				return [];
 			}
+			uvCount = uvIndices.Length;
 
 			for (int i = 0; i < uvCount; i++)
 			{
 				int uvCoordIdx = 2 * uvIndices[i];
-				yield return ReadVector2FromArray(uvCoords, uvCoordIdx);
-
+				Vector2 uv = ReadVector2FromArray(uvCoords, uvCoordIdx);
+				uvs.Add(uv);
 			}
 		}
+		return uvs;
 	}
 
-	public static IEnumerator<NormalSpace> EnumerateVertexNormals(FbxNode _geometryNode, int _expectedVertexCount)
+	public static List<Vector3> GetVertexNormals(FbxNode _geometryNode, int[] _triangleIndices)
 	{
 		if (_geometryNode is null)
 		{
-			yield break;
+			return [];
 		}
 
 		if (!_geometryNode.FindChildNode(FbxConstants.NODE_NAME_LAYER_ELEM_NORMAL, out FbxNode? layerNode))
 		{
 			Logger.Instance?.LogError("Could not find normal layer elements in FBX document!");
-			yield break;
+			return [];
 		}
 		if (!FindMappingInfo(layerNode!, out FbxMappingType mappingType, out FbxReferenceInfoType refInfoType) ||
 			!FindAndUnpackArrayProperty(layerNode!, FbxConstants.NODE_NAME_LAYER_NORMALS, out double[] normalCoords))
 		{
 			Logger.Instance?.LogError("Could not find normal coordinates or indices in FBX document!");
-			yield break;
+			return [];
 		}
 
 		int normalCount = refInfoType == FbxReferenceInfoType.Direct
-			? normalCoords.Length / 9
-			: _expectedVertexCount;
+			? normalCoords.Length / 3
+			: _triangleIndices.Length;
+
+		List<Vector3> normals = new(normalCount);
 
 		// Same value across all vertices:
 		if (mappingType == FbxMappingType.AllSame)
 		{
-			NormalSpace normalSpace = ReadNormalSpaceFromArray(normalCoords, 0);
+			Vector3 normal = ReadVector3FromArray(normalCoords, 0);
 			
 			for (int i = 0; i < normalCount; ++i)
 			{
-				yield return normalSpace;
+				normals.Add(normal);
 			}
 		}
 		// Value array:
@@ -132,24 +139,64 @@ internal static class FbxGeometryParser
 		{
 			for (int i = 0; i < normalCount; ++i)
 			{
-				yield return ReadNormalSpaceFromArray(normalCoords, 9 * i);
+				Vector3 normal = ReadVector3FromArray(normalCoords, 3 * i);
+				normals.Add(normal);
 			}
 		}
 		// Indexed values:
 		else
 		{
-			if (!FindAndUnpackArrayProperty(layerNode!, FbxConstants.NODE_NAME_LAYER_UV_INDEX, out int[] uvIndices))
+			if (!FindAndUnpackArrayProperty(layerNode!, FbxConstants.NODE_NAME_LAYER_NORMALS, out int[] uvIndices))
 			{
-				Logger.Instance?.LogError("Could not find UV indices in FBX document!");
-				yield break;
+				Logger.Instance?.LogError("Could not find normal indices in FBX document!");
+				return [];
 			}
+			normalCount = uvIndices.Length;
 
 			for (int i = 0; i < normalCount; i++)
 			{
-				int uvCoordIdx = 9 * uvIndices[i];
-				yield return ReadNormalSpaceFromArray(normalCoords, uvCoordIdx);
+				int uvCoordIdx = 3 * uvIndices[i];
+				Vector3 normal = ReadVector3FromArray(normalCoords, uvCoordIdx);
+				normals.Add(normal);
 			}
 		}
+		return normals;
+	}
+
+	public static bool GetTriangleIndices(FbxNode _geometryNode, out int[] _outIndices32, out ushort[]? _outIndices16)
+	{
+		_outIndices16 = null;
+		if (_geometryNode is null)
+		{
+			_outIndices32 = [];
+			return false;
+		}
+
+		if (!FindAndUnpackArrayProperty(_geometryNode, FbxConstants.NODE_NAME_INDICES, out _outIndices32))
+		{
+			Logger.Instance?.LogError("Could not find triangle indices in FBX document!");
+			return false;
+		}
+
+		// Negative indices indicate end of a polygon, discard sign:
+		for (int i = 0; i < _outIndices32.Length; ++i)
+		{
+			int index = _outIndices32[i];
+			if (index < 0)
+			{
+				_outIndices32[i] = Math.Abs(index) - 1;
+			}
+		}
+
+		if (_outIndices32.Length <= ushort.MaxValue)
+		{
+			_outIndices16 = new ushort[_outIndices32.Length];
+			for (int i = 0; i < _outIndices32.Length; i++)
+			{
+				_outIndices16[i] = (ushort)_outIndices32[i];
+			}
+		}
+		return true;
 	}
 
 	private static Vector2 ReadVector2FromArray(double[] _coordArray, int _vectorStartIdx)
@@ -164,24 +211,6 @@ internal static class FbxGeometryParser
 			(float)_coordArray[_vectorStartIdx + 0],
 			(float)_coordArray[_vectorStartIdx + 1],
 			(float)_coordArray[_vectorStartIdx + 2]);
-	}
-	private static NormalSpace ReadNormalSpaceFromArray(double[] _coordArray, int _normSpaceStartIdx)
-	{
-		return new()
-		{
-			normal = new(
-				(float)_coordArray[_normSpaceStartIdx + 0],
-				(float)_coordArray[_normSpaceStartIdx + 1],
-				(float)_coordArray[_normSpaceStartIdx + 2]),
-			binormal = new(
-				(float)_coordArray[_normSpaceStartIdx + 3],
-				(float)_coordArray[_normSpaceStartIdx + 4],
-				(float)_coordArray[_normSpaceStartIdx + 5]),
-			tangent = new(
-				(float)_coordArray[_normSpaceStartIdx + 6],
-				(float)_coordArray[_normSpaceStartIdx + 7],
-				(float)_coordArray[_normSpaceStartIdx + 8]),
-		};
 	}
 
 	private static bool FindMappingInfo(FbxNode _layerNode, out FbxMappingType _outMappingType, out FbxReferenceInfoType _outRefInfoType)

@@ -30,10 +30,3 @@ internal enum FbxReferenceInfoType
 	IndexToDirect,		// Indices for each vertex map to an array of values.
 	//...
 }
-
-internal struct NormalSpace
-{
-	public Vector3 normal;
-	public Vector3 binormal;
-	public Vector3 tangent;
-}
