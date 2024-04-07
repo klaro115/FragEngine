@@ -123,7 +123,7 @@ internal sealed class FbxDocument(uint _version)
 		}
 
 		//TEST
-		_outDocument.PrintNodeHierarchy();
+		//_outDocument.PrintNodeHierarchy();
 
 		return success;
 	}

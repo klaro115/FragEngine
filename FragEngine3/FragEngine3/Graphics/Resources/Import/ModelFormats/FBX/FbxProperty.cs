@@ -35,6 +35,11 @@ internal sealed class FbxPropertyRaw(byte[] _rawBytes) : FbxProperty(FbxProperty
 	public override object Value => rawBytes;
 
 	#endregion
+	#region Methods
+
+	public override string ToString() => $"byte[{valueCount}]";
+
+	#endregion
 }
 
 internal sealed class FbxPropertyString(string _text) : FbxProperty(FbxPropertyType.String, _text != null ? _text.Length : 0)
@@ -47,6 +52,11 @@ internal sealed class FbxPropertyString(string _text) : FbxProperty(FbxPropertyT
 	#region Properties
 
 	public override object Value => text;
+
+	#endregion
+	#region Methods
+
+	public override string ToString() => $"\"{text}\"";
 
 	#endregion
 }
@@ -63,6 +73,11 @@ internal sealed class FbxPropertyArray<T>(T[] _values) : FbxProperty(FbxProperty
 	public override object Value => values;
 
 	#endregion
+	#region Methods
+
+	public override string ToString() => $"{typeof(T).Name}[{valueCount}]";
+
+	#endregion
 }
 
 internal sealed class FbxProperty<T>(T _value, FbxPropertyType _primitiveType) : FbxProperty(_primitiveType, 1) where T : unmanaged
@@ -77,6 +92,11 @@ internal sealed class FbxProperty<T>(T _value, FbxPropertyType _primitiveType) :
 	#region Properties
 
 	public override object Value => value!;
+
+	#endregion
+	#region Methods
+
+	public override string ToString() => $"{typeof(T).Name}={value}";
 
 	#endregion
 }

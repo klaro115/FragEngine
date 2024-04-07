@@ -77,9 +77,14 @@ internal sealed class FbxNode(string _name)
 	public override string ToString()
 	{
 		string propertyTxt = string.Empty;
-		if (PropertyCount == 1)
+		if (PropertyCount != 0)
 		{
-			propertyTxt = $", Value: \"{properties![0]}\"";
+			propertyTxt += $", Values: [ {properties![0]}";
+			for (int i = 1; i < PropertyCount; ++i)
+			{
+				propertyTxt += $", {properties![i]}";
+			}
+			propertyTxt += " ]";
 		}
 		return $"Node, Name: '{name}', Children: {ChildCount}, Properties: {PropertyCount}{propertyTxt}";
 	}

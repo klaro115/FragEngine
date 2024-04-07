@@ -9,7 +9,7 @@ public static class FbxImporter
 {
 	#region Methods
 
-	public static bool ImportModel(Stream _streamBytes, out MeshSurfaceData? _outMeshData)
+	public static bool ImportModel(Stream _streamBytes, out MeshSurfaceData? _outMeshData)		// INCOMPLETE!
 	{
 		if (_streamBytes is null || !_streamBytes.CanRead)
 		{
@@ -68,7 +68,7 @@ public static class FbxImporter
 
 		// Assemble basic vertex data:
 		while (
-			positionEnumerator.MoveNext() &&
+			positionEnumerator.MoveNext() &&			//TODO: This isn't quite right. Vertex count and position count are two different things and need to be remapped to actual vertices accordingly!
 			normalsEnumerator.MoveNext() &&
 			uvEnumerator.MoveNext())
 		{

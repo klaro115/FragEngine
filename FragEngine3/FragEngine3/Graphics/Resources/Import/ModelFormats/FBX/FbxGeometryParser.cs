@@ -1,6 +1,5 @@
 ﻿using FragEngine3.EngineCore;
 using System.Numerics;
-using Vortice.DXGI;
 
 namespace FragEngine3.Graphics.Resources.Import.ModelFormats.FBX;
 
@@ -33,10 +32,7 @@ internal static class FbxGeometryParser
 		for (int i = 0; i < positionCount; i++)
 		{
 			int positionIdx = 3 * i;
-			yield return new Vector3(
-				(float)vertices[positionIdx + 0],
-				(float)vertices[positionIdx + 1],
-				(float)vertices[positionIdx + 2]);
+			yield return ReadVector3FromArray(vertices, positionIdx);
 		}
 	}
 
@@ -66,7 +62,7 @@ internal static class FbxGeometryParser
 		// Same value across all vertices:
 		if (mappingType == FbxMappingType.AllSame)
 		{
-			Vector2 uv = new((float)uvCoords[0], (float)uvCoords[1]);
+			Vector2 uv = ReadVector2FromArray(uvCoords, 0);
 			for (int i = 0; i < uvCount; ++i)
 			{
 				yield return uv;
@@ -77,9 +73,7 @@ internal static class FbxGeometryParser
 		{
 			for (int i = 0; i < uvCount; ++i)
 			{
-				yield return new Vector2(
-					(float)uvCoords[2 * i + 0],
-					(float)uvCoords[2 * i + 1]);
+				yield return ReadVector2FromArray(uvCoords, 2 * i);
 			}
 		}
 		// Indexed values:
@@ -94,10 +88,8 @@ internal static class FbxGeometryParser
 			for (int i = 0; i < uvCount; i++)
 			{
 				int uvCoordIdx = 2 * uvIndices[i];
+				yield return ReadVector2FromArray(uvCoords, uvCoordIdx);
 
-				yield return new Vector2(
-					(float)uvCoords[uvCoordIdx + 0],
-					(float)uvCoords[uvCoordIdx + 1]);
 			}
 		}
 	}
@@ -128,12 +120,7 @@ internal static class FbxGeometryParser
 		// Same value across all vertices:
 		if (mappingType == FbxMappingType.AllSame)
 		{
-			NormalSpace normalSpace = new()
-			{
-				normal = new((float)normalCoords[0], (float)normalCoords[1], (float)normalCoords[2]),
-				binormal = new((float)normalCoords[3], (float)normalCoords[4], (float)normalCoords[5]),
-				tangent = new((float)normalCoords[6], (float)normalCoords[7], (float)normalCoords[8]),
-			};
+			NormalSpace normalSpace = ReadNormalSpaceFromArray(normalCoords, 0);
 			
 			for (int i = 0; i < normalCount; ++i)
 			{
@@ -145,25 +132,7 @@ internal static class FbxGeometryParser
 		{
 			for (int i = 0; i < normalCount; ++i)
 			{
-				Vector3 normal = new(
-					(float)normalCoords[9 * i + 0],
-					(float)normalCoords[9 * i + 1],
-					(float)normalCoords[9 * i + 2]);
-				Vector3 binormal = new(
-					(float)normalCoords[9 * i + 3],
-					(float)normalCoords[9 * i + 4],
-					(float)normalCoords[9 * i + 5]);
-				Vector3 tangent = new(
-					(float)normalCoords[9 * i + 6],
-					(float)normalCoords[9 * i + 7],
-					(float)normalCoords[9 * i + 8]);
-
-				yield return new NormalSpace()
-				{
-					normal = normal,
-					binormal = binormal,
-					tangent = tangent,
-				};
+				yield return ReadNormalSpaceFromArray(normalCoords, 9 * i);
 			}
 		}
 		// Indexed values:
@@ -178,28 +147,41 @@ internal static class FbxGeometryParser
 			for (int i = 0; i < normalCount; i++)
 			{
 				int uvCoordIdx = 9 * uvIndices[i];
-
-				Vector3 normal = new(
-					(float)normalCoords[uvCoordIdx + 0],
-					(float)normalCoords[uvCoordIdx + 1],
-					(float)normalCoords[uvCoordIdx + 2]);
-				Vector3 binormal = new(
-					(float)normalCoords[uvCoordIdx + 3],
-					(float)normalCoords[uvCoordIdx + 4],
-					(float)normalCoords[uvCoordIdx + 5]);
-				Vector3 tangent = new(
-					(float)normalCoords[uvCoordIdx + 6],
-					(float)normalCoords[uvCoordIdx + 7],
-					(float)normalCoords[uvCoordIdx + 8]);
-
-				yield return new NormalSpace()
-				{
-					normal = normal,
-					binormal = binormal,
-					tangent = tangent,
-				};
+				yield return ReadNormalSpaceFromArray(normalCoords, uvCoordIdx);
 			}
 		}
+	}
+
+	private static Vector2 ReadVector2FromArray(double[] _coordArray, int _vectorStartIdx)
+	{
+		return new(
+			(float)_coordArray[_vectorStartIdx + 0],
+			(float)_coordArray[_vectorStartIdx + 1]);
+	}
+	private static Vector3 ReadVector3FromArray(double[] _coordArray, int _vectorStartIdx)
+	{
+		return new(
+			(float)_coordArray[_vectorStartIdx + 0],
+			(float)_coordArray[_vectorStartIdx + 1],
+			(float)_coordArray[_vectorStartIdx + 2]);
+	}
+	private static NormalSpace ReadNormalSpaceFromArray(double[] _coordArray, int _normSpaceStartIdx)
+	{
+		return new()
+		{
+			normal = new(
+				(float)_coordArray[_normSpaceStartIdx + 0],
+				(float)_coordArray[_normSpaceStartIdx + 1],
+				(float)_coordArray[_normSpaceStartIdx + 2]),
+			binormal = new(
+				(float)_coordArray[_normSpaceStartIdx + 3],
+				(float)_coordArray[_normSpaceStartIdx + 4],
+				(float)_coordArray[_normSpaceStartIdx + 5]),
+			tangent = new(
+				(float)_coordArray[_normSpaceStartIdx + 6],
+				(float)_coordArray[_normSpaceStartIdx + 7],
+				(float)_coordArray[_normSpaceStartIdx + 8]),
+		};
 	}
 
 	private static bool FindMappingInfo(FbxNode _layerNode, out FbxMappingType _outMappingType, out FbxReferenceInfoType _outRefInfoType)
