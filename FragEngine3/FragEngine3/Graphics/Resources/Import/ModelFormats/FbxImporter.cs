@@ -57,7 +57,7 @@ public static class FbxImporter
 		}
 
 		// Triangle indices:
-		if (!FbxGeometryParser.GetTriangleIndices(geometryNode, out int[] indices32, out ushort[]? indices16))
+		if (!FbxGeometryParser.GetTriangleIndices(geometryNode, out int[] vertexIndices, out List<int> indices32, out ushort[]? indices16))
 		{
 			_outMeshData = null;
 			return false;
@@ -71,13 +71,13 @@ public static class FbxImporter
 		List<Vector2> uvs = FbxGeometryParser.GetVertexUVs(geometryNode, indices32);
 
 		// Assemble basic vertex data:
-		int vertexCount = indices32.Length;     //TEMP
+		int vertexCount = vertexIndices.Length;     //TEMP
 
 		BasicVertex[] vertsBasic = new BasicVertex[vertexCount];
 
 		for (int i = 0; i < vertexCount; ++i)
 		{
-			int positionIdx = indices32[i];
+			int positionIdx = vertexIndices[i];
 
 			vertsBasic[i] = new(positions[positionIdx], normals[i], uvs[i]);
 		}
@@ -94,7 +94,7 @@ public static class FbxImporter
 			verticesBasic = vertsBasic,
 			verticesExt = null,
 			indices16 = indices16,
-			indices32 = indices32,
+			indices32 = indices16 is not null ? indices32.ToArray() : null,
 		};
 		return true;
 	}

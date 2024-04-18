@@ -154,7 +154,7 @@ namespace FragEngine3.Graphics.Resources.Import
 
 			bool useFullVertexDef = _surfaceData.HasExtendedVertexData;
 
-			//TODO: Determine which mesh type to create, based on which data was provided.
+			//TODO [later]: Determine which mesh type to create, based on which data was provided.
 
 			// Create static mesh:
 			_outMesh = new StaticMesh(_handle, _core, useFullVertexDef);

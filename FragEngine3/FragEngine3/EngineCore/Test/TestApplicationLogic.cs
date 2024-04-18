@@ -79,7 +79,7 @@ public sealed class TestApplicationLogic : ApplicationLogic
 	protected override bool BeginRunningState()
 	{
 		// Import 3D models:
-		Engine.ResourceManager.GetAndLoadResource("Cube.obj", true, out _);
+		//Engine.ResourceManager.GetAndLoadResource("Cube.obj", true, out _);
 
 		Scene scene = Engine.SceneManager.MainScene!;
 		
@@ -277,6 +277,19 @@ public sealed class TestApplicationLogic : ApplicationLogic
 			plane.DontDrawUnlessFullyLoaded = true;
 		}
 
+		if (SceneSpawner.CreateStaticMeshRenderer(scene, out StaticMeshRenderer fbxRenderer))
+		{
+			fbxRenderer.node.Name = "FBX";
+			fbxRenderer.node.LocalPosition = new(0, 0, 1);
+			fbxRenderer.node.SetRotationFromYawPitchRoll(0, 90, 0, false, true);
+			fbxRenderer.node.LocalScale = Vector3.One * 0.5f;
+			//fbxRenderer.node.SetEnabled(false);
+
+			fbxRenderer.SetMesh("Cube.obj");
+			//fbxRenderer.SetMesh("Plane.fbx");
+			fbxRenderer.SetMaterial("Mtl_DefaultSurface");
+		}
+
 		// Create two-sided quad:
 		MeshSurfaceData quadData = new()
 		{
@@ -323,7 +336,7 @@ public sealed class TestApplicationLogic : ApplicationLogic
 
 		float deltaTime = (float)Engine.TimeManager.DeltaTime.TotalSeconds;
 
-		if (scene.FindNode("Rabbit", out SceneNode? rabbitNode) && rabbitNode != null)
+		if (scene.FindNode("Rabbit", out SceneNode? rabbitNode) && rabbitNode is not null)
 		{
 			float radPerSec = 2 * MathF.PI / 10;
 		
@@ -332,7 +345,7 @@ public sealed class TestApplicationLogic : ApplicationLogic
 			rabbitNode.LocalTransformation = localPose;
 		}
 
-		if (scene.FindNode("D20", out SceneNode? cubeNode) && cubeNode != null)
+		if (scene.FindNode("D20", out SceneNode? cubeNode) && cubeNode is not null)
 		{
 			float rotSpeed = deltaTime * 5;
 			Pose localPose = cubeNode.LocalTransformation;
@@ -341,6 +354,14 @@ public sealed class TestApplicationLogic : ApplicationLogic
 			localPose.position += new Vector3(inputIJKL.X, inputIJKL.Z, inputIJKL.Y) * deltaTime;
 			localPose.Rotate(Quaternion.CreateFromYawPitchRoll(inputWASD.X * rotSpeed, inputWASD.Y * rotSpeed, inputWASD.Z * rotSpeed));
 			cubeNode.LocalTransformation = localPose;
+		}
+
+		if (scene.FindNode("FBX", out SceneNode? fbxNode) && fbxNode is not null)
+		{
+			float rotSpeed = deltaTime * 3;
+			Pose localPose = fbxNode.LocalTransformation;
+			localPose.Rotate(Quaternion.CreateFromYawPitchRoll(0, rotSpeed, 0));
+			fbxNode.LocalTransformation = localPose;
 		}
 
 		// Camera controls:

@@ -36,7 +36,7 @@ internal static class FbxGeometryParser
 		return positions;
 	}
 
-	public static List<Vector2> GetVertexUVs(FbxNode _geometryNode, int[] _triangleIndices)
+	public static List<Vector2> GetVertexUVs(FbxNode _geometryNode, IList<int> _triangleIndices)
 	{
 		if (_geometryNode is null)
 		{
@@ -57,7 +57,7 @@ internal static class FbxGeometryParser
 
 		int uvCount = refInfoType == FbxReferenceInfoType.Direct
 			? uvCoords.Length / 2
-			: _triangleIndices.Length;
+			: _triangleIndices.Count;
 
 		List<Vector2> uvs = new(uvCount);
 
@@ -99,7 +99,7 @@ internal static class FbxGeometryParser
 		return uvs;
 	}
 
-	public static List<Vector3> GetVertexNormals(FbxNode _geometryNode, int[] _triangleIndices)
+	public static List<Vector3> GetVertexNormals(FbxNode _geometryNode, IList<int> _triangleIndices)
 	{
 		if (_geometryNode is null)
 		{
@@ -120,7 +120,7 @@ internal static class FbxGeometryParser
 
 		int normalCount = refInfoType == FbxReferenceInfoType.Direct
 			? normalCoords.Length / 3
-			: _triangleIndices.Length;
+			: _triangleIndices.Count;
 
 		List<Vector3> normals = new(normalCount);
 
@@ -163,35 +163,66 @@ internal static class FbxGeometryParser
 		return normals;
 	}
 
-	public static bool GetTriangleIndices(FbxNode _geometryNode, out int[] _outIndices32, out ushort[]? _outIndices16)
+	public static bool GetTriangleIndices(FbxNode _geometryNode, out int[] _outRawIndices, out List<int> _outIndices32, out ushort[]? _outIndices16)
 	{
 		_outIndices16 = null;
 		if (_geometryNode is null)
 		{
+			_outRawIndices = [];
 			_outIndices32 = [];
 			return false;
 		}
 
-		if (!FindAndUnpackArrayProperty(_geometryNode, FbxConstants.NODE_NAME_INDICES, out _outIndices32))
+		if (!FindAndUnpackArrayProperty(_geometryNode, FbxConstants.NODE_NAME_INDICES, out _outRawIndices))
 		{
 			Logger.Instance?.LogError("Could not find triangle indices in FBX document!");
+			_outRawIndices = [];
+			_outIndices32 = [];
 			return false;
 		}
 
-		// Negative indices indicate end of a polygon, discard sign:
-		for (int i = 0; i < _outIndices32.Length; ++i)
+		// Polygons may contain more than 3 vertices:
+		_outIndices32 = new(_outRawIndices.Length);
+		int polygonVertCount = 2;
+		for (int i = 2; i < _outRawIndices.Length; i++)
 		{
-			int index = _outIndices32[i];
-			if (index < 0)
+			polygonVertCount++;
+
+			int indexA = _outRawIndices[i];
+			if (indexA < 0)					// Note: Negative indices indicate end of a polygon.
 			{
-				_outIndices32[i] = Math.Abs(index) - 1;
+				indexA = -indexA - 1;
+				_outRawIndices[i] = indexA;
+
+				int indexB = _outRawIndices[i - 1];
+				int indexC = _outRawIndices[i - 2];
+				if (polygonVertCount == 4)
+				{
+					int indexD = _outRawIndices[i - 3];
+
+					_outIndices32.Add(indexD);
+					_outIndices32.Add(indexC);
+					_outIndices32.Add(indexA);
+
+					_outIndices32.Add(indexD);
+					_outIndices32.Add(indexA);
+					_outIndices32.Add(indexB);
+				}
+				else
+				{
+					_outIndices32.Add(indexC);
+					_outIndices32.Add(indexB);
+					_outIndices32.Add(indexA);
+				}
+
+				polygonVertCount = 0;
 			}
 		}
 
-		if (_outIndices32.Length <= ushort.MaxValue)
+		if (_outIndices32.Count <= ushort.MaxValue)
 		{
-			_outIndices16 = new ushort[_outIndices32.Length];
-			for (int i = 0; i < _outIndices32.Length; i++)
+			_outIndices16 = new ushort[_outIndices32.Count];
+			for (int i = 0; i < _outIndices32.Count; i++)
 			{
 				_outIndices16[i] = (ushort)_outIndices32[i];
 			}

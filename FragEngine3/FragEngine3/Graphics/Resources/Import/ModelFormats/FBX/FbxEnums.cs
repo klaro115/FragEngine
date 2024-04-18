@@ -1,6 +1,4 @@
-﻿using System.Numerics;
-
-namespace FragEngine3.Graphics.Resources.Import.ModelFormats.FBX;
+﻿namespace FragEngine3.Graphics.Resources.Import.ModelFormats.FBX;
 
 internal enum FbxPropertyType
 {
