@@ -38,6 +38,7 @@
     <None Remove="Graphics\Resources\Import\" />
     <None Remove="EngineCore\Logging\" />
     <None Remove="Utility\Unicode\" />
+    <None Remove="Graphics\Resources\Import\ModelFormats\FBX\" />
   </ItemGroup>
   <ItemGroup>
     <Folder Include="Graphics\Config\" />

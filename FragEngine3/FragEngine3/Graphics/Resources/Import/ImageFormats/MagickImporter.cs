@@ -187,7 +187,7 @@ public static class MagickImporter
 		// RGBA32:
 		else if (_rawImage.channelCount == 4)
 		{
-			return ReadPixelData_RGB24(_pixelColl, _rawImage);
+			return ReadPixelData_RGBA32(_pixelColl, _rawImage);
 		}
 
 		return false;

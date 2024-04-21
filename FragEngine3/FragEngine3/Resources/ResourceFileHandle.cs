@@ -187,10 +187,9 @@ namespace FragEngine3.Resources
 
 			// Try reading all resource data via a stream:
 			Stream? stream = null;
-			ulong streamLength = 0;
 			try
 			{
-				if (!TryOpenDataStream(_engineSystem, _handle.dataOffset, _handle.dataSize, out stream, out streamLength))
+				if (!TryOpenDataStream(_engineSystem, _handle.dataOffset, _handle.dataSize, out stream, out ulong streamLength))
 				{
 					Logger.Instance?.LogError($"Failed to open data stream of file handle '{Key}' at data offset {_handle.dataOffset} and data size {_handle.dataSize}!");
 					_outBytes = [];

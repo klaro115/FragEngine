@@ -3,6 +3,7 @@ using FragEngine3.Graphics.Cameras;
 using FragEngine3.Graphics.Components.Data;
 using FragEngine3.Graphics.Components.Internal;
 using FragEngine3.Graphics.Contexts;
+using FragEngine3.Graphics.Lighting;
 using FragEngine3.Scenes;
 using FragEngine3.Scenes.Data;
 using FragEngine3.Scenes.EventSystem;
@@ -18,6 +19,7 @@ public sealed class Camera : Component
 	public Camera(SceneNode _node) : base(_node)
 	{
 		instance = new(node.scene.engine.GraphicsSystem.graphicsCore);
+		LightDataBuffer = new(instance.graphicsCore, 1);
 
 		node.scene.drawManager.RegisterCamera(this);
 	}
@@ -30,9 +32,6 @@ public sealed class Camera : Component
 	// Content:
 	public uint cameraPriority = 1000;
 	public uint layerMask = 0xFFFFu;
-
-	// Scene & Lighting:
-	private DeviceBuffer? bufLights = null;
 
 	// Render targets:
 	private readonly Dictionary<RenderMode, CameraTarget> targetDict = new(4);
@@ -90,6 +89,9 @@ public sealed class Camera : Component
 		set => instance.ClearingSettings = value;
 	}
 
+	// Scene & Lighting:
+	public LightDataBuffer LightDataBuffer { get; private set; }
+
 	/// <summary>
 	/// Gets or sets whether this camera is the engine's main camera.
 	/// </summary>
@@ -139,7 +141,7 @@ public sealed class Camera : Component
 			passRes.Dispose();
 		}
 
-		bufLights?.Dispose();
+		LightDataBuffer?.Dispose();
 
 		if (_disposing)
 		{
@@ -147,8 +149,6 @@ public sealed class Camera : Component
 			overrideTarget = null;
 			passResourcePool.Clear();
 			passResourcesInUse.Clear();
-
-			bufLights = null;
 		}
 	}
 
@@ -164,7 +164,7 @@ public sealed class Camera : Component
 		IsMainCamera = false;
 
 		// Purge dynamically allocated resources:
-		bufLights?.Dispose();
+		LightDataBuffer?.Dispose();
 
 		overrideTarget = null;
 		foreach (var kvp in targetDict)
@@ -295,7 +295,7 @@ public sealed class Camera : Component
 		return true;
 	}
 
-	public bool BeginFrame(uint _activeLightCount, bool _allowResizeBufLights, out bool _outRebuildResSetCamera)
+	public bool BeginFrame(uint _activeLightCount, out bool _outRebuildResSetCamera)
 	{
 		_outRebuildResSetCamera = false;
 		if (IsDisposed)
@@ -309,15 +309,17 @@ public sealed class Camera : Component
 			return false;
 		}
 
-		// Create or resize light data buffer:
-		if (_allowResizeBufLights && !CameraUtility.CreateOrResizeLightDataBuffer(
-			in instance.graphicsCore,
-			_activeLightCount,
-			ref bufLights,
-			out _outRebuildResSetCamera))
+		// Create light data buffer:
+		if (LightDataBuffer == null || LightDataBuffer.IsDisposed)
+		{
+			LightDataBuffer = new(instance.graphicsCore, _activeLightCount);
+			_outRebuildResSetCamera = true;
+		}
+		if (!LightDataBuffer.PrepareBufLights(_activeLightCount, out bool recreatedLightDataBuffer))
 		{
 			return false;
 		}
+		_outRebuildResSetCamera |= recreatedLightDataBuffer;
 
 		// Calculate camera transformation/movement since last frame:
 		{
@@ -443,8 +445,9 @@ public sealed class Camera : Component
 			in instance.graphicsCore,
 			in _sceneCtx,
 			in passResources.cbCamera,
-			in bufLights!,
+			LightDataBuffer,
 			ref passResources.resSetCamera,
+			out bool _,
 			_rebuildResSetCamera))
 		{
 			Logger.LogError("Failed to allocate or update camera's default resource set!");
@@ -459,10 +462,9 @@ public sealed class Camera : Component
 			activeFramebuffer,
 			passResources.resSetCamera!,
 			passResources.cbCamera,
-			bufLights!,
+			LightDataBuffer!,
 			FrameCounter,
 			PassCounter,
-			_activeLightCount,
 			_shadowMappedLightCount,
 			in mtxWorld2Clip);
 		return true;
@@ -484,28 +486,6 @@ public sealed class Camera : Component
 		PassCounter++;
 
 		return instance.EndDrawing();
-	}
-
-	public bool GetLightDataBuffer(uint _activeLightCount, out DeviceBuffer? _outBufLights, out bool _outBufLightsHasChanged)
-	{
-		if (IsDisposed)
-		{
-			_outBufLights = null;
-			_outBufLightsHasChanged = false;
-			return false;
-		}
-
-		if (!CameraUtility.CreateOrResizeLightDataBuffer(
-			in instance.graphicsCore,
-			_activeLightCount,
-			ref bufLights,
-			out _outBufLightsHasChanged))
-		{
-			_outBufLights = null;
-			return false;
-		}
-		_outBufLights = bufLights;
-		return true;
 	}
 
 	public override bool LoadFromData(in ComponentData _componentData, in Dictionary<int, ISceneElement> _idDataMap)

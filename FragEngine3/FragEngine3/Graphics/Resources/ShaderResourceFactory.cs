@@ -14,7 +14,7 @@ public static class ShaderResourceFactory
 {
 	#region Constants
 
-	private const string shaderGenFlagsStart = $"{ShaderGenConstants.shaderGenImportFlag}='";
+	private const string shaderGenPrefix = $"{ShaderGenConstants.shaderGenPrefix}='";
 
 	#endregion
 	#region Methods
@@ -102,6 +102,13 @@ public static class ShaderResourceFactory
 			_outShaderRes = null;
 			return false;
 		}
+		// Don't do anything if the resource has already been loaded:
+		if (_handle.IsLoaded)
+		{
+			_outShaderRes = _handle.GetResource(false, false) as ShaderResource;
+			return true;
+		}
+
 		if (_handle.resourceManager == null || _handle.resourceManager.IsDisposed)
 		{
 			Logger.Instance?.LogError("Cannot create shader resource using null or disposed resource manager!");
@@ -124,28 +131,14 @@ public static class ShaderResourceFactory
 			return false;
 		}
 
-		// Don't do anything if the resource has already been loaded:
-		if (_handle.IsLoaded)
-		{
-			_outShaderRes = _handle.GetResource(false, false) as ShaderResource;
-			return true;
-		}
-
-		// Check if import flags contain a ShaderGen flag:
-		int shaderGenFlagsIdx = !string.IsNullOrEmpty(_handle.importFlags)
-			? _handle.importFlags.IndexOf(shaderGenFlagsStart)
-			: -1;
-
-		// ShaderGen flag present? Create shader code procedurally:
-		if (shaderGenFlagsIdx >= 0)
+		// Check if this is a ShaderGen standard shader:
+		if (_handle.resourceKey.StartsWith(shaderGenPrefix, StringComparison.OrdinalIgnoreCase))
 		{
 			return CreateShaderFromShaderGen(
 				_graphicsCore,
 				_handle.resourceKey,
 				_stage,
 				_entryPoint,
-				_handle.importFlags!,
-				shaderGenFlagsIdx,
 				out _outShaderRes);
 		}
 		// Normal imported shader? Load shader code from resource file:
@@ -204,51 +197,37 @@ public static class ShaderResourceFactory
 		string _resourceKey,
 		ShaderStages _stage,
 		string _entryPoint,
-		string _importFlags,
-		int _importStartIdx,
 		out ShaderResource? _outShaderRes)
 	{
 		Logger logger = _graphicsCore.graphicsSystem.engine.Logger ?? Logger.Instance!;
 
-		// Extract configuration description text from import flags string:
-		if (_importFlags[0] == ShaderGenConstants.shaderGenImportFlag[0])
-		{
-			_importStartIdx += shaderGenFlagsStart.Length;
-		}
-		int shaderGenEndIdx = _importFlags.IndexOf('\'', _importStartIdx + shaderGenFlagsStart.Length);
-		if (shaderGenEndIdx <= _importStartIdx + 1)
-		{
-			logger.LogError($"Failed to locate ShaderGen configuration description in import flags of resource '{_resourceKey}'!");
-			_outShaderRes = null;
-			return false;
-		}
+		ShaderGenConfig config;
 
-		int configTxtLength = shaderGenEndIdx - _importStartIdx;
-		string configDescTxt = _importFlags.Substring(_importStartIdx, configTxtLength);
-
-		// Try to parse the configuration string describing the required shader features:
-		if (!ShaderGenConfig.TryParseDescriptionTxt(configDescTxt, out ShaderGenConfig config))
+		if (_resourceKey.Length <= shaderGenPrefix.Length)
 		{
-			logger.LogError($"Failed to parse ShaderGen configuration description for resource '{_resourceKey}'!");
-			_outShaderRes = null;
-			return false;
+			config = ShaderGenConfig.ConfigWhiteLit;
+		}
+		else
+		{
+			string configDescTxt = _resourceKey[shaderGenPrefix.Length..];
+
+			// Try to parse the configuration string describing the required shader features:
+			if (!ShaderGenConfig.TryParseDescriptionTxt(configDescTxt, out config))
+			{
+				logger.LogError($"Failed to parse ShaderGen configuration description for resource '{_resourceKey}'!");
+				_outShaderRes = null;
+				return false;
+			}
 		}
 
 		// Try to generate shader code from parsed configuration:
 		EnginePlatformFlag platformFlags = _graphicsCore.graphicsSystem.engine.PlatformSystem.PlatformFlags;
-		if (!ShaderGenerator.CreatePixelShaderVariation(_graphicsCore.graphicsSystem.engine.ResourceManager, in config, platformFlags, out string shaderCode))
+		if (!ShaderGenerator.CreatePixelShaderVariation(_graphicsCore.graphicsSystem.engine.ResourceManager, in config, platformFlags, out byte[] shaderCodeBytes))
 		{
-			logger.LogError($"Failed to generate default shader code resource '{_resourceKey}' using config '{configDescTxt}'!");
+			logger.LogError($"Failed to generate default shader code resource '{_resourceKey}'!");
 			_outShaderRes = null;
 			return false;
 		}
-
-		byte[] shaderCodeBytes = new byte[shaderCode.Length + 1];
-		for (int i = 0; i < shaderCode.Length; i++)
-		{
-			shaderCodeBytes[i] = (byte)shaderCode[i];
-		}
-		shaderCodeBytes[^1] = (byte)'\0';
 
 		// Compile shader from UTF-8 code bytes:
 		return CreateShaderFromCodeBytes(

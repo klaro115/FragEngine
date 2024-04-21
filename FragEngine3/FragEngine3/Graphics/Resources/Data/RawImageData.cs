@@ -10,6 +10,19 @@ namespace FragEngine3.Graphics.Resources.Data
 	/// </summary>
 	public sealed class RawImageData
 	{
+		#region Types
+
+		private readonly struct MipMapLevelSize(int _resX, int _resY, int _pixelStartIdx, int _pixelCount)
+		{
+			public readonly int resX = _resX;
+			public readonly int resY = _resY;
+			public readonly int pixelStartIdx = _pixelStartIdx;
+			public readonly int pixelCount = _pixelCount;
+		}
+
+		private delegate T FuncAverage2x2<T>(T _a, T _b, T _c, T _d) where T : unmanaged;
+
+		#endregion
 		#region Fields
 
 		// Image & format parameters:
@@ -19,6 +32,7 @@ namespace FragEngine3.Graphics.Resources.Data
 		public uint bitsPerPixel = 32;
 		public uint channelCount = 4;
 		public bool isSRgb = true;
+		public byte mipmaps = 0;
 
 		// Pixel data arrays:
 		public byte[]? pixelData_MonoByte = null;
@@ -62,6 +76,7 @@ namespace FragEngine3.Graphics.Resources.Data
 			bitsPerPixel = 0,
 			channelCount = 0,
 			isSRgb = false,
+			mipmaps = 0,
 
 			pixelData_MonoByte = null,
 			pixelData_MonoFloat = null,
@@ -394,6 +409,164 @@ namespace FragEngine3.Graphics.Resources.Data
 				}
 				return cropped;
 			}
+		}
+
+		/// <summary>
+		/// Generate mip map pixel data and append it to the image's pixels.
+		/// </summary>
+		/// <param name="_levels">The number of LOD levels we want. For values of 1 or lower, no mip maps are generated.</param>
+		/// <returns>True if mip maps were created successfully, false if any of the pixel data arrays are invalid.</returns>
+		public bool GenerateMipMaps(int _levels)
+		{
+			if (_levels <= 1)
+			{
+				return true;
+			}
+			if (mipmaps > 1)
+			{
+				Logger.Instance?.LogWarning("Raw image data already has mipmaps; are you sure you want to create them twice?");
+			}
+
+			// Do not exceed maximum number of LODs:
+			int maxLevelCount = (int)MathF.Log2(Math.Max(width, height));
+			_levels = Math.Min(_levels, maxLevelCount);
+			if (_levels <= 1)
+			{
+				return true;
+			}
+
+			// Calculate size and offset of each mip level:
+			MipMapLevelSize[] levelSizes = new MipMapLevelSize[_levels];
+			int mipmappedPixelCount = 0;
+			{
+				int resX = (int)width;
+				int resY = (int)height;
+
+				for (uint i = 0; i < _levels; i++)
+				{
+					int levelStartIdx = mipmappedPixelCount;
+					int levelPixelCount = resX * resY;
+					mipmappedPixelCount += levelPixelCount;
+
+					levelSizes[i] = new(resX, resY, levelStartIdx, levelPixelCount);
+
+					resX = Math.Max(resX / 2, 1);
+					resY = Math.Max(resY / 2, 1);
+				}
+			}
+
+			bool success = true;
+
+			// Iteratively generate pixel data for each LOD:
+			if (pixelData_MonoByte != null)
+			{
+				success &= GenerateMipMaps(_levels, ref pixelData_MonoByte, levelSizes, mipmappedPixelCount, FuncAverage_MonoByte);
+			}
+			if (pixelData_MonoFloat != null)
+			{
+				success &= GenerateMipMaps(_levels, ref pixelData_MonoFloat, levelSizes, mipmappedPixelCount, FuncAverage_MonoFloat);
+			}
+			if (pixelData_RgbaByte != null)
+			{
+				success &= GenerateMipMaps(_levels, ref pixelData_RgbaByte, levelSizes, mipmappedPixelCount, FuncAverage_RgbaByte);
+			}
+			if (pixelData_RgbaFloat != null)
+			{
+				success &= GenerateMipMaps(_levels, ref pixelData_RgbaFloat, levelSizes, mipmappedPixelCount, FuncAverage_RgbaFloat);
+			}
+
+			mipmaps = (byte)_levels;
+			return true;
+
+
+			// Helper functions for calculating the average color value of a 2x2 pixel block:
+			static byte FuncAverage_MonoByte(byte _a, byte _b, byte _c, byte _d)
+			{
+				return (byte)((_a + _b + _c + _d) >> 2);
+			}
+			static float FuncAverage_MonoFloat(float _a, float _b, float _c, float _d)
+			{
+				return (_a + _b + _c + _d) * 0.25f;
+			}
+			static RgbaByte FuncAverage_RgbaByte(RgbaByte _a, RgbaByte _b, RgbaByte _c, RgbaByte _d)
+			{
+				return new(
+					(byte)((_a.R + _b.R + _c.R + _d.R) >> 2),
+					(byte)((_a.G + _b.G + _c.G + _d.G) >> 2),
+					(byte)((_a.B + _b.B + _c.B + _d.B) >> 2),
+					(byte)((_a.A + _b.A + _c.A + _d.A) >> 2));
+			}
+			static RgbaFloat FuncAverage_RgbaFloat(RgbaFloat _a, RgbaFloat _b, RgbaFloat _c, RgbaFloat _d)
+			{
+				return new(
+					(_a.R + _b.R + _c.R + _d.R) * 0.25f,
+					(_a.G + _b.G + _c.G + _d.G) * 0.25f,
+					(_a.B + _b.B + _c.B + _d.B) * 0.25f,
+					(_a.A + _b.A + _c.A + _d.A) * 0.25f);
+			}
+		}
+
+		private bool GenerateMipMaps<T>(int _levels, ref T[] _pixels, MipMapLevelSize[] _levelSizes, int _mipmappedPixelCount, FuncAverage2x2<T> _funcAverage) where T : unmanaged
+		{
+			if (_levels <= 1)
+			{
+				return true;
+			}
+			if (mipmaps > 1)
+			{
+				Logger.Instance?.LogWarning("Raw image data already has mipmaps; are you sure you want to create them twice?");
+			}
+			if (_pixels == null || _pixels.Length < width * height)
+			{
+				Logger.Instance?.LogError("Pixel data array has invalid size for mip map calculation!");
+				return false;
+			}
+
+			T[] mipmappedPixels = new T[_mipmappedPixelCount];
+			_pixels.CopyTo(mipmappedPixels, 0);
+
+			// For each pixel in smaller level, average colors of a 2x2 quad on the next larger level:
+			int prevResX = (int)width;
+			Span<T> prevLevelPixels = _pixels.AsSpan(0, (int)(width * height));
+			for (uint i = 1; i < _levels; i++)
+			{
+				MipMapLevelSize levelSize = _levelSizes[i];
+				Span<T> levelPixels = mipmappedPixels.AsSpan(levelSize.pixelStartIdx, levelSize.pixelCount);
+
+				int resX = levelSize.resX;
+				int resY = levelSize.resY;
+				for (int y = 0; y < resY; ++y)
+				{
+					int srcY0 = 2 * y;
+					int srcY1 = srcY0 + 1;
+					srcY0 *= prevResX;
+					srcY1 *= prevResX;
+
+					for (int x = 0; x < resX; ++x)
+					{
+						int srcX0 = 2 * x;
+						int srcX1 = srcX0 + 1;
+
+						int dstIndex = y * resX + x;
+
+						// Sample 2x2 pixels from larger level:
+						T srcPixel00 = prevLevelPixels[srcY0 + srcX0];
+						T srcPixel01 = prevLevelPixels[srcY0 + srcX1];
+						T srcPixel10 = prevLevelPixels[srcY1 + srcX0 ];
+						T srcPixel11 = prevLevelPixels[srcY1 + srcX1];
+
+						// Calculate arithmetic average of 4 pixels to form smaller level's pixel value:
+						T dstPixel = _funcAverage(srcPixel00, srcPixel01, srcPixel10, srcPixel11);
+						levelPixels[dstIndex] = dstPixel;
+					}
+				}
+
+				prevResX = resX;
+				prevLevelPixels = levelPixels;
+			}
+
+			_pixels = mipmappedPixels;
+			return true;
 		}
 
 		public TextureDescription CreateTextureDescription()

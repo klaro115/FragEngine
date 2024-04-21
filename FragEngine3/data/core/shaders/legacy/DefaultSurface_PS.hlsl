@@ -62,14 +62,14 @@ struct Light
 StructuredBuffer<Light> BufLights : register(ps, t0);   // Buffer containing an array of light source data. Number of lights is given in 'CBGlobal.lightCount'.
 
 Texture2DArray<half> TexShadowMaps : register(ps, t1);
-StructuredBuffer<float4x4> BufShadowMatrices : register(ps, t2);
+StructuredBuffer<float4x4> BufShadowMatrices : register(ps, t3);
 SamplerState SamplerShadowMaps : register(ps, s0);
 
 // ResSetBound:
 
-Texture2D<half4> TexMain : register(ps, t3);
-Texture2D<half3> TexNormal : register(ps, t4);
-Texture2D<half3> TexLightmap : register(ps, t5);
+Texture2D<half4> TexMain : register(ps, t4);
+Texture2D<half3> TexNormal : register(ps, t5);
+Texture2D<half3> TexLightmap : register(ps, t6);
 SamplerState SamplerMain : register(s1);
 
 /**************** VERTEX OUTPUT: ***************/

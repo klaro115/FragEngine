@@ -1,6 +1,7 @@
 ﻿using FragEngine3.EngineCore;
 using FragEngine3.Graphics.Resources.Data;
 using FragEngine3.Graphics.Resources.Import.ImageFormats;
+using FragEngine3.Graphics.Resources.Import.Utility;
 using FragEngine3.Resources;
 
 namespace FragEngine3.Graphics.Resources.Import
@@ -82,31 +83,8 @@ namespace FragEngine3.Graphics.Resources.Import
 				stream?.Close();
 			}
 
-			// Check for further pre-processing instructions in import flags:
-			if (_outImageData != null && !string.IsNullOrEmpty(_handle.importFlags))
-			{
-				// Flip image row order: (mirrors contents vertically)
-				if (_handle.importFlags.Contains("mirrorY", StringComparison.Ordinal))
-				{
-					_outImageData.MirrorVertically();
-				}
-				// Normals are using D3D standard, convert to OpenGL standard: (inverts green color value)
-				if (_handle.importFlags.Contains("normalsDX", StringComparison.Ordinal))
-				{
-					_outImageData.ConvertNormalMapDxAndGL();
-				}
-				// Dimensions need padding to next higher power-of-two value: (pads content with black pixels)
-				if (_handle.importFlags.Contains("padPowerOf2", StringComparison.Ordinal))
-				{
-					_outImageData.PadSizeToNextPowerOfTwo();
-				}
-				// Dimensions need padding to next higher power-of-two value: (pads content with black pixels)
-				if (_handle.importFlags.Contains("sRgbToLinear", StringComparison.Ordinal))
-				{
-					_outImageData.ConvertSRgbToLinearColorSpace();
-				}
-			}
-			return true;
+			// Check for further pre-processing instructions in import flags, then return result:
+			return ImageImportFlagParser.ApplyImportFlags(_outImageData!, _handle.importFlags);
 		}
 
 		public static bool ImportImageData(

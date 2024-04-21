@@ -48,15 +48,6 @@
             {
                 "ResourceKey": "",
                 "SlotName": "TexSceneColor",
-                "SlotIndex": 3,
-                "ResourceKind": 3,
-                "ShaderStageFlags": 16,
-                "Description": null,
-                "IsBoundBySystem": true
-            },
-            {
-                "ResourceKey": "",
-                "SlotName": "TexSceneDepth",
                 "SlotIndex": 4,
                 "ResourceKind": 3,
                 "ShaderStageFlags": 16,
@@ -65,8 +56,17 @@
             },
             {
                 "ResourceKey": "",
-                "SlotName": "TexUIColor",
+                "SlotName": "TexSceneDepth",
                 "SlotIndex": 5,
+                "ResourceKind": 3,
+                "ShaderStageFlags": 16,
+                "Description": null,
+                "IsBoundBySystem": true
+            },
+            {
+                "ResourceKey": "",
+                "SlotName": "TexUIColor",
+                "SlotIndex": 6,
                 "ResourceKind": 3,
                 "ShaderStageFlags": 16,
                 "Description": null,

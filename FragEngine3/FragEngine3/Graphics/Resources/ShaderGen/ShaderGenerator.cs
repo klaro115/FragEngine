@@ -1,5 +1,6 @@
 ﻿using FragEngine3.EngineCore;
 using FragEngine3.Resources;
+using FragEngine3.Utility;
 using System.Text;
 using Veldrid;
 
@@ -12,21 +13,16 @@ public static class ShaderGenerator
 	private static string templateCodePS = string.Empty;
 
 	#endregion
-	#region Constants
-
-	public const string MODULAR_SURFACE_SHADER_PS_NAME_BASE = "DefaultSurface_modular_PS";
-
-	#endregion
 	#region Methods
 
-	public static bool CreatePixelShader(ResourceManager _resourceManager, EnginePlatformFlag _platformFlags, out string _outShaderCode)
+	public static bool CreatePixelShader(ResourceManager _resourceManager, EnginePlatformFlag _platformFlags, out byte[] _outShaderCode)
 	{
 		ShaderGenConfig config = ShaderGenConfig.ConfigWhiteLit;
 
 		return CreatePixelShaderVariation(_resourceManager, config, _platformFlags, out _outShaderCode);
 	}
 
-	public static bool CreatePixelShaderVariation(ResourceManager _resourceManager, in ShaderGenConfig _config, EnginePlatformFlag _platformFlags, out string _outShaderCode)
+	public static bool CreatePixelShaderVariation(ResourceManager _resourceManager, in ShaderGenConfig _config, EnginePlatformFlag _platformFlags, out byte[] _outShaderCode)
 	{
 		// Only load template code file once, cached code is used for all subsequent shader imports:
 		if (string.IsNullOrEmpty(templateCodePS))
@@ -43,15 +39,15 @@ public static class ShaderGenerator
 			// Determine name and extension for template shader code file:
 			string templateFileName = language switch
 			{
-				ShaderGenLanguage.HLSL => $"{MODULAR_SURFACE_SHADER_PS_NAME_BASE}.hlsl",
-				ShaderGenLanguage.Metal => $"{MODULAR_SURFACE_SHADER_PS_NAME_BASE}.metal",
-				ShaderGenLanguage.GLSL => $"{MODULAR_SURFACE_SHADER_PS_NAME_BASE}.glsl",
+				ShaderGenLanguage.HLSL => $"{ShaderGenConstants.MODULAR_SURFACE_SHADER_PS_NAME_BASE}.hlsl",
+				ShaderGenLanguage.Metal => $"{ShaderGenConstants.MODULAR_SURFACE_SHADER_PS_NAME_BASE}.metal",
+				ShaderGenLanguage.GLSL => $"{ShaderGenConstants.MODULAR_SURFACE_SHADER_PS_NAME_BASE}.glsl",
 				_ => string.Empty,
 			};
 			if (string.IsNullOrEmpty(templateFileName))
 			{
 				_resourceManager.engine.Logger.LogError($"Cannot load default pixel shader template code; file name could not be found! (Shader language: '{language}')");
-				_outShaderCode = string.Empty;
+				_outShaderCode = [];
 				return false;
 			}
 
@@ -63,7 +59,7 @@ public static class ShaderGenerator
 			if (!File.Exists(templateFilePath))
 			{
 				_resourceManager.engine.Logger.LogError($"Template code file for default pixel shader could not be found! (File path: '{templateFilePath}')");
-				_outShaderCode = string.Empty;
+				_outShaderCode = [];
 				return false;
 			}
 
@@ -75,7 +71,7 @@ public static class ShaderGenerator
 			catch (Exception ex)
 			{
 				_resourceManager.engine.Logger.LogException($"Failed to read template code file for default pixel shader! (File path: '{templateFilePath}')", ex);
-				_outShaderCode = string.Empty;
+				_outShaderCode = [];
 				return false;
 			}
 		}
@@ -146,14 +142,28 @@ public static class ShaderGenerator
 					$"#define FEATURE_LIGHT_MODEL {_config.lightingModel}",
 					definesMaxEndIdx);
 			}
+			Range indirectLineIndices = codeBuilder.GetFirstLineIndicesOf("#define FEATURE_LIGHT_INDIRECT");
+			if (indirectLineIndices.Start.Value >= 0)
+			{
+				codeBuilder.Remove(indirectLineIndices);
+				if (_config.indirectLightResolution > 1)
+				{
+					codeBuilder.Insert(indirectLineIndices.Start.Value, $"#define FEATURE_LIGHT_INDIRECT {_config.indirectLightResolution}\n");
+				}
+			}
 			if (!_config.applyLighting)
 			{
-				RemoveDefine(codeBuilder, "#define FEATURE_LIGHT", definesMaxEndIdx);
+				codeBuilder.RemoveAllLines("#define FEATURE_LIGHT");
 			}
 		}
 
 		// Output updated shader code and return success:
-		_outShaderCode = codeBuilder.ToString();
+		_outShaderCode = new byte[codeBuilder.Length + 1];
+		for (int i = 0; i < codeBuilder.Length; ++i)
+		{
+			_outShaderCode[i] = (byte)codeBuilder[i];
+		}
+		_outShaderCode[^1] = (byte)'\0';
 		return true;
 	}
 

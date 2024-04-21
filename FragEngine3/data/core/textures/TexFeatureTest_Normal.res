@@ -16,7 +16,7 @@
             "DataSize": 0,
             "DependencyCount": 0,
             "Dependencies": null,
-            "ImportFlags": "normalsDX"
+            "ImportFlags": "normalsDX;mipmap=3"
         }
     ]
 }

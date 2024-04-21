@@ -33,7 +33,7 @@
         "Geometry": "",
         "TesselationCtrl": "",
         "TesselationEval": "",
-        "Pixel": "DefaultSurface_PS"
+        "Pixel": "ShaderGen='At_Nyn0_Ly101p10'_PS"
     },
     "Replacements":
     {
@@ -46,9 +46,9 @@
         "BoundResources":
         [
             {
-                "ResourceKey": "TexFlauschi512",
+                "ResourceKey": "TexWhite",
                 "SlotName": "TexMain",
-                "SlotIndex": 3,
+                "SlotIndex": 4,
                 "ResourceKind": 3,
                 "ShaderStageFlags": 16,
                 "Description": null,
@@ -57,7 +57,7 @@
             {
                 "ResourceKey": "TexFeatureTest_Normal",
                 "SlotName": "TexNormal",
-                "SlotIndex": 4,
+                "SlotIndex": 5,
                 "ResourceKind": 3,
                 "ShaderStageFlags": 16,
                 "Description": null,
@@ -66,7 +66,7 @@
             {
                 "ResourceKey": "TexWhite",
                 "SlotName": "TexLightmap",
-                "SlotIndex": 5,
+                "SlotIndex": 6,
                 "ResourceKind": 3,
                 "ShaderStageFlags": 16,
                 "Description": null,

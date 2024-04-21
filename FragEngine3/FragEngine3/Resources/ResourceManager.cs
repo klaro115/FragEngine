@@ -541,7 +541,7 @@ namespace FragEngine3.Resources
 			// Abort and reset load state if import has failed:
 			if (!success)
 			{
-				engine.Logger.LogError($"Failed to load resource '{_handle}'!");
+				engine.Logger.LogError($"Failed to load resource \"{_handle}\"!");
 				lock (resourceLockObj)
 				{
 					_handle.LoadState = ResourceLoadState.NotLoaded;
@@ -558,7 +558,7 @@ namespace FragEngine3.Resources
 				_handle.LoadState = ResourceLoadState.Loaded;
 			}
 
-			engine.Logger.LogMessage($" * Loaded resource: '{_handle}' ({loadDurationMs}ms)");
+			engine.Logger.LogMessage($" * Loaded resource: \"{_handle}\" ({loadDurationMs}ms)");
 			return true;
 		}
 

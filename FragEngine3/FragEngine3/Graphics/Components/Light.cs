@@ -1,9 +1,8 @@
-﻿using FragEngine3.Graphics.Cameras;
-using FragEngine3.Graphics.Components.ConstantBuffers;
-using FragEngine3.Graphics.Components.Data;
-using FragEngine3.Graphics.Components.Internal;
+﻿using FragEngine3.Graphics.Components.Data;
 using FragEngine3.Graphics.Contexts;
-using FragEngine3.Graphics.Utility;
+using FragEngine3.Graphics.Lighting;
+using FragEngine3.Graphics.Lighting.Data;
+using FragEngine3.Graphics.Lighting.Instances;
 using FragEngine3.Scenes;
 using FragEngine3.Scenes.Data;
 using FragEngine3.Scenes.EventSystem;
@@ -13,35 +12,8 @@ using Veldrid;
 
 namespace FragEngine3.Graphics.Components
 {
-	public sealed class Light : Component
+    public sealed class Light : Component			//TODO: Consider splitting this into different components based on type.
 	{
-		#region Types
-
-		/// <summary>
-		/// Enumeration of different supported light types.
-		/// This dictates how a light works, in which direction and from which origin light rays are cast.
-		/// </summary>
-		public enum LightType : uint
-		{
-			/// <summary>
-			/// Point-shaped light source. All light rays are cast uniformely in all directions, starting
-			/// from a single point.
-			/// </summary>
-			Point			= 0,
-			/// <summary>
-			/// Cone-shaped light source. All light rays are cast from a single point and in one general
-			/// direction, with rays distributed evenly across a given angle.
-			/// </summary>
-			Spot			= 1,
-			/// <summary>
-			/// Directional sun-like light source. Light rays are cast following a single direction across
-			/// the entire world space. The light does not attenuate over increasing distances, and is not
-			/// tied to the source's position.
-			/// </summary>
-			Directional		= 2,
-		}
-
-		#endregion
 		#region Constructors
 
 		/// <summary>
@@ -53,6 +25,8 @@ namespace FragEngine3.Graphics.Components
 			core = node.scene.GraphicsStack?.Core ?? node.scene.engine.GraphicsSystem.graphicsCore;
 
 			node.scene.drawManager.RegisterLight(this);
+
+			lightInstance = new PointLightInstance(core);
 		}
 
 		#endregion
@@ -60,9 +34,7 @@ namespace FragEngine3.Graphics.Components
 
 		internal readonly GraphicsCore core;
 
-		private LightType type = LightType.Point;
-		private bool castShadows = false;
-		private uint shadowCascadeCount = 0;
+		private LightInstance lightInstance;
 
 		/// <summary>
 		/// Priority rating to indicate which light sources are more important. Higher priority lights will
@@ -74,30 +46,8 @@ namespace FragEngine3.Graphics.Components
 		/// </summary>
 		public uint layerMask = 0xFFu;
 
-		// Light settings:
-		public RgbaFloat lightColor = RgbaFloat.White;
-		private float lightIntensity = 1.0f;
-		private float maxLightRange = 1.0e+8f;
-		private float maxLightRangeSq = 1.0e+8f;
-		private float spotAngleRad = 30.0f * DEG2RAD;
-
-		// Shadow settings:
-		private float shadowBias = 0.02f;
-
-		// Shadow resources:
-		private CameraInstance? shadowCameraInstance = null;
-		private ShadowCascadeResources[]? shadowCascades = null;
-		private uint shadowMapIdx = 0;
-
-		private static readonly bool rotateProjectionAlongCamera = false;
-
 		#endregion
 		#region Constants
-
-		private const float MIN_LIGHT_INTENSITY = 0.001f;
-
-		private const float DEG2RAD = MathF.PI / 180.0f;
-		private const float RAD2DEG = 180.0f / MathF.PI;
 
 		private static readonly SceneEventType[] sceneEventTypes =
 		[
@@ -115,12 +65,26 @@ namespace FragEngine3.Graphics.Components
 		/// </summary>
 		public LightType Type
 		{
-			get => type;
+			get => lightInstance != null ? lightInstance.Type : LightType.Point;
 			set
 			{
-				type = value;
-				maxLightRange = type != LightType.Directional ? MathF.Sqrt(lightIntensity / MIN_LIGHT_INTENSITY) : 1.0e+8f;
-				maxLightRangeSq = maxLightRange * maxLightRange;
+				if (lightInstance.Type != value)
+				{
+					LightData? data = null;
+					lightInstance?.SaveToData(out data);
+					lightInstance?.Dispose();
+
+					lightInstance = value switch
+					{
+						LightType.Spot => new SpotLightInstance(core),
+						LightType.Directional => new DirectionalLightInstance(core),
+						_ => new PointLightInstance(core),
+					};
+					if (data is not null)
+					{
+						lightInstance.LoadFromData(in data);
+					}
+				}
 			}
 		}
 
@@ -129,38 +93,29 @@ namespace FragEngine3.Graphics.Components
 		/// </summary>
 		public float LightIntensity
 		{
-			get => lightIntensity;
-			set
-			{
-				lightIntensity = Math.Max(value, 0.0f);
-				maxLightRange = type != LightType.Directional ? MathF.Sqrt(lightIntensity / MIN_LIGHT_INTENSITY) : 1.0e+8f;
-				maxLightRangeSq = maxLightRange * maxLightRange;
-			}
+			get => lightInstance.LightIntensity;
+			set => lightInstance.LightIntensity = value;
 		}
 		/// <summary>
 		/// Gets the maximum range out to which this light source produces any noticeable brightness. 
 		/// </summary>
-		public float MaxLightRange => maxLightRange;
-		/// <summary>
-		/// Gets the squared maximum range out to which this light source produces any noticeable brightness. 
-		/// </summary>
-		public float MaxLightRangeSquared => maxLightRangeSq;
+		public float MaxLightRange => lightInstance.MaxLightRange;
 
 		/// <summary>
 		/// Gets or sets the angle in which spot lights cast their light, in radians.
 		/// </summary>
 		public float SpotAngleRadians
 		{
-			get => spotAngleRad;
-			set => spotAngleRad = Math.Max(value, 0.0f);
+			get => lightInstance is SpotLightInstance spotInstance ? spotInstance.SpotAngleRadians : MathF.PI;
+			set { if (lightInstance is SpotLightInstance spotInstance) spotInstance.SpotAngleRadians = value; }
 		}
 		/// <summary>
 		/// Gets or sets the angle in which spot lights cast their light, in degrees.
 		/// </summary>
 		public float SpotAngleDegrees
 		{
-			get => spotAngleRad * RAD2DEG;
-			set => spotAngleRad = Math.Max(value, 0.0f) * DEG2RAD;
+			get => lightInstance is SpotLightInstance spotInstance ? spotInstance.SpotAngleDegrees : MathF.PI;
+			set { if (lightInstance is SpotLightInstance spotInstance) spotInstance.SpotAngleDegrees = value; }
 		}
 
 		/// <summary>
@@ -173,31 +128,28 @@ namespace FragEngine3.Graphics.Components
 		/// </summary>
 		public bool CastShadows
 		{
-			get => castShadows && type != LightType.Point;
-			set
-			{
-				castShadows = value;
-				if (!castShadows)
-				{
-					shadowMapIdx = 0;
-
-					shadowCameraInstance?.Dispose();
-					shadowCameraInstance = null;
-					DisposeShadowCascades();
-				}
-			}
+			get => lightInstance.CastShadows;
+			set => lightInstance.CastShadows = value;
 		}
 
+		/// <summary>
+		/// Gets or sets the number of shadow cascades to create and render for this light source.
+		/// Directional and spot lights only. Must be a value between 0 and 4, where 0 disables cascades for this light.
+		/// </summary>
 		public uint ShadowCascades
 		{
-			get => shadowCascadeCount;
-			set => shadowCascadeCount = type != LightType.Point ? Math.Min(value, 4) : 0;
+			get => lightInstance.ShadowCascades;
+			set => lightInstance.ShadowCascades = value;
 		}
 
+		/// <summary>
+		/// A bias for shadow map evaluation in the shader, which is implemented as a distance offset away from a mesh's surface.
+		/// Setting this value too low may cause stair-stepping artifacts in lighting calculations.
+		/// </summary>
 		public float ShadowBias
 		{
-			get => shadowBias;
-			set => shadowBias = Math.Clamp(value, 0, 10);
+			get => lightInstance.ShadowBias;
+			set => lightInstance.ShadowBias = value;
 		}
 
 		/// <summary>
@@ -216,20 +168,7 @@ namespace FragEngine3.Graphics.Components
 		{
 			base.Dispose(_disposing);
 
-			shadowCameraInstance?.Dispose();
-			DisposeShadowCascades();
-		}
-
-		private void DisposeShadowCascades()
-		{
-			if (shadowCascades != null)
-			{
-				foreach (ShadowCascadeResources cascade in shadowCascades)
-				{
-					cascade.Dispose();
-				}
-				shadowCascades = null;
-			}
+			lightInstance.Dispose();
 		}
 
 		public override void ReceiveSceneEvent(SceneEventType _eventType, object? _eventData)
@@ -243,8 +182,8 @@ namespace FragEngine3.Graphics.Components
 
 		public static int CompareLightsForSorting(Light _a, Light _b)
 		{
-			int weightA = _a.lightPriority + (_a.castShadows ? 1000 : 0);
-			int weightB = _b.lightPriority + (_b.castShadows ? 1000 : 0);
+			int weightA = _a.lightPriority + (_a.CastShadows ? 1000 : 0);
+			int weightB = _b.lightPriority + (_b.CastShadows ? 1000 : 0);
 			return weightB.CompareTo(weightA);
 		}
 
@@ -253,26 +192,8 @@ namespace FragEngine3.Graphics.Components
 		/// </summary>
 		public LightSourceData GetLightSourceData()
 		{
-			float spotMinDot = type == LightType.Spot
-				? MathF.Cos(spotAngleRad * 0.5f)
-				: 0;
-
-			return new()
-			{
-				color = new Vector3(lightColor.R, lightColor.G, lightColor.B),
-				intensity = lightIntensity,
-				position = WorldPosition,
-				type = (uint)type,
-				direction = type != LightType.Point ? Direction : Vector3.UnitZ,
-				spotMinDot = spotMinDot,
-				//mtxShadowWorld2Clip = CastShadows
-				//	? shadowCascades![0].mtxShadowWorld2Clip
-				//	: Matrix4x4.Identity,
-				shadowMapIdx = shadowMapIdx,
-				shadowBias = shadowBias,
-				shadowCascades = ShadowCascades,
-				shadowCascadeRange = ShadowMapUtility.directionalLightSize,
-			};
+			lightInstance.WorldPose = node.WorldTransformation;
+			return lightInstance.GetLightSourceData();
 		}
 
 		public bool BeginDrawShadowMap(
@@ -280,192 +201,44 @@ namespace FragEngine3.Graphics.Components
 			float _shadingFocalPointRadius,
 			uint _newShadowMapIdx)
 		{
-			if (IsDisposed)
-			{
-				Logger.LogError("Can't begin drawing shadow map for disposed light source!");
-				return false;
-			}
-			if (!CastShadows)
-			{
-				return false;
-			}
-			if (_sceneCtx.texShadowMaps == null || _sceneCtx.texShadowMaps.IsDisposed)
-			{
-				Logger.LogError("Can't begin drawing shadow map using null shadow map texture array!");
-				return false;
-			}
+			lightInstance.WorldPose = node.WorldTransformation;
 
-			shadowMapIdx = _newShadowMapIdx;
-
-			// Ensure shadow cascades are all ready to go:
-			if (shadowCascades == null || shadowCascades.Length < shadowCascadeCount + 1)
-			{
-				DisposeShadowCascades();
-
-				shadowCascades = new ShadowCascadeResources[shadowCascadeCount + 1];
-				for (uint i = 0; i < shadowCascadeCount + 1; ++i)
-				{
-					shadowCascades[i] = new ShadowCascadeResources(this, i);
-				}
-			}
-
-			// Ensure a camera instance is ready for drawing the scene:
-			if (shadowCameraInstance == null || shadowCameraInstance.IsDisposed)
-			{
-				if (!ShadowMapUtility.UpdateOrCreateShadowMapCameraInstance(
-					in core,
-					null,
-					Matrix4x4.Identity,
-					type == LightType.Directional,
-					_shadingFocalPointRadius,
-					spotAngleRad,
-					ref shadowCameraInstance))
-				{
-					return false;
-				}
-			}
-
-			return true;
+			return lightInstance.BeginDrawShadowMap(
+				in _sceneCtx,
+				_shadingFocalPointRadius,
+				_newShadowMapIdx);
 		}
 
 		public bool BeginDrawShadowCascade(
 			in SceneContext _sceneCtx,
 			in CommandList _cmdList,
-			in DeviceBuffer _dummyBufLights,
+			in LightDataBuffer _dummyLightDataBuffer,
 			Vector3 _shadingFocalPoint,
 			uint _cascadeIdx,
 			out CameraPassContext _outCameraPassCtx,
 			bool _rebuildResSetCamera = false,
 			bool _texShadowMapsHasChanged = false)
 		{
-			// Select the right shadow cascade resource container:
-			_cascadeIdx = type == LightType.Directional
-				? Math.Min(_cascadeIdx, shadowCascadeCount)
-				: 0;
+			lightInstance.WorldPose = node.WorldTransformation;			//TODO: Redundant?
 
-			ShadowCascadeResources cascade = shadowCascades![_cascadeIdx];
-
-			// Recalculate projection for this cascade:
-			RecalculateShadowProjectionMatrix(_shadingFocalPoint, _cascadeIdx, out cascade.mtxShadowWorld2Clip);
-
-			// Update framebuffer, constant buffers and resource sets:
-			if (!cascade.UpdateResources(
+			return lightInstance.BeginDrawShadowCascade(
 				in _sceneCtx,
-				in _dummyBufLights,
-				in shadowCameraInstance!,
-				shadowMapIdx,
+				in _cmdList,
+				_shadingFocalPoint,
+				_cascadeIdx,
+				out _outCameraPassCtx,
 				_rebuildResSetCamera,
-				_texShadowMapsHasChanged,
-				out bool _,
-				out bool _))
-			{
-				Logger.LogError($"Failed to update shadow cascade resources for cascade {_cascadeIdx} of shadow map index {shadowMapIdx}!");
-				_outCameraPassCtx = null!;
-				return false;
-			}
-
-			if (!shadowCameraInstance!.SetOverrideFramebuffer(cascade.ShadowMapFrameBuffer, true))
-			{
-				Logger.LogError($"Failed to set framebuffer for shadow cascade {_cascadeIdx} of shadow map index {shadowMapIdx}!");
-				_outCameraPassCtx = null!;
-				return false;
-			}
-
-			// Bind framebuffers and clear targets:
-			if (!shadowCameraInstance!.BeginDrawing(_cmdList, true, false, out _))
-			{
-				Logger.LogError("Failed to begin drawing light component's shadow map!");
-				_outCameraPassCtx = null!;
-				return false;
-			}
-
-			// Assemble context object for renderers to reference when issuing draw calls:
-			_outCameraPassCtx = new(
-				shadowCameraInstance!,
-				_cmdList,
-				cascade.ShadowMapFrameBuffer!,
-				cascade.ShadowResSetCamera!,
-				cascade.ShadowCbCamera!,
-				_dummyBufLights,
-				0,
-				shadowMapIdx,
-				0,
-				0,
-				in cascade.mtxShadowWorld2Clip);
-
-			return true;
+				_texShadowMapsHasChanged);
 		}
 
 		public bool EndDrawShadowCascade()
 		{
-			return !IsDisposed && shadowCameraInstance != null && shadowCameraInstance.EndDrawing();
+			return lightInstance.EndDrawShadowCascade();
 		}
 
 		public bool EndDrawShadowMap()
 		{
-			return !IsDisposed && shadowCameraInstance != null;
-		}
-
-		private void RecalculateShadowProjectionMatrix(Vector3 _shadingFocalPoint, uint _shadowCascadeIdx, out Matrix4x4 _outMtxShadowWorld2Clip)
-		{
-			switch (type)
-			{
-				case LightType.Point:
-					{
-						// NOTE: Not supported at this time, as there is no linear way of evenly projecting a sphere surface to a square framebuffer.
-						// Yes, I know that cubemaps exist, but I kind of don't feel like doing that just yet. Might repurpose cascade-like mapping for it though...
-						_outMtxShadowWorld2Clip = Matrix4x4.Identity;
-					}
-					break;
-				case LightType.Spot:
-					{
-						// Transform from a world space position, to the light's local space, to perspective projection clip space, to shadow map UV coordinates:
-						if (!Matrix4x4.Invert(node.WorldTransformation.Matrix, out Matrix4x4 mtxWorld2Local))
-						{
-							mtxWorld2Local = Matrix4x4.Identity;
-						}
-						Matrix4x4 mtxLocal2Clip = Matrix4x4.CreatePerspectiveFieldOfViewLeftHanded(spotAngleRad, 1, 0.01f, MaxLightRange);
-						_outMtxShadowWorld2Clip = mtxWorld2Local * mtxLocal2Clip;
-					}
-					break;
-				case LightType.Directional:
-					{
-						float maxDirectionalRange = ShadowMapUtility.directionalLightSize * MathF.Floor(MathF.Pow(2, _shadowCascadeIdx));
-
-						Vector3 lightDir = Direction;
-						Quaternion worldRot = node.WorldRotation;
-						
-						// Orient light map projection to have its pixel grid roughly aligned with the camera's direction:
-						if (rotateProjectionAlongCamera && Camera.MainCamera != null)
-						{
-							Vector3 worldUp = Vector3.Transform(Vector3.UnitY, worldRot);
-							Vector3 cameraDir = Camera.MainCamera.node.WorldForward;
-
-							Vector3 lightDirProj = Vector3.Normalize(VectorExt.ProjectToPlane(cameraDir, lightDir));
-							float cameraRotAngle = VectorExt.Angle(worldUp, lightDirProj, true);
-							Quaternion cameraRot = Quaternion.CreateFromAxisAngle(lightDir, cameraRotAngle);
-							worldRot = cameraRot * worldRot;
-						}
-
-						// Transform from a world space position (relative to a given focal point), to orthographics projection space, to shadow map UV coordinates:
-						Vector3 posOrigin = _shadingFocalPoint - lightDir * maxDirectionalRange * 0.5f;
-						Pose originPose = new(posOrigin, worldRot, Vector3.One, false);
-						if (!Matrix4x4.Invert(originPose.Matrix, out Matrix4x4 mtxWorld2Local))
-						{
-							mtxWorld2Local = Matrix4x4.Identity;
-						}
-						Matrix4x4 mtxLocal2Clip = Matrix4x4.CreateOrthographicLeftHanded(maxDirectionalRange, maxDirectionalRange, 0.01f, maxDirectionalRange);     //TODO [later]: this works, but it's pretty bad.
-						_outMtxShadowWorld2Clip = mtxWorld2Local * mtxLocal2Clip;
-					}
-					break;
-				default:
-					{
-						_outMtxShadowWorld2Clip = Matrix4x4.Identity;
-					}
-					break;
-			}
-
-			_outMtxShadowWorld2Clip *= Matrix4x4.CreateScale(1, -1, 1);
+			return !IsDisposed;
 		}
 
 		/// <summary>
@@ -473,12 +246,7 @@ namespace FragEngine3.Graphics.Components
 		/// </summary>
 		/// <param name="_camera">The camera whose pixels may or may not be illuminated by this light source.</param>
 		/// <returns>True if this instance's light could possible be seen by the camera, false otherwise.</returns>
-		public bool CheckVisibilityByCamera(in Camera _camera)
-		{
-			if (_camera == null) return false;
-
-			return true;	//TEMP / TODO [later]
-		}
+		public bool CheckVisibilityByCamera(in Camera _camera) => lightInstance.CheckVisibilityByCamera(_camera);
 
 		public override bool LoadFromData(in ComponentData _componentData, in Dictionary<int, ISceneElement> _idDataMap)
 		{
@@ -500,16 +268,15 @@ namespace FragEngine3.Graphics.Components
 				return false;
 			}
 
-			type = data.Type;
+			// Set values:
 			layerMask = data.LayerMask;
 
-			lightColor = data.LightColor;
-			lightIntensity = data.LightIntensity;
-			SpotAngleDegrees = data.SpotAngleDegrees;
+			if (!lightInstance.LoadFromData(in data))
+			{
+				return false;
+			}
 
-			CastShadows = data.CastShadows;
-			ShadowCascades = data.ShadowCascades;
-			shadowBias = data.ShadowBias;
+			lightInstance.WorldPose = node.WorldTransformation;
 
 			// Re-register camera with the scene:
 			node.scene.drawManager.UnregisterLight(this);
@@ -518,19 +285,14 @@ namespace FragEngine3.Graphics.Components
 
 		public override bool SaveToData(out ComponentData _componentData, in Dictionary<ISceneElement, int> _idDataMap)
 		{
-			LightData data = new()
+			// Get values:
+			if (!lightInstance.SaveToData(out LightData data))
 			{
-				Type = type,
-				LayerMask = layerMask,
+				_componentData = ComponentData.Empty;
+				return false;
+			}
 
-				LightColor = lightColor,
-				LightIntensity = lightIntensity,
-				SpotAngleDegrees = SpotAngleDegrees,
-
-				CastShadows = castShadows,
-				ShadowCascades = shadowCascadeCount,
-				ShadowBias = shadowBias,
-			};
+			data.LayerMask = layerMask;
 
 			if (!Serializer.SerializeToJson(data, out string dataJson))
 			{

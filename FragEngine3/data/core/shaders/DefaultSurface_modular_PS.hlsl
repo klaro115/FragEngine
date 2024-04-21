@@ -16,8 +16,9 @@
 #define FEATURE_LIGHT_AMBIENT                   // Whether to add directional ambient intensity to base lighting
 #define FEATURE_LIGHT_LIGHTMAPS                 // Whether to add light map intensity to base lighting
 #define FEATURE_LIGHT_SOURCES                   // Whether to use light sources from the scene to light up the object
-#define FEATURE_LIGHT_MODEL Phong               // Which lighting model to use for light sources. Default is "Phong"
+#define FEATURE_LIGHT_MODEL Phong
 #define FEATURE_LIGHT_SHADOWMAPS                // Whether to use shadow maps to mask out light rays coming from light sources
+#define FEATURE_LIGHT_INDIRECT 5
 
 // Variants:
 #define VARIANT_EXTENDED                        // Whether to always create a shader variant using extended surface data
@@ -99,26 +100,29 @@ StructuredBuffer<Light> BufLights : register(ps, t0);               // Buffer co
 
 #ifdef FEATURE_LIGHT_SHADOWMAPS
 Texture2DArray<half> TexShadowMaps : register(ps, t1);
-StructuredBuffer<float4x4> BufShadowMatrices : register(ps, t2);    // Buffer containing an array of projectionm matrices for shadow maps, transforming world position to clip space.
+StructuredBuffer<float4x4> BufShadowMatrices : register(ps, t3);    // Buffer containing an array of projectionm matrices for shadow maps, transforming world position to clip space.
 SamplerState SamplerShadowMaps : register(ps, s0);
+    #if defined(FEATURE_LIGHT_INDIRECT) && FEATURE_LIGHT_INDIRECT > 1
+    Texture2DArray<half3> TexShadowNormalMaps : register(ps, t2);
+    #endif
 #endif
 
 // ResSetBound:
 
 #if FEATURE_ALBEDO_TEXTURE == 1
-Texture2D<half4> TexMain : register(ps, t3);
+Texture2D<half4> TexMain : register(ps, t4);
 #endif //FEATURE_ALBEDO_TEXTURE == 1
 
 #ifdef FEATURE_NORMALS
-Texture2D<half3> TexNormal : register(ps, t4);
+Texture2D<half3> TexNormal : register(ps, t5);
 #endif //FEATURE_NORMALS
 
 #ifdef FEATURE_PARALLAX
-Texture2D<half> TexParallax : register(ps, t5);
+Texture2D<half> TexParallax : register(ps, t6);
 #endif //FEATURE_PARALLAX
 
 #ifdef FEATURE_LIGHT_LIGHTMAPS
-Texture2D<half3> TexLightmap : register(ps, t6);
+Texture2D<half3> TexLightmap : register(ps, t7);
 #endif //FEATURE_LIGHT_LIGHTMAPS
 
 #if FEATURE_ALBEDO_TEXTURE == 1 || defined(FEATURE_NORMALS) || defined(FEATURE_PARALLAX) || defined(FEATURE_LIGHT_LIGHTMAPS)
@@ -197,9 +201,68 @@ half3 CalculatePhongLighting(const in Light _light, const in float3 _worldPositi
     const half lightDot = max(-(half)dot(lightRayDir, _worldNormal), 0.0);
     return lightIntens.xyz * lightDot;
 }
+//... (insert further lighting models here)
 #endif //FEATURE_LIGHT_MODEL == Phong
 
 #ifdef FEATURE_LIGHT_SHADOWMAPS
+#if defined(FEATURE_LIGHT_INDIRECT) && FEATURE_LIGHT_INDIRECT > 1
+half3 CalculateIndirectLightScatter(const in Light _light, const in float3 _worldPosition, const in float3 _surfaceNormal)
+{
+    static const int halfKernel = FEATURE_LIGHT_INDIRECT / 2;
+    static const half uvKernelSteps = 1.0 / 256;
+    static const float bounceAmount = 0.025;
+
+    // Determine shadow cascade for this pixel:
+    const float cameraDist = length(_worldPosition - cameraPosition.xyz);
+    const uint cascadeOffset = (uint)(2 * cameraDist / _light.shadowCascadeRange);
+    const uint cascadeIdx = min(cascadeOffset, _light.shadowCascades);
+    const uint shadowMapIdx = _light.shadowMapIdx + cascadeIdx;
+
+    const float4x4 mtxShadowWorld2Clip = BufShadowMatrices[2 * shadowMapIdx];
+    const float4x4 mtxShadowClip2World = BufShadowMatrices[2 * shadowMapIdx + 1];
+
+    // Add a bias to position along surface normal, to counter-act stair-stepping artifacts:
+    const float4 worldPosBiased = float4(_worldPosition + _surfaceNormal * _light.shadowBias, 1);
+
+    // Transform pixel position to light's clip space, then to UV space:
+    float4 shadowProj = mul(mtxShadowWorld2Clip, worldPosBiased);
+    shadowProj /= shadowProj.w;
+    const float2 shadowUv = float2(shadowProj.x + 1, 1 - shadowProj.y) * 0.5;
+
+    float lightBounceSum = 0.0;
+
+    for (int y = -halfKernel; y < halfKernel; ++y)
+    {
+        const half uvY = shadowUv.y + y * uvKernelSteps;
+        for (int x = -halfKernel; x < halfKernel; ++x)
+        {
+            const half uvX = shadowUv.x + x * uvKernelSteps;
+            const half3 uv = half3(uvX, uvY, _light.shadowMapIdx);
+
+            const half3 normal = TexShadowNormalMaps.Sample(SamplerShadowMaps, uv) * 2 - 1;
+            const half depth = TexShadowMaps.Sample(SamplerShadowMaps, uv);
+
+            const half4 posClipSpace = half4(uvX * 2 - 1, 1 - uvY * 2, depth, 1);
+            const float3 posWorld = mul(mtxShadowClip2World, posClipSpace).xyz;
+
+            // Determine approximate lighting at sampled point, pre-bounce:
+            const float3 lightOffset = posWorld - _light.lightPosition;
+            const float intensityPreBounce = max(-dot(lightOffset / length(lightOffset), normal), 0) / dot(lightOffset, lightOffset);
+
+            // Determine radiated lighting at center point, post-bounce:
+            const float3 offsetBounced = worldPosBiased.xyz - posWorld;
+            const float distSqBounced = dot(offsetBounced, offsetBounced);
+            const float intensityPostBounce = intensityPreBounce / distSqBounced;
+
+            lightBounceSum += dot(offsetBounced, _surfaceNormal) < 0 ? intensityPostBounce : 0;
+        }
+    }
+    lightBounceSum *= bounceAmount;
+
+    return lightBounceSum * _light.lightIntensity * _light.lightColor;
+}
+
+#endif //FEATURE_LIGHT_INDIRECT
 #define SHADOW_EDGE_FACE_SCALE 10.0
 
 half CalculateShadowMapLightWeight(const in Light _light, const in float3 _worldPosition, const in float3 _surfaceNormal)
@@ -208,14 +271,13 @@ half CalculateShadowMapLightWeight(const in Light _light, const in float3 _world
     const float cameraDist = length(_worldPosition - cameraPosition.xyz);
     const uint cascadeOffset = (uint)(2 * cameraDist / _light.shadowCascadeRange);
     const uint cascadeIdx = min(cascadeOffset, _light.shadowCascades);
-    //const uint cascadeIdx = _light.shadowCascades;
     const uint shadowMapIdx = _light.shadowMapIdx + cascadeIdx;
 
     // Add a bias to position along surface normal, to counter-act stair-stepping artifacts:
     const float4 worldPosBiased = float4(_worldPosition + _surfaceNormal * _light.shadowBias, 1);
 
     // Transform pixel position to light's clip space, then to UV space:
-    float4 shadowProj = mul(BufShadowMatrices[shadowMapIdx], worldPosBiased);
+    float4 shadowProj = mul(BufShadowMatrices[2 * shadowMapIdx], worldPosBiased);
     shadowProj /= shadowProj.w;
     const float2 shadowUv = float2(shadowProj.x + 1, 1 - shadowProj.y) * 0.5;
     
@@ -262,6 +324,10 @@ half3 CalculateTotalLightIntensity(const in float3 _worldPosition, const in floa
             const half3 lightIntensity = CalculatePhongLighting(light, _worldPosition, _worldNormal);
             const half lightWeight = CalculateShadowMapLightWeight(light, _worldPosition, _surfaceNormal);
             totalLightIntensity += lightIntensity * lightWeight;
+
+            #ifdef FEATURE_LIGHT_INDIRECT
+            totalLightIntensity += CalculateIndirectLightScatter(light, _worldPosition, _surfaceNormal);
+            #endif //FEATURE_LIGHT_INDIRECT
         }
         #else
         uint shadowMappedLightCount = 0;

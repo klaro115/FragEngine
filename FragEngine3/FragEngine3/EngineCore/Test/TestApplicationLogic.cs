@@ -1,6 +1,7 @@
 ﻿using FragEngine3.EngineCore.Input;
 using FragEngine3.Graphics;
 using FragEngine3.Graphics.Components;
+using FragEngine3.Graphics.Lighting;
 using FragEngine3.Graphics.Resources;
 using FragEngine3.Graphics.Resources.Data;
 using FragEngine3.Graphics.Stack;
@@ -78,7 +79,7 @@ public sealed class TestApplicationLogic : ApplicationLogic
 	protected override bool BeginRunningState()
 	{
 		// Import 3D models:
-		Engine.ResourceManager.GetAndLoadResource("ForwardPlusLight_Composition_PS", true, out _);
+		//Engine.ResourceManager.GetAndLoadResource("Cube.obj", true, out _);
 
 		Scene scene = Engine.SceneManager.MainScene!;
 		
@@ -109,7 +110,7 @@ public sealed class TestApplicationLogic : ApplicationLogic
 
 				ClearColor = true,
 				ClearDepth = true,
-				ClearColorValue = RgbaFloat.CornflowerBlue,
+				ClearColorValue = RgbaFloat.Black,
 				ClearDepthValue = 1.0f,
 			};
 			camera.IsMainCamera = true;
@@ -117,47 +118,49 @@ public sealed class TestApplicationLogic : ApplicationLogic
 		}
 
 		// Create a directional light:
-		if (SceneSpawner.CreateLight(scene, Light.LightType.Directional, out Light light))
+		if (SceneSpawner.CreateLight(scene, LightType.Directional, out Light light))
 		{
+			light.node.Name = "Sun";
 			light.node.WorldPosition = new Vector3(0, 5, 0);
 			light.node.SetRotationFromYawPitchRoll(-22.5f, 45, 0, true, true);
-			//light.node.SetRotationFromYawPitchRoll(0, 90, 0, true, true);
+			//light.node.SetRotationFromYawPitchRoll(0, -25, 0, true, true);
 			//light.node.SetEnabled(false);
 
 			light.LightIntensity = 0.5f;
 			light.CastShadows = true;
 			light.ShadowCascades = 2;
 		}
-		if (SceneSpawner.CreateLight(scene, Light.LightType.Directional, out light))
+		if (SceneSpawner.CreateLight(scene, LightType.Directional, out light))
 		{
 			light.node.WorldPosition = new Vector3(0, 5, 0);
 			light.node.SetRotationFromYawPitchRoll(-70, -30, 0, true, true);
 			light.node.SetEnabled(false);
 		}
 		// Create a spot light:
-		if (SceneSpawner.CreateLight(scene, Light.LightType.Spot, out light))
+		if (SceneSpawner.CreateLight(scene, LightType.Spot, out light))
 		{
 			light.node.WorldPosition = new Vector3(0, 0, -3);
 			light.node.LocalRotation = Quaternion.Identity;
 			//light.node.SetEnabled(false);
 
-			light.LightIntensity = 15;
+			light.LightIntensity = 10;
 			light.SpotAngleDegrees = 35;
 			light.CastShadows = true;
+			light.ShadowBias = 0.02f;
 		}
-		if (SceneSpawner.CreateLight(scene, Light.LightType.Spot, out light))
+		if (SceneSpawner.CreateLight(scene, LightType.Spot, out light))
 		{
-			light.node.WorldPosition = new Vector3(-4, 5, -4);
-			light.node.SetRotationFromYawPitchRoll(22.5f, 45, 0, true, true);
+			light.node.WorldPosition = new Vector3(4.8f, 5.5f, -4);
+			light.node.SetRotationFromYawPitchRoll(-22.5f, 45, 0, true, true);
 			light.node.SetEnabled(false);
 
 			//light.lightColor = RgbaFloat.Red;
-			light.LightIntensity = 15;
-			light.SpotAngleDegrees = 30;
+			light.LightIntensity = 25;
+			light.SpotAngleDegrees = 15;
 			light.CastShadows = true;
 		}
 		// Create a point light:
-		if (SceneSpawner.CreateLight(scene, Light.LightType.Point, out light))
+		if (SceneSpawner.CreateLight(scene, LightType.Point, out light))
 		{
 			light.node.WorldPosition = new Vector3(0, 2, -1);
 			light.node.SetEnabled(false);
@@ -179,18 +182,18 @@ public sealed class TestApplicationLogic : ApplicationLogic
 			rabbit.DontDrawUnlessFullyLoaded = true;
 		}
 
-		MeshPrimitiveFactory.CreateCubeMesh("Cube", Engine, new(1, 1, 1), true, out _, out _, out ResourceHandle cubeHandle);
+		MeshPrimitiveFactory.CreateCubeMesh("Cube", Engine, new(2, 2, 2), true, out _, out _, out ResourceHandle cubeHandle);
 		if (SceneSpawner.CreateStaticMeshRenderer(scene, out StaticMeshRenderer cube))
 		{
 			cube.node.Name = "Cube";
-			cube.node.LocalPosition = new Vector3(2.5f, 0, 2);
+			cube.node.LocalPosition = new Vector3(2.5f, -0.5f, 2);
 			//cube.node.SetRotationFromYawPitchRoll(45, 45, 0, true, true);
 			cube.node.LocalScale = Vector3.One;
 			//cube.node.SetEnabled(false);
 
 			cube.SetMesh(cubeHandle);
-			cube.SetMaterial("Mtl_DiffuseImage");
-			//cube.SetMaterial("Mtl_DefaultSurface");
+			//cube.SetMaterial("Mtl_DiffuseImage");
+			cube.SetMaterial("Mtl_DefaultSurface");
 		}
 
 		MeshPrimitiveFactory.CreateCylinderMesh("Cylinder", Engine, 0.5f, 2, 32, true, out _, out _, out ResourceHandle cylinderHandle);
@@ -250,7 +253,7 @@ public sealed class TestApplicationLogic : ApplicationLogic
 		}
 		if (SceneSpawner.CreateStaticMeshRenderer(scene, out plane))
 		{
-			plane.node.Name = "Wall";
+			plane.node.Name = "Wall_B";
 			plane.node.LocalPosition = new Vector3(0, 1, 4.5f);
 			plane.node.SetRotationFromAxisAngle(Vector3.UnitX, -90, false, true);
 			plane.node.LocalScale = Vector3.One;
@@ -260,6 +263,31 @@ public sealed class TestApplicationLogic : ApplicationLogic
 			plane.SetMaterial("Mtl_BrickWall");
 			//plane.SetMaterial("Mtl_DefaultSurface");
 			plane.DontDrawUnlessFullyLoaded = true;
+		}
+		if (SceneSpawner.CreateStaticMeshRenderer(scene, out plane))
+		{
+			plane.node.Name = "Wall_L";
+			plane.node.LocalPosition = new Vector3(-2.5f, 1, 2);
+			plane.node.SetRotationFromAxisAngle(Vector3.UnitZ, -90, false, true);
+			plane.node.LocalScale = Vector3.One;
+			//plane.node.SetEnabled(false);
+
+			plane.SetMesh(planeHandle);
+			plane.SetMaterial("Mtl_BrickWall");
+			plane.DontDrawUnlessFullyLoaded = true;
+		}
+
+		if (SceneSpawner.CreateStaticMeshRenderer(scene, out StaticMeshRenderer fbxRenderer))
+		{
+			fbxRenderer.node.Name = "FBX";
+			fbxRenderer.node.LocalPosition = new(0, 0, 1);
+			fbxRenderer.node.SetRotationFromYawPitchRoll(0, 0, 0, false, true);
+			fbxRenderer.node.LocalScale = Vector3.One * 0.5f;
+			//fbxRenderer.node.SetEnabled(false);
+
+			fbxRenderer.SetMesh("Cube.obj");
+			//fbxRenderer.SetMesh("Plane.fbx");
+			fbxRenderer.SetMaterial("Mtl_DefaultSurface");
 		}
 
 		// Create two-sided quad:
@@ -289,8 +317,8 @@ public sealed class TestApplicationLogic : ApplicationLogic
 			quad.node.SetEnabled(false);
 
 			quad.SetMesh(quadHandle);
-			//quad.SetMaterial("Mtl_DefaultSurface");
-			quad.SetMaterial("Mtl_TestMaterial");
+			quad.SetMaterial("Mtl_DefaultSurface");
+			//quad.SetMaterial("Mtl_TestMaterial");
 		}
 
 		return true;
@@ -308,7 +336,7 @@ public sealed class TestApplicationLogic : ApplicationLogic
 
 		float deltaTime = (float)Engine.TimeManager.DeltaTime.TotalSeconds;
 
-		if (scene.FindNode("Rabbit", out SceneNode? rabbitNode) && rabbitNode != null)
+		if (scene.FindNode("Rabbit", out SceneNode? rabbitNode) && rabbitNode is not null)
 		{
 			float radPerSec = 2 * MathF.PI / 10;
 		
@@ -317,7 +345,7 @@ public sealed class TestApplicationLogic : ApplicationLogic
 			rabbitNode.LocalTransformation = localPose;
 		}
 
-		if (scene.FindNode("D20", out SceneNode? cubeNode) && cubeNode != null)
+		if (scene.FindNode("D20", out SceneNode? cubeNode) && cubeNode is not null)
 		{
 			float rotSpeed = deltaTime * 5;
 			Pose localPose = cubeNode.LocalTransformation;
@@ -327,6 +355,14 @@ public sealed class TestApplicationLogic : ApplicationLogic
 			localPose.Rotate(Quaternion.CreateFromYawPitchRoll(inputWASD.X * rotSpeed, inputWASD.Y * rotSpeed, inputWASD.Z * rotSpeed));
 			cubeNode.LocalTransformation = localPose;
 		}
+
+		//if (scene.FindNode("FBX", out SceneNode? fbxNode) && fbxNode is not null)
+		//{
+		//	float rotSpeed = deltaTime * 3;
+		//	Pose localPose = fbxNode.LocalTransformation;
+		//	localPose.Rotate(Quaternion.CreateFromYawPitchRoll(rotSpeed, 0, 0));
+		//	fbxNode.LocalTransformation = localPose;
+		//}
 
 		// Camera controls:
 		if (Camera.MainCamera != null)
@@ -353,6 +389,23 @@ public sealed class TestApplicationLogic : ApplicationLogic
 
 			Camera.MainCamera.node.LocalTransformation = p;
 		}
+
+		/*
+		// Reposition quad to visualize directional light's far-clip-plane:
+		if (scene.FindNode("Quad", out SceneNode? quadNode) && quadNode != null &&
+			scene.FindNode("Sun", out SceneNode? sunNode) && sunNode != null)
+		{
+			Light sunLight = sunNode.GetComponent<Light>()!;
+			float range = ShadowMapUtility.directionalLightSize * Math.Max(MathF.Pow(2, sunLight.ShadowCascades), 1);
+
+			Pose sunPose = sunNode.WorldTransformation;
+			Pose quadPose = new(
+				Camera.MainCamera!.node.WorldPosition + sunPose.Forward * 0.5f * range,
+				sunPose.rotation,
+				Vector3.One * 0.5f * range);
+			quadNode.WorldTransformation = quadPose;
+		}
+		*/
 
 		return true;
 	}

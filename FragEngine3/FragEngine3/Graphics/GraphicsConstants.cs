@@ -1,10 +1,12 @@
 ﻿using FragEngine3.Graphics.Components.ConstantBuffers;
+using FragEngine3.Graphics.Lighting;
+using FragEngine3.Graphics.Lighting.Data;
 using FragEngine3.Graphics.Resources;
 using Veldrid;
 
 namespace FragEngine3.Graphics
 {
-	public static class GraphicsConstants
+    public static class GraphicsConstants
 	{
 		#region Constants
 
@@ -70,10 +72,11 @@ namespace FragEngine3.Graphics
 		[
 			CBScene.resourceLayoutElementDesc,							// Constant buffer with scene-wide data.
 			CBCamera.resourceLayoutElementDesc,							// Constant buffer with camera-specific data.
-			LightSourceData.ResourceLayoutElementDescBufLights,			// Structured buffer containing light data.
-			LightSourceData.ResourceLayoutElementDescTexShadowMaps,		// Texture array containing shadow maps.
-			LightSourceData.ResourceLayoutElementDescBufShadowMatrices,	// Structured buffer containing shadow projection matrices.
-			LightSourceData.ResourceLayoutElementDescSamplerShadowMaps,	// Sampler used for reading shadow maps.
+			LightConstants.ResourceLayoutElementDescBufLights,			// Structured buffer containing light data.
+			LightConstants.ResourceLayoutElementDescTexShadowDepthMaps,	// Texture array containing shadow depth maps.
+			LightConstants.ResourceLayoutElementDescTexShadowNormalMaps,// Texture array containing shadow normal maps.
+			LightConstants.ResourceLayoutElementDescBufShadowMatrices,	// Structured buffer containing shadow projection matrices.
+			LightConstants.ResourceLayoutElementDescSamplerShadowMaps,	// Sampler used for reading shadow maps.
 		];
 		public static readonly ResourceLayoutElementDescription[] DEFAULT_OBJECT_RESOURCE_LAYOUT_DESC =
 		[
