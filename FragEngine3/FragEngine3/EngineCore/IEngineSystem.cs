@@ -1,12 +1,10 @@
-﻿
-namespace FragEngine3.EngineCore
+﻿namespace FragEngine3.EngineCore;
+
+public interface IEngineSystem : IDisposable
 {
-	public interface IEngineSystem : IDisposable
-	{
-		#region Properties
+	#region Properties
 
-		Engine Engine { get; }
+	Engine Engine { get; }
 
-		#endregion
-	}
+	#endregion
 }

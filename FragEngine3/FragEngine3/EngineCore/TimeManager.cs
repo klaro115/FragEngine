@@ -1,144 +1,143 @@
 ﻿using System.Diagnostics;
 
-namespace FragEngine3.EngineCore
+namespace FragEngine3.EngineCore;
+
+public sealed class TimeManager : IEngineSystem
 {
-	public sealed class TimeManager : IEngineSystem
+	#region Constructors
+
+	public TimeManager(Engine _engine)
 	{
-		#region Constructors
+		engine = _engine ?? throw new ArgumentNullException(nameof(_engine), "Engine may not be null!");
 
-		public TimeManager(Engine _engine)
+		stopwatch = new();
+		stopwatch.Start();
+	}
+
+	~TimeManager()
+	{
+		Dispose(false);
+	}
+
+	#endregion
+	#region Fields
+
+	public readonly Engine engine;
+
+	private readonly Stopwatch stopwatch;
+
+	private TimeSpan targetFrameDuration = new(0, 0, 0, 0, 16, 667);
+	private double targetFrameRate = 60.0;
+
+	#endregion
+	#region Constants
+
+	private static readonly TimeSpan minFrameDuration = new(0, 0, 0, 0, 1);
+	private static readonly TimeSpan maxFrameDuration = new(0, 0, 0, 1, 0);
+
+	#endregion
+	#region Properties
+
+	public Engine Engine => engine;
+
+	public TimeSpan LastFrameStartTime { get; private set; } = TimeSpan.Zero;
+	public TimeSpan LastFrameEndTime { get; private set; } = TimeSpan.Zero;
+	public TimeSpan LastFrameDuration { get; private set; } = TimeSpan.Zero;
+	public long LastFrameDurationMs => LastFrameDuration.Milliseconds;
+
+	public TimeSpan DeltaTime { get; private set; } = TimeSpan.Zero;
+	public long DeltaTimeMs => DeltaTime.Milliseconds;
+
+	public TimeSpan RunTime { get; private set; } = TimeSpan.Zero;
+	public long FrameCount { get; private set; } = 0;
+
+	/// <summary>
+	/// Gets or sets the targeted frame duration of the engine's main loop. The program will try to lock
+	/// the rate at which its main thread recalculates the application logic to this time limit. Must be
+	/// a value in the range between 1 millisecond and 1 second.
+	/// </summary>
+	public TimeSpan TargetFrameDuration
+	{
+		get => targetFrameDuration;
+		set
 		{
-			engine = _engine ?? throw new ArgumentNullException(nameof(_engine), "Engine may not be null!");
-
-			stopwatch = new();
-			stopwatch.Start();
+			if (value > maxFrameDuration) value = maxFrameDuration;
+			else if (value < minFrameDuration) value = minFrameDuration;
+			targetFrameDuration = value;
+			targetFrameRate = 1000.0 / targetFrameDuration.TotalMilliseconds;
 		}
-
-		~TimeManager()
+	}
+	/// <summary>
+	/// Gets or sets the targeted frame rate of the engine's main loop. The program will try to lock the
+	/// rate at which its main thread recalculates the application logic to this frequency. Must be a
+	/// value in the range between 1 Hz and 1000 Hz.
+	/// </summary>
+	public double TargetFrameRate
+	{
+		get => targetFrameRate;
+		set
 		{
-			Dispose(false);
+			targetFrameRate = Math.Clamp(value, 1.0, 1000.0);
+			targetFrameDuration = TimeSpan.FromMilliseconds(1000.0 / targetFrameRate);
 		}
+	}
 
-		#endregion
-		#region Fields
+	#endregion
+	#region Methods
 
-		public readonly Engine engine;
+	public void Dispose()
+	{
+		GC.SuppressFinalize(this);
+		Dispose(true);
+	}
+	private void Dispose(bool _)
+	{
+		stopwatch.Stop();
+	}
 
-		private readonly Stopwatch stopwatch;
+	public void Reset()
+	{
+		stopwatch.Restart();
 
-		private TimeSpan targetFrameDuration = new(0, 0, 0, 0, 16, 667);
-		private double targetFrameRate = 60.0;
+		RunTime = TimeSpan.Zero;
 
-		#endregion
-		#region Constants
+		LastFrameStartTime = TimeSpan.Zero;
+		LastFrameEndTime = TimeSpan.Zero;
+		LastFrameDuration = TimeSpan.Zero;
 
-		private static readonly TimeSpan minFrameDuration = new(0, 0, 0, 0, 1);
-		private static readonly TimeSpan maxFrameDuration = new(0, 0, 0, 1, 0);
+		DeltaTime = targetFrameDuration;
+	}
 
-		#endregion
-		#region Properties
+	public bool BeginFrame()
+	{
+		RunTime = stopwatch.Elapsed;
+		FrameCount++;
 
-		public Engine Engine => engine;
+		LastFrameStartTime = stopwatch.Elapsed;
 
-		public TimeSpan LastFrameStartTime { get; private set; } = TimeSpan.Zero;
-		public TimeSpan LastFrameEndTime { get; private set; } = TimeSpan.Zero;
-		public TimeSpan LastFrameDuration { get; private set; } = TimeSpan.Zero;
-		public long LastFrameDurationMs => LastFrameDuration.Milliseconds;
+		return true;
+	}
 
-		public TimeSpan DeltaTime { get; private set; } = TimeSpan.Zero;
-		public long DeltaTimeMs => DeltaTime.Milliseconds;
+	public bool EndFrame(out TimeSpan _outThreadSleepTime)
+	{
+		TimeSpan newRunTime = stopwatch.Elapsed;
+		RunTime = newRunTime;
 
-		public TimeSpan RunTime { get; private set; } = TimeSpan.Zero;
-		public long FrameCount { get; private set; } = 0;
+		LastFrameEndTime = stopwatch.Elapsed;
+		LastFrameDuration = LastFrameEndTime - LastFrameStartTime;
 
-		/// <summary>
-		/// Gets or sets the targeted frame duration of the engine's main loop. The program will try to lock
-		/// the rate at which its main thread recalculates the application logic to this time limit. Must be
-		/// a value in the range between 1 millisecond and 1 second.
-		/// </summary>
-		public TimeSpan TargetFrameDuration
+		if (targetFrameDuration > LastFrameDuration)
 		{
-			get => targetFrameDuration;
-			set
-			{
-				if (value > maxFrameDuration) value = maxFrameDuration;
-				else if (value < minFrameDuration) value = minFrameDuration;
-				targetFrameDuration = value;
-				targetFrameRate = 1000.0 / targetFrameDuration.TotalMilliseconds;
-			}
-		}
-		/// <summary>
-		/// Gets or sets the targeted frame rate of the engine's main loop. The program will try to lock the
-		/// rate at which its main thread recalculates the application logic to this frequency. Must be a
-		/// value in the range between 1 Hz and 1000 Hz.
-		/// </summary>
-		public double TargetFrameRate
-		{
-			get => targetFrameRate;
-			set
-			{
-				targetFrameRate = Math.Clamp(value, 1.0, 1000.0);
-				targetFrameDuration = TimeSpan.FromMilliseconds(1000.0 / targetFrameRate);
-			}
-		}
-
-		#endregion
-		#region Methods
-
-		public void Dispose()
-		{
-			GC.SuppressFinalize(this);
-			Dispose(true);
-		}
-		private void Dispose(bool _)
-		{
-			stopwatch.Stop();
-		}
-
-		public void Reset()
-		{
-			stopwatch.Restart();
-
-			RunTime = TimeSpan.Zero;
-
-			LastFrameStartTime = TimeSpan.Zero;
-			LastFrameEndTime = TimeSpan.Zero;
-			LastFrameDuration = TimeSpan.Zero;
-
+			_outThreadSleepTime = targetFrameDuration - LastFrameDuration;
 			DeltaTime = targetFrameDuration;
 		}
-
-		public bool BeginFrame()
+		else
 		{
-			RunTime = stopwatch.Elapsed;
-			FrameCount++;
-
-			LastFrameStartTime = stopwatch.Elapsed;
-
-			return true;
+			_outThreadSleepTime = TimeSpan.Zero;
+			DeltaTime = LastFrameDuration;
 		}
-
-		public bool EndFrame(out TimeSpan _outThreadSleepTime)
-		{
-			TimeSpan newRunTime = stopwatch.Elapsed;
-			RunTime = newRunTime;
-
-			LastFrameEndTime = stopwatch.Elapsed;
-			LastFrameDuration = LastFrameEndTime - LastFrameStartTime;
-
-			if (targetFrameDuration > LastFrameDuration)
-			{
-				_outThreadSleepTime = targetFrameDuration - LastFrameDuration;
-				DeltaTime = targetFrameDuration;
-			}
-			else
-			{
-				_outThreadSleepTime = TimeSpan.Zero;
-				DeltaTime = LastFrameDuration;
-			}
-			return true;
-		}
-
-		#endregion
+		return true;
 	}
+
+	#endregion
 }
