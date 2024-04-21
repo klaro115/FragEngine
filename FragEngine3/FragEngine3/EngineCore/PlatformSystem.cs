@@ -1,145 +1,144 @@
 ﻿using System.Runtime.InteropServices;
 using FragEngine3.Resources;
 
-namespace FragEngine3.EngineCore
+namespace FragEngine3.EngineCore;
+
+public sealed class PlatformSystem : IEngineSystem
 {
-	public sealed class PlatformSystem : IEngineSystem
+	#region Types
+
+	private sealed class FileExtMapping(OSPlatform _os, string _extension)
 	{
-		#region Types
+		public readonly OSPlatform os = _os;
+		public readonly string extension = _extension ?? string.Empty;
+	}
 
-		private sealed class FileExtMapping(OSPlatform _os, string _extension)
+	#endregion
+	#region Constructors
+
+	public PlatformSystem(Engine _engine)
+	{
+		engine = _engine ?? throw new ArgumentNullException(nameof(_engine), "Engine may not be null!");
+
+		// Identify platform OS:
 		{
-			public readonly OSPlatform os = _os;
-			public readonly string extension = _extension ?? string.Empty;
-		}
-
-		#endregion
-		#region Constructors
-
-		public PlatformSystem(Engine _engine)
-		{
-			engine = _engine ?? throw new ArgumentNullException(nameof(_engine), "Engine may not be null!");
-
-			// Identify platform OS:
+			if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
 			{
-				if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
-				{
-					osPlatform = OSPlatform.Windows;
-					osPlatformFlag |= EnginePlatformFlag.OS_Windows;
-				}
-				else if (RuntimeInformation.IsOSPlatform(OSPlatform.OSX))
-				{
-					osPlatform = OSPlatform.OSX;
-					osPlatformFlag |= EnginePlatformFlag.OS_MacOS;
-				}
-				else if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
-				{
-					osPlatform = OSPlatform.Linux;
-					osPlatformFlag |= EnginePlatformFlag.OS_Linux;
-				}
-				else if (RuntimeInformation.IsOSPlatform(OSPlatform.FreeBSD))
-				{
-					osPlatform = OSPlatform.FreeBSD;
-					osPlatformFlag |= EnginePlatformFlag.OS_FreeBSD;
-				}
-				else
-				{
-					osPlatform = OSPlatform.Create(RuntimeInformation.RuntimeIdentifier);
-					osPlatformFlag |= EnginePlatformFlag.OS_Other;
-				}
+				osPlatform = OSPlatform.Windows;
+				osPlatformFlag |= EnginePlatformFlag.OS_Windows;
 			}
-
-			PlatformFlags = osPlatformFlag;
-		}
-
-		~PlatformSystem()
-		{
-			if (!IsDisposed) Dispose(false);
-		}
-
-		#endregion
-		#region Fields
-
-		public readonly Engine engine;
-
-		public readonly OSPlatform osPlatform;
-		public readonly EnginePlatformFlag osPlatformFlag;
-
-		private static readonly Dictionary<ResourceType, FileExtMapping[]> resourceFileExtMappings = new()
-		{
-			[ResourceType.Shader] =
-			[
-				new FileExtMapping(OSPlatform.Windows, ".hlsl"),
-				new FileExtMapping(OSPlatform.OSX, ".metal"),
-				new FileExtMapping(OSPlatform.Linux, ".glsl"),
-			],
-		};
-
-		#endregion
-		#region Properties
-
-		public bool IsDisposed { get; private set; } = false;
-
-		public Engine Engine => engine;
-
-		public EnginePlatformFlag PlatformFlags { get; private set; } = 0;
-
-		#endregion
-		#region Methods
-
-		public void Dispose()
-		{
-			GC.SuppressFinalize(this);
-			Dispose(true);
-		}
-		private void Dispose(bool _)
-		{
-			IsDisposed = true;
-			//...
-		}
-
-		public void UpdatePlatformFlags()
-		{
-			EnginePlatformFlag prevPlatformFlags = PlatformFlags;
-
-			PlatformFlags = osPlatformFlag;
-			PlatformFlags |= engine.GraphicsSystem.graphicsCore.ApiPlatformFlag;
-			//...
-
-			if (PlatformFlags != prevPlatformFlags)
+			else if (RuntimeInformation.IsOSPlatform(OSPlatform.OSX))
 			{
-				engine.Logger.LogStatus($"PlatformSystem: Platform flags changed => '{PlatformFlags}'");
+				osPlatform = OSPlatform.OSX;
+				osPlatformFlag |= EnginePlatformFlag.OS_MacOS;
+			}
+			else if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
+			{
+				osPlatform = OSPlatform.Linux;
+				osPlatformFlag |= EnginePlatformFlag.OS_Linux;
+			}
+			else if (RuntimeInformation.IsOSPlatform(OSPlatform.FreeBSD))
+			{
+				osPlatform = OSPlatform.FreeBSD;
+				osPlatformFlag |= EnginePlatformFlag.OS_FreeBSD;
+			}
+			else
+			{
+				osPlatform = OSPlatform.Create(RuntimeInformation.RuntimeIdentifier);
+				osPlatformFlag |= EnginePlatformFlag.OS_Other;
 			}
 		}
 
-		public bool AdjustForPlatformSpecificFileExtension(ResourceType _resourceType, string _filePath, out string _outAdjustedPath)
+		PlatformFlags = osPlatformFlag;
+	}
+
+	~PlatformSystem()
+	{
+		if (!IsDisposed) Dispose(false);
+	}
+
+	#endregion
+	#region Fields
+
+	public readonly Engine engine;
+
+	public readonly OSPlatform osPlatform;
+	public readonly EnginePlatformFlag osPlatformFlag;
+
+	private static readonly Dictionary<ResourceType, FileExtMapping[]> resourceFileExtMappings = new()
+	{
+		[ResourceType.Shader] =
+		[
+			new FileExtMapping(OSPlatform.Windows, ".hlsl"),
+			new FileExtMapping(OSPlatform.OSX, ".metal"),
+			new FileExtMapping(OSPlatform.Linux, ".glsl"),
+		],
+	};
+
+	#endregion
+	#region Properties
+
+	public bool IsDisposed { get; private set; } = false;
+
+	public Engine Engine => engine;
+
+	public EnginePlatformFlag PlatformFlags { get; private set; } = 0;
+
+	#endregion
+	#region Methods
+
+	public void Dispose()
+	{
+		GC.SuppressFinalize(this);
+		Dispose(true);
+	}
+	private void Dispose(bool _)
+	{
+		IsDisposed = true;
+		//...
+	}
+
+	public void UpdatePlatformFlags()
+	{
+		EnginePlatformFlag prevPlatformFlags = PlatformFlags;
+
+		PlatformFlags = osPlatformFlag;
+		PlatformFlags |= engine.GraphicsSystem.graphicsCore.ApiPlatformFlag;
+		//...
+
+		if (PlatformFlags != prevPlatformFlags)
 		{
-			if (string.IsNullOrEmpty(_filePath))
-			{
-				_outAdjustedPath = string.Empty;
-				return false;
-			}
+			engine.Logger.LogStatus($"PlatformSystem: Platform flags changed => '{PlatformFlags}'");
+		}
+	}
 
-			if (!resourceFileExtMappings.TryGetValue(_resourceType, out FileExtMapping[]? mappings))
-			{
-				_outAdjustedPath = _filePath;
-				return false;
-			}
+	public bool AdjustForPlatformSpecificFileExtension(ResourceType _resourceType, string _filePath, out string _outAdjustedPath)
+	{
+		if (string.IsNullOrEmpty(_filePath))
+		{
+			_outAdjustedPath = string.Empty;
+			return false;
+		}
 
-			string ext = Path.GetExtension(_filePath).ToLowerInvariant();
-			foreach (FileExtMapping mapping in mappings)
-			{
-				if (mapping.os == osPlatform && string.CompareOrdinal(mapping.extension, ext) != 0)
-				{
-					_outAdjustedPath = Path.ChangeExtension(_filePath, mapping.extension);
-					return true;
-				}
-			}
-
+		if (!resourceFileExtMappings.TryGetValue(_resourceType, out FileExtMapping[]? mappings))
+		{
 			_outAdjustedPath = _filePath;
 			return false;
 		}
 
-		#endregion
+		string ext = Path.GetExtension(_filePath).ToLowerInvariant();
+		foreach (FileExtMapping mapping in mappings)
+		{
+			if (mapping.os == osPlatform && string.CompareOrdinal(mapping.extension, ext) != 0)
+			{
+				_outAdjustedPath = Path.ChangeExtension(_filePath, mapping.extension);
+				return true;
+			}
+		}
+
+		_outAdjustedPath = _filePath;
+		return false;
 	}
+
+	#endregion
 }
