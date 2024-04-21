@@ -63,18 +63,17 @@ public static class FbxImporter
 			return false;
 		}
 
-		int minVertexCount = FbxGeometryParser.TryGetVertexCount(geometryNode);
-
 		// Vertex data:
 		List<Vector3> positions = FbxGeometryParser.GetVertexPositions(geometryNode);
 		List<Vector3> normals = FbxGeometryParser.GetVertexNormals(geometryNode, indices32);
 		List<Vector2> uvs = FbxGeometryParser.GetVertexUVs(geometryNode, indices32);
 
 		// Assemble basic vertex data:
-		int vertexCount = vertexIndices.Length;     //TEMP
+		int vertexCount = vertexIndices.Length;     //TEMP (good enough for now)
 
 		BasicVertex[] vertsBasic = new BasicVertex[vertexCount];
 
+		int[] remappedIndices = new int[indices32.Count];				//TODO: Triangle indices refer to position indices, even though they should be remapped to vertex indices.
 		for (int i = 0; i < vertexCount; ++i)
 		{
 			int positionIdx = vertexIndices[i];

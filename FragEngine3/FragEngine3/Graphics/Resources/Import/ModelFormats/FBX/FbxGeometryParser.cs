@@ -1,4 +1,5 @@
 ﻿using FragEngine3.EngineCore;
+using System;
 using System.Numerics;
 
 namespace FragEngine3.Graphics.Resources.Import.ModelFormats.FBX;
@@ -183,39 +184,36 @@ internal static class FbxGeometryParser
 
 		// Polygons may contain more than 3 vertices:
 		_outIndices32 = new(_outRawIndices.Length);
-		int polygonVertCount = 2;
-		for (int i = 2; i < _outRawIndices.Length; i++)
+		for (int i = 0; i < _outRawIndices.Length;)
 		{
-			polygonVertCount++;
-
-			int indexA = _outRawIndices[i];
-			if (indexA < 0)					// Note: Negative indices indicate end of a polygon.
+			int indexA = _outRawIndices[i + 0];
+			int indexB = _outRawIndices[i + 1];
+			int indexC = _outRawIndices[i + 2];
+			if (indexC < 0)     // Note: Negative indices indicate end of a polygon.
 			{
-				indexA = -indexA - 1;
-				_outRawIndices[i] = indexA;
+				indexC = -indexC - 1;
+				_outRawIndices[i + 2] = indexC;
 
-				int indexB = _outRawIndices[i - 1];
-				int indexC = _outRawIndices[i - 2];
-				if (polygonVertCount == 4)
-				{
-					int indexD = _outRawIndices[i - 3];
+				_outIndices32.Add(indexA);
+				_outIndices32.Add(indexB);
+				_outIndices32.Add(indexC);
 
-					_outIndices32.Add(indexD);
-					_outIndices32.Add(indexC);
-					_outIndices32.Add(indexA);
+				i += 3;
+			}
+			else
+			{
+				int indexD = -_outRawIndices[i + 3] - 1;
+				_outRawIndices[i + 3] = indexD;
 
-					_outIndices32.Add(indexD);
-					_outIndices32.Add(indexA);
-					_outIndices32.Add(indexB);
-				}
-				else
-				{
-					_outIndices32.Add(indexC);
-					_outIndices32.Add(indexB);
-					_outIndices32.Add(indexA);
-				}
+				_outIndices32.Add(indexA);
+				_outIndices32.Add(indexD);
+				_outIndices32.Add(indexB);
 
-				polygonVertCount = 0;
+				_outIndices32.Add(indexA);
+				_outIndices32.Add(indexC);
+				_outIndices32.Add(indexD);
+
+				i += 4;
 			}
 		}
 

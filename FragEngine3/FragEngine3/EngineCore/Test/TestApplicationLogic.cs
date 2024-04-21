@@ -281,7 +281,7 @@ public sealed class TestApplicationLogic : ApplicationLogic
 		{
 			fbxRenderer.node.Name = "FBX";
 			fbxRenderer.node.LocalPosition = new(0, 0, 1);
-			fbxRenderer.node.SetRotationFromYawPitchRoll(0, 90, 0, false, true);
+			fbxRenderer.node.SetRotationFromYawPitchRoll(0, 0, 0, false, true);
 			fbxRenderer.node.LocalScale = Vector3.One * 0.5f;
 			//fbxRenderer.node.SetEnabled(false);
 
@@ -356,13 +356,13 @@ public sealed class TestApplicationLogic : ApplicationLogic
 			cubeNode.LocalTransformation = localPose;
 		}
 
-		if (scene.FindNode("FBX", out SceneNode? fbxNode) && fbxNode is not null)
-		{
-			float rotSpeed = deltaTime * 3;
-			Pose localPose = fbxNode.LocalTransformation;
-			localPose.Rotate(Quaternion.CreateFromYawPitchRoll(0, rotSpeed, 0));
-			fbxNode.LocalTransformation = localPose;
-		}
+		//if (scene.FindNode("FBX", out SceneNode? fbxNode) && fbxNode is not null)
+		//{
+		//	float rotSpeed = deltaTime * 3;
+		//	Pose localPose = fbxNode.LocalTransformation;
+		//	localPose.Rotate(Quaternion.CreateFromYawPitchRoll(rotSpeed, 0, 0));
+		//	fbxNode.LocalTransformation = localPose;
+		//}
 
 		// Camera controls:
 		if (Camera.MainCamera != null)
