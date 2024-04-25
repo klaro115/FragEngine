@@ -11,7 +11,7 @@ The engine is designed to be open-source, and available for both free and commer
     - [Windows](#windows)
     - [Linux](#linux)
     - [Apple](#apple)
-- [WIP - Work In Progress](#wip---work-in-progress)
+- [Work In Progress](#work-in-progress)
 - [Roadmap](#roadmap)
 
 <br>
@@ -46,14 +46,16 @@ The platform is reliant on its proprietary Metal API, which is so poorly documen
 Support may be resumed in the future if express interest arises, and may possibly use MoltenVK, to bypass Apple's insufferable software ecosystem.
 
 
-## WIP - Work In Progress
+## Work In Progress
 
-- Rework engine state machine:
-    - Split states into their own classes
+- Refactor graphics architecture:
+    - Rewrite update/draw registration and call logic
+    - Simplify code & reduce draw logic overhead
 - Lighting system: **[awaiting graphics refactoring]**
     - Indirect lighting
 - File format support: **[on hold]**
     - FBX (geometry)
+
 
 ## Roadmap
 
@@ -61,7 +63,6 @@ The following is a rough and very short-sighted roadmap of features that are goi
 
 - Refactor graphics architecture:
     - Refactor Forward+Lights graphics stack _(split into sub-modules)_
-    - Revisit 
 - Rework engine state machine:
     - More granular thread sleep timings
 - Post-processing:
