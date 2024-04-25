@@ -1,4 +1,6 @@
-﻿namespace FragEngine3.Scenes.SceneManagers
+﻿using FragEngine3.Scenes.EventSystem;
+
+namespace FragEngine3.Scenes.SceneManagers
 {
     /// <summary>
     /// Module of a <see cref="Scene"/> that manages registration of updatable scene elements, though mainly components.
@@ -19,10 +21,10 @@
 
         public readonly Scene scene = _scene ?? throw new ArgumentNullException(nameof(_scene), "Scene may not be null!");
 
-        private readonly List<IUpdatableSceneElement> earlyUpdateList = [];
-        private readonly List<IUpdatableSceneElement> mainUpdateList = [];
-        private readonly List<IUpdatableSceneElement> lateUpdateList = [];
-        private readonly List<IUpdatableSceneElement> fixedUpdateList = [];
+        private readonly List<IOnEarlyUpdateListener> earlyUpdateList = [];
+        private readonly List<IOnMainUpdateListener> mainUpdateList = [];
+        private readonly List<IOnLateUpdateListener> lateUpdateList = [];
+		private readonly List<IOnFixedUpdateListener> fixedUpdateList = [];
 
         #endregion
         #region Properties
@@ -58,94 +60,111 @@
 
         public bool RunUpdateStage(SceneUpdateStage _updateStage)
         {
-            List<IUpdatableSceneElement>? updateList = _updateStage switch
+			bool success = true;
+
+			switch (_updateStage)
             {
-                SceneUpdateStage.Early => earlyUpdateList,
-                SceneUpdateStage.Main => mainUpdateList,
-                SceneUpdateStage.Late => lateUpdateList,
-                SceneUpdateStage.Fixed => fixedUpdateList,
-                _ => null,
-            };
+                // EARLY:
+                case SceneUpdateStage.Early:
+					foreach (var element in earlyUpdateList)
+					{
+						success &= element.OnEarlyUpdate();
+					}
+					break;
 
-            if (updateList == null) return false;
-            if (updateList.Count == 0) return true;
+                // MAIN:
+                case SceneUpdateStage.Main:
+					foreach (var kvp in mainUpdateList)
+					{
+						success &= kvp.OnUpdate();
+					}
+					break;
 
-            bool success = true;
+                // LATE:
+                case SceneUpdateStage.Late:
+					foreach (var element in lateUpdateList)
+					{
+						success &= element.OnLateUpdate();
+					}
+					break;
 
-            foreach (IUpdatableSceneElement element in updateList)
-            {
-                success &= element.HandleUpdate(_updateStage);
+                // FIXED:
+                case SceneUpdateStage.Fixed:
+					foreach (var element in fixedUpdateList)
+					{
+						success &= element.OnFixedUpdate();
+					}
+					break;
+
+                default:
+                    return false;
             }
 
             return success;
         }
 
-        public bool RegisterSceneElement(IUpdatableSceneElement _newElement)
+        public bool RegisterSceneElement(ISceneUpdateListener _newListener)
         {
-            if (_newElement == null || _newElement.IsDisposed)
+            if (_newListener == null || _newListener.IsDisposed)
             {
-                scene.Logger.LogError("Cannot register null or disposed scene element for update events!");
+                scene.Logger.LogError("Cannot register null or disposed scene event listener for update events!");
                 return false;
             }
 
-            SceneUpdateStage updateStageFlags = _newElement.UpdateStageFlags;
-            if (updateStageFlags == 0)
-            {
-                return true;
-            }
+            bool wasRegistered = false;
 
-            if (updateStageFlags.HasFlag(SceneUpdateStage.Early) && !earlyUpdateList.Contains(_newElement))
+            if (_newListener is IOnEarlyUpdateListener earlyUpdateListener)
             {
-                earlyUpdateList.Add(_newElement);
-            }
-            if (updateStageFlags.HasFlag(SceneUpdateStage.Main) && !mainUpdateList.Contains(_newElement))
-            {
-                mainUpdateList.Add(_newElement);
-            }
-            if (updateStageFlags.HasFlag(SceneUpdateStage.Late) && !lateUpdateList.Contains(_newElement))
-            {
-                lateUpdateList.Add(_newElement);
-            }
-            if (updateStageFlags.HasFlag(SceneUpdateStage.Fixed) && !fixedUpdateList.Contains(_newElement))
-            {
-                fixedUpdateList.Add(_newElement);
-            }
+                earlyUpdateList.Add(earlyUpdateListener);
+				wasRegistered = true;
+			}
+			if (_newListener is IOnMainUpdateListener mainUpdateListener)
+			{
+				mainUpdateList.Add(mainUpdateListener);
+				wasRegistered = true;
+			}
+			if (_newListener is IOnLateUpdateListener lateUpdateListener)
+			{
+				lateUpdateList.Add(lateUpdateListener);
+				wasRegistered = true;
+			}
+			if (_newListener is IOnFixedUpdateListener fixedUpdateListener)
+			{
+				fixedUpdateList.Add(fixedUpdateListener);
+				wasRegistered = true;
+			}
 
-            return true;
+			return wasRegistered;
         }
 
-        public bool UnregisterSceneElements(IUpdatableSceneElement _oldElement)
+        public bool UnregisterSceneElements(ISceneUpdateListener _oldListener)
         {
-            if (_oldElement == null)
+            if (_oldListener == null)
             {
-                scene.Logger.LogError("Cannot unregister null scene element from update events!");
+                scene.Logger.LogError("Cannot unregister null scene event listener from update events!");
                 return false;
             }
 
-            SceneUpdateStage updateStageFlags = _oldElement.UpdateStageFlags;
-            if (updateStageFlags == 0)
-            {
-                return true;
-            }
+            bool wasRemoved = false;
 
-            if (updateStageFlags.HasFlag(SceneUpdateStage.Early))
-            {
-                earlyUpdateList.Remove(_oldElement);
-            }
-            if (updateStageFlags.HasFlag(SceneUpdateStage.Main))
-            {
-                mainUpdateList.Remove(_oldElement);
-            }
-            if (updateStageFlags.HasFlag(SceneUpdateStage.Late))
-            {
-                lateUpdateList.Remove(_oldElement);
-            }
-            if (updateStageFlags.HasFlag(SceneUpdateStage.Fixed))
-            {
-                fixedUpdateList.Remove(_oldElement);
-            }
+			if (_oldListener is IOnEarlyUpdateListener earlyUpdateListener)
+			{
+				wasRemoved |= earlyUpdateList.Remove(earlyUpdateListener);
+			}
+			if (_oldListener is IOnMainUpdateListener mainUpdateListener)
+			{
+				wasRemoved |= mainUpdateList.Remove(mainUpdateListener);
+			}
+			if (_oldListener is IOnLateUpdateListener lateUpdateListener)
+			{
+				wasRemoved |= lateUpdateList.Remove(lateUpdateListener);
+			}
+			if (_oldListener is IOnFixedUpdateListener fixedUpdateListener)
+			{
+				wasRemoved |= fixedUpdateList.Remove(fixedUpdateListener);
+			}
 
-            return true;
+            return wasRemoved;
         }
 
         #endregion
