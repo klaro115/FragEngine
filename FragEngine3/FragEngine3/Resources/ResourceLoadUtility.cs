@@ -6,12 +6,22 @@ public static class ResourceLoadUtility
 {
 	#region Methods
 
+	/// <summary>
+	/// Checks and ensures that a resource is actually loaded. If the resource is not yet loaded, loading is either queued up or executed immediately on the calling thread.
+	/// </summary>
+	/// <typeparam name="T">The type of the resource.</typeparam>
+	/// <param name="_resourceHandle">A resource handle for which we wish to fetch and ensure loading of a resource. If null and the resource is not loaded, the method will return false.</param>
+	/// <param name="_resource">A reference to the resource object itself. If null or disposed, it will be loaded from file. If non-null and ready, this method will do nothing.</param>
+	/// <param name="_dontContinueUnlessFullyLoaded">Whether the caller should abort execution if the resource is not fully loaded when this function returns. If false, it may continue, but the
+	/// resource may still be pending for asynchronous loading in the background. If true, the resource will be loaded immediately on the calling thread, possible inducing lag spikes.</param>
+	/// <param name="_outResourceIsReady">Outputs whether the resource has been fully loaded and is ready for immediate use.</param>
+	/// <returns>True if the resource is loaded, or if it has been queued for async loading. False if the resource is not loaded and loading has failed.</returns>
 	public static bool EnsureResourceIsLoaded<T>(ResourceHandle? _resourceHandle, ref T? _resource, bool _dontContinueUnlessFullyLoaded, out bool _outResourceIsReady) where T : Resource
 	{
 		// Check resource and load it now if necessary:
-		if (_resource == null || _resource.IsDisposed)
+		if (_resource is null || _resource.IsDisposed)
 		{
-			if (_resourceHandle == null || !_resourceHandle.IsValid)
+			if (_resourceHandle is null || !_resourceHandle.IsValid)
 			{
 				_outResourceIsReady = false;
 				return false;
@@ -39,9 +49,9 @@ public static class ResourceLoadUtility
 	public static bool EnsureMeshIsLoaded<T>(ResourceHandle? _resourceHandle, ref T? _mesh, ref float _boundingRadius, bool _dontContinueUnlessFullyLoaded, out bool _outResourceIsReady) where T : Mesh
 	{
 		// Check resource and load it now if necessary:
-		if (_mesh == null || _mesh.IsDisposed)
+		if (_mesh is null || _mesh.IsDisposed)
 		{
-			if (_resourceHandle == null || !_resourceHandle.IsValid)
+			if (_resourceHandle is null || !_resourceHandle.IsValid)
 			{
 				_outResourceIsReady = false;
 				return false;
