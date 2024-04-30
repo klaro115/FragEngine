@@ -16,6 +16,9 @@ public sealed class EngineConfig
 	#endregion
 	#region Methods
 
+	/// <summary>
+	/// Creates a deep copy of this engine config instance.
+	/// </summary>
 	public EngineConfig Clone()
 	{
 		return new EngineConfig()

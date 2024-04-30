@@ -108,7 +108,7 @@ public sealed class TimeManager : IEngineSystem
 		DeltaTime = targetFrameDuration;
 	}
 
-	public bool BeginFrame()
+	internal bool BeginFrame()
 	{
 		RunTime = stopwatch.Elapsed;
 		FrameCount++;
@@ -118,7 +118,7 @@ public sealed class TimeManager : IEngineSystem
 		return true;
 	}
 
-	public bool EndFrame(out TimeSpan _outThreadSleepTime)
+	internal bool EndFrame(out TimeSpan _outThreadSleepTime)
 	{
 		TimeSpan newRunTime = stopwatch.Elapsed;
 		RunTime = newRunTime;
