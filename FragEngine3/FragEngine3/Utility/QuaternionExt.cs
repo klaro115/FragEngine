@@ -2,6 +2,9 @@
 
 namespace FragEngine3;
 
+/// <summary>
+/// Extension methods for working with '<see cref="Quaternion"/>' rotations.
+/// </summary>
 public static class QuaternionExt
 {
 	#region Methods

@@ -5,6 +5,9 @@ using System.Text.Json.Serialization;
 
 namespace FragEngine3.Utility.Serialization.CustomSerializers;
 
+/// <summary>
+/// A custom converter for nicely formatting 4x4 matrices of type '<see cref="Matrix4x4"/>' for JSON serialization.
+/// </summary>
 public sealed class Matrix4x4JsonConverter : JsonConverter<Matrix4x4>
 {
 	#region Methods
