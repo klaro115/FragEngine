@@ -4,21 +4,27 @@ using FragEngine3.Scenes.EventSystem;
 
 namespace FragEngine3.Scenes
 {
-	public abstract class SceneBehaviour : ISceneElement
+	/// <summary>
+	/// Abstract base type for scene-wide behaviours. Instances of this type may be attached to a scene, to provide
+	/// overarching logic, or to handle the entire gameplay logic, in case you don't want to rely on components.
+	/// </summary>
+	/// <param name="_scene">The scene that this behaviour instance is attached to.</param>
+	public abstract class SceneBehaviour(Scene _scene) : ISceneElement
 	{
 		#region Constructors
 
-		protected SceneBehaviour(Scene _scene)
+		~SceneBehaviour()
 		{
-			scene = _scene ?? throw new ArgumentNullException(nameof(_scene), "Scene may not be null!");
+			if (!IsDisposed) Dispose(false);
 		}
 
 		#endregion
 		#region Fields
 
-		public readonly Scene scene;
-
-		private static readonly SceneEventType[] emptyEventArray = [];
+		/// <summary>
+		/// The scene that this behaviour is attached to.
+		/// </summary>
+		public readonly Scene scene = _scene ?? throw new ArgumentNullException(nameof(_scene), "Scene may not be null!");
 
 		#endregion
 		#region Properties
@@ -53,11 +59,6 @@ namespace FragEngine3.Scenes
 		/// <param name="_eventType">The type of the received event.</param>
 		/// <param name="_stateObject">A state object containing additional data associated with the event.</param>
 		public virtual void ReceiveSceneEvent(SceneEventType _eventType, object? _eventData) { }
-		/// <summary>
-		/// Returns an array of event types this behaviour will listen to.
-		/// </summary>
-		/// <returns>An array of event type, or an empty array if not listening to any events.</returns>
-		public virtual SceneEventType[] GetSceneEventList() => emptyEventArray;
 
 		/// <summary>
 		/// Load and initialize this behaviour's data and states from data. This is used when loading a saved scene from file.

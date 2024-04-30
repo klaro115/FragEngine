@@ -1,6 +1,5 @@
 ﻿using System.Numerics;
 using FragEngine3.Graphics.Contexts;
-using Veldrid;
 
 namespace FragEngine3.Graphics
 {

@@ -21,7 +21,7 @@ public interface ISceneUpdateListener : ISceneEventListener
 	/// Gets a sorting key for delaying or prioritizing the execution of update events on listeners.
 	/// This value is static and should be immutable at run-time.
 	/// </summary>
-	static int UpdateOrder { get => 0; }
+	virtual int UpdateOrder { get => 0; }
 }
 
 // UPDATE / DRAW:

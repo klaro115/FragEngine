@@ -1,4 +1,5 @@
-﻿using FragEngine3.Scenes.Data;
+﻿using FragEngine3.Graphics;
+using FragEngine3.Scenes.Data;
 using System.Numerics;
 
 namespace FragEngine3.Scenes
@@ -30,16 +31,27 @@ namespace FragEngine3.Scenes
 			}
 		}
 
+		/// <summary>
+		/// Gets or sets the ambient light radiating up from below, following the global +Y axis.
+		/// </summary>
 		public Vector3 AmbientLightIntensityLow
 		{
 			get => ambientLightIntensityLow;
 			set => ambientLightIntensityLow = Vector3.Clamp(value, Vector3.Zero, new(100.0f, 100.0f, 100.0f));
 		}
+
+		/// <summary>
+		/// Gets or sets the ambient light radiating across the horizontal plane, following the global X and Z axes.
+		/// </summary>
 		public Vector3 AmbientLightIntensityMid
 		{
 			get => ambientLightIntensityMid;
 			set => ambientLightIntensityMid = Vector3.Clamp(value, Vector3.Zero, new(100.0f, 100.0f, 100.0f));
 		}
+
+		/// <summary>
+		/// Gets or sets the ambient light radiating down from above, following the global -Y axis.
+		/// </summary>
 		public Vector3 AmbientLightIntensityHigh
 		{
 			get => ambientLightIntensityHigh;
@@ -53,9 +65,9 @@ namespace FragEngine3.Scenes
 		{
 			if (_data == null) return false;
 
-			AmbientLightIntensityLow = _data.AmbientLightIntensityLow;
-			AmbientLightIntensityMid = _data.AmbientLightIntensityLow;
-			AmbientLightIntensityHigh = _data.AmbientLightIntensityLow;
+			AmbientLightIntensityLow = (Vector3)Color32.ParseHexString(_data.AmbientLightIntensityLow);
+			AmbientLightIntensityMid = (Vector3)Color32.ParseHexString(_data.AmbientLightIntensityMid);
+			AmbientLightIntensityHigh = (Vector3)Color32.ParseHexString(_data.AmbientLightIntensityHigh);
 			//...
 
 			return true;
@@ -64,9 +76,9 @@ namespace FragEngine3.Scenes
 		{
 			_outData = new()
 			{
-				AmbientLightIntensityLow = ambientLightIntensityLow,
-				AmbientLightIntensityMid = ambientLightIntensityMid,
-				AmbientLightIntensityHigh = ambientLightIntensityHigh,
+				AmbientLightIntensityLow = new Color32(ambientLightIntensityLow).ToHexString(),
+				AmbientLightIntensityMid = new Color32(ambientLightIntensityMid).ToHexString(),
+				AmbientLightIntensityHigh = new Color32(ambientLightIntensityHigh).ToHexString(),
 				//...
 			};
 			return true;

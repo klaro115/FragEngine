@@ -15,7 +15,7 @@ namespace FragEngine3.Scenes.SceneManagers
 
         public readonly Scene scene = _scene ?? throw new ArgumentNullException(nameof(_scene), "Scene may not be null!");
 
-        private readonly List<IRenderer> renderers = [];
+        private readonly List<IRenderer> renderers = [];        //TODO [later]: Split into multiple renderer groups that may populate command lists in parallel, each in their own thread.
 
         private readonly List<Camera> cameras = new(4);
         private readonly List<Light> lights = new(64);

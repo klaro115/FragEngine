@@ -1,17 +1,14 @@
-﻿using System.Numerics;
+﻿namespace FragEngine3.Scenes.Data;
 
-namespace FragEngine3.Scenes.Data
+[Serializable]
+public sealed class SceneSettingsData
 {
-	[Serializable]
-	public sealed class SceneSettingsData
-	{
-		#region Properties
+	#region Properties
 
-		public Vector3 AmbientLightIntensityLow { get; set; } = new Vector3(0.1f, 0.1f, 0.1f);
-		public Vector3 AmbientLightIntensityMid { get; set; } = new Vector3(0.1f, 0.1f, 0.1f);
-		public Vector3 AmbientLightIntensityHigh { get; set; } = new Vector3(0.1f, 0.1f, 0.1f);
-		//...
+	public string AmbientLightIntensityLow { get; set; } = "1A1A1AFF";
+	public string AmbientLightIntensityMid { get; set; } = "1A1A1AFF";
+	public string AmbientLightIntensityHigh { get; set; } = "1A1A1AFF";
+	//...
 
-		#endregion
-	}
+	#endregion
 }

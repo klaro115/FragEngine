@@ -115,22 +115,22 @@ namespace FragEngine3.Scenes.SceneManagers
 
             if (_newListener is IOnEarlyUpdateListener earlyUpdateListener)
             {
-                earlyUpdateList.Add(earlyUpdateListener);
+                SortedInsert(earlyUpdateList, earlyUpdateListener);
 				wasRegistered = true;
 			}
 			if (_newListener is IOnMainUpdateListener mainUpdateListener)
 			{
-				mainUpdateList.Add(mainUpdateListener);
+                SortedInsert(mainUpdateList, mainUpdateListener);
 				wasRegistered = true;
 			}
 			if (_newListener is IOnLateUpdateListener lateUpdateListener)
 			{
-				lateUpdateList.Add(lateUpdateListener);
+                SortedInsert(lateUpdateList, lateUpdateListener);
 				wasRegistered = true;
 			}
 			if (_newListener is IOnFixedUpdateListener fixedUpdateListener)
 			{
-				fixedUpdateList.Add(fixedUpdateListener);
+                SortedInsert(fixedUpdateList, fixedUpdateListener);
 				wasRegistered = true;
 			}
 
@@ -165,6 +165,51 @@ namespace FragEngine3.Scenes.SceneManagers
 			}
 
             return wasRemoved;
+        }
+
+        private static void SortedInsert<T>(List<T> _list, T _newListener) where T : class, ISceneUpdateListener
+        {
+            // If list is empty, add directly:
+            if (_list.Count == 0)
+            {
+                _list.Add(_newListener);
+                return;
+            }
+
+            // If lowest order, prepend to list:
+            int order = _newListener.UpdateOrder;
+            if (order < _list[0].UpdateOrder)
+            {
+				_list.Insert(0, _newListener);
+                return;
+			}
+
+            // If highest order, append to list:
+            int highIdx = _list.Count - 1;
+            if (order >= _list[highIdx].UpdateOrder)
+            {
+                _list.Add(_newListener);
+                return;
+            }
+
+            // Insert after searching for similarly weighted update order, using Newton pattern:
+            int lowIdx = 0;
+            int midIdx = _list.Count / 2;
+            int mid = _list[midIdx].UpdateOrder;
+            while (mid != order)
+            {
+                if (mid < order)
+                {
+                    highIdx = midIdx;
+                }
+                else
+                {
+                    lowIdx = midIdx;
+                }
+                midIdx = (highIdx + lowIdx) / 2;
+                mid = _list[midIdx].UpdateOrder;
+            }
+            _list.Insert(midIdx, _newListener);
         }
 
         #endregion
