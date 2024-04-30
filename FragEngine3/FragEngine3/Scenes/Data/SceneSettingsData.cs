@@ -1,5 +1,8 @@
 ﻿namespace FragEngine3.Scenes.Data;
 
+/// <summary>
+/// Serializable data type for scene settings of type '<see cref="SceneSettings"/>'.
+/// </summary>
 [Serializable]
 public sealed class SceneSettingsData
 {
