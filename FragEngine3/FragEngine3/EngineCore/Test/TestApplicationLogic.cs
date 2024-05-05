@@ -426,7 +426,7 @@ public sealed class TestApplicationLogic : ApplicationLogic
 				Directory.CreateDirectory(saveDirPath);
 			}
 			string saveFilePath = Path.Combine(saveDirPath, "test.json");
-			SceneSerializer.SaveSceneToFile(Engine.SceneManager.MainScene!, saveFilePath, out _, false);
+			SceneSerializer.SaveSceneToFile(Engine.SceneManager.MainScene!, saveFilePath, out _, false, false);
 
 			Engine.Logger.LogMessage("Saved main scene to file.");
 		}

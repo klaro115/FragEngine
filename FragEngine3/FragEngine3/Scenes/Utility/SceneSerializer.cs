@@ -17,11 +17,19 @@ public static class SceneSerializer
 		in Scene _scene,
 		string _filePath,
 		out Progress _outProgress,
-		bool _refreshBeforeSaving = true)
+		bool _refreshBeforeSaving = true,
+		bool _compressSaveFile = false)
 	{
 		if (!SaveSceneToData(_scene, out SceneData data, out _outProgress, _refreshBeforeSaving)) return false;
 
-		return Serializer.SerializeJsonToFile(data, _filePath);
+		if (_compressSaveFile)
+		{
+			return Serializer.SerializeJsonToCompressedFile(data, _filePath);
+		}
+		else
+		{
+			return Serializer.SerializeJsonToFile(data, _filePath);
+		}
 	}
 
 	public static bool SaveSceneToData(

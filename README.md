@@ -49,7 +49,6 @@ Support may be resumed in the future if express interest arises, and may possibl
 ## Work In Progress
 
 - Refactor graphics architecture:
-    - Rewrite update/draw registration and call logic
     - Simplify code & reduce draw logic overhead
 - Lighting system: **[awaiting graphics refactoring]**
     - Indirect lighting
@@ -63,6 +62,7 @@ The following is a rough and very short-sighted roadmap of features that are goi
 
 - Refactor graphics architecture:
     - Refactor Forward+Lights graphics stack _(split into sub-modules)_
+    - Add rendering groups for auto-parallelizing draw call creation
 - Rework engine state machine:
     - More granular thread sleep timings
 - Post-processing:
