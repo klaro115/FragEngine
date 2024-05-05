@@ -13,6 +13,16 @@ public static class SceneSerializer
 {
 	#region Methods Saving
 
+	/// <summary>
+	/// Serializes a scene's current state and writes it to file.
+	/// </summary>
+	/// <param name="_scene">The scene you want to save.</param>
+	/// <param name="_filePath">The file path for the save file, may not be null or blank.</param>
+	/// <param name="_outProgress">Outputs a progress object for tracking the state of the saving process.<para/>
+	/// HINT: This may be used to animate a progress bar when saving a scene or game state.</param>
+	/// <param name="_refreshBeforeSaving">Whether to call refresh on all scene elements within the scene before storing their states.</param>
+	/// <param name="_compressSaveFile">Whether to compress the serialized data before saving it to file. If false, the data will be written as JSON plaintext.</param>
+	/// <returns>True if the scene was successfully saved to file, false otherwise.</returns>
 	public static bool SaveSceneToFile(
 		in Scene _scene,
 		string _filePath,
@@ -32,6 +42,15 @@ public static class SceneSerializer
 		}
 	}
 
+	/// <summary>
+	/// Create serializable save data from a scene's current state.
+	/// </summary>
+	/// <param name="_scene">The scene you want to save.</param>
+	/// <param name="_outData">Outputs a data object describing the scene's state and hierarchy.</param>
+	/// <param name="_outProgress">Outputs a progress object for tracking the state of the saving process.<para/>
+	/// HINT: This may be used to animate a progress bar when saving a scene or game state.</param>
+	/// <param name="_refreshBeforeSaving">Whether to call refresh on all scene elements within the scene before storing their states.</param>
+	/// <returns>True if the scene was successfully saved to data, false otherwise.</returns>
 	public static bool SaveSceneToData(
 		in Scene _scene,
 		out SceneData _outData,
