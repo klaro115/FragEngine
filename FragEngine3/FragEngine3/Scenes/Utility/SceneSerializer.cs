@@ -374,6 +374,16 @@ public static class SceneSerializer
 			goto abort;
 		}
 
+		// Finalize scene:
+		{
+			_outProgress.UpdateTitle("Sorting behaviours");
+
+			_outScene.updateManager.SortListenersByUpdateOrder();
+			_outProgress.Increment();
+			_outScene.drawManager.SortDrawablesByRenderMode();
+			_outProgress.Increment();
+		}
+
 		// Broadcast an event across the scene instance that it has just finished loading:
 		_outScene.BroadcastEvent(SceneEventType.OnSceneLoaded, _outScene, false);
 		_outScene.rootNode.SendEvent(SceneEventType.OnSetNodeEnabled, _outScene.rootNode.IsEnabled);
@@ -400,13 +410,15 @@ public static class SceneSerializer
 		out int _outTotalComponentCount,
 		out int _outTotalProgressTaskCount)
 	{
+		const int sceneFinalizingTaskCount = 2;	// re-sort update order + re-sort draw order.
+
 		int expectedElementCount = _data.GetTotalSceneElementCount();
 
 		_progress.Update("Reconstructing scene ID map", 0, expectedElementCount);
 
 		_outIdMap = new Dictionary<int, ISceneElementData>(expectedElementCount);
 		_outTotalComponentCount = 0;
-		_outTotalProgressTaskCount = 0;
+		_outTotalProgressTaskCount = sceneFinalizingTaskCount;
 
 		if (_data.Behaviours?.BehavioursData != null)
 		{
