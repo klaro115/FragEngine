@@ -8,11 +8,11 @@ namespace FragEngine3.Graphics.Resources.Data
 {
     /// <summary>
     /// Raw CPU-side surface geometry data for a mesh. This contains basic and (optionally) extended vertex data defining
-    /// a hard surface mesh. A '<see cref="StaticMesh"/>' resource can be created directly from just this data; animated
-    /// meshes will require additional data.
+    /// a hard surface mesh. A '<see cref="Mesh"/>' resource can be created directly from just this data; animated meshes
+    /// will require additional data.
     /// </summary>
     [Serializable]
-    [ResourceDataType(typeof(StaticMesh))]
+    [ResourceDataType(typeof(Mesh))]
     public sealed class MeshSurfaceData
     {
         #region Fields

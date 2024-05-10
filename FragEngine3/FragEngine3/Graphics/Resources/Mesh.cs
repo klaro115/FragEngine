@@ -1,5 +1,7 @@
 ﻿using FragEngine3.EngineCore;
+using FragEngine3.Graphics.Resources.Data;
 using FragEngine3.Resources;
+using System.Numerics;
 using Veldrid;
 
 namespace FragEngine3.Graphics.Resources;
@@ -12,9 +14,11 @@ public sealed class Mesh : Resource
 	{
 		graphicsCore = _graphicsCore ?? _handle.resourceManager.engine.GraphicsSystem.graphicsCore;
 	}
-	public Mesh(string _resourceKey, GraphicsCore _graphicsCore) : base(_resourceKey, _graphicsCore.graphicsSystem.engine)
+	public Mesh(string _resourceKey, Engine _engine, out ResourceHandle _outHandle) : base(_resourceKey, _engine)
 	{
-		graphicsCore = _graphicsCore;
+		_outHandle = new(this);
+		resourceManager.AddResource(_outHandle);
+		graphicsCore = _engine.GraphicsSystem.graphicsCore;
 	}
 
 	~Mesh()
@@ -66,6 +70,8 @@ public sealed class Mesh : Resource
 
 	public override ResourceType ResourceType => ResourceType.Model;
 
+	public bool IsInitialized => !IsDisposed && bufVerticesBasic is not null && bufIndices is not null;
+
 	public int VertexBufferCount => vertexBuffers.Length;
 	public MeshVertexDataFlags VertexDataFlags { get; private set; } = MeshVertexDataFlags.BasicSurfaceData;
 	public IndexFormat IndexFormat { get; private set; } = IndexFormat.UInt16;
@@ -73,6 +79,8 @@ public sealed class Mesh : Resource
 	public uint VertexCount { get; private set; } = 0;
 	public uint IndexCount { get; private set; } = 0;
 	public uint TriangleCount { get; private set; } = 0;
+
+	public float BoundingRadius { get; private set; } = 1.0f;
 
 	private Logger Logger => graphicsCore.graphicsSystem.engine.Logger;
 
@@ -126,6 +134,15 @@ public sealed class Mesh : Resource
 		CheckVertexData(_verticesBlend, MeshVertexDataFlags.BlendShapes);
 		CheckVertexData(_verticesAnim, MeshVertexDataFlags.Animations);
 
+		// Recalculate bounding radius from new position data:
+		float newBoundingRadiusSq = 0.0f;
+		for (int i = 0; i < newVertexCount; ++i)
+		{
+			Vector3 position = _verticesBasic[i].position;
+			float originDistSq = position.LengthSquared();
+			newBoundingRadiusSq = MathF.Min(originDistSq, newBoundingRadiusSq);
+		}
+
 		bool success = true;
 		bool wereBuffersChanged = false;
 		int currentBufferIndex = 0;
@@ -136,6 +153,7 @@ public sealed class Mesh : Resource
 			areVerticesDirtyFlags = newVertexDataFlags;
 			VertexDataFlags = newVertexDataFlags;
 			VertexCount = (uint)newVertexCount;
+			BoundingRadius = MathF.Sqrt(newBoundingRadiusSq);
 
 			if (vertexBuffers.Length != newVertexBufferCount)
 			{
@@ -191,7 +209,7 @@ public sealed class Mesh : Resource
 				// Create a new buffer:
 				try
 				{
-					BufferDescription bufferDesc = new(totalByteSize, BufferUsage.VertexBuffer, _elementByteSize);
+					BufferDescription bufferDesc = new(totalByteSize, BufferUsage.VertexBuffer);
 					_bufVertices = graphicsCore.MainFactory.CreateBuffer(ref bufferDesc);
 					_bufVertices.Name = $"BufVertex_x{newVertexCount}_{_vertexDataFlag}";
 
@@ -235,7 +253,7 @@ public sealed class Mesh : Resource
 			IndexFormat = IndexFormat.UInt16;
 
 			// Check if the previous buffer is still alive and large enough for the new data:
-			uint totalByteSize = sizeof(ushort) * VertexCount;
+			uint totalByteSize = sizeof(ushort) * IndexCount;
 			if (bufIndices is null || bufIndices.IsDisposed || bufIndices.SizeInBytes < totalByteSize)
 			{
 				wasBuffersChanged = true;
@@ -246,7 +264,7 @@ public sealed class Mesh : Resource
 				// Create a new buffer:
 				try
 				{
-					BufferDescription bufferDesc = new(totalByteSize, BufferUsage.IndexBuffer, sizeof(ushort));
+					BufferDescription bufferDesc = new(totalByteSize, BufferUsage.IndexBuffer);
 					bufIndices = graphicsCore.MainFactory.CreateBuffer(ref bufferDesc);
 					bufIndices.Name = $"BufIndices_x{newIndexCount}_{IndexFormat.UInt16}";
 				}
@@ -311,7 +329,7 @@ public sealed class Mesh : Resource
 			IndexFormat = newIndexFormat;
 
 			// Check if the previous buffer is still alive and large enough for the new data:
-			uint totalByteSize = elementByteSize * VertexCount;
+			uint totalByteSize = elementByteSize * IndexCount;
 			if (bufIndices is null || bufIndices.IsDisposed || bufIndices.SizeInBytes < totalByteSize)
 			{
 				wasBuffersChanged = true;
@@ -322,7 +340,7 @@ public sealed class Mesh : Resource
 				// Create a new buffer:
 				try
 				{
-					BufferDescription bufferDesc = new(totalByteSize, BufferUsage.IndexBuffer, elementByteSize);
+					BufferDescription bufferDesc = new(totalByteSize, BufferUsage.IndexBuffer);
 					bufIndices = graphicsCore.MainFactory.CreateBuffer(ref bufferDesc);
 					bufIndices.Name = $"BufIndices_x{newIndexCount}_{newIndexFormat}";
 				}
@@ -362,11 +380,50 @@ public sealed class Mesh : Resource
 		return true;
 	}
 
-	public bool Prepare(out DeviceBuffer[] _outBufVertices, out DeviceBuffer _outBufIndices)
+	public bool SetGeometry(in MeshSurfaceData _surfaceData)
 	{
 		if (IsDisposed)
 		{
-			Logger.LogError("Cannot prepare disposed mesh for rendering!");
+			Logger.LogError("Cannot set surface data of disposed mesh!");
+			return false;
+		}
+		if (_surfaceData is null)
+		{
+			Logger.LogError("Mesh's surface data may not be null!");
+			return false;
+		}
+
+		// Set vertex data:
+		if (!SetVertexData(_surfaceData.verticesBasic, _surfaceData.verticesExt, null, null, _surfaceData.VertexCount))
+		{
+			Logger.LogError($"Failed to set vertices from surface data on mesh '{resourceKey}'!");
+			return false;
+		}
+
+		// Set index data:
+		bool wereIndicesSet;
+		if (_surfaceData.IndexFormat == IndexFormat.UInt16)
+		{
+			wereIndicesSet = SetIndexData(_surfaceData.indices16!, _surfaceData.IndexCount);
+		}
+		else
+		{
+			wereIndicesSet = SetIndexData(_surfaceData.indices32!, _surfaceData.IndexCount);
+		}
+		if (!wereIndicesSet)
+		{
+			Logger.LogError($"Failed to set indices of format '{_surfaceData.IndexFormat}' from surface data on mesh '{resourceKey}'!");
+			return false;
+		}
+
+		return true;
+	}
+
+	public bool Prepare(out DeviceBuffer[] _outBufVertices, out DeviceBuffer _outBufIndices)
+	{
+		if (!IsInitialized)
+		{
+			Logger.LogError("Cannot prepare uninitialized or disposed mesh for rendering!");
 			_outBufVertices = null!;
 			_outBufIndices = null!;
 			return false;

@@ -152,22 +152,13 @@ namespace FragEngine3.Graphics.Resources.Import
 
 			Logger logger = _handle.resourceManager.engine.Logger ?? Logger.Instance!;
 
-			bool useFullVertexDef = _surfaceData.HasExtendedVertexData;
-
-			//TODO [later]: Determine which mesh type to create, based on which data was provided.
-
-			// Create static mesh:
-			_outMesh = new StaticMesh(_handle, _core, useFullVertexDef);
+			// Create mesh instance:
+			_outMesh = new Mesh(_handle, _core);
 
 			bool success = true;
 
 			// Set vertex data:
-			success &= _outMesh.SetBasicGeometry(_surfaceData.verticesBasic);
-			if (useFullVertexDef)
-			{
-				success &= _outMesh.SetExtendedGeometry(_surfaceData.verticesExt!);
-			}
-			if (!success)
+			if (!_outMesh.SetVertexData(_surfaceData.verticesBasic, _surfaceData.verticesExt))
 			{
 				logger.LogError($"Failed to set vertex data on mesh for resource '{_handle}'!");
 				goto abort;

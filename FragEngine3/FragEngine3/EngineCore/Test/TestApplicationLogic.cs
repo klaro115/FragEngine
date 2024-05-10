@@ -284,7 +284,7 @@ public sealed class TestApplicationLogic : ApplicationLogic
 			fbxRenderer.node.SetRotationFromYawPitchRoll(0, 0, 0, false, true);
 			fbxRenderer.node.LocalScale = Vector3.One * 0.5f;
 			//fbxRenderer.node.SetEnabled(false);
-
+		
 			fbxRenderer.SetMesh("Cube.obj");
 			//fbxRenderer.SetMesh("Plane.fbx");
 			fbxRenderer.SetMaterial("Mtl_DefaultSurface");
@@ -306,7 +306,7 @@ public sealed class TestApplicationLogic : ApplicationLogic
 				2, 3, 1,
 			],
 		};
-		StaticMesh quadMesh = new("Quad", Engine, false, out ResourceHandle quadHandle);
+		Mesh quadMesh = new("Quad", Engine, out ResourceHandle quadHandle);
 		quadMesh.SetGeometry(in quadData);
 		if (SceneSpawner.CreateStaticMeshRenderer(scene, out StaticMeshRenderer quad))
 		{

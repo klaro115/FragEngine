@@ -46,7 +46,7 @@ public static class ResourceLoadUtility
 		return true;
 	}
 
-	public static bool EnsureMeshIsLoaded<T>(ResourceHandle? _resourceHandle, ref T? _mesh, ref float _boundingRadius, bool _dontContinueUnlessFullyLoaded, out bool _outResourceIsReady) where T : Mesh
+	public static bool EnsureMeshIsLoaded(ResourceHandle? _resourceHandle, ref Mesh? _mesh, ref float _boundingRadius, bool _dontContinueUnlessFullyLoaded, out bool _outResourceIsReady)
 	{
 		// Check resource and load it now if necessary:
 		if (_mesh is null || _mesh.IsDisposed)
@@ -64,7 +64,7 @@ public static class ResourceLoadUtility
 				return true;
 			}
 
-			if (_resourceHandle.GetResource(true, true) is not T typedMesh || !typedMesh.IsLoaded)
+			if (_resourceHandle.GetResource(true, true) is not Mesh typedMesh || !typedMesh.IsLoaded)
 			{
 				_resourceHandle.resourceManager.engine.Logger.LogError($"Failed to load mesh from handle '{_resourceHandle}'!");
 				_outResourceIsReady = false;

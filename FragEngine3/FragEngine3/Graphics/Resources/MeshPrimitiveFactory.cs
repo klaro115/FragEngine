@@ -168,7 +168,7 @@ namespace FragEngine3.Graphics.Resources
 			Vector3 _size,
 			bool _useExtendedData,
 			out MeshSurfaceData _outMeshData,
-			out StaticMesh _outMesh,
+			out Mesh _outMesh,
 			out ResourceHandle _outHandle)
 		{
 			if (string.IsNullOrEmpty(_resourceKey) || _engine == null || _engine.IsDisposed)
@@ -189,7 +189,7 @@ namespace FragEngine3.Graphics.Resources
 				return false;
 			}
 
-			_outMesh = new(_resourceKey, _engine, _useExtendedData, out _outHandle);
+			_outMesh = new(_resourceKey, _engine, out _outHandle);
 
 			return _outMesh.SetGeometry(in _outMeshData);
 		}
@@ -330,7 +330,7 @@ namespace FragEngine3.Graphics.Resources
 			float _radius, float _height, uint _subdivisions,
 			bool _useExtendedData,
 			out MeshSurfaceData _outMeshData,
-			out StaticMesh _outMesh,
+			out Mesh _outMesh,
 			out ResourceHandle _outHandle)
 		{
 			if (string.IsNullOrEmpty(_resourceKey) || _engine == null || _engine.IsDisposed)
@@ -351,7 +351,7 @@ namespace FragEngine3.Graphics.Resources
 				return false;
 			}
 
-			_outMesh = new(_resourceKey, _engine, _useExtendedData, out _outHandle);
+			_outMesh = new(_resourceKey, _engine, out _outHandle);
 
 			return _outMesh.SetGeometry(in _outMeshData);
 		}
@@ -439,7 +439,7 @@ namespace FragEngine3.Graphics.Resources
 			Vector2 _size, uint _subdivisions,
 			bool _useExtendedData,
 			out MeshSurfaceData _outMeshData,
-			out StaticMesh _outMesh,
+			out Mesh _outMesh,
 			out ResourceHandle _outHandle)
 		{
 			if (string.IsNullOrEmpty(_resourceKey) || _engine == null || _engine.IsDisposed)
@@ -460,7 +460,7 @@ namespace FragEngine3.Graphics.Resources
 				return false;
 			}
 
-			_outMesh = new(_resourceKey, _engine, _useExtendedData, out _outHandle);
+			_outMesh = new(_resourceKey, _engine, out _outHandle);
 
 			return _outMesh.SetGeometry(in _outMeshData);
 		}
@@ -584,7 +584,7 @@ namespace FragEngine3.Graphics.Resources
 			float _radius, float _height, uint _subdivisions,
 			bool _useExtendedData,
 			out MeshSurfaceData _outMeshData,
-			out StaticMesh _outMesh,
+			out Mesh _outMesh,
 			out ResourceHandle _outHandle)
 		{
 			if (string.IsNullOrEmpty(_resourceKey) || _engine == null || _engine.IsDisposed)
@@ -605,7 +605,7 @@ namespace FragEngine3.Graphics.Resources
 				return false;
 			}
 
-			_outMesh = new(_resourceKey, _engine, _useExtendedData, out _outHandle);
+			_outMesh = new(_resourceKey, _engine, out _outHandle);
 
 			return _outMesh.SetGeometry(in _outMeshData);
 		}
@@ -731,7 +731,7 @@ namespace FragEngine3.Graphics.Resources
 			float _radius,
 			bool _useExtendedData,
 			out MeshSurfaceData _outMeshData,
-			out StaticMesh _outMesh,
+			out Mesh _outMesh,
 			out ResourceHandle _outHandle)
 		{
 			if (string.IsNullOrEmpty(_resourceKey) || _engine == null || _engine.IsDisposed)
@@ -753,7 +753,7 @@ namespace FragEngine3.Graphics.Resources
 				return false;
 			}
 
-			_outMesh = new(_resourceKey, _engine, _useExtendedData, out _outHandle);
+			_outMesh = new(_resourceKey, _engine, out _outHandle);
 
 			return _outMesh.SetGeometry(in _outMeshData);
 		}
@@ -790,7 +790,7 @@ namespace FragEngine3.Graphics.Resources
 			Engine _engine,
 			bool _useExtendedData,
 			out MeshSurfaceData _outMeshData,
-			out StaticMesh _outMesh,
+			out Mesh _outMesh,
 			out ResourceHandle _outHandle)
 		{
 			if (string.IsNullOrEmpty(_resourceKey) || _engine == null || _engine.IsDisposed)
@@ -812,7 +812,7 @@ namespace FragEngine3.Graphics.Resources
 				return false;
 			}
 
-			_outMesh = new(_resourceKey, _engine, _useExtendedData, out _outHandle);
+			_outMesh = new(_resourceKey, _engine, out _outHandle);
 
 			return _outMesh.SetGeometry(in _outMeshData);
 		}

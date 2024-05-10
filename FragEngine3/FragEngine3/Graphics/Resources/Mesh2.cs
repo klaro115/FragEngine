@@ -174,6 +174,7 @@ namespace FragEngine3.Graphics.Resources
 		public abstract bool SetIndexData(ushort[] _indices, bool _verifyIndices = false);
 		public abstract bool SetIndexData(int[] _indices, bool _verifyIndices = false);
 
+		/*
 		public virtual bool AsyncDownloadGeometry(AsyncGeometryDownloadRequest.CallbackReceiveDownloadedData _callbackDownloadDone)
 		{
 			if (!IsInitialized)
@@ -288,6 +289,7 @@ namespace FragEngine3.Graphics.Resources
 				return true;
 			}
 		}
+		*/
 		
 		public override IEnumerator<ResourceHandle> GetResourceDependencies()
 		{
