@@ -319,6 +319,33 @@ namespace FragEngine3.Graphics
 			}
 		}
 
+		public static Color32 ParseHexString(ReadOnlySpan<char> _hexString)
+		{
+			if (_hexString.IsEmpty || _hexString.Length < 6)
+			{
+				return TransparentBlack;
+			}
+			uint r = (ParseDigit(_hexString[0]) << 4) | ParseDigit(_hexString[1]);
+			uint g = (ParseDigit(_hexString[2]) << 4) | ParseDigit(_hexString[3]);
+			uint b = (ParseDigit(_hexString[4]) << 4) | ParseDigit(_hexString[5]);
+			uint a = 0xFF;
+			if (_hexString.Length >= 8)
+			{
+				a = (ParseDigit(_hexString[6]) << 4) | ParseDigit(_hexString[7]);
+			}
+			return new((byte)r, (byte)g, (byte)b, (byte)a);
+
+			static uint ParseDigit(uint c)
+			{
+				if (c >= 'a')
+					return c - 'a' + 10;
+				else if (c >= 'A')
+					return c - 'A' + 10;
+				else
+					return c - '0';
+			}
+		}
+
 		#endregion
 		#region Standard Colors
 

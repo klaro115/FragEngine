@@ -20,6 +20,8 @@ public static class Serializer
 		{
 			new Matrix4x4JsonConverter(),
 			new PoseJsonConverter(),
+			new RgbaFloatJsonConverter(),
+			//...
 		},
 	};
 	private static JsonSerializerOptions? customOptions = null;
