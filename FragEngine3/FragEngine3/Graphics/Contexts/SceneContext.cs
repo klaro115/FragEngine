@@ -2,39 +2,38 @@
 using FragEngine3.Scenes;
 using Veldrid;
 
-namespace FragEngine3.Graphics.Contexts
+namespace FragEngine3.Graphics.Contexts;
+
+public sealed class SceneContext(
+	// References:
+	Scene _scene,
+
+	// Scene resources:
+	ResourceLayout _resLayoutCamera,
+	ResourceLayout _resLayoutObject,
+	DeviceBuffer _cbScene,
+	LightDataBuffer _dummyLightDataBuffer,
+	ShadowMapArray _shadowMapArray,
+
+	// Parameters:
+	uint _lightCount,
+	uint _lightCountShadowMapped)
 {
-	public sealed class SceneContext(
-		// References:
-		Scene _scene,
+	#region Fields
 
-		// Scene resources:
-		ResourceLayout _resLayoutCamera,
-		ResourceLayout _resLayoutObject,
-		DeviceBuffer _cbScene,
-		LightDataBuffer _dummyLightDataBuffer,
-		ShadowMapArray _shadowMapArray,
+	// References:
+	public readonly Scene scene = _scene;
 
-		// Parameters:
-		uint _lightCount,
-		uint _lightCountShadowMapped)
-	{
-		#region Fields
+	// Scene resources:
+	public readonly ResourceLayout resLayoutCamera = _resLayoutCamera;
+	public readonly ResourceLayout resLayoutObject = _resLayoutObject;
+	public readonly DeviceBuffer cbScene = _cbScene;
+	public readonly LightDataBuffer dummyLightDataBuffer = _dummyLightDataBuffer;
+	public readonly ShadowMapArray shadowMapArray = _shadowMapArray;
 
-		// References:
-		public readonly Scene scene = _scene;
+	// Parameters:
+	public readonly uint lightCount = _lightCount;
+	public readonly uint lightCountShadowMapped = Math.Min(_lightCountShadowMapped, _lightCount);
 
-		// Scene resources:
-		public readonly ResourceLayout resLayoutCamera = _resLayoutCamera;
-		public readonly ResourceLayout resLayoutObject = _resLayoutObject;
-		public readonly DeviceBuffer cbScene = _cbScene;
-		public readonly LightDataBuffer dummyLightDataBuffer = _dummyLightDataBuffer;
-		public readonly ShadowMapArray shadowMapArray = _shadowMapArray;
-
-		// Parameters:
-		public readonly uint lightCount = _lightCount;
-		public readonly uint lightCountShadowMapped = Math.Min(_lightCountShadowMapped, _lightCount);
-
-		#endregion
-	}
+	#endregion
 }
