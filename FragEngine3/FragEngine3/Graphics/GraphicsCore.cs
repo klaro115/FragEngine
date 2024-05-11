@@ -231,7 +231,7 @@ namespace FragEngine3.Graphics
 			Device.WaitForIdle();
 
 			// If there are async download requests, issue these now:
-			if (asyncDownloadsRequests.Count != 0 && blittingCmdList != null)
+			if (asyncDownloadsRequests.Count != 0 && blittingCmdList is not null)
 			{
 				lock (downloadLockObj)
 				{
@@ -274,7 +274,7 @@ namespace FragEngine3.Graphics
 					//Device.WaitForIdle();
 					foreach (AsyncGeometryDownloadRequest request in asyncDownloadsRequests)
 					{
-						if (request != null && request.IsValid)
+						if (request is not null && request.IsValid)
 						{
 							request.Finish();
 							request.Dispose();
@@ -294,19 +294,19 @@ namespace FragEngine3.Graphics
 				Logger.LogError("Cannot schedule async geometry download on uninitialized graphics core!");
 				return false;
 			}
-			if (_request == null || _request.IsValid)
+			if (_request is null || !_request.IsValid)
 			{
 				Logger.LogError("Cannot schedule null or invalid async geometry download request!");
 				return false;
 			}
-			if (_request.callbackReceiveDownloadedData == null)
+			if (_request.callbackReceiveDownloadedData is null)
 			{
 				Logger.LogError("Cannot schedule async geometry download request with null callback!");
 				return false;
 			}
 
 			// Prepare a command list specifically for blitting/copying resources:
-			if (blittingCmdList == null || blittingCmdList.IsDisposed)
+			if (blittingCmdList is null || blittingCmdList.IsDisposed)
 			{
 				blittingCmdList = MainFactory.CreateCommandList();
 			}

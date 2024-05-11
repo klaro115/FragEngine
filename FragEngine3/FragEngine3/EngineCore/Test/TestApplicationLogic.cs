@@ -407,7 +407,22 @@ public sealed class TestApplicationLogic : ApplicationLogic
 		}
 		*/
 
+		// Try downloading mesh geometry data from GPU memory when pressing 'T':
+		if (Engine.InputManager.GetKeyUp(Key.T) && Engine.ResourceManager.GetResource("Cube", out ResourceHandle meshHandle))
+		{
+			Mesh? mesh = meshHandle?.GetResource<Mesh>(false);
+			if (mesh is null || !mesh.RequestGeometryDownload(CallbackMeshGeometryDownload))
+			{
+				Engine.Logger.LogError("Geometry download request failed.");
+			}
+		}
+
 		return true;
+	}
+
+	private void CallbackMeshGeometryDownload(Mesh _mesh, MeshSurfaceData _meshSurfaceData, IndexedWeightedVertex[]? _blendShapeData = null, IndexedWeightedVertex[]? _animationData = null)
+	{
+		Engine.Logger.LogMessage("Geometry download completed.");
 	}
 
 	public override bool DrawRunningState()

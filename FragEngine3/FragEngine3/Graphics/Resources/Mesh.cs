@@ -1,4 +1,5 @@
 ﻿using FragEngine3.EngineCore;
+using FragEngine3.Graphics.Internal;
 using FragEngine3.Graphics.Resources.Data;
 using FragEngine3.Resources;
 using System.Numerics;
@@ -470,10 +471,10 @@ public sealed class Mesh : Resource
 
 		lock(lockObj)
 		{
-			success &= UploadDataToBuffer(bufVerticesBasic!, pendingVerticesBasic, MeshVertexDataFlags.BasicSurfaceData);
-			success &= UploadDataToBuffer(bufVerticesExt!, pendingVerticesExt, MeshVertexDataFlags.ExtendedSurfaceData);
-			success &= UploadDataToBuffer(bufVerticesBlend!, pendingVerticesBlend, MeshVertexDataFlags.BlendShapes);
-			success &= UploadDataToBuffer(bufVerticesAnim!, pendingVerticesAnim, MeshVertexDataFlags.Animations);
+			success &= UploadDataToBuffer(bufVerticesBasic!, ref pendingVerticesBasic, MeshVertexDataFlags.BasicSurfaceData);
+			success &= UploadDataToBuffer(bufVerticesExt!, ref pendingVerticesExt, MeshVertexDataFlags.ExtendedSurfaceData);
+			success &= UploadDataToBuffer(bufVerticesBlend!, ref pendingVerticesBlend, MeshVertexDataFlags.BlendShapes);
+			success &= UploadDataToBuffer(bufVerticesAnim!, ref pendingVerticesAnim, MeshVertexDataFlags.Animations);
 
 			if (success)
 			{
@@ -483,7 +484,7 @@ public sealed class Mesh : Resource
 		return success;
 
 
-		bool UploadDataToBuffer<T>(DeviceBuffer _bufVertexData, T[]? _pendingData, MeshVertexDataFlags _vertexDataFlag) where T : unmanaged
+		bool UploadDataToBuffer<T>(DeviceBuffer _bufVertexData, ref T[]? _pendingData, MeshVertexDataFlags _vertexDataFlag) where T : unmanaged
 		{
 			if (areVerticesDirtyFlags.HasFlag(_vertexDataFlag) && _pendingData is not null)
 			{
@@ -497,6 +498,7 @@ public sealed class Mesh : Resource
 					return false;
 				}
 			}
+			_pendingData = null;
 			return true;
 		}
 	}
@@ -522,9 +524,200 @@ public sealed class Mesh : Resource
 				return false;
 			}
 
+			pendingIndices16 = null;
+			pendingIndices32 = null;
 			areIndicesDirty = false;
 		}
 		return true;
+	}
+
+	public bool RequestGeometryDownload(AsyncGeometryDownloadRequest.CallbackReceiveDownloadedData _downloadCallback)
+	{
+		if (!IsInitialized)
+		{
+			Logger.LogError("Cannot download geometry data from uninitialized or disposed mesh!");
+			return false;
+		}
+		if (_downloadCallback is null)
+		{
+			Logger.LogError("Cannot download mesh geometry data using null download callback!");
+			return false;
+		}
+
+		AsyncGeometryDownloadRequest request = new(
+			this,
+			CallbackDispatchCopyForGeometryDownload,
+			CallbackDownloadDataForGeometryDownload,
+			_downloadCallback)
+		{
+			dstSurfaceData = new MeshSurfaceData()
+			{
+				verticesBasic = new BasicVertex[VertexCount],
+				verticesExt = bufVerticesExt is not null ? new ExtendedVertex[VertexCount] : null,
+				indices16 = IndexFormat == IndexFormat.UInt16 ? new ushort[IndexCount] : null,
+				indices32 = IndexFormat == IndexFormat.UInt32 ? new int[IndexCount] : null,
+			},
+			dstBlendShapeData = bufVerticesBlend is not null ? new IndexedWeightedVertex[VertexCount] : null,
+			dstAnimationData = bufVerticesAnim is not null ? new IndexedWeightedVertex[VertexCount] : null,
+		};
+
+		return graphicsCore.ScheduleAsyncGeometryDownload(request);
+	}
+
+	private bool CallbackDispatchCopyForGeometryDownload(CommandList _blittingCmdList, AsyncGeometryDownloadRequest _request, out DeviceBuffer[] _outStagingBuffers, out MeshVertexDataFlags[] _outStagingBufferDataTypes)
+	{
+		if (!IsInitialized)
+		{
+			Logger.LogError("Cannot dispatch copy for geometry download from uninitialized or disposed mesh!");
+			_outStagingBuffers = [];
+			_outStagingBufferDataTypes = [];
+			return true;
+		}
+		if (_blittingCmdList is null || _blittingCmdList.IsDisposed)
+		{
+			Logger.LogError("Cannot download mesh geometry data using null or disposed command list!");
+			_outStagingBuffers = [];
+			_outStagingBufferDataTypes = [];
+			return false;
+		}
+		if (!_request.IsValid)
+		{
+			Logger.LogError("Mesh geometry data download request is invalid!");
+			_outStagingBuffers = [];
+			_outStagingBufferDataTypes = [];
+			return false;
+		}
+
+		bool success = true;
+
+		int stagingBufferIdx = 0;
+		int stagingBufferCount = VertexBufferCount + 1;
+		DeviceBuffer[] stagingBuffers = new DeviceBuffer[stagingBufferCount];
+		MeshVertexDataFlags[] dataTypes = new MeshVertexDataFlags[stagingBufferCount];
+
+		// Vertex buffers:
+		success &= CreateStagingBufferAndScheduleCopy(bufVerticesBasic, _request.dstSurfaceData?.verticesBasic, MeshVertexDataFlags.BasicSurfaceData);
+		success &= CreateStagingBufferAndScheduleCopy(bufVerticesExt, _request.dstSurfaceData?.verticesExt, MeshVertexDataFlags.ExtendedSurfaceData);
+		success &= CreateStagingBufferAndScheduleCopy(bufVerticesBlend, _request.dstBlendShapeData, MeshVertexDataFlags.BlendShapes);
+		success &= CreateStagingBufferAndScheduleCopy(bufVerticesAnim, _request.dstAnimationData, MeshVertexDataFlags.Animations);
+
+		// Index buffer:
+		if (IndexFormat == IndexFormat.UInt16)
+		{
+			success &= CreateStagingBufferAndScheduleCopy(bufIndices, _request.dstSurfaceData?.indices16, 0);
+		}
+		else
+		{
+			success &= CreateStagingBufferAndScheduleCopy(bufIndices, _request.dstSurfaceData?.indices32, 0);
+		}
+		
+		_outStagingBuffers = stagingBuffers;
+		_outStagingBufferDataTypes = dataTypes;
+		return success;
+
+
+		// Local helper method for creating staging buffer, and to issue the copy command:
+		bool CreateStagingBufferAndScheduleCopy(DeviceBuffer? _copyFrom, Array? _dstDataBuffer, MeshVertexDataFlags _dataFlag)
+		{
+			if (_copyFrom is null || _dstDataBuffer is null)
+			{
+				return true;
+			}
+
+			BufferDescription bufferDesc = new(_copyFrom.SizeInBytes, BufferUsage.Staging);
+
+			try
+			{
+				// Create staging buffer:
+				DeviceBuffer stagingBuffer = graphicsCore.MainFactory.CreateBuffer(ref bufferDesc);
+				stagingBuffers[stagingBufferIdx] = stagingBuffer;
+				dataTypes[stagingBufferIdx] = _dataFlag;
+				stagingBufferIdx++;
+
+				// Schedule copy via command list:
+				_blittingCmdList.CopyBuffer(_copyFrom, 0u, stagingBuffer, 0u, bufferDesc.SizeInBytes);
+				return true;
+			}
+			catch (Exception ex)
+			{
+				Logger.LogException($"Failed to create staging buffer for downloading geometry data from buffer '{_copyFrom.Name}'!", ex);
+				return false;
+			}
+		}
+	}
+
+	private bool CallbackDownloadDataForGeometryDownload(AsyncGeometryDownloadRequest _request)
+	{
+		if (!_request.IsValid)
+		{
+			Logger.LogError("Mesh geometry data download request is invalid!");
+			return false;
+		}
+		if (_request.StagingBuffers is null || _request.StagingBufferDataTypes is null)
+		{
+			Logger.LogError("Mesh geometry data download request has no staging buffers to download from!");
+			return false;
+		}
+
+		bool success = true;
+
+		// Vertex data:
+		success &= TryMapAndDownloadData(_request.dstSurfaceData?.verticesBasic, BasicVertex.byteSize, MeshVertexDataFlags.BasicSurfaceData);
+		success &= TryMapAndDownloadData(_request.dstSurfaceData?.verticesExt, BasicVertex.byteSize, MeshVertexDataFlags.ExtendedSurfaceData);
+		success &= TryMapAndDownloadData(_request.dstBlendShapeData, IndexedWeightedVertex.byteSize, MeshVertexDataFlags.BlendShapes);
+		success &= TryMapAndDownloadData(_request.dstAnimationData, IndexedWeightedVertex.byteSize, MeshVertexDataFlags.Animations);
+
+		// Index data:
+		if (IndexFormat == IndexFormat.UInt16)
+		{
+			success &= TryMapAndDownloadData(_request.dstSurfaceData?.indices16, sizeof(ushort), 0);
+		}
+		else
+		{
+			success &= TryMapAndDownloadData(_request.dstSurfaceData?.indices32, sizeof(int), 0);
+		}
+
+		return success;
+
+
+		// Local helper method for checking if a specific type of geometry data is available for download, and than map and copy data from staging buffer:
+		bool TryMapAndDownloadData<T>(T[]? _dstDataBuffer, uint _elementByteSize, MeshVertexDataFlags _dataFlag) where T : unmanaged
+		{
+			// Check if a staging buffer of that data type exists:
+			int stagingBufferIdx = Array.IndexOf(_request.StagingBufferDataTypes, _dataFlag);
+			if (stagingBufferIdx < 0)
+			{
+				return true;
+			}
+
+			// Get staging buffer, abort quietly if no destination exists:
+			DeviceBuffer stagingBuffer = _request.StagingBuffers[stagingBufferIdx];
+			MeshVertexDataFlags dataType = _request.StagingBufferDataTypes[stagingBufferIdx];
+
+			if (_dstDataBuffer is null)
+			{
+				return true;
+			}
+
+			uint stagingBufferElementCount = stagingBuffer.SizeInBytes / _elementByteSize;
+			uint downloadElementCount = Math.Min((uint)_dstDataBuffer.Length, stagingBufferElementCount);
+
+			try
+			{
+				var mappedData = graphicsCore.Device.Map<T>(stagingBuffer, MapMode.Read);
+				for (uint i = 0; i < downloadElementCount; ++i)
+				{
+					_dstDataBuffer[i] = mappedData[i];
+				}
+				graphicsCore.Device.Unmap(stagingBuffer);
+				return true;
+			}
+			catch (Exception ex)
+			{
+				Logger.LogException($"Failed to map and download mesh geometry data of type '{typeof(T).Name}'", ex);
+				return false;
+			}
+		}
 	}
 
 	public override IEnumerator<ResourceHandle> GetResourceDependencies()
