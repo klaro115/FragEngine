@@ -84,9 +84,9 @@ public sealed class TestApplicationLogic : ApplicationLogic
 		Scene scene = Engine.SceneManager.MainScene!;
 		
 		// Set ambient lighting:
-		scene.settings.AmbientLightIntensityLow = new(0.18f, 0.16f, 0.12f);
-		scene.settings.AmbientLightIntensityMid = new(0.15f, 0.15f, 0.15f);
-		scene.settings.AmbientLightIntensityHigh = new(0.17f, 0.17f, 0.25f);
+		scene.settings.AmbientLightIntensityLow = new(0.18f, 0.16f, 0.12f, 0);
+		scene.settings.AmbientLightIntensityMid = new(0.15f, 0.15f, 0.15f, 0);
+		scene.settings.AmbientLightIntensityHigh = new(0.17f, 0.17f, 0.25f, 0);
 
 		// Create a camera:
 		if (SceneSpawner.CreateCamera(scene, true, out Camera camera))

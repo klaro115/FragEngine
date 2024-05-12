@@ -1,6 +1,6 @@
-﻿using FragEngine3.Graphics;
-using FragEngine3.Scenes.Data;
+﻿using FragEngine3.Scenes.Data;
 using System.Numerics;
+using Veldrid;
 
 namespace FragEngine3.Scenes;
 
@@ -8,9 +8,9 @@ public sealed class SceneSettings
 {
 	#region Fields
 
-	private Vector3 ambientLightIntensityLow = new(0.1f, 0.1f, 0.1f);
-	private Vector3 ambientLightIntensityMid = new(0.1f, 0.1f, 0.1f);
-	private Vector3 ambientLightIntensityHigh = new(0.1f, 0.1f, 0.1f);
+	private RgbaFloat ambientLightIntensityLow = new(0.1f, 0.1f, 0.1f, 0);
+	private RgbaFloat ambientLightIntensityMid = new(0.1f, 0.1f, 0.1f, 0);
+	private RgbaFloat ambientLightIntensityHigh = new(0.1f, 0.1f, 0.1f, 0);
 	//...
 
 	#endregion
@@ -19,43 +19,60 @@ public sealed class SceneSettings
 	/// <summary>
 	/// Gets or sets the global ambient light intensity for all renderers in the scene. Values cannot be negative.
 	/// </summary>
-	public Vector3 AmbientLightIntensity
+	public RgbaFloat AmbientLightIntensity
 	{
-		get => 0.3333f * (ambientLightIntensityLow + ambientLightIntensityMid + ambientLightIntensityHigh);
+		get
+		{
+			Vector4 averageColor = 0.3333f * (ambientLightIntensityLow.ToVector4() + ambientLightIntensityMid.ToVector4() + ambientLightIntensityHigh.ToVector4());
+			return new(averageColor);
+		}
 		set
 		{
-			Vector3 clampedValue = Vector3.Clamp(value, Vector3.Zero, new(100.0f, 100.0f, 100.0f));
-			ambientLightIntensityLow = clampedValue;
-			ambientLightIntensityMid = clampedValue;
-			ambientLightIntensityHigh = clampedValue;
+			Vector4 clampedValue = Vector4.Clamp(value.ToVector4(), Vector4.Zero, new(100.0f, 100.0f, 100.0f, 0));
+			RgbaFloat clampedColor = new(clampedValue);
+			ambientLightIntensityLow = clampedColor;
+			ambientLightIntensityMid = clampedColor;
+			ambientLightIntensityHigh = clampedColor;
 		}
 	}
 
 	/// <summary>
 	/// Gets or sets the ambient light radiating up from below, following the global +Y axis.
 	/// </summary>
-	public Vector3 AmbientLightIntensityLow
+	public RgbaFloat AmbientLightIntensityLow
 	{
-		get => ambientLightIntensityLow;
-		set => ambientLightIntensityLow = Vector3.Clamp(value, Vector3.Zero, new(100.0f, 100.0f, 100.0f));
+		get => new(ambientLightIntensityLow.R, ambientLightIntensityLow.G, ambientLightIntensityLow.B, 0);
+		set
+		{
+			Vector4 clampedValue = Vector4.Clamp(value.ToVector4(), Vector4.Zero, new(100, 100, 100, 0));
+			ambientLightIntensityLow = new(clampedValue);
+		}
 	}
 
 	/// <summary>
 	/// Gets or sets the ambient light radiating across the horizontal plane, following the global X and Z axes.
 	/// </summary>
-	public Vector3 AmbientLightIntensityMid
+	public RgbaFloat AmbientLightIntensityMid
 	{
-		get => ambientLightIntensityMid;
-		set => ambientLightIntensityMid = Vector3.Clamp(value, Vector3.Zero, new(100.0f, 100.0f, 100.0f));
+		get => new(ambientLightIntensityMid.R, ambientLightIntensityMid.G, ambientLightIntensityMid.B, 0);
+		set
+		{
+			Vector4 clampedValue = Vector4.Clamp(value.ToVector4(), Vector4.Zero, new(100, 100, 100, 0));
+			ambientLightIntensityMid = new(clampedValue);
+		}
 	}
 
 	/// <summary>
 	/// Gets or sets the ambient light radiating down from above, following the global -Y axis.
 	/// </summary>
-	public Vector3 AmbientLightIntensityHigh
+	public RgbaFloat AmbientLightIntensityHigh
 	{
-		get => ambientLightIntensityHigh;
-		set => ambientLightIntensityHigh = Vector3.Clamp(value, Vector3.Zero, new(100.0f, 100.0f, 100.0f));
+		get => new(ambientLightIntensityHigh.R, ambientLightIntensityHigh.G, ambientLightIntensityHigh.B, 0);
+		set
+		{
+			Vector4 clampedValue = Vector4.Clamp(value.ToVector4(), Vector4.Zero, new(100, 100, 100, 0));
+			ambientLightIntensityHigh = new(clampedValue);
+		}
 	}
 
 	#endregion
@@ -65,9 +82,9 @@ public sealed class SceneSettings
 	{
 		if (_data == null) return false;
 
-		AmbientLightIntensityLow = (Vector3)Color32.ParseHexString(_data.AmbientLightIntensityLow);
-		AmbientLightIntensityMid = (Vector3)Color32.ParseHexString(_data.AmbientLightIntensityMid);
-		AmbientLightIntensityHigh = (Vector3)Color32.ParseHexString(_data.AmbientLightIntensityHigh);
+		AmbientLightIntensityLow = _data.AmbientLightIntensityLow;
+		AmbientLightIntensityMid = _data.AmbientLightIntensityMid;
+		AmbientLightIntensityHigh = _data.AmbientLightIntensityHigh;
 		//...
 
 		return true;
@@ -76,9 +93,9 @@ public sealed class SceneSettings
 	{
 		_outData = new()
 		{
-			AmbientLightIntensityLow = new Color32(ambientLightIntensityLow).ToHexString(),
-			AmbientLightIntensityMid = new Color32(ambientLightIntensityMid).ToHexString(),
-			AmbientLightIntensityHigh = new Color32(ambientLightIntensityHigh).ToHexString(),
+			AmbientLightIntensityLow = ambientLightIntensityLow,
+			AmbientLightIntensityMid = ambientLightIntensityMid,
+			AmbientLightIntensityHigh = ambientLightIntensityHigh,
 			//...
 		};
 		return true;
