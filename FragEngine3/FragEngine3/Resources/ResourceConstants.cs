@@ -1,13 +1,15 @@
-﻿namespace FragEngine3.Resources;
+﻿using FragEngine3.Resources.Data;
+
+namespace FragEngine3.Resources;
 
 public static class ResourceConstants
 {
 	#region Constants
 
 	/// <summary>
-	/// File extension for all resource metadata files. The extension must be lower-case. The contents must be a JSON-serialized object of type '<see cref="ResourceFileMetadataOld"/>'.
+	/// File extension for all resource metadata files. The extension must be lower-case. The contents must be a JSON-serialized object of type '<see cref="ResourceFileData"/>'.
 	/// </summary>
-	public const string FILE_EXT_METADATA = ".res";
+	public const string FILE_EXT_METADATA = ".fres";
 
 	public const string FILE_EXT_BATCH_NORMAL_COMPRESSED = ".cpkg";
 	public const string FILE_EXT_BATCH_BLOCK_COMPRESSED = ".bpkg";

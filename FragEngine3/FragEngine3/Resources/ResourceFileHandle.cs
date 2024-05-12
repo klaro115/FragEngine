@@ -264,7 +264,7 @@ public sealed class ResourceFileHandle : IEquatable<ResourceFileHandle>
 	/// Gets a serializable description object through which a file handle may be represented in save data.
 	/// </summary>
 	/// <param name="_resourceManager">The resource manager in which this file handle was registered.</param>
-	/// <param name="_outData">Outputs a data object that may be serialized into a "*.res" resource file,
+	/// <param name="_outData">Outputs a data object that may be serialized into a "*.fres" resource file,
 	/// or null, if the data generation fails.</param>
 	/// <returns>True if resource file data was generated successfully, false otherwise.</returns>
 	public bool GetResourceFileData(ResourceManager _resourceManager, out ResourceFileData? _outData)
