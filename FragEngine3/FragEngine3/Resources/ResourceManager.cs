@@ -446,7 +446,7 @@ public sealed class ResourceManager : IEngineSystem
 			// If resource is currently in the process of being imported, block and wait for it to conclude:
 			if (_handle.LoadState == ResourceLoadState.Loading)
 			{
-				const int timeoutMs = 5000;
+				const int timeoutMs = 2500;
 				for (int i = 0; i < timeoutMs; ++i)
 				{
 					Thread.Sleep(1);
