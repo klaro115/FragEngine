@@ -21,7 +21,7 @@ public static class ImageImporter
 			_outImageData = null;
 			return false;
 		}
-		if (_handle.resourceManager == null || _handle.resourceManager.IsDisposed)
+		if (_handle.resourceManager is null || _handle.resourceManager.IsDisposed)
 		{
 			Logger.Instance?.LogError("Cannot load raw image using null or disposed resource manager!");
 			_outImageData = null;
@@ -93,7 +93,7 @@ public static class ImageImporter
 		string? _importFlags,
 		out RawImageData? _outImageData)
 	{
-		if (_stream == null || !_stream.CanRead)
+		if (_stream is null || !_stream.CanRead)
 		{
 			Logger.Instance?.LogError("Cannot import raw image data from null or write-only stream!");
 			_outImageData = null;

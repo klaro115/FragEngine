@@ -15,7 +15,7 @@ public static class ModelImporter
 		out MeshSurfaceData? _outSurfaceData
 		/* out ... */)
 	{
-		if (_handle == null || !_handle.IsValid)
+		if (_handle is null || !_handle.IsValid)
 		{
 			Logger.Instance?.LogError("Resource handle for model import may not be null or invalid!");
 			_outSurfaceData = null;
@@ -84,13 +84,13 @@ public static class ModelImporter
 		}
 
 		// Check for further pre-processing instructions in import flags:
-		if (_outSurfaceData != null && !string.IsNullOrEmpty(_handle.importFlags))
+		if (_outSurfaceData is not null && !string.IsNullOrEmpty(_handle.importFlags))
 		{
 			// Flip triangle vertex order, optinally flip normals and tangents: (turns the surfaces inside-out)
-			if (_handle.importFlags.Contains("flipVertexOrder", StringComparison.Ordinal))
+			if (_handle.importFlags.Contains(ImportFlagsConstants.MOD_FLIP_VERTEX_ORDER, StringComparison.Ordinal))
 			{
-				bool flipNormals = _handle.importFlags.Contains("flipNormals", StringComparison.Ordinal);
-				bool flipTangents = _handle.importFlags.Contains("flipTangents", StringComparison.Ordinal);
+				bool flipNormals = _handle.importFlags.Contains(ImportFlagsConstants.MOD_FLIP_NORMALS, StringComparison.Ordinal);
+				bool flipTangents = _handle.importFlags.Contains(ImportFlagsConstants.MOD_FLIP_TANGENTS, StringComparison.Ordinal);
 
 				_outSurfaceData.ReverseVertexOrder(flipNormals, flipTangents);
 			}
@@ -104,7 +104,7 @@ public static class ModelImporter
 		out MeshSurfaceData? _outSurfaceData
 		/* out ... */)
 	{
-		if (_stream == null || !_stream.CanRead)
+		if (_stream is null || !_stream.CanRead)
 		{
 			Logger.Instance?.LogError("Cannot import model data from null or write-only stream!");
 			_outSurfaceData = null;

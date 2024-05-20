@@ -1,4 +1,5 @@
-﻿using FragEngine3.Graphics.Components.ConstantBuffers;
+﻿using System.Collections.Frozen;
+using FragEngine3.Graphics.Components.ConstantBuffers;
 using FragEngine3.Graphics.Lighting;
 using FragEngine3.Graphics.Resources;
 using Veldrid;
@@ -39,30 +40,31 @@ public static class GraphicsConstants
 	public const string SHADER_DEFAULT_ENTRYPOINT_TESSELATION_EVAL = "Main_Tesselation_Eval";
 	public const string SHADER_DEFAULT_ENTRYPOINT_PIXEL = "Main_Pixel";
 
-	public static readonly Dictionary<ShaderStages, string> defaultShaderStageEntryPoints = new()
+	public static readonly FrozenDictionary<ShaderStages, string> defaultShaderStageEntryPoints = new KeyValuePair<ShaderStages, string>[]
 	{
-		[ShaderStages.Compute] = SHADER_DEFAULT_ENTRYPOINT_COMPUTE,
-		[ShaderStages.Vertex] = SHADER_DEFAULT_ENTRYPOINT_VERTEX,
-		[ShaderStages.Geometry] = SHADER_DEFAULT_ENTRYPOINT_GEOMETRY,
-		[ShaderStages.TessellationControl] = SHADER_DEFAULT_ENTRYPOINT_TESSELATION_CTRL,
-		[ShaderStages.TessellationEvaluation] = SHADER_DEFAULT_ENTRYPOINT_TESSELATION_EVAL,
-		[ShaderStages.Fragment] = SHADER_DEFAULT_ENTRYPOINT_PIXEL,
-	};
+		new(ShaderStages.Compute, SHADER_DEFAULT_ENTRYPOINT_COMPUTE),
+		new(ShaderStages.Vertex, SHADER_DEFAULT_ENTRYPOINT_VERTEX),
+		new(ShaderStages.Geometry, SHADER_DEFAULT_ENTRYPOINT_GEOMETRY),
+		new(ShaderStages.TessellationControl, SHADER_DEFAULT_ENTRYPOINT_TESSELATION_CTRL),
+		new(ShaderStages.TessellationEvaluation, SHADER_DEFAULT_ENTRYPOINT_TESSELATION_EVAL),
+		new(ShaderStages.Fragment, SHADER_DEFAULT_ENTRYPOINT_PIXEL),
+	}.ToFrozenDictionary();
 
-	public static readonly Dictionary<MeshVertexDataFlags, string> shaderVariantsForEntryPointSuffixes = new()
+	public static readonly FrozenDictionary<MeshVertexDataFlags, string> shaderVariantsForEntryPointSuffixes = new KeyValuePair<MeshVertexDataFlags, string>[]
 	{
-		[MeshVertexDataFlags.ExtendedSurfaceData] = ExtendedVertex.shaderEntryPointSuffix,
-		[MeshVertexDataFlags.BlendShapes] = IndexedWeightedVertex.shaderEntryPointSuffix_Blend,
-		[MeshVertexDataFlags.Animations] = IndexedWeightedVertex.shaderEntryPointSuffix_Anim,
+		new (MeshVertexDataFlags.ExtendedSurfaceData, ExtendedVertex.shaderEntryPointSuffix),
+		new (MeshVertexDataFlags.BlendShapes, IndexedWeightedVertex.shaderEntryPointSuffix_Blend),
+		new (MeshVertexDataFlags.Animations, IndexedWeightedVertex.shaderEntryPointSuffix_Anim),
 		//...
-	};
-	public static readonly Dictionary<string, MeshVertexDataFlags> shaderEntryPointSuffixesForVariants = new()
+	}.ToFrozenDictionary();
+
+	public static readonly FrozenDictionary<string, MeshVertexDataFlags> shaderEntryPointSuffixesForVariants = new KeyValuePair<string, MeshVertexDataFlags>[]
 	{
-		[ExtendedVertex.shaderEntryPointSuffix] = MeshVertexDataFlags.ExtendedSurfaceData,
-		[IndexedWeightedVertex.shaderEntryPointSuffix_Blend] = MeshVertexDataFlags.BlendShapes,
-		[IndexedWeightedVertex.shaderEntryPointSuffix_Anim] = MeshVertexDataFlags.Animations,
+		new(ExtendedVertex.shaderEntryPointSuffix, MeshVertexDataFlags.ExtendedSurfaceData),
+		new(IndexedWeightedVertex.shaderEntryPointSuffix_Blend, MeshVertexDataFlags.BlendShapes),
+		new(IndexedWeightedVertex.shaderEntryPointSuffix_Anim, MeshVertexDataFlags.Animations),
 		//...
-	};
+	}.ToFrozenDictionary();
 
 	#endregion
 	#region Constants Pipelines

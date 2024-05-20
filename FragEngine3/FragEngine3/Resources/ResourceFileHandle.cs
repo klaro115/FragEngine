@@ -16,7 +16,8 @@ namespace FragEngine3.Resources;
 /// asset file's extension. Batched asset files are compressed archives of one or more resources, with a regular
 /// contiguously compressed variant, and a block-compressed variant. Block-compression allows for more efficient
 /// random access to resources located within the file, whilst contiguous compression may offer better compressed
-/// size while being perfectly suitable for interdependent groups of resources.
+/// size while being perfectly suitable for interdependent groups of resources. Cached decompressed file data may
+/// be discarded by calling '<see cref="Unload"/>'.
 /// </summary>
 public sealed class ResourceFileHandle : IEquatable<ResourceFileHandle>
 {

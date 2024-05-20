@@ -1,12 +1,14 @@
 ﻿using FragEngine3.EngineCore;
 using FragEngine3.Graphics.Resources.Data;
 using System.Globalization;
-using System.Linq;
 using System.Numerics;
 using System.Text;
 
 namespace FragEngine3.Graphics.Resources.Import.ModelFormats;
 
+/// <summary>
+/// Importer for the Wavefront OBJ 3D file format.
+/// </summary>
 public static class ObjImporter
 {
 	#region Types
