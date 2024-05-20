@@ -1,9 +1,23 @@
-﻿using FragEngine3.EngineCore;
+﻿using System.IO.Compression;
+using FragEngine3.EngineCore;
 using FragEngine3.Resources.Data;
-using System.IO.Compression;
 
 namespace FragEngine3.Resources;
 
+/// <summary>
+/// Handle type for referencing data files from which resources' data may be loaded.<para/>
+/// Each resource file may contain one or more resources, with single-resource files often being uncompressed
+/// immediate asset files using standard file formats (ex.: *.OBJ for 3D models, *.HLSL for shaders). The
+/// resource file is identified by an accompanying resource descriptor file, which is a JSON-serialized object
+/// of type '<see cref="ResourceFileData"/>', which contains a list of all resources contained within a data
+/// file.<para/>
+/// There are 3 major types of resource files: single-resource files, compressed batch files, and block-compressed
+/// batch files. The first will contain only one resource and the asset type can generally be derived from the
+/// asset file's extension. Batched asset files are compressed archives of one or more resources, with a regular
+/// contiguously compressed variant, and a block-compressed variant. Block-compression allows for more efficient
+/// random access to resources located within the file, whilst contiguous compression may offer better compressed
+/// size while being perfectly suitable for interdependent groups of resources.
+/// </summary>
 public sealed class ResourceFileHandle : IEquatable<ResourceFileHandle>
 {
 	#region Constructors
@@ -100,9 +114,19 @@ public sealed class ResourceFileHandle : IEquatable<ResourceFileHandle>
 		dataBuffer = null;
 	}
 
-	public bool TryOpenDataStream(IEngineSystem _engineSystem, ulong _dataOffset, ulong _dataSize, out Stream _outStream, out ulong _outStreamLength)
+	/// <summary>
+	/// Tries to open a file stream for reading the raw byte data from the resource file this resource is loaded from.
+	/// </summary>
+	/// <param name="_engine">The engine instance for which the data is read.</param>
+	/// <param name="_dataOffset">The byte offset from the start of the resource file.</param>
+	/// <param name="_dataSize">The (compressed) byte size of the resource's data in the file.</param>
+	/// <param name="_outStream">Outputs a stream for reading resource data from. This stream must be closed and disposed by the caller.</param>
+	/// <param name="_outStreamLength">Outputs the maximum number of bytes that may be read from the stream.</param>
+	/// <returns>True if a stream could be opened, false if the file couldn't be accessed, or if decompression failed.</returns>
+	/// <exception cref="NotImplementedException">Block-compression is not implemented yet.</exception>
+	public bool TryOpenDataStream(Engine _engine, ulong _dataOffset, ulong _dataSize, out Stream _outStream, out ulong _outStreamLength)
 	{
-		if (LoadState == ResourceLoadState.Loaded && dataBuffer != null)
+		if (LoadState == ResourceLoadState.Loaded && dataBuffer is not null)
 		{
 			_outStream = new MemoryStream(dataBuffer);
 			_outStreamLength = 0;
@@ -110,7 +134,7 @@ public sealed class ResourceFileHandle : IEquatable<ResourceFileHandle>
 		}
 
 		// Retarget data file to 
-		bool pathWasAdjusted = GetPlatformAdjustedDataFilePath(_engineSystem, out string adjustedFilePath);
+		bool pathWasAdjusted = GetPlatformAdjustedDataFilePath(_engine, out string adjustedFilePath);
 		string actualDataFilePath = pathWasAdjusted ? adjustedFilePath : dataFilePath;
 
 		if (!File.Exists(actualDataFilePath))
@@ -157,9 +181,18 @@ public sealed class ResourceFileHandle : IEquatable<ResourceFileHandle>
 		return false;
 	}
 
-	public bool TryReadResourceBytes(IEngineSystem _engineSystem, ResourceHandle _handle, out byte[] _outBytes, out int _outByteCount)
+	/// <summary>
+	/// Try to read all of a resoure's raw byte data from the data file.<para/>
+	/// If a compressed file is already loaded and in memory, this is a very fast copy operation. In all other cases,
+	/// the resource data is read from file and decompressed as required.
+	/// </summary>
+	/// <param name="_handle">A resource handle describing the resource whose data we wish to read.</param>
+	/// <param name="_outBytes">Outputs an array of byte data from which the resource may be loaded. Empty on failure.</param>
+	/// <param name="_outByteCount">Outputs the total number of bytes that hold the requested resource data.</param>
+	/// <returns>True if the resource's byte data could be read, false otherwise.</returns>
+	public bool TryReadResourceBytes(ResourceHandle _handle, out byte[] _outBytes, out int _outByteCount)
 	{
-		if (_handle == null)
+		if (_handle?.resourceManager is null)
 		{
 			Logger.Instance?.LogError("Cannot read data bytes for null resource handle!");
 			_outBytes = [];
@@ -171,7 +204,10 @@ public sealed class ResourceFileHandle : IEquatable<ResourceFileHandle>
 		if (dataFileType == ResourceFileType.Batch_Compressed ||
 			dataFileType == ResourceFileType.Batch_BlockCompressed)
 		{
-			ulong totalDataSize = LoadState == ResourceLoadState.Loaded && dataBuffer != null ? (ulong)dataBuffer.Length : uncompressedFileSize;
+			ulong totalDataSize = LoadState == ResourceLoadState.Loaded && dataBuffer is not null
+				? (ulong)dataBuffer.Length
+				: uncompressedFileSize;
+
 			if (_handle.dataOffset + _handle.dataSize > totalDataSize)
 			{
 				Logger.Instance?.LogError($"Data bytes offset and size for resource handle '{_handle}' are out-of-bounds!");
@@ -182,17 +218,20 @@ public sealed class ResourceFileHandle : IEquatable<ResourceFileHandle>
 		}
 
 		// If uncompressed file data is already loaded and ready to go, copy from there:
-		if (LoadState == ResourceLoadState.Loaded && dataBuffer != null)
+		if (LoadState == ResourceLoadState.Loaded && dataBuffer is not null)
 		{
 			_outBytes = new byte[_handle.dataSize];
+			_outByteCount = (int)_handle.dataSize;
+
 			dataBuffer.CopyTo(_outBytes, (int)_handle.dataOffset);
+			return true;
 		}
 
 		// Try reading all resource data via a stream:
 		Stream? stream = null;
 		try
 		{
-			if (!TryOpenDataStream(_engineSystem, _handle.dataOffset, _handle.dataSize, out stream, out ulong streamLength))
+			if (!TryOpenDataStream(_handle.resourceManager.engine, _handle.dataOffset, _handle.dataSize, out stream, out ulong streamLength))
 			{
 				Logger.Instance?.LogError($"Failed to open data stream of file handle '{Key}' at data offset {_handle.dataOffset} and data size {_handle.dataSize}!");
 				_outBytes = [];
@@ -232,14 +271,14 @@ public sealed class ResourceFileHandle : IEquatable<ResourceFileHandle>
 		}
 	}
 
-	public bool GetPlatformAdjustedDataFilePath(IEngineSystem _engineSystem, out string _outAdjustedPath)
+	public bool GetPlatformAdjustedDataFilePath(Engine _engine, out string _outAdjustedPath)
 	{
 		if (string.IsNullOrEmpty(dataFilePath))
 		{
 			_outAdjustedPath = string.Empty;
 			return false;
 		}
-		if (_engineSystem == null)
+		if (_engine is null)
 		{
 			Logger.Instance?.LogError("Cannot get platform adjusted data file path using null engine reference!");
 			_outAdjustedPath = string.Empty;
@@ -247,13 +286,13 @@ public sealed class ResourceFileHandle : IEquatable<ResourceFileHandle>
 		}
 		if (dataFileType != ResourceFileType.Single ||
 			ResourceCount != 1 ||
-			!_engineSystem.Engine.ResourceManager.GetResource(resources[0], out ResourceHandle resHandle))
+			!_engine.ResourceManager.GetResource(resources[0], out ResourceHandle resHandle))
 		{
 			_outAdjustedPath = dataFilePath;
 			return false;
 		}
 		
-		PlatformSystem platformSystem = _engineSystem.Engine.PlatformSystem;
+		PlatformSystem platformSystem = _engine.PlatformSystem;
 		ResourceType resourceType = resHandle.resourceType;
 		
 		// Adjust path to use the resource's most likely platform-specific extension:
@@ -269,7 +308,7 @@ public sealed class ResourceFileHandle : IEquatable<ResourceFileHandle>
 	/// <returns>True if resource file data was generated successfully, false otherwise.</returns>
 	public bool GetResourceFileData(ResourceManager _resourceManager, out ResourceFileData? _outData)
 	{
-		if (_resourceManager == null || _resourceManager.IsDisposed)
+		if (_resourceManager is null || _resourceManager.IsDisposed)
 		{
 			_outData = null;
 			return false;

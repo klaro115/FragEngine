@@ -2,10 +2,27 @@
 
 namespace FragEngine3.Resources;
 
+/// <summary>
+/// Handle type for managing and loading resources and assets. Ownership of handles lies with the engine's <see cref="ResourceManager"/>.
+/// This handle allows safe referencing of resources, ensuring that each resource's data is loaded only once and when needed. The handle
+/// obtains full ownership of its resource data upon loading.<para/>
+/// To use the resource's data, call '<see cref="Load(bool)"/>', triggering either asynchronous loading in a background thread, or
+/// immediate loading on the calling thread. Immediate loading will block until loading has concluded. To release a resource's data,
+/// use '<see cref="Unload"/>', disposing the resource object and dropping all references to it.<para/>
+/// Systems that use resources should only reference them through their handle as it exposes the resource's current state, and should
+/// never dispose the resource data directly without going through the handle first. Multiple systems may reference a same resource object
+/// and safely access it via its handle. Resources are uniquely identifiable by their '<see cref="resourceKey"/>'; duplicate resource keys
+/// in resource files may overwrite any additional declarations.
+/// </summary>
 public sealed class ResourceHandle : IEquatable<ResourceHandle>
 {
 	#region Types
 
+	/// <summary>
+	/// Callback function for assigning a resource object to a handle after it has finished loading.
+	/// </summary>
+	/// <param name="_resourceObject">The resource object that has just finished import, or null, if loading failed.</param>
+	/// <returns>True if the resource object could be loaded successfully, false otherwise.</returns>
 	internal delegate bool FuncAssignResourceCallback(Resource? _resourceObject);
 
 	#endregion
@@ -103,11 +120,20 @@ public sealed class ResourceHandle : IEquatable<ResourceHandle>
 	#endregion
 	#region Properties
 
+	/// <summary>
+	/// Gets whether this resource handle is valid and usable.
+	/// </summary>
 	public bool IsValid => !string.IsNullOrEmpty(resourceKey) && resourceType != ResourceType.Unknown && resourceType != ResourceType.Ignored;
+	/// <summary>
+	/// Gets whether the resource is currently in a fully loaded and immediately usable state.
+	/// </summary>
 	public bool IsLoaded => LoadState == ResourceLoadState.Loaded && resource is not null && !resource.IsDisposed;
 
 	public ResourceLoadState LoadState { get; internal set; } = ResourceLoadState.NotLoaded;
 
+	/// <summary>
+	/// Gets the number of other resources that this one is immediately dependent on.
+	/// </summary>
 	public int DependencyCount => dependencies is not null ? dependencies.Length : 0;
 
 	/// <summary>
@@ -201,6 +227,11 @@ public sealed class ResourceHandle : IEquatable<ResourceHandle>
 		return true;
 	}
 
+	/// <summary>
+	/// Gets a serializable data object representing this resource handle.
+	/// </summary>
+	/// <param name="_outData">Outputs a serializable data object.</param>
+	/// <returns>True if data was prepared, false otherwise.</returns>
 	public bool GetResourceHandleData(out ResourceHandleData _outData)
 	{
 		_outData = new()

@@ -55,7 +55,7 @@ public static class ImageImporter
 		try
 		{
 			// Open file stream:
-			if (!fileHandle.TryOpenDataStream(_resourceManager, _handle.dataOffset, _handle.dataSize, out stream, out _))
+			if (!fileHandle.TryOpenDataStream(_resourceManager.engine, _handle.dataOffset, _handle.dataSize, out stream, out _))
 			{
 				logger.LogError($"Failed to open file stream for resource handle '{_handle}'!");
 				_outImageData = null;

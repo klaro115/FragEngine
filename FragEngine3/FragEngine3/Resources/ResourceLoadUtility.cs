@@ -2,6 +2,9 @@
 
 namespace FragEngine3.Resources;
 
+/// <summary>
+/// Helper class for loading or preparing resources for use.
+/// </summary>
 public static class ResourceLoadUtility
 {
 	#region Methods
