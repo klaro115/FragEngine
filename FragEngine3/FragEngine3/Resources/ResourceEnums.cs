@@ -62,6 +62,10 @@ public enum ResourceType
 	/// A scene definition or a save file's full description of a scene's state.
 	/// </summary>
 	Scene,
+	/// <summary>
+	/// A code or script file, possibly used to extend app logic, for automation, or for modding. Typically interpreted at run-time or JIT.
+	/// </summary>
+	Script,
 }
 
 /// <summary>

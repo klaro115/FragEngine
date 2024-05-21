@@ -1,4 +1,5 @@
 ﻿using FragEngine3.Resources.Data;
+using System.Collections.Frozen;
 
 namespace FragEngine3.Resources;
 
@@ -21,8 +22,8 @@ public static class ResourceConstants
 	#endregion
 	#region Fields
 
-	public static readonly string[] coreResourceLibraries =
-	[
+	public static readonly FrozenSet<string> coreResourceLibraries = new string[]
+	{
 		"textures",
 		"videos",
 		"shaders",
@@ -32,7 +33,7 @@ public static class ResourceConstants
 		"audio",
 		"prefabs",
 		"data",
-	];
+	}.ToFrozenSet();
 
 	#endregion
 }

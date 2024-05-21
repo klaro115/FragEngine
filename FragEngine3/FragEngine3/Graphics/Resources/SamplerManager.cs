@@ -1,4 +1,5 @@
 ﻿using FragEngine3.Graphics.Resources.Data;
+using System.Collections.Concurrent;
 using Veldrid;
 
 namespace FragEngine3.Graphics.Resources;
@@ -21,7 +22,7 @@ public sealed class SamplerManager(GraphicsCore _core) : IDisposable
 
 	public readonly GraphicsCore core = _core ?? throw new ArgumentNullException(nameof(_core), "Graphics core may not be null!");
 
-	private readonly Dictionary<ulong, Sampler> samplerDict = new(10);
+	private readonly ConcurrentDictionary<ulong, Sampler> samplerDict = new(-1, 10);
 
 	#endregion
 	#region Properties
@@ -73,7 +74,7 @@ public sealed class SamplerManager(GraphicsCore _core) : IDisposable
 				_outSampler = sampler;
 				return true;
 			}
-			samplerDict.Remove(samplerId);
+			samplerDict.TryRemove(samplerId, out _);
 		}
 
 		// Create and register a new sampler:
@@ -97,7 +98,7 @@ public sealed class SamplerManager(GraphicsCore _core) : IDisposable
 				_outSampler = sampler;
 				return true;
 			}
-			samplerDict.Remove(_samplerId);
+			samplerDict.TryRemove(_samplerId, out _);
 		}
 
 		// Generate a description from the information encoded in the ID:
@@ -127,7 +128,7 @@ public sealed class SamplerManager(GraphicsCore _core) : IDisposable
 				_outSampler = sampler;
 				return true;
 			}
-			samplerDict.Remove(samplerId);
+			samplerDict.TryRemove(samplerId, out _);
 		}
 
 		// Create and register a new sampler:

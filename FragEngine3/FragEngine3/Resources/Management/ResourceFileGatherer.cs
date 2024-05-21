@@ -202,7 +202,7 @@ public sealed class ResourceFileGatherer : IDisposable
 	private bool VerifyResourceDirectories()
 	{
 		long startTimeMs = stopwatch.ElapsedMilliseconds;
-		int progressTaskCount = 3 + ResourceConstants.coreResourceLibraries.Length;
+		int progressTaskCount = 3 + ResourceConstants.coreResourceLibraries.Count;
 		gatherProgress?.Update("Verifying resource directories", 0, progressTaskCount);
 
 		resourceManager.engine.Logger.LogMessage("+ Verifying resource directories...");
@@ -269,7 +269,7 @@ public sealed class ResourceFileGatherer : IDisposable
 	private bool GatherAllLibraries()
 	{
 		long startTimeMs = stopwatch.ElapsedMilliseconds;
-		int progressTaskCount = 2 + ResourceConstants.coreResourceLibraries.Length;
+		int progressTaskCount = 2 + ResourceConstants.coreResourceLibraries.Count;
 		gatherProgress?.Update("+ Gathering all resource libraries", 0, progressTaskCount);
 
 		resourceManager.engine.Logger.LogMessage("+ Gathering all resource libraries...");

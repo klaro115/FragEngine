@@ -2,7 +2,7 @@
 
 namespace FragEngine3.Resources;
 
-internal class ResourceFileConstants
+internal static class ResourceFileConstants
 {
 	#region Fields
 
@@ -44,15 +44,18 @@ internal class ResourceFileConstants
 			".mpg",
 			".mpeg",
 			".avi",
+			".webm",
 			".wmv",
 			//...
 		]),
 		new(ResourceType.Shader,
 		[
+			".fx",
 			".glsl",
 			".hlsl",
 			".incl",
 			".metal",
+			".shader",
 		]),
 		new(ResourceType.Material,
 		[
@@ -89,6 +92,7 @@ internal class ResourceFileConstants
 		]),
 		new(ResourceType.Font,
 		[
+			"otf",
 			"ttf",
 			//...
 		]),
@@ -96,7 +100,11 @@ internal class ResourceFileConstants
 		[
 			".csv",
 			".json",
+			".md",
 			".txt",
+			".xaml",
+			".xls",
+			".xlsx",
 			".xml",
 			".yml",
 			//...
@@ -104,6 +112,18 @@ internal class ResourceFileConstants
 		new(ResourceType.Scene,
 		[
 			".scene"
+		]),
+		new(ResourceType.Script,
+		[
+			".cs",
+			".js",	// who in their right mind would use JS anyways?
+			".lua",
+			".py",
+			".rb",
+			".ru",
+			".ts",
+			".vb",
+			//...
 		]),
 	}.ToFrozenDictionary();
 
@@ -136,9 +156,27 @@ internal class ResourceFileConstants
 	{
 		if (string.IsNullOrEmpty(_dataFilePath)) return ResourceType.Unknown;
 
-		string ext = Path.GetExtension(_dataFilePath);
+		string ext = Path.GetExtension(_dataFilePath).ToLowerInvariant();
 
 		return GetResourceTypeFromFileExtension(ext);
+	}
+
+	/// <summary>
+	/// Check whether a given file extension is known at all.<para/>
+	/// NOTE: Not all known format extensions are supported, but all unknown extensions are definitely unsupported by the engine.
+	/// </summary>
+	/// <param name="_ext">A file format extension. Must be non-null and lower-case.</param>
+	/// <returns></returns>
+	public static bool IsFileExtensionKnown(string _ext)
+	{
+		if (!string.IsNullOrEmpty(_ext))
+		{
+			foreach (var kvp in resourceTypeExtensionDict)
+			{
+				if (kvp.Value.Contains(_ext)) return true;
+			}
+		}
+		return false;
 	}
 
 	#endregion

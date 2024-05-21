@@ -22,15 +22,15 @@ public static class GraphicsConstants
 	public const string SHADER_RESOURCE_SUFFIX_TESSELATION_EVAL = "_TS_E";
 	public const string SHADER_RESOURCE_SUFFIX_PIXEL = "_PS";
 
-	public static readonly Dictionary<ShaderStages, string> shaderResourceSuffixes = new()
+	public static readonly FrozenDictionary<ShaderStages, string> shaderResourceSuffixes = new KeyValuePair<ShaderStages, string>[]
 	{
-		[ShaderStages.Compute] = SHADER_RESOURCE_SUFFIX_COMPUTE,
-		[ShaderStages.Vertex] = SHADER_RESOURCE_SUFFIX_VERTEX,
-		[ShaderStages.Geometry] = SHADER_RESOURCE_SUFFIX_GEOMETRY,
-		[ShaderStages.TessellationControl] = SHADER_RESOURCE_SUFFIX_TESSELATION_CTRL,
-		[ShaderStages.TessellationEvaluation] = SHADER_RESOURCE_SUFFIX_TESSELATION_EVAL,
-		[ShaderStages.Fragment] = SHADER_RESOURCE_SUFFIX_PIXEL,
-	};
+		new(ShaderStages.Compute, SHADER_RESOURCE_SUFFIX_COMPUTE),
+		new(ShaderStages.Vertex, SHADER_RESOURCE_SUFFIX_VERTEX),
+		new(ShaderStages.Geometry, SHADER_RESOURCE_SUFFIX_GEOMETRY),
+		new(ShaderStages.TessellationControl, SHADER_RESOURCE_SUFFIX_TESSELATION_CTRL),
+		new(ShaderStages.TessellationEvaluation, SHADER_RESOURCE_SUFFIX_TESSELATION_EVAL),
+		new(ShaderStages.Fragment, SHADER_RESOURCE_SUFFIX_PIXEL),
+	}.ToFrozenDictionary();
 
 	// Default entry point function names for various shader stages:
 	public const string SHADER_DEFAULT_ENTRYPOINT_COMPUTE = "Main_Compute";
