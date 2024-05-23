@@ -1,4 +1,5 @@
-﻿using FragEngine3.Graphics.Components.ConstantBuffers;
+﻿using System.Numerics;
+using FragEngine3.Graphics.Components.ConstantBuffers;
 using FragEngine3.Graphics.Components.Data;
 using FragEngine3.Graphics.Contexts;
 using FragEngine3.Graphics.Internal;
@@ -8,7 +9,6 @@ using FragEngine3.Resources;
 using FragEngine3.Scenes;
 using FragEngine3.Scenes.Data;
 using FragEngine3.Utility.Serialization;
-using System.Numerics;
 using Veldrid;
 
 namespace FragEngine3.Graphics.Components;

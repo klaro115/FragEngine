@@ -1,8 +1,8 @@
-﻿using FragEngine3.EngineCore;
+﻿using System.Numerics;
+using FragEngine3.EngineCore;
 using FragEngine3.Graphics.Internal;
 using FragEngine3.Graphics.Resources.Data;
 using FragEngine3.Resources;
-using System.Numerics;
 using Veldrid;
 
 namespace FragEngine3.Graphics.Resources;
@@ -72,6 +72,7 @@ public sealed class Mesh : Resource
 	public override ResourceType ResourceType => ResourceType.Model;
 
 	public bool IsInitialized => !IsDisposed && bufVerticesBasic is not null && bufIndices is not null;
+	public bool IsDirty => areVerticesDirtyFlags != 0 || areIndicesDirty;
 
 	public int VertexBufferCount => vertexBuffers.Length;
 	public MeshVertexDataFlags VertexDataFlags { get; private set; } = MeshVertexDataFlags.BasicSurfaceData;
