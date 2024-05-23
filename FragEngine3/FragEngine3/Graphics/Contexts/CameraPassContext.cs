@@ -3,45 +3,44 @@ using FragEngine3.Graphics.Lighting;
 using System.Numerics;
 using Veldrid;
 
-namespace FragEngine3.Graphics.Contexts
+namespace FragEngine3.Graphics.Contexts;
+
+public sealed class CameraPassContext(
+	// References:
+	CameraInstance _cameraInstance,
+	CommandList _cmdList,
+
+	// Camera resources:
+	Framebuffer _framebuffer,
+	ResourceSet _resSetCamera,
+	DeviceBuffer _cbCamera,
+	LightDataBuffer _lightDataBuffer,
+
+	// Parameters:
+	uint _frameIdx,
+	uint _passIdx,
+	uint _lightCountShadowMapped,
+	in Matrix4x4 _mtxWorld2Clip)
 {
-	public sealed class CameraPassContext(
-		// References:
-		CameraInstance _cameraInstance,
-		CommandList _cmdList,
+	#region Fields
 
-		// Camera resources:
-		Framebuffer _framebuffer,
-		ResourceSet _resSetCamera,
-		DeviceBuffer _cbCamera,
-		LightDataBuffer _lightDataBuffer,
+	// References:
+	public readonly CameraInstance cameraInstance = _cameraInstance;
+	public readonly CommandList cmdList = _cmdList;
 
-		// Parameters:
-		uint _frameIdx,
-		uint _passIdx,
-		uint _lightCountShadowMapped,
-		in Matrix4x4 _mtxWorld2Clip)
-	{
-		#region Fields
+	// Camera resources:
+	public readonly Framebuffer framebuffer = _framebuffer;
+	public readonly ResourceSet resSetCamera = _resSetCamera;
+	public readonly DeviceBuffer cbCamera = _cbCamera;
+	public readonly LightDataBuffer lightDataBuffer = _lightDataBuffer;
 
-		// References:
-		public readonly CameraInstance cameraInstance = _cameraInstance;
-		public readonly CommandList cmdList = _cmdList;
+	// Parameters:
+	public readonly uint frameIdx = _frameIdx;
+	public readonly uint passIdx = _passIdx;
+	public readonly uint lightCountShadowMapped = Math.Min(_lightCountShadowMapped, _lightDataBuffer.Count);
+	public readonly Matrix4x4 mtxWorld2Clip = _mtxWorld2Clip;
+	public readonly OutputDescription outputDesc = _framebuffer.OutputDescription;
+	public readonly bool mirrorY = _cameraInstance.ProjectionSettings.mirrorY;
 
-		// Camera resources:
-		public readonly Framebuffer framebuffer = _framebuffer;
-		public readonly ResourceSet resSetCamera = _resSetCamera;
-		public readonly DeviceBuffer cbCamera = _cbCamera;
-		public readonly LightDataBuffer lightDataBuffer = _lightDataBuffer;
-
-		// Parameters:
-		public readonly uint frameIdx = _frameIdx;
-		public readonly uint passIdx = _passIdx;
-		public readonly uint lightCountShadowMapped = Math.Min(_lightCountShadowMapped, _lightDataBuffer.Count);
-		public readonly Matrix4x4 mtxWorld2Clip = _mtxWorld2Clip;
-		public readonly OutputDescription outputDesc = _framebuffer.OutputDescription;
-		public readonly bool mirrorY = _cameraInstance.ProjectionSettings.mirrorY;
-
-		#endregion
-	}
+	#endregion
 }

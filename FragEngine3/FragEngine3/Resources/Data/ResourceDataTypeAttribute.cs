@@ -1,13 +1,11 @@
-﻿
-namespace FragEngine3.Resources.Data
-{
-	[AttributeUsage(AttributeTargets.Class | AttributeTargets.Struct, AllowMultiple = false, Inherited = false)]
-	public sealed class ResourceDataTypeAttribute(Type resourceType) : Attribute
-	{
-		#region Fields
+﻿namespace FragEngine3.Resources.Data;
 
-		public readonly Type resourceType = resourceType ?? typeof(object);
-		
-		#endregion
-	}
+[AttributeUsage(AttributeTargets.Class | AttributeTargets.Struct, AllowMultiple = false, Inherited = false)]
+public sealed class ResourceDataTypeAttribute(Type resourceType) : Attribute
+{
+	#region Fields
+
+	public readonly Type resourceType = resourceType ?? typeof(object);
+	
+	#endregion
 }

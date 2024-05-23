@@ -12,7 +12,7 @@ using Veldrid;
 
 namespace FragEngine3.Graphics.Components
 {
-    public sealed class Light : Component			//TODO: Consider splitting this into different components based on type.
+    public sealed class Light : Component, IOnNodeDestroyedListener, IOnComponentRemovedListener			//TODO: Consider splitting this into different components based on type.
 	{
 		#region Constructors
 
@@ -47,18 +47,7 @@ namespace FragEngine3.Graphics.Components
 		public uint layerMask = 0xFFu;
 
 		#endregion
-		#region Constants
-
-		private static readonly SceneEventType[] sceneEventTypes =
-		[
-			SceneEventType.OnNodeDestroyed,
-			SceneEventType.OnDestroyComponent,
-		];
-
-		#endregion
 		#region Properties
-
-		public override SceneEventType[] GetSceneEventList() => sceneEventTypes;
 
 		/// <summary>
 		/// Gets or sets the emission shape of this light source.
@@ -171,10 +160,13 @@ namespace FragEngine3.Graphics.Components
 			lightInstance.Dispose();
 		}
 
-		public override void ReceiveSceneEvent(SceneEventType _eventType, object? _eventData)
+		public void OnNodeDestroyed()
 		{
-			if (_eventType == SceneEventType.OnNodeDestroyed ||
-				_eventType == SceneEventType.OnDestroyComponent)
+			node.scene.drawManager.UnregisterLight(this);
+		}
+		public void OnComponentRemoved(Component removedComponent)
+		{
+			if (removedComponent == this)
 			{
 				node.scene.drawManager.UnregisterLight(this);
 			}

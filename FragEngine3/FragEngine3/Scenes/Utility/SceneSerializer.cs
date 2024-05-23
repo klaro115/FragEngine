@@ -13,17 +13,44 @@ public static class SceneSerializer
 {
 	#region Methods Saving
 
+	/// <summary>
+	/// Serializes a scene's current state and writes it to file.
+	/// </summary>
+	/// <param name="_scene">The scene you want to save.</param>
+	/// <param name="_filePath">The file path for the save file, may not be null or blank.</param>
+	/// <param name="_outProgress">Outputs a progress object for tracking the state of the saving process.<para/>
+	/// HINT: This may be used to animate a progress bar when saving a scene or game state.</param>
+	/// <param name="_refreshBeforeSaving">Whether to call refresh on all scene elements within the scene before storing their states.</param>
+	/// <param name="_compressSaveFile">Whether to compress the serialized data before saving it to file. If false, the data will be written as JSON plaintext.</param>
+	/// <returns>True if the scene was successfully saved to file, false otherwise.</returns>
 	public static bool SaveSceneToFile(
 		in Scene _scene,
 		string _filePath,
 		out Progress _outProgress,
-		bool _refreshBeforeSaving = true)
+		bool _refreshBeforeSaving = true,
+		bool _compressSaveFile = false)
 	{
 		if (!SaveSceneToData(_scene, out SceneData data, out _outProgress, _refreshBeforeSaving)) return false;
 
-		return Serializer.SerializeJsonToFile(data, _filePath);
+		if (_compressSaveFile)
+		{
+			return Serializer.SerializeJsonToCompressedFile(data, _filePath);
+		}
+		else
+		{
+			return Serializer.SerializeJsonToFile(data, _filePath);
+		}
 	}
 
+	/// <summary>
+	/// Create serializable save data from a scene's current state.
+	/// </summary>
+	/// <param name="_scene">The scene you want to save.</param>
+	/// <param name="_outData">Outputs a data object describing the scene's state and hierarchy.</param>
+	/// <param name="_outProgress">Outputs a progress object for tracking the state of the saving process.<para/>
+	/// HINT: This may be used to animate a progress bar when saving a scene or game state.</param>
+	/// <param name="_refreshBeforeSaving">Whether to call refresh on all scene elements within the scene before storing their states.</param>
+	/// <returns>True if the scene was successfully saved to data, false otherwise.</returns>
 	public static bool SaveSceneToData(
 		in Scene _scene,
 		out SceneData _outData,
@@ -374,6 +401,16 @@ public static class SceneSerializer
 			goto abort;
 		}
 
+		// Finalize scene:
+		{
+			_outProgress.UpdateTitle("Sorting behaviours");
+
+			_outScene.updateManager.SortListenersByUpdateOrder();
+			_outProgress.Increment();
+			_outScene.drawManager.SortDrawablesByRenderMode();
+			_outProgress.Increment();
+		}
+
 		// Broadcast an event across the scene instance that it has just finished loading:
 		_outScene.BroadcastEvent(SceneEventType.OnSceneLoaded, _outScene, false);
 		_outScene.rootNode.SendEvent(SceneEventType.OnSetNodeEnabled, _outScene.rootNode.IsEnabled);
@@ -400,13 +437,15 @@ public static class SceneSerializer
 		out int _outTotalComponentCount,
 		out int _outTotalProgressTaskCount)
 	{
+		const int sceneFinalizingTaskCount = 2;	// re-sort update order + re-sort draw order.
+
 		int expectedElementCount = _data.GetTotalSceneElementCount();
 
 		_progress.Update("Reconstructing scene ID map", 0, expectedElementCount);
 
 		_outIdMap = new Dictionary<int, ISceneElementData>(expectedElementCount);
 		_outTotalComponentCount = 0;
-		_outTotalProgressTaskCount = 0;
+		_outTotalProgressTaskCount = sceneFinalizingTaskCount;
 
 		if (_data.Behaviours?.BehavioursData != null)
 		{

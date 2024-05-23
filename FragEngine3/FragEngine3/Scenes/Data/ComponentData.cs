@@ -1,25 +1,23 @@
-﻿
-namespace FragEngine3.Scenes.Data
+﻿namespace FragEngine3.Scenes.Data;
+
+[Serializable]
+public sealed class ComponentData : ISceneElementData
 {
-	[Serializable]
-	public sealed class ComponentData : ISceneElementData
-	{
-		#region Properties
+	#region Properties
 
-		public string Type { get; set; } = string.Empty;
-		public int ID { get; set; } = -1;
-		public int NodeID { get; set; } = -1;
-		public SceneElementType ElementType => SceneElementType.Component;
+	public string Type { get; set; } = string.Empty;
+	public int ID { get; set; } = -1;
+	public int NodeID { get; set; } = -1;
+	public SceneElementType ElementType => SceneElementType.Component;
 
-		//...
+	//...
 
-		public string SerializedData { get; set; } = string.Empty;
+	public string SerializedData { get; set; } = string.Empty;
 
-		#endregion
-		#region Properties
+	#endregion
+	#region Properties
 
-		public static ComponentData Empty => new();
+	public static ComponentData Empty => new();
 
-		#endregion
-	}
+	#endregion
 }

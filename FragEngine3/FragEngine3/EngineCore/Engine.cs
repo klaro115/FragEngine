@@ -130,7 +130,7 @@ public sealed class Engine : IDisposable
 	{
 		Logger.LogMessage("Exit was requested.");
 
-		if (mainLoopCancellationSrc != null)
+		if (mainLoopCancellationSrc is not null)
 		{
 			mainLoopCancellationSrc.Cancel();
 		}

@@ -1,17 +1,19 @@
-﻿using System.Numerics;
+﻿using Veldrid;
 
-namespace FragEngine3.Scenes.Data
+namespace FragEngine3.Scenes.Data;
+
+/// <summary>
+/// Serializable data type for scene settings of type '<see cref="SceneSettings"/>'.
+/// </summary>
+[Serializable]
+public sealed class SceneSettingsData
 {
-	[Serializable]
-	public sealed class SceneSettingsData
-	{
-		#region Properties
+	#region Properties
 
-		public Vector3 AmbientLightIntensityLow { get; set; } = new Vector3(0.1f, 0.1f, 0.1f);
-		public Vector3 AmbientLightIntensityMid { get; set; } = new Vector3(0.1f, 0.1f, 0.1f);
-		public Vector3 AmbientLightIntensityHigh { get; set; } = new Vector3(0.1f, 0.1f, 0.1f);
-		//...
+	public RgbaFloat AmbientLightIntensityLow { get; set; } = new(0.1f, 0.1f, 0.1f, 0);
+	public RgbaFloat AmbientLightIntensityMid { get; set; } = new(0.1f, 0.1f, 0.1f, 0);
+	public RgbaFloat AmbientLightIntensityHigh { get; set; } = new(0.1f, 0.1f, 0.1f, 0);
+	//...
 
-		#endregion
-	}
+	#endregion
 }

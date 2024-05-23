@@ -23,7 +23,7 @@ public sealed class StaticMeshRenderer(SceneNode _node) : Component(_node), IRen
 
 	private Material? material = null;
 	private Material? shadowMaterial = null;
-	private StaticMesh? mesh = null;
+	private Mesh? mesh = null;
 	private float meshBoundingRadius = 0.0f;
 
 	private DeviceBuffer? cbObject = null;
@@ -57,7 +57,7 @@ public sealed class StaticMeshRenderer(SceneNode _node) : Component(_node), IRen
 	/// Gets a handle to mesh resource that is drawn by this renderer. A mesh provides the surface geometry of a 3D model.
 	/// </summary>
 	public ResourceHandle? MeshHandle { get; private set; } = null;
-	public StaticMesh? Mesh
+	public Mesh? Mesh
 	{
 		get => mesh;
 		private set => mesh = value;
@@ -122,7 +122,7 @@ public sealed class StaticMeshRenderer(SceneNode _node) : Component(_node), IRen
 		}
 
 		// If the mesh is already loaded, assign it right away:
-		if (_meshHandle.GetResource(_loadImmediatelyIfNotReady) is StaticMesh mesh && !mesh.IsDisposed)
+		if (_meshHandle.GetResource(_loadImmediatelyIfNotReady) is Mesh mesh && !mesh.IsDisposed)
 		{
 			Mesh = mesh;
 			BoundingRadius = mesh.BoundingRadius;
@@ -139,7 +139,7 @@ public sealed class StaticMeshRenderer(SceneNode _node) : Component(_node), IRen
 		return true;
 	}
 
-	public bool SetMesh(StaticMesh _mesh)
+	public bool SetMesh(Mesh _mesh)
 	{
 		if (_mesh == null || _mesh.IsDisposed)
 		{
@@ -310,7 +310,7 @@ public sealed class StaticMeshRenderer(SceneNode _node) : Component(_node), IRen
 		if (!meshIsReady) return true;
 
 		// Fetch geometry buffers:
-		if (!Mesh!.GetGeometryBuffers(out DeviceBuffer[] vertexBuffers, out DeviceBuffer indexBuffer, out MeshVertexDataFlags vertexDataFlags))
+		if (!Mesh!.Prepare(out DeviceBuffer[] vertexBuffers, out DeviceBuffer indexBuffer))
 		{
 			Logger.LogError($"Failed to retrieve geometry buffers for static mesh '{Mesh}'!");
 			return false;
@@ -321,7 +321,7 @@ public sealed class StaticMeshRenderer(SceneNode _node) : Component(_node), IRen
 		{
 			_currentPipeline?.Dispose();
 
-			if (!_currentMaterial.CreatePipeline(_sceneCtx, _cameraPassCtx, rendererVersion, vertexDataFlags, out _currentPipeline))
+			if (!_currentMaterial.CreatePipeline(_sceneCtx, _cameraPassCtx, rendererVersion, Mesh.VertexDataFlags, out _currentPipeline))
 			{
 				Logger.LogError($"Failed to retrieve pipeline description for material '{_currentMaterial}'!");
 				return false;
@@ -425,7 +425,7 @@ public sealed class StaticMeshRenderer(SceneNode _node) : Component(_node), IRen
 				return false;
 			}
 			MeshHandle = handle;
-			Mesh = handle.GetResource(false) as StaticMesh;
+			Mesh = handle.GetResource(false) as Mesh;
 		}
 		return true;
 	}

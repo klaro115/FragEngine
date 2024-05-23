@@ -23,22 +23,22 @@ public static class ImageImportFlagParser
 		bool success = true;
 
 		// Flip image row order: (mirrors contents vertically)
-		if (FindFlag("mirrorY", out _))
+		if (FindFlag(ImportFlagsConstants.IMG_MIRROR_Y, out _))
 		{
 			success &= _imageData.MirrorVertically();
 		}
 		// Normals are using D3D standard, convert to OpenGL standard: (inverts green color value)
-		if (FindFlag("normalsDX", out _))
+		if (FindFlag(ImportFlagsConstants.IMG_NORMALS_D3D_CONVENTION, out _))
 		{
 			success &= _imageData.ConvertNormalMapDxAndGL();
 		}
 		// Dimensions need padding to next higher power-of-two value: (pads content with black pixels)
-		if (FindFlag("sRgbToLinear", out _))
+		if (FindFlag(ImportFlagsConstants.IMG_CONVERT_SRGB_TO_LINEAR, out _))
 		{
 			success &= _imageData.ConvertSRgbToLinearColorSpace();
 		}
 		// Dimensions need padding to next higher power-of-two value: (pads content with black pixels)
-		if (FindFlag("padPowerOf2", out _))
+		if (FindFlag(ImportFlagsConstants.IMG_PAD_NEXT_POWER_OF_2, out _))
 		{
 			success &= _imageData.PadSizeToNextPowerOfTwo();
 		}
@@ -46,10 +46,9 @@ public static class ImageImportFlagParser
 		//...
 
 		// Generate and append mip maps to the image's buffer:
-		const string mipmapFlag = "mipmap";
-		if (FindFlag(mipmapFlag, out int startIdx))
+		if (FindFlag(ImportFlagsConstants.IMG_GENERATE_MIPMAPS, out int startIdx))
 		{
-			int mipmapEndIdx = startIdx + mipmapFlag.Length;
+			int mipmapEndIdx = startIdx + ImportFlagsConstants.IMG_GENERATE_MIPMAPS.Length;
 
 			if (_importFlags.Length <= mipmapEndIdx + 1 ||
 				_importFlags[mipmapEndIdx] != '=' ||

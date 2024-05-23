@@ -4,6 +4,9 @@ using Veldrid;
 
 namespace FragEngine3.Graphics.Resources.Import.ImageFormats;
 
+/// <summary>
+/// Importer for the Microsoft Bitmap image file format.
+/// </summary>
 public static class BitmapImporter
 {
 	#region Types

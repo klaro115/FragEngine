@@ -1,5 +1,8 @@
 ﻿namespace FragEngine3.EngineCore.Logging;
 
+/// <summary>
+/// Enumeration of different types of logged events.
+/// </summary>
 public enum LogEntryType
 {
 	// Good stuff:
@@ -12,6 +15,9 @@ public enum LogEntryType
 	Exception,
 }
 
+/// <summary>
+/// Enumeration describing the gravity or importance of a logged event.
+/// </summary>
 public enum LogEntrySeverity
 {
 	Trivial,

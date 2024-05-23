@@ -1,153 +1,247 @@
-﻿namespace FragEngine3.Scenes.SceneManagers
+﻿using FragEngine3.Scenes.EventSystem;
+
+namespace FragEngine3.Scenes.SceneManagers;
+
+/// <summary>
+/// Module of a <see cref="Scene"/> that manages registration of updatable scene elements, though mainly components.
+/// The different update stages (Fixed, Early, Main, Late) are executed through this type's '<see cref="RunUpdateStage"/>' method.
+/// </summary>
+/// <param name="_scene">The scene this manager instance is attached to.</param>
+internal sealed class SceneUpdateManager(Scene _scene) : IDisposable
 {
-    /// <summary>
-    /// Module of a <see cref="Scene"/> that manages registration of updatable scene elements, though mainly components.
-    /// The different update stages (Fixed, Early, Main, Late) are executed through this type's '<see cref="RunUpdateStage"/>' method.
-    /// </summary>
-    /// <param name="_scene">The scene this manager instance is attached to.</param>
-    internal sealed class SceneUpdateManager(Scene _scene) : IDisposable
-    {
-        #region Constructors
+	#region Constructors
 
-        ~SceneUpdateManager()
-        {
-            Dispose(false);
-        }
+	~SceneUpdateManager()
+	{
+		Dispose(false);
+	}
 
-        #endregion
-        #region Fields
+	#endregion
+	#region Fields
 
-        public readonly Scene scene = _scene ?? throw new ArgumentNullException(nameof(_scene), "Scene may not be null!");
+	public readonly Scene scene = _scene ?? throw new ArgumentNullException(nameof(_scene), "Scene may not be null!");
 
-        private readonly List<IUpdatableSceneElement> earlyUpdateList = [];
-        private readonly List<IUpdatableSceneElement> mainUpdateList = [];
-        private readonly List<IUpdatableSceneElement> lateUpdateList = [];
-        private readonly List<IUpdatableSceneElement> fixedUpdateList = [];
+	private readonly List<IOnEarlyUpdateListener> earlyUpdateList = [];
+	private readonly List<IOnMainUpdateListener> mainUpdateList = [];
+	private readonly List<IOnLateUpdateListener> lateUpdateList = [];
+	private readonly List<IOnFixedUpdateListener> fixedUpdateList = [];
 
-        #endregion
-        #region Properties
+	private readonly object lockObj = new();
 
-        public int EarlyUpdateListenerCount => earlyUpdateList.Count;
-        public int MainUpdateListenerCount => mainUpdateList.Count;
-        public int LateUpdateListenerCount => lateUpdateList.Count;
-        public int FixedUpdateListenerCount => fixedUpdateList.Count;
+	#endregion
+	#region Properties
 
-        #endregion
-        #region Methods
+	public int EarlyUpdateListenerCount => earlyUpdateList.Count;
+	public int MainUpdateListenerCount => mainUpdateList.Count;
+	public int LateUpdateListenerCount => lateUpdateList.Count;
+	public int FixedUpdateListenerCount => fixedUpdateList.Count;
 
-        public void Dispose()
-        {
-            GC.SuppressFinalize(this);
-            Dispose(true);
-        }
-        private void Dispose(bool _disposing)
-        {
-            if (_disposing)
-            {
-                Clear();
-            }
-        }
+	#endregion
+	#region Methods
 
-        public void Clear()
-        {
-            fixedUpdateList.Clear();
-            earlyUpdateList.Clear();
-            mainUpdateList.Clear();
-            lateUpdateList.Clear();
-        }
+	public void Dispose()
+	{
+		GC.SuppressFinalize(this);
+		Dispose(true);
+	}
+	private void Dispose(bool _disposing)
+	{
+		if (_disposing)
+		{
+			Clear();
+		}
+	}
 
-        public bool RunUpdateStage(SceneUpdateStage _updateStage)
-        {
-            List<IUpdatableSceneElement>? updateList = _updateStage switch
-            {
-                SceneUpdateStage.Early => earlyUpdateList,
-                SceneUpdateStage.Main => mainUpdateList,
-                SceneUpdateStage.Late => lateUpdateList,
-                SceneUpdateStage.Fixed => fixedUpdateList,
-                _ => null,
-            };
+	public void Clear()
+	{
+		fixedUpdateList.Clear();
+		earlyUpdateList.Clear();
+		mainUpdateList.Clear();
+		lateUpdateList.Clear();
+	}
 
-            if (updateList == null) return false;
-            if (updateList.Count == 0) return true;
+	public bool RunUpdateStage(SceneUpdateStage _updateStage)
+	{
+		bool success = true;
 
-            bool success = true;
+		switch (_updateStage)
+		{
+			// EARLY:
+			case SceneUpdateStage.Early:
+				foreach (var element in earlyUpdateList)
+				{
+					success &= element.OnEarlyUpdate();
+				}
+				break;
 
-            foreach (IUpdatableSceneElement element in updateList)
-            {
-                success &= element.HandleUpdate(_updateStage);
-            }
+			// MAIN:
+			case SceneUpdateStage.Main:
+				foreach (var kvp in mainUpdateList)
+				{
+					success &= kvp.OnUpdate();
+				}
+				break;
 
-            return success;
-        }
+			// LATE:
+			case SceneUpdateStage.Late:
+				foreach (var element in lateUpdateList)
+				{
+					success &= element.OnLateUpdate();
+				}
+				break;
 
-        public bool RegisterSceneElement(IUpdatableSceneElement _newElement)
-        {
-            if (_newElement == null || _newElement.IsDisposed)
-            {
-                scene.Logger.LogError("Cannot register null or disposed scene element for update events!");
-                return false;
-            }
+			// FIXED:
+			case SceneUpdateStage.Fixed:
+				foreach (var element in fixedUpdateList)
+				{
+					success &= element.OnFixedUpdate();
+				}
+				break;
 
-            SceneUpdateStage updateStageFlags = _newElement.UpdateStageFlags;
-            if (updateStageFlags == 0)
-            {
-                return true;
-            }
+			default:
+				return false;
+		}
 
-            if (updateStageFlags.HasFlag(SceneUpdateStage.Early) && !earlyUpdateList.Contains(_newElement))
-            {
-                earlyUpdateList.Add(_newElement);
-            }
-            if (updateStageFlags.HasFlag(SceneUpdateStage.Main) && !mainUpdateList.Contains(_newElement))
-            {
-                mainUpdateList.Add(_newElement);
-            }
-            if (updateStageFlags.HasFlag(SceneUpdateStage.Late) && !lateUpdateList.Contains(_newElement))
-            {
-                lateUpdateList.Add(_newElement);
-            }
-            if (updateStageFlags.HasFlag(SceneUpdateStage.Fixed) && !fixedUpdateList.Contains(_newElement))
-            {
-                fixedUpdateList.Add(_newElement);
-            }
+		return success;
+	}
 
-            return true;
-        }
+	/// <summary>
+	/// Sort all update listeners by their update order.
+	/// NOTE: Usually, a listener's update order should not change over its lifecycle, and listeners should be  upon registration.
+	/// Therefore calling this method should hardly ever be necessary, unless you're excessively adding new listeners across multiple threads.
+	/// </summary>
+	public void SortListenersByUpdateOrder()
+	{
+		lock(lockObj)
+		{
+			earlyUpdateList.Sort(CompareUpdateOrder);
+			mainUpdateList.Sort(CompareUpdateOrder);
+			lateUpdateList.Sort(CompareUpdateOrder);
+			fixedUpdateList.Sort(CompareUpdateOrder);
+		}
 
-        public bool UnregisterSceneElements(IUpdatableSceneElement _oldElement)
-        {
-            if (_oldElement == null)
-            {
-                scene.Logger.LogError("Cannot unregister null scene element from update events!");
-                return false;
-            }
 
-            SceneUpdateStage updateStageFlags = _oldElement.UpdateStageFlags;
-            if (updateStageFlags == 0)
-            {
-                return true;
-            }
+		// Local helper method for sorting listeners in ascending update order:
+		static int CompareUpdateOrder<T>(T _a, T _b) where T : ISceneUpdateListener
+		{
+			return _b.UpdateOrder.CompareTo(_a.UpdateOrder);
+		}
+	}
 
-            if (updateStageFlags.HasFlag(SceneUpdateStage.Early))
-            {
-                earlyUpdateList.Remove(_oldElement);
-            }
-            if (updateStageFlags.HasFlag(SceneUpdateStage.Main))
-            {
-                mainUpdateList.Remove(_oldElement);
-            }
-            if (updateStageFlags.HasFlag(SceneUpdateStage.Late))
-            {
-                lateUpdateList.Remove(_oldElement);
-            }
-            if (updateStageFlags.HasFlag(SceneUpdateStage.Fixed))
-            {
-                fixedUpdateList.Remove(_oldElement);
-            }
+	public bool RegisterSceneElement(ISceneUpdateListener _newListener)
+	{
+		if (_newListener == null || _newListener.IsDisposed)
+		{
+			scene.Logger.LogError("Cannot register null or disposed scene event listener for update events!");
+			return false;
+		}
 
-            return true;
-        }
+		bool wasRegistered = false;
 
-        #endregion
-    }
+		lock(lockObj)
+		{
+			if (_newListener is IOnEarlyUpdateListener earlyUpdateListener)
+			{
+				SortedInsert(earlyUpdateList, earlyUpdateListener);
+				wasRegistered = true;
+			}
+			if (_newListener is IOnMainUpdateListener mainUpdateListener)
+			{
+			SortedInsert(mainUpdateList, mainUpdateListener);
+				wasRegistered = true;
+			}
+			if (_newListener is IOnLateUpdateListener lateUpdateListener)
+			{
+			SortedInsert(lateUpdateList, lateUpdateListener);
+				wasRegistered = true;
+			}
+			if (_newListener is IOnFixedUpdateListener fixedUpdateListener)
+			{
+			SortedInsert(fixedUpdateList, fixedUpdateListener);
+				wasRegistered = true;
+			}
+		}
+
+		return wasRegistered;
+	}
+
+	public bool UnregisterSceneElements(ISceneUpdateListener _oldListener)
+	{
+		if (_oldListener == null)
+		{
+			scene.Logger.LogError("Cannot unregister null scene event listener from update events!");
+			return false;
+		}
+
+		bool wasRemoved = false;
+
+		lock (lockObj)
+		{
+			if (_oldListener is IOnEarlyUpdateListener earlyUpdateListener)
+			{
+				wasRemoved |= earlyUpdateList.Remove(earlyUpdateListener);
+			}
+			if (_oldListener is IOnMainUpdateListener mainUpdateListener)
+			{
+				wasRemoved |= mainUpdateList.Remove(mainUpdateListener);
+			}
+			if (_oldListener is IOnLateUpdateListener lateUpdateListener)
+			{
+				wasRemoved |= lateUpdateList.Remove(lateUpdateListener);
+			}
+			if (_oldListener is IOnFixedUpdateListener fixedUpdateListener)
+			{
+				wasRemoved |= fixedUpdateList.Remove(fixedUpdateListener);
+			}
+		}
+
+		return wasRemoved;
+	}
+
+	private static void SortedInsert<T>(List<T> _list, T _newListener) where T : class, ISceneUpdateListener
+	{
+		// If list is empty, add directly:
+		if (_list.Count == 0)
+		{
+			_list.Add(_newListener);
+			return;
+		}
+
+		// If lowest order, prepend to list:
+		int order = _newListener.UpdateOrder;
+		if (order < _list[0].UpdateOrder)
+		{
+				_list.Insert(0, _newListener);
+			return;
+			}
+
+		// If highest order, append to list:
+		int highIdx = _list.Count - 1;
+		if (order >= _list[highIdx].UpdateOrder)
+		{
+			_list.Add(_newListener);
+			return;
+		}
+
+		// Insert after searching for similarly weighted update order, using Newton pattern:
+		int lowIdx = 0;
+		int midIdx = _list.Count / 2;
+		int mid = _list[midIdx].UpdateOrder;
+		while (mid != order)
+		{
+			if (mid < order)
+			{
+				highIdx = midIdx;
+			}
+			else
+			{
+				lowIdx = midIdx;
+			}
+			midIdx = (highIdx + lowIdx) / 2;
+			mid = _list[midIdx].UpdateOrder;
+		}
+		_list.Insert(midIdx, _newListener);
+	}
+
+	#endregion
 }

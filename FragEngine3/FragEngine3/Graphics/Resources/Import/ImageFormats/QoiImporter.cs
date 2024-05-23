@@ -5,6 +5,9 @@ using Veldrid;
 
 namespace FragEngine3.Graphics.Resources.Import.ImageFormats;
 
+/// <summary>
+/// Importer for the QOI (Quite Okay Image) file format.
+/// </summary>
 public static class QoiImporter
 {
 	#region Types

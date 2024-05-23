@@ -4,23 +4,21 @@ using FragEngine3.Graphics.Config;
 using FragEngine3.Graphics.Internal;
 using System.Diagnostics;
 using Veldrid;
-using Veldrid.MetalBindings;
 using Veldrid.Sdl2;
 using Veldrid.StartupUtilities;
 
-namespace FragEngine3.Graphics.MacOS;
+namespace FragEngine3.Graphics.D3D11;
 
-internal sealed class MacGraphicsCore(GraphicsSystem _graphicsSystem, EngineConfig _config) : GraphicsCore(_graphicsSystem, _config)
+internal sealed class Dx11GraphicsCore(GraphicsSystem _graphicsSystem, EngineConfig _config) : GraphicsCore(_graphicsSystem, _config)
 {
 	#region Fields
 
-	private static readonly GraphicsCapabilities capabilities = new(
-		[ new GraphicsCapabilities.DepthStencilFormat(32, 8) ]);
+	private static readonly GraphicsCapabilities capabilities = new();
 
-	#endregion
-	#region Properties
+        #endregion
+        #region Properties
 
-	public override EnginePlatformFlag ApiPlatformFlag => EnginePlatformFlag.GraphicsAPI_Metal;
+        public override EnginePlatformFlag ApiPlatformFlag => EnginePlatformFlag.GraphicsAPI_D3D;
 	public override bool DefaultMirrorY => true;
 
 	private Logger Logger => graphicsSystem.engine.Logger ?? Logger.Instance!;
@@ -32,25 +30,25 @@ internal sealed class MacGraphicsCore(GraphicsSystem _graphicsSystem, EngineConf
 	{
 		if (IsDisposed)
 		{
-			Logger.LogError("Cannot initialize disposed metal graphics devices!");
+			Logger.LogError("Cannot initialize disposed D3D graphics devices!");
 			return false;
 		}
 		if (IsInitialized)
 		{
-			Logger.LogError("Metal graphics devices are already initialized!");
+			Logger.LogError("D3D graphics devices are already initialized!");
 			return true;
 		}
 
 		Stopwatch stopwatch = new();
 		stopwatch.Start();
 
-		Console.Write("# Initializing Metal graphics device... ");
+		Console.Write("# Initializing D3D graphics device... ");
 
 		try
 		{
 			GraphicsSettings settings = graphicsSystem.Settings;
 
-			// CREATE WINDOW:
+			// DEFINE WINDOW:
 
 			Rectangle displayRect = new(0, 0, 1920, 1080);
 			unsafe
@@ -74,22 +72,18 @@ internal sealed class MacGraphicsCore(GraphicsSystem _graphicsSystem, EngineConf
 			string windowTitle = config.MainWindowTitle ?? config.ApplicationName ?? string.Empty;
 
 			WindowCreateInfo windowCreateInfo = new(
-				0, 0,
+				posX, posY,
 				width, height,
 				windowStyle.GetVeldridWindowState(),
 				windowTitle);
 
-			Window = VeldridStartup.CreateWindow(ref windowCreateInfo);
-			Window.Closing += () => quitMessageReceived = true;
-
-			// CREATE GRAPHICS DEVICE:
+			// DEFINE GRAPHICS DEVICE:
 
 			capabilities.GetBestOutputBitDepth(config.Graphics.OutputBitDepth, out int outputBitDepth);
 			bool vsync = settings.Vsync;
 			bool useSrgb = config.Graphics.OutputIsSRGB;
 			DefaultColorTargetPixelFormat = GetOutputPixelFormat(outputBitDepth, useSrgb);
-			DefaultDepthTargetPixelFormat = GetOutputDepthFormat(outputBitDepth, true);
-			DefaultShadowMapDepthTargetFormat = PixelFormat.R32_Float;
+			DefaultDepthTargetPixelFormat = GetOutputDepthFormat(outputBitDepth, false);
 
 			GraphicsDeviceOptions deviceOptions = new(
 				false,
@@ -100,7 +94,13 @@ internal sealed class MacGraphicsCore(GraphicsSystem _graphicsSystem, EngineConf
 				true,
 				useSrgb);
 
-			Device = VeldridStartup.CreateGraphicsDevice(Window, deviceOptions, GraphicsBackend.Metal);
+			// CREATE GRAPHICS DEVICE & WINDOW:
+
+			VeldridStartup.CreateWindowAndGraphicsDevice(windowCreateInfo, deviceOptions, GraphicsBackend.Direct3D11, out Sdl2Window window, out GraphicsDevice device);
+			Device = device;
+			Window = window;
+			Window.Closing += () => quitMessageReceived = true;
+			
 			Device.WaitForIdle();
 			Device.SwapBuffers();
 
@@ -118,7 +118,7 @@ internal sealed class MacGraphicsCore(GraphicsSystem _graphicsSystem, EngineConf
 		{
 			Console.WriteLine("FAIL.");
 			Logger.LogMessage("# Initializing D3D graphics device... FAIL.", true);
-			Logger.LogException("Failed to create system default metal graphics device!", ex);
+			Logger.LogException("Failed to create system default D3D graphics device!", ex);
 			Shutdown();
 			stopwatch.Stop();
 			return false;
@@ -149,18 +149,15 @@ internal sealed class MacGraphicsCore(GraphicsSystem _graphicsSystem, EngineConf
 				capabilities.textures1D = features.Texture1D;
 			}
 
-			// Log Metal specific information:
-			if (Device.GetMetalInfo(out BackendInfoMetal mtlInfo))
+			// Log D3D specific information:
+			if (Device.GetD3D11Info(out BackendInfoD3D11 d3dInfo))
 			{
-				Logger.LogMessage("+ Metal feature sets:");
-				foreach (MTLFeatureSet featureSet in mtlInfo.FeatureSet)
-				{
-					Logger.LogMessage($"  - {featureSet}");
-				}
+				Logger.LogMessage("+ D3D device details:");
+				Logger.LogMessage($"  - PCI ID: {d3dInfo.DeviceId}");
 			}
 			else
 			{
-				Logger.LogError("Could not query Metal feature sets!");
+				Logger.LogError("Could not query D3D device details!");
 			}
 		}
 
@@ -171,7 +168,7 @@ internal sealed class MacGraphicsCore(GraphicsSystem _graphicsSystem, EngineConf
 		isInitialized = Device != null && Window != null;
 		if (isInitialized)
 		{
-			Logger.LogMessage($"# Finished initializing Metal graphics device. ({stopwatch.ElapsedMilliseconds} ms)\n");
+			Logger.LogMessage($"# Finished initializing D3D graphics device. ({stopwatch.ElapsedMilliseconds} ms)\n");
 		}
 
 		quitMessageReceived = false;
@@ -220,4 +217,3 @@ internal sealed class MacGraphicsCore(GraphicsSystem _graphicsSystem, EngineConf
 
 	#endregion
 }
-

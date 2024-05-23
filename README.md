@@ -7,6 +7,8 @@ The engine is designed to be open-source, and available for both free and commer
 
 - [Dependencies](#dependencies)
 - [Assets](#assets)
+    - [Resource Files](#resource-files)
+    - [Shaders \& Graphics](#shaders--graphics)
 - [Platforms](#platforms)
     - [Windows](#windows)
     - [Linux](#linux)
@@ -16,6 +18,7 @@ The engine is designed to be open-source, and available for both free and commer
 
 <br>
 
+
 ## Dependencies
 The number of third-party dependencies for this engine is designed to be as low as possible.
 As much of the code and functionality as possible are written custom for this project, and implemented in pure C#.
@@ -23,12 +26,23 @@ As much of the code and functionality as possible are written custom for this pr
 The main dependency at this time is [Veldrid](https://veldrid.dev/), a cross-platform wrapper for graphics APIs, which is used as the basis for the engine's graphics, input, and window management modules.
 
 Beyond that, the [Magick.NET](https://github.com/dlemstra/Magick.NET) library was added for image file import. A small number of file formats will still see custom implementations for this project.
+<br>
 
 
 ## Assets
 An assets folder exists within the root directory, called "data". This folder must be copied into the build results directory.
 Scripts for Windows and MacOS are included, to automate this copying as much as possible.
 Eventually, a proper asset pipeline is planned, to replace and automate asset processing and bundling further.
+
+#### Resource Files
+
+Resources are primarily loaded from files located within the "data" folder. Each resource file might contain one or more resources, and must be accompanied by a descriptive resource metadata file. You may refer to the [Resource Guide](./FragEngine3/data/core/Resource%20Guide.md) for more details on asset management.
+
+#### Shaders & Graphics
+
+Standard shaders exist in HLSL (Direct3D shading language) in the most up-to-date form, and in MSL (Metal shading language) in an out-dated form.
+The following document provides a rough overview of default resource bindings and pipeline behaviour: [Shader Guide](./FragEngine3/data/core/shaders/Shader%20Guide.md)
+<br>
 
 
 ## Platforms
@@ -44,17 +58,18 @@ Linux support is planned but not currently implemented. A Vulkan backend and SPI
 Support for MacOS exists to some degree, but active development has been put on hold indefinitely.
 The platform is reliant on its proprietary Metal API, which is so poorly documented and cumbersome to work with, that the time and effort it takes to implement even basic functionality is just not worth it.
 Support may be resumed in the future if express interest arises, and may possibly use MoltenVK, to bypass Apple's insufferable software ecosystem.
+<br>
 
 
 ## Work In Progress
 
 - Refactor graphics architecture:
-    - Rewrite update/draw registration and call logic
     - Simplify code & reduce draw logic overhead
 - Lighting system: **[awaiting graphics refactoring]**
     - Indirect lighting
 - File format support: **[on hold]**
     - FBX (geometry)
+<br>
 
 
 ## Roadmap
@@ -63,6 +78,7 @@ The following is a rough and very short-sighted roadmap of features that are goi
 
 - Refactor graphics architecture:
     - Refactor Forward+Lights graphics stack _(split into sub-modules)_
+    - Add rendering groups for auto-parallelizing draw call creation
 - Rework engine state machine:
     - More granular thread sleep timings
 - Post-processing:

@@ -83,7 +83,7 @@ public sealed class Logger
 
 		lock(lockObj)
 		{
-			if (Instance == null || !Instance.IsInitialized)
+			if (Instance is null || !Instance.IsInitialized)
 			{
 				Instance = this;
 			}

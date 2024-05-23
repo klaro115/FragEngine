@@ -12,7 +12,7 @@ using Veldrid;
 
 namespace FragEngine3.Graphics.Components;
 
-public sealed class Camera : Component
+public sealed class Camera : Component, IOnNodeDestroyedListener, IOnComponentRemovedListener
 {
 	#region Constructors
 
@@ -49,18 +49,7 @@ public sealed class Camera : Component
 	private static readonly object mainCameraLockObj = new();
 
 	#endregion
-	#region Constants
-
-	private static readonly SceneEventType[] sceneEventTypes =
-	[
-		SceneEventType.OnNodeDestroyed,
-		SceneEventType.OnDestroyComponent,
-	];
-
-	#endregion
 	#region Properties
-
-	public override SceneEventType[] GetSceneEventList() => sceneEventTypes;
 
 	public bool IsDrawing => !IsDisposed && instance.IsDrawing;
 	public bool HasOverrideFramebuffer => overrideTarget != null && !overrideTarget.IsDisposed;
@@ -198,10 +187,13 @@ public sealed class Camera : Component
 		}
 	}
 
-	public override void ReceiveSceneEvent(SceneEventType _eventType, object? _eventData)
+	public void OnNodeDestroyed()
 	{
-		if (_eventType == SceneEventType.OnNodeDestroyed ||
-			_eventType == SceneEventType.OnDestroyComponent)
+		node.scene.drawManager.UnregisterCamera(this);
+	}
+	public void OnComponentRemoved(Component removedComponent)
+	{
+		if (removedComponent == this)
 		{
 			node.scene.drawManager.UnregisterCamera(this);
 		}

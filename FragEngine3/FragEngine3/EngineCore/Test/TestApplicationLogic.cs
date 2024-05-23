@@ -84,9 +84,9 @@ public sealed class TestApplicationLogic : ApplicationLogic
 		Scene scene = Engine.SceneManager.MainScene!;
 		
 		// Set ambient lighting:
-		scene.settings.AmbientLightIntensityLow = new(0.18f, 0.16f, 0.12f);
-		scene.settings.AmbientLightIntensityMid = new(0.15f, 0.15f, 0.15f);
-		scene.settings.AmbientLightIntensityHigh = new(0.17f, 0.17f, 0.25f);
+		scene.settings.AmbientLightIntensityLow = new(0.18f, 0.16f, 0.12f, 0);
+		scene.settings.AmbientLightIntensityMid = new(0.15f, 0.15f, 0.15f, 0);
+		scene.settings.AmbientLightIntensityHigh = new(0.17f, 0.17f, 0.25f, 0);
 
 		// Create a camera:
 		if (SceneSpawner.CreateCamera(scene, true, out Camera camera))
@@ -284,7 +284,7 @@ public sealed class TestApplicationLogic : ApplicationLogic
 			fbxRenderer.node.SetRotationFromYawPitchRoll(0, 0, 0, false, true);
 			fbxRenderer.node.LocalScale = Vector3.One * 0.5f;
 			//fbxRenderer.node.SetEnabled(false);
-
+		
 			fbxRenderer.SetMesh("Cube.obj");
 			//fbxRenderer.SetMesh("Plane.fbx");
 			fbxRenderer.SetMaterial("Mtl_DefaultSurface");
@@ -306,7 +306,7 @@ public sealed class TestApplicationLogic : ApplicationLogic
 				2, 3, 1,
 			],
 		};
-		StaticMesh quadMesh = new("Quad", Engine, false, out ResourceHandle quadHandle);
+		Mesh quadMesh = new("Quad", Engine, out ResourceHandle quadHandle);
 		quadMesh.SetGeometry(in quadData);
 		if (SceneSpawner.CreateStaticMeshRenderer(scene, out StaticMeshRenderer quad))
 		{
@@ -407,7 +407,22 @@ public sealed class TestApplicationLogic : ApplicationLogic
 		}
 		*/
 
+		// Try downloading mesh geometry data from GPU memory when pressing 'T':
+		if (Engine.InputManager.GetKeyUp(Key.T) && Engine.ResourceManager.GetResource("Cube", out ResourceHandle meshHandle))
+		{
+			Mesh? mesh = meshHandle?.GetResource<Mesh>(false);
+			if (mesh is null || !mesh.RequestGeometryDownload(CallbackMeshGeometryDownload))
+			{
+				Engine.Logger.LogError("Geometry download request failed.");
+			}
+		}
+
 		return true;
+	}
+
+	private void CallbackMeshGeometryDownload(Mesh _mesh, MeshSurfaceData _meshSurfaceData, IndexedWeightedVertex[]? _blendShapeData = null, IndexedWeightedVertex[]? _animationData = null)
+	{
+		Engine.Logger.LogMessage("Geometry download completed.");
 	}
 
 	public override bool DrawRunningState()
@@ -426,7 +441,7 @@ public sealed class TestApplicationLogic : ApplicationLogic
 				Directory.CreateDirectory(saveDirPath);
 			}
 			string saveFilePath = Path.Combine(saveDirPath, "test.json");
-			SceneSerializer.SaveSceneToFile(Engine.SceneManager.MainScene!, saveFilePath, out _, false);
+			SceneSerializer.SaveSceneToFile(Engine.SceneManager.MainScene!, saveFilePath, out _, false, false);
 
 			Engine.Logger.LogMessage("Saved main scene to file.");
 		}

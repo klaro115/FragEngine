@@ -7,6 +7,8 @@ using Veldrid;
 
 namespace FragEngine3.Graphics.Resources
 {
+	/*
+	[Obsolete("Deprecated by more generalized Mesh implementation")]
 	public class StaticMesh : Mesh
 	{
 		#region Constructors
@@ -457,5 +459,6 @@ namespace FragEngine3.Graphics.Resources
 
 		#endregion
 	}
+	*/
 }
 

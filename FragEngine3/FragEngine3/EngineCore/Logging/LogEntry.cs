@@ -1,37 +1,20 @@
 ﻿namespace FragEngine3.EngineCore.Logging;
 
 [Serializable]
-public sealed class LogEntry : IComparable<LogEntry>
+public sealed class LogEntry(LogEntryType _type, string _message, long _errorCode = 0, LogEntrySeverity _severity = LogEntrySeverity.Normal, Exception? _exception = null) : IComparable<LogEntry>
 {
-	#region Constructors
-
-	public LogEntry(LogEntryType _type, string _message, long _errorCode = 0, LogEntrySeverity _severity = LogEntrySeverity.Normal, Exception? _exception = null)
-	{
-		type = _type;
-		message = _message ?? string.Empty;
-		errorCode = _errorCode;
-		severity = _severity;
-
-		timestampUtc = DateTime.UtcNow;
-
-		exceptionType = _exception?.GetType();
-		exceptionMessage = _exception?.Message ?? string.Empty;
-		exceptionTrace = _exception?.StackTrace ?? string.Empty;
-	}
-
-	#endregion
 	#region Fields
 
-	public readonly LogEntryType type;
-	public readonly string message;
-	public readonly long errorCode;
-	public readonly LogEntrySeverity severity;
+	public readonly LogEntryType type = _type;
+	public readonly string message = _message ?? string.Empty;
+	public readonly long errorCode = _errorCode;
+	public readonly LogEntrySeverity severity = _severity;
 
-	public readonly DateTime timestampUtc;
+	public readonly DateTime timestampUtc = DateTime.UtcNow;
 
-	public readonly Type? exceptionType = null;
-	public readonly string exceptionMessage = string.Empty;
-	public readonly string exceptionTrace = string.Empty;
+	public readonly Type? exceptionType = _exception?.GetType();
+	public readonly string exceptionMessage = _exception?.Message ?? string.Empty;
+	public readonly string exceptionTrace = _exception?.StackTrace ?? string.Empty;
 
 	public static readonly ConsoleColor defaultConsoleColor = Console.ForegroundColor;
 
@@ -100,7 +83,7 @@ public sealed class LogEntry : IComparable<LogEntry>
 
 	public int CompareTo(LogEntry? other)
 	{
-		return other != null ? timestampUtc.CompareTo(other.timestampUtc) : 1;
+		return other is not null ? timestampUtc.CompareTo(other.timestampUtc) : 1;
 	}
 
 	#endregion

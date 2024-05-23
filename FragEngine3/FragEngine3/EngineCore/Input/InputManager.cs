@@ -128,7 +128,7 @@ public sealed class InputManager : IEngineSystem
 			engine.Logger.LogError("Cannot update input states on disposed input manager!");
 			return false;
 		}
-		if (_snapshot == null)
+		if (_snapshot is null)
 		{
 			engine.Logger.LogError("Cannot update input states from null snapshot!");
 			return false;
