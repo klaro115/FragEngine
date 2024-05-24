@@ -15,7 +15,11 @@ public sealed class StaticMeshRendererNew : Component, IRenderer
 
 	public StaticMeshRendererNew(SceneNode _node) : base(_node)
 	{
-		graphicsCore = _node.scene.engine.GraphicsSystem.graphicsCore;
+		graphicsCore = _node?.scene.engine.GraphicsSystem.graphicsCore ??  throw new ArgumentNullException(nameof(_node), "Node and graphics core may not be null!");
+
+		// Create object constant buffer immediately:
+		BufferDescription cbObjectDesc = new(CBObject.packedByteSize, BufferUsage.Dynamic);
+		cbObject = graphicsCore.MainFactory.CreateBuffer(ref cbObjectDesc);
 	}
 
 	#endregion
@@ -31,11 +35,13 @@ public sealed class StaticMeshRendererNew : Component, IRenderer
 
 	public readonly GraphicsCore graphicsCore;
 
+	// Resources:
 	private Mesh? mesh = null;
 	private Material? materialScene = null;
 	private Material? materialShadow = null;
 
-	private DeviceBuffer? cbObject = null;
+	// Graphics objects:
+	private readonly DeviceBuffer cbObject;
 	private Pipeline? pipelineScene = null;
 	private Pipeline? pipelineShadow = null;
 
@@ -51,10 +57,9 @@ public sealed class StaticMeshRendererNew : Component, IRenderer
 	public ResourceHandle MaterialHandle { get; private set; } = ResourceHandle.None;
 	public ResourceHandle ShadowMaterialHandle { get; private set; } = ResourceHandle.None;
 
-	private bool HasMesh => (mesh is not null && mesh.IsInitialized) || (MeshHandle is not null && MeshHandle.IsValid);
-	private bool HasMaterial => (materialScene is not null && !materialScene.IsDisposed) || (MaterialHandle is not null && MaterialHandle.IsValid);
-
-	public bool IsVisible => !IsDisposed && node.IsEnabled && HasMesh && HasMaterial;
+	public bool AreResourcesAssigned { get; private set; } = false;
+	public bool AreShadowResourcesAssigned { get; private set; } = false;
+	public bool IsVisible => !IsDisposed && node.IsEnabled && AreResourcesAssigned;
 	public bool DontDrawUnlessFullyLoaded { get; set; } = false;
 
 	public RenderMode RenderMode => materialScene is not null ? materialScene.RenderMode : RenderMode.Opaque;
@@ -70,6 +75,110 @@ public sealed class StaticMeshRendererNew : Component, IRenderer
 		cbObject?.Dispose();
 		pipelineScene?.Dispose();
 		pipelineShadow?.Dispose();
+	}
+
+	public bool SetMesh(ResourceHandle? _meshHandle)
+	{
+		if (IsDisposed)
+		{
+			Logger.LogError("Cannot set mesh on disposed renderer!");
+			return false;
+		}
+
+		string prevResourceKey = MeshHandle?.resourceKey ?? string.Empty;
+		mesh = null;
+
+		if (_meshHandle is null || !_meshHandle.IsValid)
+		{
+			// Assigning a null or invalid handle will unassign current mesh:
+			MeshHandle = ResourceHandle.None;
+			AreResourcesAssigned = false;
+		}
+		else
+		{
+			MeshHandle = _meshHandle;
+			if (MeshHandle.IsLoaded)
+			{
+				mesh = MeshHandle.GetResource<Mesh>();
+			}
+
+			AreResourcesAssigned = (materialScene is not null && !materialScene.IsDisposed) || MaterialHandle.IsValid;
+		}
+
+		// Notify any users that the renderer's resources have changed:
+		if (prevResourceKey != MeshHandle!.resourceKey)
+		{
+			OnResourcesChanged?.Invoke(this);
+		}
+		return true;
+	}
+
+	public bool SetMaterial(ResourceHandle? _materialHandle, ResourceHandle? _overrideShadowMaterial = null)
+	{
+		if (IsDisposed)
+		{
+			Logger.LogError("Cannot set material on disposed renderer!");
+			return false;
+		}
+
+		string prevSceneResourceKey = MaterialHandle.resourceKey ?? string.Empty;
+		string prevShadowResourceKey = ShadowMaterialHandle.resourceKey ?? string.Empty;
+		materialScene = null;
+		materialShadow = null;
+		ShadowMaterialHandle = ResourceHandle.None;
+		AreShadowResourcesAssigned = false;
+		bool isMeshAssigned = (mesh is not null && !mesh.IsDisposed) || MeshHandle.IsValid;
+
+		if (_materialHandle is null || !_materialHandle.IsValid)
+		{
+			// Assigning a null or invalid handle will unassign current material:
+			MaterialHandle = ResourceHandle.None;
+			AreResourcesAssigned = false;
+		}
+		else
+		{
+			MaterialHandle = _materialHandle;
+
+			// If already loaded, assign scene material immediately:
+			if (MaterialHandle.IsLoaded)
+			{
+				materialScene = MaterialHandle.GetResource<Material>();
+
+				// If no override shadow material is provided, use default from loaded scene material:
+				if (materialScene is not null && (_overrideShadowMaterial is null || !_overrideShadowMaterial.IsValid))
+				{
+					ShadowMaterialHandle = materialScene.ShadowMapMaterialVersion ?? ResourceHandle.None;
+					if (ShadowMaterialHandle.IsLoaded)
+					{
+						materialShadow = ShadowMaterialHandle.GetResource<Material>();
+					}
+
+					AreShadowResourcesAssigned = isMeshAssigned;
+				}
+			}
+
+			AreResourcesAssigned = isMeshAssigned;
+		}
+
+		// If an override shadow material is provided, assign it immediately:
+		if (_overrideShadowMaterial is not null && _overrideShadowMaterial.IsValid)
+		{
+			ShadowMaterialHandle = _overrideShadowMaterial;
+			if (ShadowMaterialHandle.IsLoaded)
+			{
+				materialShadow = ShadowMaterialHandle.GetResource<Material>();
+			}
+
+			AreShadowResourcesAssigned = isMeshAssigned;
+		}
+
+		// Notify any users that the renderer's resources have changed:
+		if (prevSceneResourceKey != MaterialHandle!.resourceKey ||
+			prevShadowResourceKey != ShadowMaterialHandle.resourceKey)
+		{
+			OnResourcesChanged?.Invoke(this);
+		}
+		return true;
 	}
 
 	public float GetZSortingDepth(Vector3 _viewportPosition, Vector3 _cameraDirection)
@@ -154,9 +263,9 @@ public sealed class StaticMeshRendererNew : Component, IRenderer
 
 		if (_resource is null)
 		{
-			if (_handle is null)
+			if (_handle is null || !_handle.IsValid)
 			{
-				Logger.LogError($"Resource handle of mesh renderer '{node.Name}' has not been set!");
+				Logger.LogError($"Resource handle of mesh renderer '{node.Name}' is null or invalid!");
 				_outProceed = false;
 				return false;
 			}
@@ -167,7 +276,7 @@ public sealed class StaticMeshRendererNew : Component, IRenderer
 
 			if (loadImmediately && !_outProceed)
 			{
-				Logger.LogError("Failed to load resource for static mesh renderer!");
+				Logger.LogError($"Failed to load resource '{_handle.resourceKey}' for static mesh renderer!");
 				success = false;
 			}
 		}
