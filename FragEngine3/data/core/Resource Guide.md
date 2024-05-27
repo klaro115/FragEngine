@@ -12,6 +12,8 @@ Resources are primarily loaded from files located within the "data" folder. Each
 ## Metadata Files
 
 These files must have the ".fres" file extension, which is short for <ins>F</ins>ragment <ins>Res</ins>ource. The file's contents are a JSON-representation of the `ResourceFileData` type. The `DataFilePath` field points at another file containing the resource's data, and the `Resources` field provides a list of descriptions of all resources contained within the file. Resource descriptions are JSON-representations of the `ResourceHandleData` type.
+
+See the [Resource Specifications](./Resource%20Specifications.md) for more in-depth information on resource files.
 <br>
 
 
