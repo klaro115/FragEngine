@@ -1,10 +1,14 @@
 ﻿using System.Numerics;
+using FragEngine3.Containers;
 using FragEngine3.Graphics.Components.ConstantBuffers;
+using FragEngine3.Graphics.Components.Data;
 using FragEngine3.Graphics.Contexts;
+using FragEngine3.Graphics.Internal;
 using FragEngine3.Graphics.Resources;
 using FragEngine3.Resources;
 using FragEngine3.Scenes;
 using FragEngine3.Scenes.Data;
+using FragEngine3.Utility.Serialization;
 using Veldrid;
 
 namespace FragEngine3.Graphics.Components;
@@ -20,6 +24,7 @@ public sealed class StaticMeshRendererNew : Component, IRenderer
 		// Create object constant buffer immediately:
 		BufferDescription cbObjectDesc = new(CBObject.packedByteSize, BufferUsage.Dynamic);
 		cbObject = graphicsCore.MainFactory.CreateBuffer(ref cbObjectDesc);
+		cbObject.Name = $"CBObject_{node.Name}";
 	}
 
 	#endregion
@@ -42,10 +47,13 @@ public sealed class StaticMeshRendererNew : Component, IRenderer
 
 	// Graphics objects:
 	private readonly DeviceBuffer cbObject;
-	private Pipeline? pipelineScene = null;
-	private Pipeline? pipelineShadow = null;
+	private ResourceSet? resSetObject = null;
+	private VersionedMember<Pipeline?> pipelineScene = new(null, 0);
+	private VersionedMember<Pipeline?> pipelineShadow = new(null, 0);
 
-	private uint lastUpdatedForFrameIdx = 0;
+	private int lastUpdatedForFrameIdx = -1;
+	private uint rendererVersionScene = 0;
+	private uint rendererVersionShadow = 0;
 	private CBObject cbObjectData = default;
 
 	#endregion
@@ -73,10 +81,26 @@ public sealed class StaticMeshRendererNew : Component, IRenderer
 		base.Dispose(_disposing);
 
 		cbObject?.Dispose();
-		pipelineScene?.Dispose();
-		pipelineShadow?.Dispose();
+		resSetObject?.Dispose();
+		pipelineScene.DisposeValue();
+		pipelineShadow.DisposeValue();
 	}
 
+	/// <summary>
+	/// Manually flag the renderer as dirty, forcing a rebuild of the pipeline and constant buffers before the next draw call.
+	/// </summary>
+	public void MarkDirty()
+	{
+		lastUpdatedForFrameIdx = 0;
+		rendererVersionScene++;
+		rendererVersionShadow++;
+	}
+
+	/// <summary>
+	/// Assigns a mesh that shall be drawn by this renderer.
+	/// </summary>
+	/// <param name="_meshHandle">A resource handle for the mesh. If null or invalid, the mesh will be unassigned.</param>
+	/// <returns>True if the mesh was assigned, false otherwise.</returns>
 	public bool SetMesh(ResourceHandle? _meshHandle)
 	{
 		if (IsDisposed)
@@ -113,6 +137,13 @@ public sealed class StaticMeshRendererNew : Component, IRenderer
 		return true;
 	}
 
+	/// <summary>
+	/// Assigns a material for rendering the mesh.
+	/// </summary>
+	/// <param name="_materialHandle">A resource handle for the material. If null or invalid, the material will be unassigned.</param>
+	/// <param name="_overrideShadowMaterial">An override material for rendering shadow maps. If non-null, this material replaces any
+	/// shadow material provided by the main material.</param>
+	/// <returns>True if the material was assigned, false otherwise.</returns>
 	public bool SetMaterial(ResourceHandle? _materialHandle, ResourceHandle? _overrideShadowMaterial = null)
 	{
 		if (IsDisposed)
@@ -173,9 +204,13 @@ public sealed class StaticMeshRendererNew : Component, IRenderer
 		}
 
 		// Notify any users that the renderer's resources have changed:
-		if (prevSceneResourceKey != MaterialHandle!.resourceKey ||
-			prevShadowResourceKey != ShadowMaterialHandle.resourceKey)
+		bool materialSceneChanged = prevSceneResourceKey != MaterialHandle!.resourceKey;
+		bool materialShadowChanged = prevShadowResourceKey != ShadowMaterialHandle.resourceKey;
+		if (materialSceneChanged || materialShadowChanged)
 		{
+			if (materialSceneChanged) rendererVersionScene++;
+			if (materialShadowChanged) rendererVersionShadow++;
+
 			OnResourcesChanged?.Invoke(this);
 		}
 		return true;
@@ -201,6 +236,7 @@ public sealed class StaticMeshRendererNew : Component, IRenderer
 			_sceneCtx,
 			_cameraPassCtx,
 			materialScene!,
+			rendererVersionScene,
 			ref pipelineScene);
 	}
 
@@ -215,6 +251,7 @@ public sealed class StaticMeshRendererNew : Component, IRenderer
 			_sceneCtx,
 			_cameraPassCtx,
 			materialShadow!,
+			rendererVersionShadow,
 			ref pipelineShadow);
 	}
 
@@ -222,7 +259,8 @@ public sealed class StaticMeshRendererNew : Component, IRenderer
 		SceneContext _sceneCtx,
 		CameraPassContext _cameraPassCtx,
 		Material _material,
-		ref Pipeline? _pipeline)
+		uint _rendererVersion,
+		ref VersionedMember<Pipeline?> _pipeline)
 	{
 		if (IsDisposed)
 		{
@@ -246,12 +284,37 @@ public sealed class StaticMeshRendererNew : Component, IRenderer
 		// Update CBObject on the first draw call of each new frame:
 		if (lastUpdatedForFrameIdx < _cameraPassCtx.frameIdx)
 		{
-			lastUpdatedForFrameIdx = _cameraPassCtx.frameIdx;
-			UpdateCBObject(_cameraPassCtx.cmdList);
+			lastUpdatedForFrameIdx = (int)_cameraPassCtx.frameIdx;
+			UpdateCBObject(_cameraPassCtx.cmdList, in _sceneCtx.resLayoutObject);
 		}
 
-		//TODO: Recreate pipeline if necessary.
-		//TODO: Issue draw calls.
+		// Recreate pipeline if necessary:
+		if (_pipeline.Version != _rendererVersion && !RecreatePipeline(_sceneCtx, _cameraPassCtx, _material, _rendererVersion, ref _pipeline))		//TODO [critical]: Increase renderer version if scene/camera resources changed!
+		{
+			return false;
+		}
+
+		// Bind pipeline and resource sets:
+		_cameraPassCtx.cmdList.SetPipeline(_pipeline.Value);
+		_cameraPassCtx.cmdList.SetGraphicsResourceSet(0, _cameraPassCtx.resSetCamera);
+		_cameraPassCtx.cmdList.SetGraphicsResourceSet(1, resSetObject);
+
+		ResourceSet? overrideBoundResourceSet = null;	//TODO / TEMP
+		ResourceSet? boundResourceSet = overrideBoundResourceSet ?? _material.BoundResourceSet;
+		if (boundResourceSet != null && _material.BoundResourceLayout != null)
+		{
+			_cameraPassCtx.cmdList.SetGraphicsResourceSet(2, boundResourceSet);
+		}
+
+		// Bind geometry buffers:
+		for (uint i = 0; i < bufVertices.Length; i++)
+		{
+			_cameraPassCtx.cmdList.SetVertexBuffer(i, bufVertices[i]);
+		}
+		_cameraPassCtx.cmdList.SetIndexBuffer(bufIndices, mesh.IndexFormat);
+
+		// Issue draw call:
+		_cameraPassCtx.cmdList.DrawIndexed(mesh.IndexCount);
 
 		return success;
 	}
@@ -283,8 +346,9 @@ public sealed class StaticMeshRendererNew : Component, IRenderer
 		return success;
 	}
 
-	private void UpdateCBObject(CommandList _cmdList)
+	private void UpdateCBObject(CommandList _cmdList, in ResourceLayout _resLayoutObject)
 	{
+		// Update data in the object's constant buffer:
 		Pose worldPose = node.WorldTransformation;
 
 		cbObjectData = new()
@@ -295,16 +359,125 @@ public sealed class StaticMeshRendererNew : Component, IRenderer
 		};
 
 		_cmdList.UpdateBuffer(cbObject, 0, ref cbObjectData);
+
+		// Ensure the object's resource set has been created:
+		if (resSetObject is null)
+		{
+			ResourceSetDescription resSetObjectDesc = new(
+				_resLayoutObject,
+				cbObject);
+
+			resSetObject = graphicsCore.MainFactory.CreateResourceSet(ref resSetObjectDesc);
+			resSetObject.Name = $"ResSetObject_{node.Name}";
+
+			// Mark renderer as dirty since we have a new resource set:
+			rendererVersionScene++;
+			rendererVersionShadow++;
+		}
+	}
+
+	private bool RecreatePipeline(in SceneContext _sceneCtx, in CameraPassContext _cameraPassCtx, Material _material, uint _rendererVersion, ref VersionedMember<Pipeline?> _pipeline)
+	{
+		_pipeline.DisposeValue();
+
+		if (!_material.CreatePipeline(_sceneCtx, _cameraPassCtx, _rendererVersion, mesh!.VertexDataFlags, out PipelineState pipelineState))
+		{
+			_pipeline.UpdateValue(0, null);
+			Logger.LogError($"Failed to retrieve pipeline description for material '{_material}'!");
+			return false;
+		}
+
+		_pipeline.UpdateValue(_rendererVersion, pipelineState.pipeline);	//TODO: Ditch pipeline state object and type.
+		return true;
 	}
 
 	public override bool LoadFromData(in ComponentData _componentData, in Dictionary<int, ISceneElement> _idDataMap)
 	{
-		throw new NotImplementedException();
+		if (string.IsNullOrEmpty(_componentData.SerializedData))
+		{
+			Logger.LogError("Cannot load static mesh renderer from null or blank serialized data!");
+			return false;
+		}
+
+		// Deserialize renderer data from component data's serialized data string:
+		if (!Serializer.DeserializeFromJson(_componentData.SerializedData, out StaticMeshRendererData? data) || data == null)
+		{
+			Logger.LogError("Failed to deserialize static mesh renderer component data from JSON!");
+			return false;
+		}
+
+		ResourceManager resourceManager = graphicsCore.graphicsSystem.engine.ResourceManager;
+
+		// Reset all resource references:
+		MaterialHandle = ResourceHandle.None;
+		ShadowMaterialHandle = ResourceHandle.None;
+		materialScene = null;
+		materialShadow = null;
+		MeshHandle = ResourceHandle.None;
+		mesh = null;
+
+		DontDrawUnlessFullyLoaded = data.DontDrawUnlessFullyLoaded;
+		LayerFlags = data.LayerFlags;
+
+		bool success = true;
+
+		// Load resource handles and queue up loading if they're not available yet:
+		if (!string.IsNullOrEmpty(data.Material))
+		{
+			ResourceHandle? handleShadows = null;
+
+			if (!resourceManager.GetResource(data.Material, out ResourceHandle handle) || handle.resourceType != ResourceType.Material)
+			{
+				Logger.LogError($"A material resource with the key '{data.Material}' could not be found!");
+				return false;
+			}
+			if (!string.IsNullOrEmpty(data.ShadowMaterial) && !resourceManager.GetResource(data.ShadowMaterial, out handleShadows) && handleShadows.resourceType == ResourceType.Material)
+			{
+				Logger.LogError($"A shadow material resource with the key '{data.ShadowMaterial}' could not be found!");
+				return false;
+			}
+
+			success &= SetMaterial(handle, handleShadows);
+		}
+		if (!string.IsNullOrEmpty(data.Mesh))
+		{
+			if (!resourceManager.GetResource(data.Mesh, out ResourceHandle handle) || handle.resourceType != ResourceType.Model)
+			{
+				Logger.LogError($"A static mesh resource with the key '{data.Mesh}' could not be found!");
+				return false;
+			}
+
+			success &= SetMesh(handle);
+		}
+		return success;
 	}
 
 	public override bool SaveToData(out ComponentData _componentData, in Dictionary<ISceneElement, int> _idDataMap)
 	{
-		throw new NotImplementedException();
+		StaticMeshRendererData data = new()
+		{
+			Mesh = MeshHandle?.resourceKey ?? string.Empty,
+			Material = MaterialHandle?.resourceKey ?? string.Empty,
+			ShadowMaterial = ShadowMaterialHandle is not null && ShadowMaterialHandle != materialScene?.ShadowMapMaterialVersion
+				? ShadowMaterialHandle.resourceKey
+				: string.Empty,
+
+			DontDrawUnlessFullyLoaded = DontDrawUnlessFullyLoaded,
+			LayerFlags = LayerFlags,
+		};
+
+		if (!Serializer.SerializeToJson(data, out string dataJson))
+		{
+			Logger.LogError("Failed to serialize static mesh renderer component data to JSON!");
+			_componentData = ComponentData.Empty;
+			return false;
+		}
+
+		_componentData = new ComponentData()
+		{
+			SerializedData = dataJson,
+		};
+		return true;
 	}
 
 	#endregion
