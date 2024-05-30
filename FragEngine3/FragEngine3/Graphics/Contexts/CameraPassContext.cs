@@ -15,6 +15,7 @@ public sealed class CameraPassContext(
 	ResourceSet _resSetCamera,
 	DeviceBuffer _cbCamera,
 	LightDataBuffer _lightDataBuffer,
+	ushort _passResourceVersion,
 
 	// Parameters:
 	uint _frameIdx,
@@ -33,6 +34,7 @@ public sealed class CameraPassContext(
 	public readonly ResourceSet resSetCamera = _resSetCamera;
 	public readonly DeviceBuffer cbCamera = _cbCamera;
 	public readonly LightDataBuffer lightDataBuffer = _lightDataBuffer;
+	public readonly ushort cameraResourceVersion = _passResourceVersion;
 
 	// Parameters:
 	public readonly uint frameIdx = _frameIdx;

@@ -36,6 +36,7 @@ public sealed class Camera : Component, IOnNodeDestroyedListener, IOnComponentRe
 	// Render targets:
 	private readonly Dictionary<RenderMode, CameraTarget> targetDict = new(4);
 	private CameraTarget? overrideTarget = null;
+	private ushort resourceVersion = 0;
 
 	private readonly Stack<CameraPassResources> passResourcePool = new(4);
 	private readonly Stack<CameraPassResources> passResourcesInUse = new(4);
@@ -312,6 +313,10 @@ public sealed class Camera : Component, IOnNodeDestroyedListener, IOnComponentRe
 			return false;
 		}
 		_outRebuildResSetCamera |= recreatedLightDataBuffer;
+		if (_outRebuildResSetCamera)
+		{
+			resourceVersion++;
+		}
 
 		// Calculate camera transformation/movement since last frame:
 		{
@@ -446,6 +451,13 @@ public sealed class Camera : Component, IOnNodeDestroyedListener, IOnComponentRe
 			_outCameraPassCtx = null!;
 			return false;
 		}
+		if (_rebuildResSetCamera)
+		{
+			resourceVersion++;
+		}
+
+		// Determine version number for this pass' resources:
+		ushort cameraResourceVersion = (ushort)(resourceVersion ^ _sceneCtx.sceneResourceVersion);
 
 		// Assemble context for rendering this pass:
 		_outCameraPassCtx = new(
@@ -455,10 +467,12 @@ public sealed class Camera : Component, IOnNodeDestroyedListener, IOnComponentRe
 			passResources.resSetCamera!,
 			passResources.cbCamera,
 			LightDataBuffer!,
+			cameraResourceVersion,
 			FrameCounter,
 			PassCounter,
 			_shadowMappedLightCount,
 			in mtxWorld2Clip);
+
 		return true;
 	}
 

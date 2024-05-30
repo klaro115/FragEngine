@@ -52,8 +52,8 @@ public sealed class StaticMeshRendererNew : Component, IRenderer
 	private VersionedMember<Pipeline?> pipelineShadow = new(null, 0);
 
 	private int lastUpdatedForFrameIdx = -1;
-	private uint rendererVersionScene = 0;
-	private uint rendererVersionShadow = 0;
+	private ushort rendererVersionScene = 0;
+	private ushort rendererVersionShadow = 0;
 	private CBObject cbObjectData = default;
 
 	#endregion
@@ -259,7 +259,7 @@ public sealed class StaticMeshRendererNew : Component, IRenderer
 		SceneContext _sceneCtx,
 		CameraPassContext _cameraPassCtx,
 		Material _material,
-		uint _rendererVersion,
+		ushort _rendererVersion,
 		ref VersionedMember<Pipeline?> _pipeline)
 	{
 		if (IsDisposed)
@@ -289,7 +289,8 @@ public sealed class StaticMeshRendererNew : Component, IRenderer
 		}
 
 		// Recreate pipeline if necessary:
-		if (_pipeline.Version != _rendererVersion && !RecreatePipeline(_sceneCtx, _cameraPassCtx, _material, _rendererVersion, ref _pipeline))		//TODO [critical]: Increase renderer version if scene/camera resources changed!
+		uint expectedPipelineVersion = (uint)(_cameraPassCtx.cameraResourceVersion << 16) | _rendererVersion;
+		if (_pipeline.Version != expectedPipelineVersion && !RecreatePipeline(_sceneCtx, _cameraPassCtx, _material, expectedPipelineVersion, ref _pipeline))
 		{
 			return false;
 		}
@@ -376,18 +377,18 @@ public sealed class StaticMeshRendererNew : Component, IRenderer
 		}
 	}
 
-	private bool RecreatePipeline(in SceneContext _sceneCtx, in CameraPassContext _cameraPassCtx, Material _material, uint _rendererVersion, ref VersionedMember<Pipeline?> _pipeline)
+	private bool RecreatePipeline(in SceneContext _sceneCtx, in CameraPassContext _cameraPassCtx, Material _material, uint _newestVersion, ref VersionedMember<Pipeline?> _pipeline)
 	{
 		_pipeline.DisposeValue();
 
-		if (!_material.CreatePipeline(_sceneCtx, _cameraPassCtx, _rendererVersion, mesh!.VertexDataFlags, out PipelineState pipelineState))
+		if (!_material.CreatePipeline(_sceneCtx, _cameraPassCtx, _newestVersion, mesh!.VertexDataFlags, out PipelineState pipelineState))
 		{
 			_pipeline.UpdateValue(0, null);
 			Logger.LogError($"Failed to retrieve pipeline description for material '{_material}'!");
 			return false;
 		}
 
-		_pipeline.UpdateValue(_rendererVersion, pipelineState.pipeline);	//TODO: Ditch pipeline state object and type.
+		_pipeline.UpdateValue(_newestVersion, pipelineState.pipeline);	//TODO: Ditch pipeline state object and type.
 		return true;
 	}
 
