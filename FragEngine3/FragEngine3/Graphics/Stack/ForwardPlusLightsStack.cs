@@ -208,7 +208,7 @@ public sealed class ForwardPlusLightsStack(GraphicsCore _core) : IGraphicsStack
 			compositionNode.LocalTransformation = Pose.Identity;
 			if (compositionNode.CreateComponent(out compositeSceneRenderer) && compositeSceneRenderer != null)
 			{
-				compositeSceneRenderer.SetMaterial(RESOURCE_KEY_COMPOSITE_SCENE_MATERIAL, true);
+				compositeSceneRenderer.SetMaterial(RESOURCE_KEY_COMPOSITE_SCENE_MATERIAL);
 				compositeSceneRenderer.SetMesh(fullscreenQuadHandle);
 				compositeSceneRenderer.LayerFlags = COMPOSITION_LAYER_MASK;
 			}
@@ -219,7 +219,7 @@ public sealed class ForwardPlusLightsStack(GraphicsCore _core) : IGraphicsStack
 			compositionNode.LocalTransformation = Pose.Identity;
 			if (compositionNode.CreateComponent(out compositeUIRenderer) && compositeUIRenderer != null)
 			{
-				compositeUIRenderer.SetMaterial(RESOURCE_KEY_COMPOSITE_UI_MATERIAL, true);
+				compositeUIRenderer.SetMaterial(RESOURCE_KEY_COMPOSITE_UI_MATERIAL);
 				compositeUIRenderer.SetMesh(fullscreenQuadHandle);
 				compositeUIRenderer.LayerFlags = COMPOSITION_LAYER_MASK;
 			}

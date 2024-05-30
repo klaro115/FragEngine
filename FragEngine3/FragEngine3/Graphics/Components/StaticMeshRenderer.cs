@@ -13,7 +13,8 @@ using Veldrid;
 
 namespace FragEngine3.Graphics.Components;
 
-public sealed class StaticMeshRenderer(SceneNode _node) : Component(_node), IRenderer
+[Obsolete("Replaced by rewrite")]
+public sealed class StaticMeshRendererOld(SceneNode _node) : Component(_node), IRenderer
 {
 	#region Fields
 

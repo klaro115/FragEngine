@@ -13,16 +13,16 @@ using Veldrid;
 
 namespace FragEngine3.Graphics.Components;
 
-public sealed class StaticMeshRendererNew : Component, IRenderer
+public sealed class StaticMeshRenderer : Component, IRenderer
 {
 	#region Constructors
 
-	public StaticMeshRendererNew(SceneNode _node) : base(_node)
+	public StaticMeshRenderer(SceneNode _node) : base(_node)
 	{
 		graphicsCore = _node?.scene.engine.GraphicsSystem.graphicsCore ??  throw new ArgumentNullException(nameof(_node), "Node and graphics core may not be null!");
 
 		// Create object constant buffer immediately:
-		BufferDescription cbObjectDesc = new(CBObject.packedByteSize, BufferUsage.Dynamic);
+		BufferDescription cbObjectDesc = new(CBObject.packedByteSize, BufferUsage.UniformBuffer | BufferUsage.Dynamic);
 		cbObject = graphicsCore.MainFactory.CreateBuffer(ref cbObjectDesc);
 		cbObject.Name = $"CBObject_{node.Name}";
 	}
@@ -33,7 +33,7 @@ public sealed class StaticMeshRendererNew : Component, IRenderer
 	/// <summary>
 	/// Event that is triggered whenever the renderer's resources (mesh and materials) have been changed.
 	/// </summary>
-	public event Action<StaticMeshRendererNew>? OnResourcesChanged = null;
+	public event Action<StaticMeshRenderer>? OnResourcesChanged = null;
 
 	#endregion
 	#region Fields
@@ -48,6 +48,7 @@ public sealed class StaticMeshRendererNew : Component, IRenderer
 	// Graphics objects:
 	private readonly DeviceBuffer cbObject;
 	private ResourceSet? resSetObject = null;
+	private ResourceSet? overrideBoundResourceSet = null;
 	private VersionedMember<Pipeline?> pipelineScene = new(null, 0);
 	private VersionedMember<Pipeline?> pipelineShadow = new(null, 0);
 
@@ -96,6 +97,19 @@ public sealed class StaticMeshRendererNew : Component, IRenderer
 		rendererVersionShadow++;
 	}
 
+	public bool SetMesh(string _resourceKey)
+	{
+		if (string.IsNullOrEmpty(_resourceKey))
+		{
+			Logger.LogError("Cannot assign mesh to static mesh renderer using null or blank resource key!");
+			return false;
+		}
+
+		ResourceManager resourceManager = graphicsCore.graphicsSystem.engine.ResourceManager;
+
+		return resourceManager.GetResource(_resourceKey, out ResourceHandle handle) && SetMesh(handle);
+	}
+
 	/// <summary>
 	/// Assigns a mesh that shall be drawn by this renderer.
 	/// </summary>
@@ -135,6 +149,19 @@ public sealed class StaticMeshRendererNew : Component, IRenderer
 			OnResourcesChanged?.Invoke(this);
 		}
 		return true;
+	}
+
+	public bool SetMaterial(string _resourceKey)
+	{
+		if (string.IsNullOrEmpty(_resourceKey))
+		{
+			Logger.LogError("Cannot assign material to static mesh renderer using null or blank resource key!");
+			return false;
+		}
+
+		ResourceManager resourceManager = graphicsCore.graphicsSystem.engine.ResourceManager;
+
+		return resourceManager.GetResource(_resourceKey, out ResourceHandle handle) && SetMaterial(handle);
 	}
 
 	/// <summary>
@@ -216,6 +243,25 @@ public sealed class StaticMeshRendererNew : Component, IRenderer
 		return true;
 	}
 
+	public bool SetOverrideBoundResourceSet(ResourceSet? _newOverrideResourceSet)
+	{
+		if (IsDisposed)
+		{
+			Logger.LogError("Cannot set override resource set on disposed static mesh renderer!");
+			return false;
+		}
+
+		if (_newOverrideResourceSet == null || _newOverrideResourceSet.IsDisposed)
+		{
+			overrideBoundResourceSet = null;
+		}
+		else
+		{
+			overrideBoundResourceSet = _newOverrideResourceSet;
+		}
+		return true;
+	}
+
 	public float GetZSortingDepth(Vector3 _viewportPosition, Vector3 _cameraDirection)
 	{
 		float boundingRadius = mesh is not null ? mesh.BoundingRadius : 0;
@@ -242,7 +288,7 @@ public sealed class StaticMeshRendererNew : Component, IRenderer
 
 	public bool DrawShadowMap(SceneContext _sceneCtx, CameraPassContext _cameraPassCtx)
 	{
-		if (!EnsureResourceIsLoaded(ShadowMaterialHandle, ref materialShadow, out bool proceed))
+		if (!EnsureShadowMaterialIsLoaded(out bool proceed))
 		{
 			return false;
 		}
@@ -300,7 +346,6 @@ public sealed class StaticMeshRendererNew : Component, IRenderer
 		_cameraPassCtx.cmdList.SetGraphicsResourceSet(0, _cameraPassCtx.resSetCamera);
 		_cameraPassCtx.cmdList.SetGraphicsResourceSet(1, resSetObject);
 
-		ResourceSet? overrideBoundResourceSet = null;	//TODO / TEMP
 		ResourceSet? boundResourceSet = overrideBoundResourceSet ?? _material.BoundResourceSet;
 		if (boundResourceSet != null && _material.BoundResourceLayout != null)
 		{
@@ -341,6 +386,42 @@ public sealed class StaticMeshRendererNew : Component, IRenderer
 			if (loadImmediately && !_outProceed)
 			{
 				Logger.LogError($"Failed to load resource '{_handle.resourceKey}' for static mesh renderer!");
+				success = false;
+			}
+		}
+		return success;
+	}
+
+	private bool EnsureShadowMaterialIsLoaded(out bool _outProceed)
+	{
+		bool success = true;
+		_outProceed = true;
+
+		if (materialShadow is null)
+		{
+			if (ShadowMaterialHandle is null || !ShadowMaterialHandle.IsValid)
+			{
+				// Get shadow material from scene material:
+				if (!EnsureResourceIsLoaded(MaterialHandle, ref materialScene, out _outProceed))
+				{
+					return false;
+				}
+				if (!_outProceed || !materialScene!.HasShadowMapMaterialVersion)
+				{
+					_outProceed = false;
+					return true;
+				}
+
+				ShadowMaterialHandle = materialScene.ShadowMapMaterialVersion ?? ResourceHandle.None;
+			}
+
+			bool loadImmediately = !DontDrawUnlessFullyLoaded;
+			materialShadow = ShadowMaterialHandle.GetResource<Material>(loadImmediately);
+			_outProceed = materialShadow is not null;
+
+			if (loadImmediately && !_outProceed)
+			{
+				Logger.LogError($"Failed to load shadow material '{ShadowMaterialHandle.resourceKey}' for static mesh renderer!");
 				success = false;
 			}
 		}
