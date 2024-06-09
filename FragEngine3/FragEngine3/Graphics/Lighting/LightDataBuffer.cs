@@ -165,5 +165,10 @@ public sealed class LightDataBuffer : IDisposable
 		}
 	}
 
+	public override string ToString()
+	{
+		return $"LightDataBuffer, Count: {Count}, Capacity: {Capacity}";
+	}
+
 	#endregion
 }
