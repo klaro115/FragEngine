@@ -22,7 +22,7 @@ This is the immediate JSON-serialized data type of all ".fres" metadata files. T
 | `BlockSize`             | `ulong`                | Byte size of compression blocks, block-compressed file type only.   |
 | `BlockCount`            | `uint`                 | Total number of compressed blocks, block-compressed file type only. |
 | `ResourceCount`         | `uint`                 | Number of resources encoded in the data file. Must be equal to or less than the length of the `Resources` array. |
-| `Resources`             | `ResourceHandleData[]` | Array of resources contained in the data file. If null and single-resource type, the one resource handle may be inferred from the file extension of `DataFilePath`. |
+| `Resources`             | `ResourceHandleData[]` | Array of resources contained in the data file. If null and single-resource type, the one [resource handle](#resourcehandledata-class) may be inferred from the file extension of `DataFilePath`. |
 <br>
 
 
