@@ -12,7 +12,8 @@ The following is an overview of how the engine works and where developers may st
 - [Writing Application Logic](#writing-application-logic)
   - [Node Components](#node-components)
   - [Scene-wide Behaviours](#scene-wide-behaviours)
-  - [Application-wide Logic:](#application-wide-logic)
+  - [Application-wide Logic](#application-wide-logic)
+- [Main Loop](#main-loop)
 
 <br>
 
@@ -70,12 +71,14 @@ _Source code:_ [Component](../FragEngine3/Scenes/Component.cs), [SceneNode](../F
 
 The engine can have multiple active scenes, where each scene has its own node hierarchy. Usage of this node system is no requirement when using the engine, though it may provide a familiar entry point for _Unity_ developers. The nodes are implemented via the `SceneNode` class. Each node is roughly equivalent to _Unity_'s `GameObject` type, and can have multiple components attached to them. Each component is responsible for a behaviour or an isolated logic pertaining to its host node.
 
-To create a custom component, simply create a new class that inherits from `FragEngine3.Scenes.SceneNode`.
+To create a custom component, simply create a new class that inherits from `FragEngine3.Scenes.Component`.
 An instance of the component can be attached to a node by calling `SceneNode.CreateComponent<T>(out T, params object[])`. The method's optional paramaters list allow you to pass any arguments to the new instance's constructor. Alternatively, The static class `ComponentFactory` offers more in-depth control over a component's creation.
 Note that all components implement the `IDisposable` interface, which is called when the host node expires, or when the component is removed from its node.
 Component instances cannot be transferred to a different node after creation, though you may duplicate an existing component to a new node via `ComponentFactory.DuplicateComponent()` (cf. [source](../FragEngine3/Scenes/ComponentFactory.cs)).
 
-Components and their current state can be saved to file and loaded using the `LoadFromData()` and `SaveToData()` methods. Both methods receive an map of IDs for mapping dependencies within the scene in serialized data. The default save/load logic saves scene elements as JSON.
+Components and their current state can be saved to file and loaded using the `LoadFromData()` and `SaveToData()` methods. Both methods receive a map of IDs for mapping dependencies within the scene in serialized data. The default save/load logic will save scene elements to file as JSON.
+
+In order to respond to events within the scene, or originating from its hostg node, a component may implement one or more event interfaces (see [source](../FragEngine3/Scenes/EventSystem/SceneEventInterfaces.cs)). These will be automatically registered and unregistered with the scene over the course of the component's lifecycle.
 
 **Pros:**
 - Easy to use, clear pre-defined development paradigm.
@@ -107,7 +110,7 @@ Note that all scene behaviours implement the `IDisposable` interface, which is c
 <br>
 
 
-### Application-wide Logic:
+### Application-wide Logic
 _Source code:_ [ApplicationLogic](../FragEngine3/EngineCore/ApplicationLogic.cs)
 
 Most applications require some overarching code logic that spans across all aspects of the app. In these cases, passing data across scenes and from one component to another is convoluted and error-prone. the same problem applies to a sightly lesser degree to scene-wide behaviour.
@@ -123,3 +126,7 @@ Note that the `Engine.applicationLogic` field is private! This object should not
 **Cons:**
 - Detached/distant from contents of a scene.
 <br>
+
+
+## Main Loop
+[WIP]
