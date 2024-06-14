@@ -625,14 +625,14 @@ public sealed class SceneNode : ISceneElement
 		while (e.MoveNext())
 		{
 			component = e.Current.GetComponent<T>();
-			if (component != null)
+			if (component is not null)
 			{
 				_results.Add(component);
 			}
 		}
 
 		component = GetComponent<T>();
-		if (component != null)
+		if (component is not null)
 		{
 			_results.Add(component);
 		}
@@ -650,7 +650,7 @@ public sealed class SceneNode : ISceneElement
 		if (_enabledOnly && !isEnabled) return null;
 
 		T? component = GetComponent<T>();
-		if (component != null)
+		if (component is not null)
 		{
 			return component;
 		}
@@ -661,7 +661,7 @@ public sealed class SceneNode : ISceneElement
 			if (!_enabledOnly || child.IsEnabled)
 			{
 				component = child.GetComponentInChildren<T>(_enabledOnly);
-				if (component != null)
+				if (component is not null)
 				{
 					return component;
 				}
@@ -754,7 +754,7 @@ public sealed class SceneNode : ISceneElement
 			_outNewComponent = null;
 			return false;
 		}
-		if (!ComponentFactory.CreateComponent(this, out _outNewComponent, _params) || _outNewComponent == null)
+		if (!ComponentFactory.CreateComponent(this, out _outNewComponent, _params) || _outNewComponent is null)
 		{
 			Logger.LogError($"Failed to create new component on node '{Name}'!");
 			_outNewComponent?.Dispose();
@@ -762,7 +762,7 @@ public sealed class SceneNode : ISceneElement
 			return false;
 		}
 
-		if (components == null)
+		if (components is null)
 		{
 			components = [ _outNewComponent ];
 		}
@@ -789,7 +789,7 @@ public sealed class SceneNode : ISceneElement
 	public bool GetOrCreateComponent<T>(out T? _outComponent) where T : Component
 	{
 		_outComponent = GetComponent<T>();
-		if (_outComponent != null && !_outComponent.IsDisposed)
+		if (_outComponent is not null && !_outComponent.IsDisposed)
 		{
 			return true;
 		}
@@ -809,7 +809,7 @@ public sealed class SceneNode : ISceneElement
 			Logger.LogError("Cannot add new component on disposed node!");
 			return false;
 		}
-		if (_newComponent == null || _newComponent.IsDisposed)
+		if (_newComponent is null || _newComponent.IsDisposed)
 		{
 			Logger.LogError($"Cannot add null or disposed component to node '{Name}'!");
 			return false;
@@ -821,7 +821,7 @@ public sealed class SceneNode : ISceneElement
 		}
 
 		// Make sure components are initialized, then register component:
-		if (components == null)
+		if (components is null)
 		{
 			components = [ _newComponent ];
 		}

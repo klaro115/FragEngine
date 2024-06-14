@@ -246,6 +246,9 @@ internal abstract class LightInstance(GraphicsCore _core) : IDisposable
 			return false;
 		}
 
+		// Determine version number for this pass' resources:
+		ushort cameraResourceVersion = (ushort)(cascade.resourceVersion ^ _sceneCtx.sceneResourceVersion);
+
 		// Assemble context object for renderers to reference when issuing draw calls:
 		_outCameraPassCtx = new(
 			shadowCameraInstance,
@@ -254,6 +257,7 @@ internal abstract class LightInstance(GraphicsCore _core) : IDisposable
 			cascade.ShadowResSetCamera!,
 			cascade.ShadowCbCamera!,
 			_sceneCtx.dummyLightDataBuffer,
+			cameraResourceVersion,
 			0,
 			ShadowMapIdx,
 			0,

@@ -32,7 +32,7 @@ public static class ImageImportFlagParser
 		{
 			success &= _imageData.ConvertNormalMapDxAndGL();
 		}
-		// Dimensions need padding to next higher power-of-two value: (pads content with black pixels)
+		// Pixel values are in sRGB color space, convert to linear color.
 		if (FindFlag(ImportFlagsConstants.IMG_CONVERT_SRGB_TO_LINEAR, out _))
 		{
 			success &= _imageData.ConvertSRgbToLinearColorSpace();

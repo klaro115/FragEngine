@@ -1,6 +1,5 @@
 ﻿using System.Numerics;
 using System.Runtime.InteropServices;
-using Veldrid;
 
 namespace FragEngine3.Graphics.Lighting.Data
 {

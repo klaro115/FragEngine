@@ -31,7 +31,7 @@ public abstract class ApplicationLogic
 		return true;
 	}
 
-	public bool SetEngineState(EngineState _prevState, EngineState _newState)
+	internal bool SetEngineState(EngineState _prevState, EngineState _newState)
 	{
 		if (engine == null || engine.IsDisposed) return false;
 

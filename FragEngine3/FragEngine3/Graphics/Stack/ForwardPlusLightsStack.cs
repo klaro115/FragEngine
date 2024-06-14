@@ -16,7 +16,7 @@ using Veldrid;
 
 namespace FragEngine3.Graphics.Stack;
 
-public sealed class ForwardPlusLightsStack(GraphicsCore _core) : IGraphicsStack
+public sealed class ForwardPlusLightsStack(GraphicsCore _core) : IGraphicsStack		//TODO: This type is a convoluted and unmaintainable mess, needs intense cleaning up.
 {
 	#region Constructors
 
@@ -51,6 +51,7 @@ public sealed class ForwardPlusLightsStack(GraphicsCore _core) : IGraphicsStack
 	private readonly Stack<CommandList> commandListsInUse = new();
 	private ResourceLayout? resLayoutCamera = null;
 	private ResourceLayout? resLayoutObject = null;
+	private ushort sceneResourceVersion = 0;
 
 	// Shadow maps:
 	private ShadowMapArray? shadowMapArray = null;
@@ -207,7 +208,7 @@ public sealed class ForwardPlusLightsStack(GraphicsCore _core) : IGraphicsStack
 			compositionNode.LocalTransformation = Pose.Identity;
 			if (compositionNode.CreateComponent(out compositeSceneRenderer) && compositeSceneRenderer != null)
 			{
-				compositeSceneRenderer.SetMaterial(RESOURCE_KEY_COMPOSITE_SCENE_MATERIAL, true);
+				compositeSceneRenderer.SetMaterial(RESOURCE_KEY_COMPOSITE_SCENE_MATERIAL);
 				compositeSceneRenderer.SetMesh(fullscreenQuadHandle);
 				compositeSceneRenderer.LayerFlags = COMPOSITION_LAYER_MASK;
 			}
@@ -218,7 +219,7 @@ public sealed class ForwardPlusLightsStack(GraphicsCore _core) : IGraphicsStack
 			compositionNode.LocalTransformation = Pose.Identity;
 			if (compositionNode.CreateComponent(out compositeUIRenderer) && compositeUIRenderer != null)
 			{
-				compositeUIRenderer.SetMaterial(RESOURCE_KEY_COMPOSITE_UI_MATERIAL, true);
+				compositeUIRenderer.SetMaterial(RESOURCE_KEY_COMPOSITE_UI_MATERIAL);
 				compositeUIRenderer.SetMesh(fullscreenQuadHandle);
 				compositeUIRenderer.LayerFlags = COMPOSITION_LAYER_MASK;
 			}
@@ -419,15 +420,13 @@ public sealed class ForwardPlusLightsStack(GraphicsCore _core) : IGraphicsStack
 				cbScene!,
 				dummyLightDataBuffer!,
 				shadowMapArray!,
+				sceneResourceVersion,
 				sceneCtx.lightCount,
 				shadowMapLightCount);
 		}
 
 		// Draw each active camera component in the scene, and composite output:
-		success &= DrawSceneCameras(
-			in sceneCtx,
-			maxActiveLightCount,
-			rebuildResSetCamera);
+		success &= DrawSceneCameras(in sceneCtx, rebuildResSetCamera);
 
 		isDrawing = false;
 		return success;
@@ -540,6 +539,10 @@ public sealed class ForwardPlusLightsStack(GraphicsCore _core) : IGraphicsStack
 			_outTexShadowsHasChanged = false;
 			return false;
 		}
+		if (_outRebuildResSetCamera)
+		{
+			sceneResourceVersion++;
+		}
 
 		// Resize shadow map texture array to reflect maximum number of shadow-casting lights:
 		if (!PrepareShadowMaps(
@@ -558,6 +561,7 @@ public sealed class ForwardPlusLightsStack(GraphicsCore _core) : IGraphicsStack
 			cbScene!,
 			dummyLightDataBuffer!,
 			shadowMapArray!,
+			sceneResourceVersion,
 			(uint)activeLights.Count,
 			(uint)activeLightsShadowMapped.Count);
 
@@ -582,6 +586,11 @@ public sealed class ForwardPlusLightsStack(GraphicsCore _core) : IGraphicsStack
 			return false;
 		}
 		_outRebuildResSetCamera |= _outTexShadowsHasChanged;
+
+		if (_outTexShadowsHasChanged)
+		{
+			sceneResourceVersion++;
+		}
 
 		return true;
 	}
@@ -686,7 +695,7 @@ public sealed class ForwardPlusLightsStack(GraphicsCore _core) : IGraphicsStack
 		return success;
 	}
 
-	private bool DrawSceneCameras(in SceneContext _sceneCtx, uint _maxActiveLightCount, bool _rebuildAllResSetCamera)
+	private bool DrawSceneCameras(in SceneContext _sceneCtx, bool _rebuildAllResSetCamera)
 	{
 		bool success = true;
 

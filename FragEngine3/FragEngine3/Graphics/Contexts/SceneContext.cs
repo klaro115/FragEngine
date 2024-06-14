@@ -14,6 +14,7 @@ public sealed class SceneContext(
 	DeviceBuffer _cbScene,
 	LightDataBuffer _dummyLightDataBuffer,
 	ShadowMapArray _shadowMapArray,
+	ushort _sceneResourceVersion,
 
 	// Parameters:
 	uint _lightCount,
@@ -30,6 +31,7 @@ public sealed class SceneContext(
 	public readonly DeviceBuffer cbScene = _cbScene;
 	public readonly LightDataBuffer dummyLightDataBuffer = _dummyLightDataBuffer;
 	public readonly ShadowMapArray shadowMapArray = _shadowMapArray;
+	public readonly ushort sceneResourceVersion = _sceneResourceVersion;
 
 	// Parameters:
 	public readonly uint lightCount = _lightCount;

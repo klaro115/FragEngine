@@ -21,7 +21,7 @@ internal sealed class ShadowCascadeResources(LightInstance _light, uint _shadowC
 	#endregion
 	#region Events
 
-	public Action? OnRecreateResSetObjectEvent = null;
+	public event Action? OnRecreateResSetObjectEvent = null;
 
 	#endregion
 	#region Fields
@@ -35,6 +35,7 @@ internal sealed class ShadowCascadeResources(LightInstance _light, uint _shadowC
 	private DeviceBuffer? shadowCbCamera = null;
 	public Matrix4x4 mtxShadowWorld2Clip = Matrix4x4.Identity;
 	private ResourceSet? shadowResSetCamera = null;
+	public ushort resourceVersion = 0;
 
 	#endregion
 	#region Properties
@@ -126,6 +127,8 @@ internal sealed class ShadowCascadeResources(LightInstance _light, uint _shadowC
 		}
 		if (_outCbCameraChanged)
 		{
+			resourceVersion++;
+
 			OnRecreateResSetObjectEvent?.Invoke();
 		}
 

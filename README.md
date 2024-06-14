@@ -1,7 +1,7 @@
 <h1>Fragment Engine</h1>
 Cross-platform 3D game engine written in C# using .NET 8.
 
-The engine is designed to be open-source, and available for both free and commercial usage. It is provided under the [Apache 2.0](https://github.com/klaro115/FragEngine?tab=Apache-2.0-1-ov-file#readme) license.
+The engine is designed to be open-source, and available for both free and commercial usage. It is provided under the [Apache 2.0](https://github.com/klaro115/FragEngine?tab=Apache-2.0-1-ov-file#readme) license. See [License](./LICENSE) file for up-to-date info.
 
 <h3>Table of Contents:</h3>
 
@@ -9,6 +9,7 @@ The engine is designed to be open-source, and available for both free and commer
 - [Assets](#assets)
     - [Resource Files](#resource-files)
     - [Shaders \& Graphics](#shaders--graphics)
+- [Architecture](#architecture)
 - [Platforms](#platforms)
     - [Windows](#windows)
     - [Linux](#linux)
@@ -36,12 +37,19 @@ Eventually, a proper asset pipeline is planned, to replace and automate asset pr
 
 #### Resource Files
 
-Resources are primarily loaded from files located within the "data" folder. Each resource file might contain one or more resources, and must be accompanied by a descriptive resource metadata file. You may refer to the [Resource Guide](./FragEngine3/data/core/Resource%20Guide.md) for more details on asset management.
+Resources are primarily loaded from files located within the "data" folder. Each resource file might contain one or more resources, and must be accompanied by a descriptive resource metadata file. You may refer to the [Resource Guide](./FragEngine3/Documentation/Resources/Resource%20Guide.md) for more details on asset management.
 
 #### Shaders & Graphics
 
 Standard shaders exist in HLSL (Direct3D shading language) in the most up-to-date form, and in MSL (Metal shading language) in an out-dated form.
-The following document provides a rough overview of default resource bindings and pipeline behaviour: [Shader Guide](./FragEngine3/data/core/shaders/Shader%20Guide.md)
+The following document provides a rough overview of default resource bindings and pipeline behaviour: [Shader Guide](./FragEngine3/Documentation/Graphics/Shader%20Guide.md)
+<br>
+
+
+## Architecture
+The engine is designed with multithreading in mind. To this end, there are 3 main ways for developers to implement application logic using this engine. These include a component system, with behaviours attached to individual nodes in the scene, but also 2 interface points for driving application-level or scene-level logic without the need for the engine's node/component system.
+
+For more information on how to implement app logic, see the [Architecture Guide](./FragEngine3/Documentation/Architecture.md).
 <br>
 
 
@@ -83,7 +91,7 @@ The following is a rough and very short-sighted roadmap of features that are goi
     - More granular thread sleep timings
 - Post-processing:
     - Implement standard/demo stack
-    - Common VFX modules
+    - Common VFX modules _(blur, bloom, DoF, etc.)_
 - Animation system:
     - Support for 3D files that allow animations
     - Non-static mesh renderers
