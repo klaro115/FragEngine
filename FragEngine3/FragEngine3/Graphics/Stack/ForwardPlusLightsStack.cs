@@ -16,7 +16,7 @@ using Veldrid;
 
 namespace FragEngine3.Graphics.Stack;
 
-public sealed class ForwardPlusLightsStack(GraphicsCore _core) : IGraphicsStack
+public sealed class ForwardPlusLightsStack(GraphicsCore _core) : IGraphicsStack		//TODO: This type is a convoluted and unmaintainable mess, needs intense cleaning up.
 {
 	#region Constructors
 

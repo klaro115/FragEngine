@@ -126,6 +126,10 @@ public sealed class Engine : IDisposable
 	/// <returns>A deep copy of the config. The config is strictly immutable at run-time.</returns>
 	public EngineConfig GetEngineConfig() => config.Clone();
 
+	/// <summary>
+	/// Request the engine to stop the main loop and quit.<para/>
+	/// This will end the program, make sure to save your progress before calling this ;)
+	/// </summary>
 	public void Exit()
 	{
 		Logger.LogMessage("Exit was requested.");
@@ -138,6 +142,59 @@ public sealed class Engine : IDisposable
 		{
 			SetState(EngineState.Unloading);
 		}
+	}
+
+	/// <summary>
+	/// Start up the engine and get the game/app going.
+	/// </summary>
+	/// <returns>True if the engine was start successfully, ran without issues, and then exited safely.
+	/// False if it couldn't be started or if an unrecoverable error occured.</returns>
+	public bool Run()
+	{
+		if (State != EngineState.None)
+		{
+			Logger.LogError("Error! Engine is already running!");
+			return false;
+		}
+		Instance ??= this;
+
+		mainLoopCancellationSrc = new CancellationTokenSource();
+
+		TimeManager.Reset();
+
+		bool success = true;
+
+		try
+		{
+			// Run startup logic, loading configs and such:
+			success &= SetState(EngineState.Startup);
+			success &= startupState.RunState(true);
+
+			// Run the main application loops:
+			if (success)
+			{
+				success &= RunMainLoopStates();
+			}
+			if (IsRunning) Exit();
+
+			// Run shutdown logic, saving configs and such:
+			success &= SetState(EngineState.Shutdown);
+			success &= shutdownState.RunState(true);
+
+			SetState(EngineState.None);
+		}
+		catch (Exception ex)
+		{
+			Logger.LogException("An unhandled exception caused the engine's main loop to crash!", ex, LogEntrySeverity.Critical);
+			SetState(EngineState.None);
+			success = false;
+		}
+
+		mainLoopCancellationSrc?.Dispose();
+		mainLoopCancellationSrc = null;
+
+		if (Instance == this) Instance = null;
+		return success;
 	}
 
 	private bool SetState(EngineState _newState, bool _verbose = true, bool _force = false)
@@ -196,54 +253,6 @@ public sealed class Engine : IDisposable
 			}
 		}
 
-		return success;
-	}
-
-	public bool Run()
-	{
-		if (State != EngineState.None)
-		{
-			Logger.LogError("Error! Engine is already running!");
-			return false;
-		}
-		Instance ??= this;
-
-		mainLoopCancellationSrc = new CancellationTokenSource();
-
-		TimeManager.Reset();
-
-		bool success = true;
-
-		try
-		{
-			// Run startup logic, loading configs and such:
-			success &= SetState(EngineState.Startup);
-			success &= startupState.RunState(true);
-
-			// Run the main application loops:
-			if (success)
-			{
-				success &= RunMainLoopStates();
-			}
-			if (IsRunning) Exit();
-
-			// Run shutdown logic, saving configs and such:
-			success &= SetState(EngineState.Shutdown);
-			success &= shutdownState.RunState(true);
-
-			SetState(EngineState.None);
-		}
-		catch (Exception ex)
-		{
-			Logger.LogException("An unhandled exception caused the engine's main loop to crash!", ex, LogEntrySeverity.Critical);
-			SetState(EngineState.None);
-			success = false;
-		}
-
-		mainLoopCancellationSrc?.Dispose();
-		mainLoopCancellationSrc = null;
-
-		if (Instance == this) Instance = null;
 		return success;
 	}
 

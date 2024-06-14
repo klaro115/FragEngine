@@ -91,6 +91,7 @@ public sealed class StaticMeshRendererInstance : IRenderer
 
 	public void Dispose()
 	{
+		GC.SuppressFinalize(this);
 		Dispose(true);
 	}
 	private void Dispose(bool _)
@@ -259,6 +260,13 @@ public sealed class StaticMeshRendererInstance : IRenderer
 		return true;
 	}
 
+	/// <summary>
+	/// Assigns a resource set that replaces any bound resource sets provided by the renderer's material.
+	/// </summary>
+	/// <param name="_newOverrideResourceSet">The resource set to use instead of whatever the material provides.
+	/// If null, the override will be unassigned, and the material's set will be used instead.
+	/// The renderer does not assume ownership of the given resource set.</param>
+	/// <returns>True if the resource set was overriden, or if the override was unassigned. False if an error occured.</returns>
 	public bool SetOverrideBoundResourceSet(ResourceSet? _newOverrideResourceSet)
 	{
 		if (IsDisposed)
@@ -287,6 +295,10 @@ public sealed class StaticMeshRendererInstance : IRenderer
 		return Vector3.DistanceSquared(_viewportPosition, biasPosition);
 	}
 
+	/// <summary>
+	/// Sets a pose that describes the renderer's transformation in world space.
+	/// </summary>
+	/// <param name="_rendererWorldPose">The pose at which to render the mesh. Details position, rotation, and scale of the object in world space.</param>
 	public void SetWorldPose(Pose _rendererWorldPose)
 	{
 		worldPose = _rendererWorldPose;

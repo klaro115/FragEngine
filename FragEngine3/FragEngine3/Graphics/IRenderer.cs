@@ -65,6 +65,7 @@ public interface IRenderer : IDisposable
 	/// draw calls should be written into.</param>
 	/// <returns>True if draw calls were issued, false otherwise.</returns>
 	bool Draw(SceneContext _sceneCtx, CameraPassContext _cameraPassCtx);
+
 	/// <summary>
 	/// Requests the renderer to generate draw calls by writing them into the given command list,
 	/// but specialized for drawing shadow maps.<para/>
