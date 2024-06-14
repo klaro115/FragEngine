@@ -18,7 +18,7 @@ The following is an overview of how the engine works and where developers may st
 
 
 ## Engine Lifecycle
-The engine has several lifecycle states that it goes through from launch to exit. These states may be accessed via `Engine.State` as an enum of type `FragEngine3.EngineCore.EngineState`. Possible values are:
+The engine has several lifecycle states that it goes through from launch to exit. These states may be accessed via `Engine.State` as an enum of type `FragEngine3.EngineCore.EngineState` (cf. [source](../FragEngine3/EngineCore/EngineEnums.cs)). Possible values are:
 
 | Engine States: | Implementation:        | Main Loop: | Description:                                                                 |
 | -------------- | ---------------------- | ---------- | ---------------------------------------------------------------------------- |
@@ -66,12 +66,14 @@ Use `ApplicationLogic` to drive your app's lifecycle events to persist states ac
 
 
 ### Node Components
+_Source code:_ [Component](../FragEngine3/Scenes/Component.cs), [SceneNode](../FragEngine3/Scenes/SceneNode.cs)
+
 The engine can have multiple active scenes, where each scene has its own node hierarchy. Usage of this node system is no requirement when using the engine, though it may provide a familiar entry point for _Unity_ developers. The nodes are implemented via the `SceneNode` class. Each node is roughly equivalent to _Unity_'s `GameObject` type, and can have multiple components attached to them. Each component is responsible for a behaviour or an isolated logic pertaining to its host node.
 
 To create a custom component, simply create a new class that inherits from `FragEngine3.Scenes.SceneNode`.
 An instance of the component can be attached to a node by calling `SceneNode.CreateComponent<T>(out T, params object[])`. The method's optional paramaters list allow you to pass any arguments to the new instance's constructor. Alternatively, The static class `ComponentFactory` offers more in-depth control over a component's creation.
 Note that all components implement the `IDisposable` interface, which is called when the host node expires, or when the component is removed from its node.
-Component instances cannot be transferred to a different node after creation, though you may duplicate an existing component to a new node via `ComponentFactory.DuplicateComponent()`.
+Component instances cannot be transferred to a different node after creation, though you may duplicate an existing component to a new node via `ComponentFactory.DuplicateComponent()` (cf. [source](../FragEngine3/Scenes/ComponentFactory.cs)).
 
 Components and their current state can be saved to file and loaded using the `LoadFromData()` and `SaveToData()` methods. Both methods receive an map of IDs for mapping dependencies within the scene in serialized data. The default save/load logic saves scene elements as JSON.
 
@@ -86,6 +88,8 @@ Components and their current state can be saved to file and loaded using the `Lo
 
 
 ### Scene-wide Behaviours
+_Source code:_ [SceneBehaviour](../FragEngine3/Scenes/SceneBehaviour.cs), [Scene](../FragEngine3/Scenes/Scene.cs)
+
 Since most game or application logic tends to be isolated to one active scene, it makes sense to expose a programming entry point that operates on a scene-wide level. This is where scene-wide behaviours come in; they inherit from the `SceneBehaviour` class and are attached directly to a scene.
 
 To create a custom scene behaviour, simply create a new class that inherits from `FragEngine3.Scenes.SceneBehaviour`.
@@ -104,6 +108,8 @@ Note that all scene behaviours implement the `IDisposable` interface, which is c
 
 
 ### Application-wide Logic:
+_Source code:_ [ApplicationLogic](../FragEngine3/EngineCore/ApplicationLogic.cs)
+
 Most applications require some overarching code logic that spans across all aspects of the app. In these cases, passing data across scenes and from one component to another is convoluted and error-prone. the same problem applies to a sightly lesser degree to scene-wide behaviour.
 The overarching, app-wide `ApplicationLogic` class exists to address these exact use-cases. A singleton of this type is attached directly to the engine at launch-time. This instance then serves as the main hub for the application's run-time state, providing listener methods for the main engine events, such as startup, exit, and the main loop stages.
 

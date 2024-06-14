@@ -11,6 +11,8 @@ The following document outlines requirements and specifications for some of the 
 <br>
 
 ## ResourceFileData Class
+_Source code:_ [ResourceFileData](../../FragEngine3/Resources/Data/ResourceFileData.cs)
+
 This is the immediate JSON-serialized data type of all ".fres" metadata files. The JSON is structured as follows:
 
 | Field:                  | Type:                  | Description:                                                        |
@@ -27,6 +29,8 @@ This is the immediate JSON-serialized data type of all ".fres" metadata files. T
 
 
 ## ResourceHandleData Class
+_Source code:_ [ResourceHandleData](../../FragEngine3/Resources/Data/ResourceHandleData.cs)
+
 This is the immediate JSON-serialized data type of resource handles in metadata files' `Resources` array. The JSON for each element in the array is structured as follows:
 
 | Field:            | Type:                | Description:                                                                |
@@ -43,6 +47,8 @@ This is the immediate JSON-serialized data type of resource handles in metadata 
 
 
 ## ResourceType Enum
+_Source code:_ [ResourceType](../../FragEngine3/Resources/ResourceEnums.cs)
+
 An enum of different types of resources, differentiated by media type, usage, or data structure. Values are represented in JSON as integers.
 
 Each [resource handle](#resourcehandledata-class) must declare one of the values listed below. If the type is `Unknown`, the resource's type may be detected from the data file's file extension, though this is only possible for single-resource files.
@@ -67,6 +73,8 @@ Each [resource handle](#resourcehandledata-class) must declare one of the values
 
 
 ## EnginePlatformFlag Enum
+_Source code:_ [EnginePlatformFlag](../../FragEngine3/EngineCore/EngineEnums.cs)
+
 An enum, used as bit mask, to signify the presence or requirement of different features in software or hardware. The most important platform flags include the graphics API, and the OS running the engine. Values are represented in JSON as integers.
 
 Platform flags are determined by the engine at launch, and exposed via the engine's `PlatformSystem` instance. Platform flags may be provided for each [resource handle](#resourcehandledata-class); this can be used to declare platform-specific variants of a same resource, each using the same resource key but different platform flags.
@@ -86,6 +94,8 @@ Platform flags are determined by the engine at launch, and exposed via the engin
 
 
 ## ImportFlags String
+_Source code:_ [ImportFlagsConstants](../../FragEngine3/Graphics/Resources/Import/ImportFlagsConstants.cs), [ImageImportFlagParser](../../FragEngine3/Graphics/Resources/Import/Utility/ImageImportFlagParser.cs)
+
 Import flags are additional instructions provided to the resource importer. The importer will use these flags to either import the resource's data in a customized way, or it may post-process the resource immediately after import.
 Multiple flags can be given in this string, separated by semicolon. The format of flags is generally either "`keyword`", or "`keyword=value`" if the import instruction exposes more fine-grained control.
 
