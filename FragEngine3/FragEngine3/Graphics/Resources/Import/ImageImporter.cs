@@ -1,6 +1,7 @@
 ﻿using FragEngine3.EngineCore;
 using FragEngine3.Graphics.Resources.Data;
 using FragEngine3.Graphics.Resources.Import.ImageFormats;
+using FragEngine3.Graphics.Resources.Import.ImageFormats.DDS;
 using FragEngine3.Graphics.Resources.Import.Utility;
 using FragEngine3.Resources;
 
@@ -115,6 +116,10 @@ public static class ImageImporter
 		else if (_formatExt == ".qoi")
 		{
 			return QoiImporter.ImportImage(_stream, out _outImageData);
+		}
+		else if (_formatExt == ".dds")
+		{
+			return DdsImporter.ImportImage(_stream, out _outImageData);
 		}
 		//...
 		else if (MagickImporter.SupportsFormat(_formatExt))

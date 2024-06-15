@@ -19,6 +19,7 @@ internal static class ResourceFileConstants
 		new(ResourceType.Texture,
 		[
 			".bmp",
+			".dds",
 			".exr",
 			".gif",
 			".jpg",
