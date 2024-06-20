@@ -1,4 +1,5 @@
 ﻿using FragEngine3.EngineCore;
+using FragEngine3.Resources;
 
 namespace FragEngine3.Graphics.Resources.Import.ImageFormats.DDS;
 
@@ -8,7 +9,7 @@ public sealed class DdsPixelFormat
 
 	public uint size;					// Byte size of the pixel format descriptor, must be 32 bytes.
 	public DdsPixelFormatFlags flags;
-	public uint fourCC;
+	public FourCC fourCC;
 	public uint rgbBitCount;
 	public uint rBitMask;
 	public uint gBitMask;
@@ -18,7 +19,8 @@ public sealed class DdsPixelFormat
 	#endregion
 	#region Constants
 
-	public const uint FOURCC_DXT10 = (byte)'D' | ((byte)'X' << 8) | ((byte)'1' << 16) | ((byte)'0' << 24);	//TODO: Needs testing. Packing ASCII with correct endian-ness is a nightmare I just don't want to deal with.
+	//public const uint FOURCC_DXT10 = (byte)'D' | ((byte)'X' << 8) | ((byte)'1' << 16) | ((byte)'0' << 24);	//TODO: Needs testing. Packing ASCII with correct endian-ness is a nightmare I just don't want to deal with.
+	public static readonly FourCC FOURCC_DXT10 = new("DX10");
 
 	#endregion
 	#region Methods
@@ -32,7 +34,7 @@ public sealed class DdsPixelFormat
 		bool result =
 			size == 32 &&
 			flags != 0 &&
-			fourCC != 0;
+			fourCC.IsValid();
 		return result;
 	}
 
@@ -54,7 +56,7 @@ public sealed class DdsPixelFormat
 			{
 				size = size,
 				flags = (DdsPixelFormatFlags)_reader.ReadUInt32(),
-				fourCC = _reader.ReadUInt32(),
+				fourCC = new(_reader.ReadUInt32()),
 				rgbBitCount = _reader.ReadUInt32(),
 				rBitMask = _reader.ReadUInt32(),
 				gBitMask = _reader.ReadUInt32(),
@@ -92,7 +94,7 @@ public sealed class DdsPixelFormat
 			// Write data:
 			_writer.Write(size);
 			_writer.Write((uint)flags);
-			_writer.Write(fourCC);
+			_writer.Write(fourCC.packedValue);
 			_writer.Write(rgbBitCount);
 			_writer.Write(rBitMask);
 			_writer.Write(gBitMask);

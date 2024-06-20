@@ -80,6 +80,7 @@ public sealed class TestApplicationLogic : ApplicationLogic
 	{
 		// Import 3D models:
 		//Engine.ResourceManager.GetAndLoadResource("Cube.obj", true, out _);
+		Engine.ResourceManager.GetAndLoadResource("TexDdsSample", true, out _);
 
 		Scene scene = Engine.SceneManager.MainScene!;
 		

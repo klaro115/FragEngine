@@ -37,21 +37,9 @@ public sealed class DdsFile
 		return result;
 	}
 
-	public Format GetSurfaceFormat()
-	{
-		if (dxt10Header is not null)
-		{
-			return dxt10Header.dxgiFormat;
-		}
-
-		//TODO
-
-		return Format.Unknown;	//TEMP
-	}
-
 	public uint CalculatePitch()
 	{
-		Format format = GetSurfaceFormat();
+		Format format = DdsTextureDescription.GetDxgiSurfaceFormat(fileHeader, dxt10Header);
 
 		// Block-compressed formats:
 		if (format.IsBlockCompressed())
@@ -61,7 +49,9 @@ public sealed class DdsFile
 		}
 
 		// 2-channel-alternating and 4:2:2 sampled formats:
-		if (format == Format.R8G8_B8G8_UNorm || format == Format.YUY2) // Note: UYVY is not defined in enum.
+		if (format == Format.R8G8_B8G8_UNorm ||
+			format == Format.G8R8_G8B8_UNorm ||
+			format == Format.YUY2)
 		{
 			return ((fileHeader.width + 1) >> 1) * 4;
 		}

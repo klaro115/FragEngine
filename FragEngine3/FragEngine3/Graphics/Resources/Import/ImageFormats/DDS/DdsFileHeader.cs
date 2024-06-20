@@ -19,8 +19,8 @@ public sealed class DdsFileHeader
 	public DdsPixelFormat pixelFormat = new();
 	public uint caps;
 	public uint caps2;
-	public uint caps3;
-	public uint caps4;
+	public uint caps3;					//unused
+	public uint caps4;					// unused
 	// [...] (reserved, 1x uint)
 
 	#endregion
@@ -48,9 +48,7 @@ public sealed class DdsFileHeader
 		bool result =
 			magicNumber == MAGIC_NUMBER &&
 			headerSize == 124 &&
-			height > 0 &&
-			width > 0 &&
-			depth > 0;
+			width > 0;
 		return result;
 	}
 
