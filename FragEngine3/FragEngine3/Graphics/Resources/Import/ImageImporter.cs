@@ -14,18 +14,21 @@ public static class ImageImporter
 	public static bool ImportImageData(
 		ResourceManager _resourceManager,
 		ResourceHandle _handle,
-		out RawImageData? _outImageData)
+		out RawImageData? _outImageData,
+		out TextureData? _outTextureData)
 	{
 		if (_handle == null || !_handle.IsValid)
 		{
 			Logger.Instance?.LogError("Resource handle for raw image import may not be null or invalid!");
 			_outImageData = null;
+			_outTextureData = null;
 			return false;
 		}
 		if (_handle.resourceManager is null || _handle.resourceManager.IsDisposed)
 		{
 			Logger.Instance?.LogError("Cannot load raw image using null or disposed resource manager!");
 			_outImageData = null;
+			_outTextureData = null;
 			return false;
 		}
 
@@ -39,6 +42,7 @@ public static class ImageImporter
 			{
 				logger.LogError($"Could not find any resource data file containing resource handle '{_handle}'!");
 				_outImageData = null;
+				_outTextureData = null;
 				return false;
 			}
 		}
@@ -48,6 +52,7 @@ public static class ImageImporter
 			{
 				logger.LogError($"Resource data file for resource handle '{_handle}' does not exist!");
 				_outImageData = null;
+				_outTextureData = null;
 				return false;
 			}
 		}
@@ -60,16 +65,18 @@ public static class ImageImporter
 			{
 				logger.LogError($"Failed to open file stream for resource handle '{_handle}'!");
 				_outImageData = null;
+				_outTextureData = null;
 				return false;
 			}
 
 			// Import from stream, identifying file format from extension:
 			string formatExt = Path.GetExtension(fileHandle.dataFilePath);
 
-			if (!ImportImageData(stream, formatExt, _handle.importFlags, out _outImageData))
+			if (!ImportImageData(stream, formatExt, _handle.importFlags, out _outImageData, out _outTextureData))
 			{
 				logger.LogError($"Failed to import raw image data for resource handle '{_handle}'!");
 				_outImageData = null;
+				_outTextureData = null;
 				return false;
 			}
 		}
@@ -77,6 +84,7 @@ public static class ImageImporter
 		{
 			logger.LogException($"Failed to import raw image data for resource handle '{_handle}'!", ex);
 			_outImageData = null;
+			_outTextureData = null;
 			return false;
 		}
 		finally
@@ -92,18 +100,21 @@ public static class ImageImporter
 		Stream _stream,
 		string _formatExt,
 		string? _importFlags,
-		out RawImageData? _outImageData)
+		out RawImageData? _outImageData,
+		out TextureData? _outTextureData)
 	{
 		if (_stream is null || !_stream.CanRead)
 		{
 			Logger.Instance?.LogError("Cannot import raw image data from null or write-only stream!");
 			_outImageData = null;
+			_outTextureData = null;
 			return false;
 		}
 		if (string.IsNullOrWhiteSpace(_formatExt))
 		{
 			Logger.Instance?.LogError("Cannot import raw image data using unspecified image file format extension!");
 			_outImageData = null;
+			_outTextureData = null;
 			return false;
 		}
 
@@ -111,19 +122,23 @@ public static class ImageImporter
 
 		if (_formatExt == ".bmp")
 		{
+			_outTextureData = null;
 			return BitmapImporter.ImportImage(_stream, out _outImageData);
 		}
 		else if (_formatExt == ".qoi")
 		{
+			_outTextureData = null;
 			return QoiImporter.ImportImage(_stream, out _outImageData);
 		}
 		else if (_formatExt == ".dds")
 		{
-			return DdsImporter.ImportImage(_stream, out _outImageData);
+			_outImageData = null;
+			return DdsImporter.ImportImage(_stream, out _outTextureData);
 		}
 		//...
 		else if (MagickImporter.SupportsFormat(_formatExt))
 		{
+			_outTextureData = null;
 			var importFlags = MagickImporter.ParseImportFlags(_importFlags);
 			return MagickImporter.ImportImage(_stream, importFlags, out _outImageData);
 		}
@@ -131,6 +146,7 @@ public static class ImageImporter
 		{
 			Logger.Instance?.LogError($"Unknown image file format extension '{_formatExt}', cannot import raw image data!");
 			_outImageData = null;
+			_outTextureData = null;
 			return false;
 		}
 	}

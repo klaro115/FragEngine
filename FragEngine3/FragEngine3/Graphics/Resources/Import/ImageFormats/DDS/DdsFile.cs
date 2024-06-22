@@ -37,30 +37,6 @@ public sealed class DdsFile
 		return result;
 	}
 
-	public uint CalculatePitch()
-	{
-		Format format = DdsTextureDescription.GetDxgiSurfaceFormat(fileHeader, dxt10Header);
-
-		// Block-compressed formats:
-		if (format.IsBlockCompressed())
-		{
-			uint blockSize = format.GetCompressionBlockSize();
-			return Math.Max((fileHeader.width + 3) / 4, 1) * blockSize;
-		}
-
-		// 2-channel-alternating and 4:2:2 sampled formats:
-		if (format == Format.R8G8_B8G8_UNorm ||
-			format == Format.G8R8_G8B8_UNorm ||
-			format == Format.YUY2)
-		{
-			return ((fileHeader.width + 1) >> 1) * 4;
-		}
-
-		// Other formats:
-		uint bitsPerPixel = (uint)format.GetBitsPerPixel();
-		return (fileHeader.width * bitsPerPixel + 7) / 8;
-	}
-
 	public static bool Read(BinaryReader _reader, out DdsFile? _outFile)
 	{
 		if (_reader is null)

@@ -7,18 +7,18 @@ public static class DdsImporter
 {
 	#region Methods
 
-	public static bool ImportImage(Stream _byteStream, out RawImageData? _outRawImage)
+	public static bool ImportImage(Stream _byteStream, out TextureData? _outTextureData)
 	{
 		if (_byteStream == null)
 		{
 			Logger.Instance?.LogError("Cannot import DDS texture from null stream!");
-			_outRawImage = null;
+			_outTextureData = null;
 			return false;
 		}
 		if (!_byteStream.CanRead)
 		{
 			Logger.Instance?.LogError("Cannot import DDS texture from write-only stream!");
-			_outRawImage = null;
+			_outTextureData = null;
 			return false;
 		}
 
@@ -28,29 +28,49 @@ public static class DdsImporter
 		if (!DdsFile.Read(reader, out DdsFile? file) || file is null)
 		{
 			Logger.Instance?.LogError("Failed to read DDS file structure and contents!");
-			_outRawImage = null;
+			_outTextureData = null;
 			return false;
 		}
 
 		// Try parsing header data to get a consistent description of the texture:
 		if (!DdsTextureDescription.TryCreateDescription(file.fileHeader, file.dxt10Header, out DdsTextureDescription desc))
 		{
-			_outRawImage = null;
+			_outTextureData = null;
 			return false;
 		}
 
-		_outRawImage = new()
+		// Assemble texture data description:
+		_outTextureData = new()
 		{
 			width = desc.width,
 			height = desc.height,
+			depth = desc.depth,
+			arraySize = desc.arraySize,
+			isCubemap = file.dxt10Header is not null && file.dxt10Header.IsTextureCube,
 			channelCount = desc.channelCount,
 			isSRgb = desc.isRgbColorSpace && !desc.isLinearColorSpace,
 			mipmaps = (byte)desc.mipMapCount,
 			bitsPerPixel = desc.pixelByteSize,
+
+			pixelFormat = desc.pixelFormat,
+			dxgiFormat = desc.dxgiFormat,
 		};
 
-		//TODO 1: Parse pixel data.
-		//TODO 2: Add import support for block-compressed textures.
+		// Read pixel data of first/main resource:
+		uint totalByteSize = desc.CalculateTotalByteSize();
+		_outTextureData.pixelData = new byte[totalByteSize];
+
+		try
+		{
+			reader.Read(_outTextureData.pixelData, 0, (int)totalByteSize);
+		}
+		catch (Exception ex)
+		{
+			Logger.Instance?.LogException("Failed to read pixel data of DDS texture!", ex);
+			return false;
+		}
+
+		//TODO: Read pixel data of secondary layers/subresources (aka 'data2').
 
 		return true;
 	}

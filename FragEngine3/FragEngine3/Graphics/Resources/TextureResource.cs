@@ -45,7 +45,7 @@ public sealed class TextureResource : Resource
 	#region Properties
 
 	public override ResourceType ResourceType => ResourceType.Texture;
-	public override bool IsLoaded => !IsDisposed && Texture != null && !Texture.IsDisposed;
+	public override bool IsLoaded => !IsDisposed && Texture is not null && !Texture.IsDisposed;
 
 	public Texture? Texture { get; private set; } = null;
 
@@ -74,7 +74,7 @@ public sealed class TextureResource : Resource
 			Logger.LogError("Cannot set pixel data of uninitialized texture resource!");
 			return false;
 		}
-		if (_rawImage == null || !_rawImage.IsValid())
+		if (_rawImage is null || !_rawImage.IsValid())
 		{
 			Logger.LogError("Cannot set pixel data of texture from null or invalid raw image data!");
 			return false;
@@ -95,7 +95,7 @@ public sealed class TextureResource : Resource
 		// Local helper method for uploading pixels of arbitrary types and layouts:
 		bool UpdateTexture<T>(T[]? _pixelData) where T : unmanaged
 		{
-			if (_pixelData == null) return false;
+			if (_pixelData is null) return false;
 			try
 			{
 				core.Device.UpdateTexture(Texture, _pixelData, 0, 0, 0, _rawImage.width, _rawImage.height, 1, 0, 0);
@@ -106,6 +106,40 @@ public sealed class TextureResource : Resource
 				Logger.LogException($"Failed to set pixel data on texture resource '{resourceKey}'!", ex);
 				return false;
 			}
+		}
+	}
+
+	public unsafe bool SetPixelData(TextureData _textureData)
+	{
+		if (IsDisposed)
+		{
+			Logger.LogError("Cannot set pixel data of disposed texture resource!");
+			return false;
+		}
+		if (!IsLoaded)
+		{
+			Logger.LogError("Cannot set pixel data of uninitialized texture resource!");
+			return false;
+		}
+		if (_textureData is null || !_textureData.IsValid())
+		{
+			Logger.LogError("Cannot set pixel data of texture from null or invalid raw image data!");
+			return false;
+		}
+
+		// Upload byte data to GPU texture memory:
+		try
+		{
+			fixed (byte* pPixelData = _textureData.pixelData)
+			{
+				core.Device.UpdateTexture(Texture, (nint)pPixelData, _textureData.DataByteSize, 0, 0, 0, _textureData.width, _textureData.height, _textureData.depth, 0, 0);
+			}
+			return true;
+		}
+		catch (Exception ex)
+		{
+			Logger.LogException($"Failed to set pixel data on texture resource '{resourceKey}'!", ex);
+			return false;
 		}
 	}
 
@@ -132,9 +166,9 @@ public sealed class TextureResource : Resource
 		return $"Texture '{resourceKey}' (Size: {sizeTxt}, Format: {Texture.Format})";
 	}
 
-	public static bool CreateTexture(ResourceHandle _handle, GraphicsCore _graphicsCore, RawImageData _rawImageData, out TextureResource? _outTexture)
+	public static bool CreateTexture(ResourceHandle _handle, GraphicsCore _graphicsCore, RawImageData? _rawImageData, TextureData? _textureData, out TextureResource? _outTexture)
 	{
-		if (_graphicsCore == null)
+		if (_graphicsCore is null)
 		{
 			Logger.Instance?.LogError("Cannot create texture using null graphics core!");
 			_outTexture = null;
@@ -147,7 +181,7 @@ public sealed class TextureResource : Resource
 			_outTexture = null;
 			return false;
 		}
-		if (_handle == null || !_handle.IsValid)
+		if (_handle is null || !_handle.IsValid)
 		{
 			logger.LogError("Cannot create texture using null or invalid resource handle!");
 			_outTexture = null;
@@ -158,13 +192,34 @@ public sealed class TextureResource : Resource
 		if (_handle.IsLoaded)
 		{
 			Resource? oldResource = _handle.GetResource(false, false);
-			if (oldResource != null && !oldResource.IsDisposed)
+			if (oldResource is not null && !oldResource.IsDisposed)
 			{
 				logger.LogError("Cannot create texture; resource handle is already loaded and has a resource assigned!");
 				_outTexture = null;
 				return false;
 			}
 		}
+
+		// Depending on available data sets, try creating and populating a texture resource:
+		if (_textureData is not null)
+		{
+			return CreateTextureFromTextureData(_handle, _graphicsCore, _textureData, out _outTexture);
+		}
+		else if (_rawImageData is not null)
+		{
+			return CreateTextureFromRawImageData(_handle, _graphicsCore, _rawImageData, out _outTexture);
+		}
+		else
+		{
+			logger.LogError("Cannot create texture using null raw image data and null texture data!");
+			_outTexture = null;
+			return false;
+		}
+	}
+
+	private static bool CreateTextureFromRawImageData(ResourceHandle _handle, GraphicsCore _graphicsCore, RawImageData _rawImageData, out TextureResource? _outTexture)
+	{
+		Logger logger = _graphicsCore.graphicsSystem.engine.Logger ?? Logger.Instance!;
 
 		// Try creating the empty texture GPU object:
 		Texture texture;
@@ -189,6 +244,35 @@ public sealed class TextureResource : Resource
 
 		// Set initial texture content from the given raw image data:
 		return _outTexture.SetPixelData(_rawImageData);
+	}
+
+	private static bool CreateTextureFromTextureData(ResourceHandle _handle, GraphicsCore _graphicsCore, TextureData _textureData, out TextureResource? _outTexture)
+	{
+		Logger logger = _graphicsCore.graphicsSystem.engine.Logger ?? Logger.Instance!;
+
+		// Try creating the empty texture GPU object:
+		Texture texture;
+		try
+		{
+			TextureDescription textureDesc = _textureData.CreateTextureDescription();
+
+			texture = _graphicsCore.MainFactory.CreateTexture(ref textureDesc);
+		}
+		catch (Exception ex)
+		{
+			logger.LogException($"Failed to create texture for handle '{_handle.resourceKey}'!", ex);
+			_outTexture = null;
+			return false;
+		}
+
+		// Create a texture resource object:
+		_outTexture = new TextureResource(_graphicsCore, _handle)
+		{
+			Texture = texture,
+		};
+
+		// Set initial texture content from the given raw image data:
+		return _outTexture.SetPixelData(_textureData);
 	}
 
 	#endregion

@@ -526,8 +526,9 @@ public sealed class ResourceManager : IEngineSystem
 				}
 				break;
 			case ResourceType.Texture:
-				if ((success = ImageImporter.ImportImageData(this, _handle, out RawImageData? rawImageData) && rawImageData is not null) &&
-					(success = TextureResource.CreateTexture(_handle, engine.GraphicsSystem.graphicsCore, rawImageData!, out TextureResource? texture)))
+				if ((success = ImageImporter.ImportImageData(this, _handle, out RawImageData? rawImageData, out TextureData? textureData) &&
+					(rawImageData is not null || textureData is not null)) &&
+					(success = TextureResource.CreateTexture(_handle, engine.GraphicsSystem.graphicsCore, rawImageData, textureData, out TextureResource? texture)))
 				{
 					_assignResourceCallback(texture);
 				}
