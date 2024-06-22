@@ -14,9 +14,7 @@ public sealed class DdsFile
 	public DdsFileHeader fileHeader = new();
 	public DdsDxt10Header? dxt10Header = null;
 
-	public byte[] data = [];		// Main surface data.
-	public byte[]? data2 = null;	// Additional surface data. (mipmaps, cubemap faces, depth layers, etc.)
-	//...
+	public byte[] data = [];
 
 	#endregion
 	#region Methods

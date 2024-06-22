@@ -93,7 +93,7 @@ public static class ImageImporter
 		}
 
 		// Check for further pre-processing instructions in import flags, then return result:
-		return ImageImportFlagParser.ApplyImportFlags(_outImageData!, _handle.importFlags);
+		return _outTextureData is not null || ImageImportFlagParser.ApplyImportFlags(_outImageData!, _handle.importFlags);
 	}
 
 	public static bool ImportImageData(

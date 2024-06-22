@@ -68,7 +68,6 @@ public struct DdsTextureDescription
 			height > 0 &&
 			depth > 0 &&
 			rowByteSize > 0 &&
-			channelCount > 0 && channelCount <= 4 &&
 			arraySize > 0 &&
 			dxgiFormat != Format.Unknown;
 
@@ -83,6 +82,10 @@ public struct DdsTextureDescription
 			if (isCompressed)
 			{
 				result &= compressionBlockSize > 0;
+			}
+			else
+			{
+				result &= channelCount > 0 && channelCount <= 4;
 			}
 		}
 		return result;
@@ -156,11 +159,12 @@ public struct DdsTextureDescription
 		_outDescription = new()
 		{
 			width = _fileHeader.width,
-			height = _fileHeader.height,
-			depth = _fileHeader.depth,
+			height = Math.Max(_fileHeader.height, 1),
+			depth = Math.Max(_fileHeader.depth, 1),
 			arraySize = 1,
 			mipMapCount = Math.Max(_fileHeader.mipMapCount, 1),
 			rowByteSize = Math.Max(CalculatePitch(_fileHeader, _dxt10Header), 1),
+			channelCount = 4,
 		};
 
 		// For simple raw color formats, read pixel byte size directly:
@@ -192,7 +196,10 @@ public struct DdsTextureDescription
 		_outDescription.isLinearColorSpace = !_outDescription.dxgiFormat.IsSRGB();
 
 		// Try to determine pixel format:
-
+		if (!_outDescription.dxgiFormat.TryGetPixelFormat(out _outDescription.pixelFormat))
+		{
+			Logger.Instance?.LogWarning($"Could not find an ideal pixel format for texture's DXGI surface format! (DXGI Format: '{_outDescription.dxgiFormat}')");
+		}
 
 		return true;
 	}

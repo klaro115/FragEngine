@@ -46,7 +46,7 @@
         "BoundResources":
         [
             {
-                "ResourceKey": "TexBrickWall_diff",
+                "ResourceKey": "TexDdsSample",
                 "SlotName": "TexMain",
                 "SlotIndex": 4,
                 "ResourceKind": 3,

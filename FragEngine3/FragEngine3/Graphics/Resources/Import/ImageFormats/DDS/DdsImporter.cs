@@ -70,8 +70,6 @@ public static class DdsImporter
 			return false;
 		}
 
-		//TODO: Read pixel data of secondary layers/subresources (aka 'data2').
-
 		return true;
 	}
 

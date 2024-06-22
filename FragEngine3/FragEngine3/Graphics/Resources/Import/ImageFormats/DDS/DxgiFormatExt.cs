@@ -1,5 +1,4 @@
-﻿using System.Text;
-using Veldrid;
+﻿using Veldrid;
 using Vortice.DXGI;
 
 namespace FragEngine3.Graphics.Resources.Import.ImageFormats.DDS;
@@ -76,94 +75,12 @@ public static class DxgiFormatExt
 	#endregion
 	#region Methods
 
-	//TEST: Automatic mapping function for DXGI surface formats and Veldrid pixel formats.
-	public static void MapFormats()
-	{
-		Format[] dxgiFormats = Enum.GetValues<Format>();
-		PixelFormat[] pixelFormats = Enum.GetValues<PixelFormat>();
-
-		List<Format> unmatchesDxgiFormats = [];
-		StringBuilder builder = new(1024);
-
-		List<string> parts = new(6);
-		foreach (Format dxgiFormat in dxgiFormats)
-		{
-			string dxgiName = dxgiFormat.ToString();
-
-			bool prevWasNumber = false;
-			char prevC = '1';
-			int partStartIdx = 0;
-			for (int i = 0; i < dxgiName.Length; ++i)
-			{
-				char c = dxgiName[i];
-				bool curIsNumber = char.IsAsciiDigit(c);
-				if (!curIsNumber && prevWasNumber)
-				{
-					int partEndIdx = i;
-					if (prevC == '_')
-					{
-						partEndIdx--;
-					}
-
-					string part = dxgiName.Substring(partStartIdx, partEndIdx - partStartIdx);
-					parts.Add(part);
-					partStartIdx = i;
-				}
-				prevWasNumber = curIsNumber;
-				prevC = c;
-			}
-			if (partStartIdx < dxgiName.Length)
-			{
-				if (dxgiName[partStartIdx] == '_')
-				{
-					partStartIdx++;
-				}
-
-				string part = dxgiName.Substring(partStartIdx, dxgiName.Length - partStartIdx);
-				parts.Add(part);
-			}
-
-			string pixelFormatName = string.Join('_', parts);
-			parts.Clear();
-
-			var matches = from p in pixelFormats
-						  where p.ToString() == pixelFormatName
-						  select p;
-			if (!matches.Any())
-			{
-				unmatchesDxgiFormats.Add(dxgiFormat);
-				continue;
-			}
-
-			if (matches.Count() > 1)
-			{
-				// Multiple matches:
-				foreach (PixelFormat pixelFormat in matches)
-				{
-					builder.Append("\t\t//[Format.").Append(dxgiFormat).Append("] = PixelFormat.").Append(pixelFormat).AppendLine(",");
-				}
-			}
-			else
-			{
-				// Singular matches:
-				builder.Append("\t\t[Format.").Append(dxgiFormat).Append("] = PixelFormat.").Append(matches.First()).AppendLine(",");
-			}
-		}
-
-		Console.WriteLine("\n\n\nBEGIN: DXGI/Pixel format matches:\n");
-		Console.WriteLine(builder);
-		Console.WriteLine("\nEND.\n\n\n");
-
-		Console.WriteLine("BEGIN: Unmatched DXGI formats:\n");
-		foreach (Format dxgiFormat in unmatchesDxgiFormats)
-		{
-			Console.Write("\t\t");
-			Console.Write(dxgiFormat);
-			Console.WriteLine(',');
-		}
-		Console.WriteLine("\nEND.\n\n\n");
-	}
-
+	/// <summary>
+	/// Try to find a pixel format that maps directly and unambiguously to this DXGI surface format.
+	/// </summary>
+	/// <param name="_dxgiFormat">This DXGI format.</param>
+	/// <param name="_outPixelFormat">Outputs a corresponding pixel fromat.</param>
+	/// <returns>True if a matching format is known and was found, false otherwise.</returns>
 	public static bool TryGetPixelFormat(this Format _dxgiFormat, out PixelFormat _outPixelFormat)
 	{
 		bool result = formatMap.TryGetValue(_dxgiFormat, out _outPixelFormat);
@@ -226,6 +143,7 @@ public static class DxgiFormatExt
 				return 128;
 
 			// BC3 (DXT4 & DXT5)
+			case PixelFormat.BC3_UNorm:
 			case PixelFormat.BC3_UNorm_SRgb:
 				return 128;
 
