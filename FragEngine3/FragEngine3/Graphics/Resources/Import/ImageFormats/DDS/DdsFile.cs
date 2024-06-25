@@ -1,5 +1,4 @@
 ﻿using FragEngine3.EngineCore;
-using Vortice.DXGI;
 
 namespace FragEngine3.Graphics.Resources.Import.ImageFormats.DDS;
 
