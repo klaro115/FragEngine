@@ -35,8 +35,8 @@ public sealed class ForwardPlusLightsStack(GraphicsCore _core) : IGraphicsStack	
 
 	// Lists & object management:
 	private readonly List<Camera> activeCameras = new(2);
-	private readonly List<Light> activeLights = new(10);
-	private readonly List<Light> activeLightsShadowMapped = new(5);
+	private readonly List<ILightSource> activeLights = new(10);
+	private readonly List<ILightSource> activeLightsShadowMapped = new(5);
 	private LightSourceData[] activeLightData = [];
 
 	private readonly List<IRenderer> activeRenderersOpaque = new(128);
@@ -337,7 +337,7 @@ public sealed class ForwardPlusLightsStack(GraphicsCore _core) : IGraphicsStack	
 		return true;
 	}
 
-	public bool DrawStack(Scene _scene, List<IRenderer> _renderers, in IList<Camera> _cameras, in IList<Light> _lights)
+	public bool DrawStack(Scene _scene, List<IRenderer> _renderers, in IList<Camera> _cameras, in IList<ILightSource> _lights)
 	{
 		if (!IsInitialized)
 		{
@@ -435,7 +435,7 @@ public sealed class ForwardPlusLightsStack(GraphicsCore _core) : IGraphicsStack	
 	private bool BeginDrawScene(
 		in List<IRenderer> _renderers,
 		in IList<Camera> _cameras,
-		in IList<Light> _lights,
+		in IList<ILightSource> _lights,
 		uint _maxActiveLightCount,
 		out SceneContext _outSceneCtx,
 		out Vector3 _outRenderFocalPoint,
@@ -461,10 +461,10 @@ public sealed class ForwardPlusLightsStack(GraphicsCore _core) : IGraphicsStack	
 			}
 		}
 
-		foreach (Light light in _lights)
+		foreach (ILightSource light in _lights)
 		{
 			// Skip disabled and overly dim light sources:
-			if (light.IsDisposed || light.layerMask == 0 || light.LightIntensity < 0.0001f || !light.node.IsEnabledInHierarchy())
+			if (light.IsDisposed || light.LayerMask == 0 || light.LightIntensity < 0.0001f || !light.node.IsEnabledInHierarchy())
 				continue;
 
 			// Only retain sources whose light may be seen by an active camera:
@@ -479,7 +479,7 @@ public sealed class ForwardPlusLightsStack(GraphicsCore _core) : IGraphicsStack	
 		}
 		// Sort lights, to prioritize shadow casters first, and higher priority lights second:
 		activeLights.Sort(Light.CompareLightsForSorting);
-		foreach (Light light in activeLights)
+		foreach (ILightSource light in activeLights)
 		{
 			if (light.CastShadows)
 			{
@@ -575,7 +575,7 @@ public sealed class ForwardPlusLightsStack(GraphicsCore _core) : IGraphicsStack	
 		uint minLightCountShadowMapped = Math.Min((uint)activeLightsShadowMapped.Count, _maxActiveLightCount);
 		uint totalShadowCascadeCount = minLightCountShadowMapped;
 
-		foreach (Light light in activeLightsShadowMapped)
+		foreach (ILightSource light in activeLightsShadowMapped)
 		{
 			totalShadowCascadeCount += Math.Max(light.ShadowCascades, 1);
 		}
@@ -631,7 +631,7 @@ public sealed class ForwardPlusLightsStack(GraphicsCore _core) : IGraphicsStack	
 			while (i < shadowMappedLightCount && result)
 			{
 				// Begin drawing shadow maps for the current light source:
-				Light light = activeLightsShadowMapped[i];
+				ILightSource light = activeLightsShadowMapped[i];
 				result &= light.BeginDrawShadowMap(
 					in _sceneCtx,
 					_renderFocalRadius,
@@ -716,7 +716,7 @@ public sealed class ForwardPlusLightsStack(GraphicsCore _core) : IGraphicsStack	
 		}
 		cmdList.Begin();
 
-		List<Light> visibleLights = new(activeLights.Count);
+		List<ILightSource> visibleLights = new(activeLights.Count);
 
 		for (uint i = 0; i < activeCameras.Count; ++i)
 		{
@@ -724,7 +724,7 @@ public sealed class ForwardPlusLightsStack(GraphicsCore _core) : IGraphicsStack	
 
 			// Pre-filter lights to only include those are actually visible by current camera:
 			visibleLights.Clear();
-			foreach (Light light in activeLights)
+			foreach (ILightSource light in activeLights)
 			{
 				if (light.CheckVisibilityByCamera(in camera))
 				{

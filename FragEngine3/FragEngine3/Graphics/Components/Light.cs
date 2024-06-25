@@ -12,7 +12,7 @@ using Veldrid;
 
 namespace FragEngine3.Graphics.Components
 {
-    public sealed class Light : Component, IOnNodeDestroyedListener, IOnComponentRemovedListener			//TODO: Consider splitting this into different components based on type.
+    public sealed class Light : Component, ILightSource, IOnNodeDestroyedListener, IOnComponentRemovedListener			//TODO: Consider splitting this into different components based on type.
 	{
 		#region Constructors
 
@@ -37,17 +37,18 @@ namespace FragEngine3.Graphics.Components
 		private LightInstance lightInstance;
 
 		/// <summary>
-		/// Priority rating to indicate which light sources are more important. Higher priority lights will
-		/// be drawn first, lower priority light may be ignored as their impact on a mesh may be negligable.
-		/// </summary>
-		public int lightPriority = 1;
-		/// <summary>
 		/// Bit mask for all layers that can be affected by this light source.
 		/// </summary>
 		public uint layerMask = 0xFFu;
 
 		#endregion
 		#region Properties
+
+		/// <summary>
+		/// Priority rating to indicate which light sources are more important. Higher priority lights will
+		/// be drawn first, lower priority light may be ignored as their impact on a mesh may be negligable.
+		/// </summary>
+		public int LightPriority { get; set; } = 1;
 
 		/// <summary>
 		/// Gets or sets the emission shape of this light source.
@@ -174,8 +175,8 @@ namespace FragEngine3.Graphics.Components
 
 		public static int CompareLightsForSorting(Light _a, Light _b)
 		{
-			int weightA = _a.lightPriority + (_a.CastShadows ? 1000 : 0);
-			int weightB = _b.lightPriority + (_b.CastShadows ? 1000 : 0);
+			int weightA = _a.LightPriority + (_a.CastShadows ? 1000 : 0);
+			int weightB = _b.LightPriority + (_b.CastShadows ? 1000 : 0);
 			return weightB.CompareTo(weightA);
 		}
 

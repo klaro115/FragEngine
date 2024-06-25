@@ -1,4 +1,5 @@
 ﻿using FragEngine3.Graphics.Components;
+using FragEngine3.Graphics.Lighting;
 using FragEngine3.Scenes;
 
 namespace FragEngine3.Graphics.Stack;
@@ -56,7 +57,7 @@ public interface IGraphicsStack : IDisposable
 	/// <param name="_lights">List of all light components within the scene.</param>
 	/// <returns>True if the scene and its nodes were rendered successfully, false
 	/// otherwise.</returns>
-	bool DrawStack(Scene _scene, List<IRenderer> _renderers, in IList<Camera> _cameras, in IList<Light> _lights);
+	bool DrawStack(Scene _scene, List<IRenderer> _renderers, in IList<Camera> _cameras, in IList<ILightSource> _lights);
 
 	#endregion
 }
