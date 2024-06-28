@@ -1,5 +1,4 @@
 ﻿using FragEngine3.Graphics.Components;
-using FragEngine3.Graphics.Lighting;
 using FragEngine3.Scenes;
 
 namespace FragEngine3.Graphics.Stack;

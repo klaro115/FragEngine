@@ -1,6 +1,5 @@
 ﻿using FragEngine3.Graphics;
 using FragEngine3.Graphics.Components;
-using FragEngine3.Graphics.Lighting;
 using FragEngine3.Graphics.Stack;
 
 namespace FragEngine3.Scenes.SceneManagers;

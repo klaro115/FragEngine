@@ -11,7 +11,7 @@ using Veldrid;
 
 namespace FragEngine3.Graphics.Lighting;
 
-internal abstract class LightInstance(GraphicsCore _core) : IDisposable
+internal abstract class LightInstance(GraphicsCore _core) : ILightSource
 {
 	#region Constructors
 
@@ -22,8 +22,6 @@ internal abstract class LightInstance(GraphicsCore _core) : IDisposable
 
 	#endregion
 	#region Fields
-
-	public readonly GraphicsCore core = _core;
 
 	protected LightSourceData data = new()
 	{
@@ -50,9 +48,12 @@ internal abstract class LightInstance(GraphicsCore _core) : IDisposable
 	#region Properties
 
 	public bool IsDisposed { get; private set; } = false;
+	public bool IsVisible => !IsDisposed;
 
 	// LIGHT:
 
+	public int LightPriority { get; set; } = 1;
+	public uint LayerMask { get; set; } = 0xFFu;
 	public abstract LightType Type { get; }
 
 	/// <summary>
@@ -120,7 +121,9 @@ internal abstract class LightInstance(GraphicsCore _core) : IDisposable
 
 	// MISC:
 
-	protected Logger Logger => core.graphicsSystem.engine.Logger;
+	public GraphicsCore GraphicsCore { get; } = _core;
+
+	protected Logger Logger => GraphicsCore.graphicsSystem.engine.Logger;
 
 	#endregion
 	#region Methods
@@ -156,9 +159,9 @@ internal abstract class LightInstance(GraphicsCore _core) : IDisposable
 	public abstract LightSourceData GetLightSourceData();
 
 	public bool BeginDrawShadowMap(
-			in SceneContext _sceneCtx,
-			float _shadingFocalPointRadius,
-			uint _newShadowMapIdx)
+		in SceneContext _sceneCtx,
+		float _shadingFocalPointRadius,
+		uint _newShadowMapIdx)
 	{
 		if (IsDisposed)
 		{
@@ -199,13 +202,13 @@ internal abstract class LightInstance(GraphicsCore _core) : IDisposable
 	}
 
 	public bool BeginDrawShadowCascade(
-			in SceneContext _sceneCtx,
-			in CommandList _cmdList,
-			Vector3 _shadingFocalPoint,
-			uint _cascadeIdx,
-			out CameraPassContext _outCameraPassCtx,
-			bool _rebuildResSetCamera = false,
-			bool _texShadowMapsHasChanged = false)
+		in SceneContext _sceneCtx,
+		in CommandList _cmdList,
+		Vector3 _shadingFocalPoint,
+		uint _cascadeIdx,
+		out CameraPassContext _outCameraPassCtx,
+		bool _rebuildResSetCamera = false,
+		bool _texShadowMapsHasChanged = false)
 	{
 		// Select the right shadow cascade resource container:
 		_cascadeIdx = Math.Min(_cascadeIdx, data.shadowCascades);
@@ -270,6 +273,8 @@ internal abstract class LightInstance(GraphicsCore _core) : IDisposable
 	{
 		return !IsDisposed && shadowCameraInstance != null && shadowCameraInstance.EndDrawing();
 	}
+
+	public bool EndDrawShadowMap() => true;
 
 	protected abstract bool UpdateShadowMapCameraInstance(float _shadingFocalPointRadius);
 

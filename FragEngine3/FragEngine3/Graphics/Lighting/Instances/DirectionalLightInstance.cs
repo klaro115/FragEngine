@@ -96,7 +96,7 @@ internal sealed class DirectionalLightInstance : LightInstance
         if (shadowCameraInstance == null || shadowCameraInstance.IsDisposed)
         {
             if (!ShadowMapUtility.UpdateOrCreateShadowMapCameraInstance(
-                in core,
+                GraphicsCore,
                 true,
                 MaxLightRange,
                 0.0f,

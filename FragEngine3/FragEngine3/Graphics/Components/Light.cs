@@ -22,37 +22,31 @@ namespace FragEngine3.Graphics.Components
 		/// <param name="_node">The scene node which the component will be attached to.</param>
 		public Light(SceneNode _node) : base(_node)
 		{
-			core = node.scene.GraphicsStack?.Core ?? node.scene.engine.GraphicsSystem.graphicsCore;
+			GraphicsCore = node.scene.GraphicsStack?.Core ?? node.scene.engine.GraphicsSystem.graphicsCore;
 
 			node.scene.drawManager.RegisterLight(this);
 
-			lightInstance = new PointLightInstance(core);
+			lightInstance = new PointLightInstance(GraphicsCore);
 		}
 
 		#endregion
 		#region Fields
 
-		internal readonly GraphicsCore core;
-
 		private LightInstance lightInstance;
-
-		/// <summary>
-		/// Bit mask for all layers that can be affected by this light source.
-		/// </summary>
-		public uint layerMask = 0xFFu;
 
 		#endregion
 		#region Properties
 
-		/// <summary>
-		/// Priority rating to indicate which light sources are more important. Higher priority lights will
-		/// be drawn first, lower priority light may be ignored as their impact on a mesh may be negligable.
-		/// </summary>
+		public bool IsVisible => !IsDisposed && node.IsEnabledInHierarchy();
+
 		public int LightPriority { get; set; } = 1;
 
-		/// <summary>
-		/// Gets or sets the emission shape of this light source.
-		/// </summary>
+		public uint LayerMask
+		{
+			get => lightInstance.LayerMask;
+			set => lightInstance.LayerMask = value;
+		}
+
 		public LightType Type
 		{
 			get => lightInstance != null ? lightInstance.Type : LightType.Point;
@@ -66,9 +60,9 @@ namespace FragEngine3.Graphics.Components
 
 					lightInstance = value switch
 					{
-						LightType.Spot => new SpotLightInstance(core),
-						LightType.Directional => new DirectionalLightInstance(core),
-						_ => new PointLightInstance(core),
+						LightType.Spot => new SpotLightInstance(GraphicsCore),
+						LightType.Directional => new DirectionalLightInstance(GraphicsCore),
+						_ => new PointLightInstance(GraphicsCore),
 					};
 					if (data is not null)
 					{
@@ -86,9 +80,6 @@ namespace FragEngine3.Graphics.Components
 			get => lightInstance.LightIntensity;
 			set => lightInstance.LightIntensity = value;
 		}
-		/// <summary>
-		/// Gets the maximum range out to which this light source produces any noticeable brightness. 
-		/// </summary>
 		public float MaxLightRange => lightInstance.MaxLightRange;
 
 		/// <summary>
@@ -108,24 +99,12 @@ namespace FragEngine3.Graphics.Components
 			set { if (lightInstance is SpotLightInstance spotInstance) spotInstance.SpotAngleDegrees = value; }
 		}
 
-		/// <summary>
-		/// Gets or sets whether this light source should cast shadows.<para/>
-		/// NOTE: If true, before scene cameras are drawn, a shadow map will be rendered for this light source.
-		/// When changing this value to false, the shadow map and its framebuffer will be disposed. This flag
-		/// may not be changed during the engine's drawing stage.<para/>
-		/// LIMITATION: Point lights cannot casts shadows at this stage. Use spot or directional lights if shadows
-		/// are required.
-		/// </summary>
 		public bool CastShadows
 		{
 			get => lightInstance.CastShadows;
 			set => lightInstance.CastShadows = value;
 		}
 
-		/// <summary>
-		/// Gets or sets the number of shadow cascades to create and render for this light source.
-		/// Directional and spot lights only. Must be a value between 0 and 4, where 0 disables cascades for this light.
-		/// </summary>
 		public uint ShadowCascades
 		{
 			get => lightInstance.ShadowCascades;
@@ -150,6 +129,8 @@ namespace FragEngine3.Graphics.Components
 		/// Gets the world space diretion of light rays coming off this light source. Only relevant for spot and directional lights.
 		/// </summary>
 		public Vector3 Direction => Vector3.Transform(Vector3.UnitZ, node.WorldRotation);
+
+		public GraphicsCore GraphicsCore { get; private init; }
 
 		#endregion
 		#region Methods
@@ -205,7 +186,6 @@ namespace FragEngine3.Graphics.Components
 		public bool BeginDrawShadowCascade(
 			in SceneContext _sceneCtx,
 			in CommandList _cmdList,
-			in LightDataBuffer _dummyLightDataBuffer,
 			Vector3 _shadingFocalPoint,
 			uint _cascadeIdx,
 			out CameraPassContext _outCameraPassCtx,
@@ -262,7 +242,7 @@ namespace FragEngine3.Graphics.Components
 			}
 
 			// Set values:
-			layerMask = data.LayerMask;
+			LayerMask = data.LayerMask;
 
 			if (!lightInstance.LoadFromData(in data))
 			{
@@ -285,7 +265,7 @@ namespace FragEngine3.Graphics.Components
 				return false;
 			}
 
-			data.LayerMask = layerMask;
+			data.LayerMask = LayerMask;
 
 			if (!Serializer.SerializeToJson(data, out string dataJson))
 			{

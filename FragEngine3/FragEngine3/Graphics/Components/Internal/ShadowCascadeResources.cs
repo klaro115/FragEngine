@@ -26,7 +26,7 @@ internal sealed class ShadowCascadeResources(LightInstance _light, uint _shadowC
 	#endregion
 	#region Fields
 
-	private readonly GraphicsCore core = _light.core;
+	private readonly GraphicsCore core = _light.GraphicsCore;
 
 	public readonly LightInstance light = _light;
 	public readonly uint shadowCascadeIdx = _shadowCascadeIdx;

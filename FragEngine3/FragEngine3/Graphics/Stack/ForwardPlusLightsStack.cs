@@ -464,7 +464,7 @@ public sealed class ForwardPlusLightsStack(GraphicsCore _core) : IGraphicsStack	
 		foreach (ILightSource light in _lights)
 		{
 			// Skip disabled and overly dim light sources:
-			if (light.IsDisposed || light.LayerMask == 0 || light.LightIntensity < 0.0001f || !light.node.IsEnabledInHierarchy())
+			if (light.IsDisposed || light.LayerMask == 0 || !light.IsVisible)
 				continue;
 
 			// Only retain sources whose light may be seen by an active camera:
@@ -478,7 +478,7 @@ public sealed class ForwardPlusLightsStack(GraphicsCore _core) : IGraphicsStack	
 			}
 		}
 		// Sort lights, to prioritize shadow casters first, and higher priority lights second:
-		activeLights.Sort(Light.CompareLightsForSorting);
+		activeLights.Sort(ILightSource.CompareLightsForSorting);
 		foreach (ILightSource light in activeLights)
 		{
 			if (light.CastShadows)
@@ -650,7 +650,6 @@ public sealed class ForwardPlusLightsStack(GraphicsCore _core) : IGraphicsStack	
 					result &= light.BeginDrawShadowCascade(
 						in _sceneCtx,
 						in cmdList,
-						in dummyLightDataBuffer!,
 						_renderFocalPoint,
 						cascadeIdx,
 						out CameraPassContext lightCtx,
@@ -660,7 +659,7 @@ public sealed class ForwardPlusLightsStack(GraphicsCore _core) : IGraphicsStack	
 					// Draw renderers for opaque and tranparent geometry, ignore UI:
 					foreach (IRenderer renderer in activeShadowCasters)
 					{
-						if ((light.layerMask & renderer.LayerFlags) != 0)
+						if ((light.LayerMask & renderer.LayerFlags) != 0)
 						{
 							result &= renderer.DrawShadowMap(_sceneCtx, lightCtx);
 						}

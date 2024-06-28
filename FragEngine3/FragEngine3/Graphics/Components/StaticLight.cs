@@ -1,7 +1,11 @@
-﻿using FragEngine3.Graphics.Lighting;
+﻿using FragEngine3.Graphics.Contexts;
+using FragEngine3.Graphics.Lighting;
+using FragEngine3.Graphics.Lighting.Data;
 using FragEngine3.Scenes;
 using FragEngine3.Scenes.Data;
 using FragEngine3.Scenes.EventSystem;
+using System.Numerics;
+using Veldrid;
 
 namespace FragEngine3.Graphics.Components;
 
@@ -19,10 +23,14 @@ public sealed class StaticLight : Component, ILightSource, IOnComponentAddedList
 
 	private Light? light = null;
 
+	private LightSourceData lightSourceData = default;
+
 	#endregion
 	#region Properties
 
 	public bool IsRedrawIssued { get; private set; } = true;
+
+	public bool IsVisible => LightComponent is not null && light!.IsVisible;
 
 	/// <summary>
 	/// Priority rating to indicate which light sources are more important. Higher priority lights will
@@ -37,10 +45,18 @@ public sealed class StaticLight : Component, ILightSource, IOnComponentAddedList
 		}
 	}
 
+	public uint LayerMask => LightComponent is not null ? light!.LayerMask : 0;
+	public LightType Type => LightComponent is not null ? light!.Type : LightType.Point;
+	public float MaxLightRange => LightComponent is not null ? light!.MaxLightRange : 0;
+	public bool CastShadows => LightComponent is not null && light!.CastShadows;
+	public uint ShadowCascades => LightComponent is not null ? light!.ShadowCascades : 0;
+
 	/// <summary>
 	/// Gets the currently assigned light component that is used to draw the initial/static shadow map.
 	/// </summary>
 	public Light? LightComponent => GetLightComponent();
+
+	public GraphicsCore GraphicsCore => LightComponent?.GraphicsCore ?? node.scene.engine.GraphicsSystem.graphicsCore;
 
 	#endregion
 	#region Methods
@@ -121,6 +137,41 @@ public sealed class StaticLight : Component, ILightSource, IOnComponentAddedList
 	{
 		IsRedrawIssued = true;
 	}
+
+	public LightSourceData GetLightSourceData()
+	{
+		if (IsRedrawIssued && LightComponent is not null)
+		{
+			lightSourceData = light!.GetLightSourceData();
+		}
+		return lightSourceData;
+	}
+
+	public bool CheckVisibilityByCamera(in Camera _camera) => LightComponent is not null && light!.CheckVisibilityByCamera(_camera);
+
+	public bool BeginDrawShadowMap(in SceneContext _sceneCtx, float _shadingFocalPointRadius, uint _newShadowMapIdx)
+	{
+		//TODO
+		return true;	//TEMP
+	}
+
+	public bool BeginDrawShadowCascade(
+		in SceneContext _sceneCtx,
+		in CommandList _cmdList,
+		Vector3 _shadingFocalPoint,
+		uint _cascadeIdx,
+		out CameraPassContext _outCameraPassCtx,
+		bool _rebuildResSetCamera = false,
+		bool _texShadowMapsHasChanged = false)
+	{
+		//TODO
+		_outCameraPassCtx = null!;
+		return true;    //TEMP
+	}
+
+	public bool EndDrawShadowCascade() => true;
+
+	public bool EndDrawShadowMap() => true;
 
 	public override bool LoadFromData(in ComponentData _componentData, in Dictionary<int, ISceneElement> _idDataMap)
 	{

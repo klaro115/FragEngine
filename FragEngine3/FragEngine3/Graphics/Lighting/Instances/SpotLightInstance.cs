@@ -94,7 +94,7 @@ internal sealed class SpotLightInstance : LightInstance
         if (shadowCameraInstance == null || shadowCameraInstance.IsDisposed)
         {
             if (!ShadowMapUtility.UpdateOrCreateShadowMapCameraInstance(
-                in core,
+                GraphicsCore,
                 false,
                 MaxLightRange,
                 SpotAngleRadians,

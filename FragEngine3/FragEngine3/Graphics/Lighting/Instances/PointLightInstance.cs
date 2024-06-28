@@ -77,7 +77,7 @@ internal sealed class PointLightInstance : LightInstance
         if (shadowCameraInstance == null || shadowCameraInstance.IsDisposed)
         {
             if (!ShadowMapUtility.UpdateOrCreateShadowMapCameraInstance(
-                in core,
+                GraphicsCore,
                 false,
                 _shadingFocalPointRadius,
                 MathF.PI,
