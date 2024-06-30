@@ -28,6 +28,8 @@ public sealed class TestApplicationLogic : ApplicationLogic
 
 	protected override bool RunStartupLogic()
 	{
+		Engine.TimeManager.TargetFrameRate = 60;
+
 		return true;
 	}
 
@@ -415,6 +417,13 @@ public sealed class TestApplicationLogic : ApplicationLogic
 			{
 				Engine.Logger.LogError("Geometry download request failed.");
 			}
+		}
+
+		// Switch main directional light between static and non-static mode when pressing 'Z':
+		if (Engine.InputManager.GetKeyUp(Key.Y) && scene.FindNode("Sun", out SceneNode? sunNode) && sunNode is not null)
+		{
+			Light light = sunNode.GetComponent<Light>()!;
+			light.IsStaticLight = !light.IsStaticLight;
 		}
 
 		return true;

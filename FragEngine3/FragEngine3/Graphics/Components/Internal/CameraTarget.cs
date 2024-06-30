@@ -33,21 +33,30 @@ internal sealed class CameraTarget : IDisposable
 		descriptorID = CreateDescriptorID(resolutionX, resolutionY, colorFormat, depthFormat, hasDepth, hasStencil);
 	}
 
-	public CameraTarget(GraphicsCore _graphicsCore, RenderMode _renderMode, uint _resolutionX, uint _resolutionY, PixelFormat? _colorFormat = null, bool _createDepth = true)
+	public CameraTarget(GraphicsCore _graphicsCore, RenderMode _renderMode, uint _resolutionX, uint _resolutionY, PixelFormat? _colorFormat = null, bool _createDepth = true, PixelFormat? _overrideDepthFormat = null)
 	{
 		graphiceCore = _graphicsCore ?? throw new ArgumentNullException(nameof(_graphicsCore), "Graphics core may not be null!");
 		renderMode = _renderMode;
 
 		colorFormat = _colorFormat ?? _graphicsCore.DefaultColorTargetPixelFormat;
 
+		if (_createDepth)
+		{
+			_overrideDepthFormat ??= _graphicsCore.DefaultDepthTargetPixelFormat;
+		}
+		else
+		{
+			_overrideDepthFormat = null;
+		}
+
 		texColorTarget = null!;
 		texDepthTarget = null!;
 
 		if (!_graphicsCore.CreateRenderTargets(
 			colorFormat,
+			_overrideDepthFormat,
 			_resolutionX,
 			_resolutionY,
-			_createDepth,
 			out texColorTarget,
 			out texDepthTarget!,
 			out framebuffer))

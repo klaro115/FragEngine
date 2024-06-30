@@ -367,6 +367,36 @@ public abstract class GraphicsCore : IDisposable
 		out Texture? _outTexDepthTarget,
 		out Framebuffer _outFramebuffer)
 	{
+		return CreateRenderTargets(
+			DefaultColorTargetPixelFormat,
+			DefaultDepthTargetPixelFormat,
+			_width,
+			_height,
+			out _outTexColorTarget,
+			out _outTexDepthTarget,
+			out _outFramebuffer);
+	}
+
+	/// <summary>
+	/// Creates a set of render targets.
+	/// </summary>
+	/// <param name="_colorFormat">The pixel format for the color texture of the framebuffer. Must be a packed uncompressed format.</param>
+	/// <param name="_depthFormat">The pixel format for the depth buffers of the framebuffer. If null, no depth buffer is created.</param>
+	/// <param name="_width">Horizontal resolution of output image, in pixels. Depending on platform, this should be a multiple of 8.</param>
+	/// <param name="_height">Vertical resolution of output image, in pixels.</param>
+	/// <param name="_outTexColorTarget">Outputs an RGBA render target for lit and colored render results. This is the stuff you want to display on screen.</param>
+	/// <param name="_outTexDepthTarget">Outputs a depth texture, with an optional stencil channel. Null if no depth format was provided.</param>
+	/// <param name="_outFramebuffer">Outputs a framebuffer using the created color and depth textures as render targets.</param>
+	/// <returns>True if frame buffer and texture creation succeeded, false otherwise. All outputs will be disposed on failure.</returns>
+	public virtual bool CreateRenderTargets(
+		PixelFormat _colorFormat,
+		PixelFormat? _depthFormat,
+		uint _width,
+		uint _height,
+		out Texture _outTexColorTarget,
+		out Texture? _outTexDepthTarget,
+		out Framebuffer _outFramebuffer)
+	{
 		if (!IsInitialized)
 		{
 			_outTexColorTarget = null!;
@@ -403,13 +433,13 @@ public abstract class GraphicsCore : IDisposable
 		}
 
 		// Try creating depth/stencil target:
-		if (_createDepth)
+		if (_depthFormat is not null)
 		{
 			TextureDescription texDepthTargetDesc = new(
 				_width,
 				_height,
 				1, 1, 1,
-				DefaultDepthTargetPixelFormat,
+				_depthFormat.Value,
 				TextureUsage.DepthStencil | TextureUsage.Sampled,
 				TextureType.Texture2D,
 				msaaCount);
@@ -417,7 +447,7 @@ public abstract class GraphicsCore : IDisposable
 			try
 			{
 				_outTexDepthTarget = MainFactory.CreateTexture(ref texDepthTargetDesc);
-				_outTexDepthTarget.Name = $"TexDepthTarget_{_width}x{_height}_{DefaultDepthTargetPixelFormat}";
+				_outTexDepthTarget.Name = $"TexDepthTarget_{_width}x{_height}_{_depthFormat}";
 			}
 			catch (Exception ex)
 			{
@@ -439,7 +469,7 @@ public abstract class GraphicsCore : IDisposable
 			FramebufferDescription frameBufferDesc = new(_outTexDepthTarget, _outTexColorTarget);
 
 			_outFramebuffer = MainFactory.CreateFramebuffer(ref frameBufferDesc);
-			_outFramebuffer.Name = $"Framebuffer_{_width}x{_height}_{_colorFormat}_HasDepth={_createDepth}";
+			_outFramebuffer.Name = $"Framebuffer_{_width}x{_height}_{_colorFormat}_HasDepth={_depthFormat is not null}";
 			return true;
 		}
 		catch (Exception ex)

@@ -656,12 +656,16 @@ public sealed class ForwardPlusLightsStack(GraphicsCore _core) : IGraphicsStack	
 						_rebuildResSetCamera,
 						_texShadowsHasChanged);
 
-					// Draw renderers for opaque and tranparent geometry, ignore UI:
-					foreach (IRenderer renderer in activeShadowCasters)
+					// Draw renderers only for non-static or dirty lights:
+					if (!light.IsStaticLight || light.IsStaticLightDirty)
 					{
-						if ((light.LayerMask & renderer.LayerFlags) != 0)
+						// Draw renderers for opaque and tranparent geometry, ignore UI:
+						foreach (IRenderer renderer in activeShadowCasters)
 						{
-							result &= renderer.DrawShadowMap(_sceneCtx, lightCtx);
+							if ((light.LayerMask & renderer.LayerFlags) != 0)
+							{
+								result &= renderer.DrawShadowMap(_sceneCtx, lightCtx);
+							}
 						}
 					}
 
