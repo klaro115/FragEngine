@@ -61,14 +61,17 @@ internal sealed class SpotLightInstance : LightInstance
 
     public override LightSourceData GetLightSourceData()
     {
-        data.position = worldPose.position;
+		if (IsStaticLight && staticLightDirtyFlags.HasFlag(StaticLightDirtyFlags.Data)) return data;
+
+		data.position = worldPose.position;
         data.direction = worldPose.Forward;
         data.shadowMapIdx = ShadowMapIdx;
         data.shadowCascades = ShadowCascades;
         data.shadowCascadeRange = maxLightRangeSq;
 
+		staticLightDirtyFlags &= ~StaticLightDirtyFlags.Data;
         return data;
-    }
+	}
 
     public override bool CheckVisibilityByCamera(in Camera _camera)
     {

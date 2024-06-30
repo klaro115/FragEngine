@@ -13,6 +13,19 @@ namespace FragEngine3.Graphics.Lighting;
 
 internal abstract class LightInstance(GraphicsCore _core) : ILightSource
 {
+	#region Types
+
+	[Flags]
+	protected enum StaticLightDirtyFlags
+	{
+		Data		= 1,
+		Frame		= 2,
+		Cascades	= 4,
+
+		All			= Data | Frame | Cascades,
+	}
+
+	#endregion
 	#region Constructors
 
 	~LightInstance()
@@ -41,6 +54,8 @@ internal abstract class LightInstance(GraphicsCore _core) : ILightSource
 	protected ShadowCascadeResources[]? shadowCascades = null;
 
 	protected bool castShadows = false;
+	protected bool isStaticLight = false;
+	protected StaticLightDirtyFlags staticLightDirtyFlags = 0;
 
 	protected Pose worldPose = Pose.Identity;
 
@@ -89,6 +104,10 @@ internal abstract class LightInstance(GraphicsCore _core) : ILightSource
 				shadowCameraInstance = null;
 				DisposeShadowCascades();
 			}
+			else
+			{
+				staticLightDirtyFlags = isStaticLight ? StaticLightDirtyFlags.All : 0;
+			}
 		}
 	}
 
@@ -98,10 +117,6 @@ internal abstract class LightInstance(GraphicsCore _core) : ILightSource
 		protected set => data.shadowMapIdx = value;
 	}
 
-	/// <summary>
-	/// Gets or sets the number of shadow cascades to create and render for this light source.
-	/// Directional and spot lights only. Must be a value between 0 and 4, where 0 disables cascades for this light.
-	/// </summary>
 	public uint ShadowCascades
 	{
 		get => data.shadowCascades;
@@ -118,6 +133,20 @@ internal abstract class LightInstance(GraphicsCore _core) : ILightSource
 		get => data.shadowBias;
 		set => data.shadowBias = Math.Clamp(value, 0, 10);
 	}
+
+	// STATIC SHADOWS:
+
+	public bool IsStaticLight
+	{
+		get => isStaticLight;
+		set
+		{
+			isStaticLight = value;
+			staticLightDirtyFlags = CastShadows && isStaticLight ? StaticLightDirtyFlags.All : 0;
+		}
+	}
+
+	public bool IsStaticLightDirty => isStaticLight && staticLightDirtyFlags != 0;
 
 	// MISC:
 
@@ -143,7 +172,7 @@ internal abstract class LightInstance(GraphicsCore _core) : ILightSource
 
 	private void DisposeShadowCascades()
 	{
-		if (shadowCascades != null)
+		if (shadowCascades is not null)
 		{
 			foreach (ShadowCascadeResources cascade in shadowCascades)
 			{
@@ -151,6 +180,17 @@ internal abstract class LightInstance(GraphicsCore _core) : ILightSource
 			}
 			shadowCascades = null;
 		}
+	}
+
+	/// <summary>
+	/// For static lights (i.e. <see cref="IsStaticLight"/> is true), a redraw of all shadow maps and lighting data is scheduled
+	/// for the next frame. On non-static lights, this does nothing.
+	/// </summary>
+	public void RequestRedrawStaticLighting()
+	{
+		if (IsDisposed || !IsStaticLight) return;
+
+		staticLightDirtyFlags = StaticLightDirtyFlags.All;
 	}
 
 	/// <summary>
@@ -172,7 +212,7 @@ internal abstract class LightInstance(GraphicsCore _core) : ILightSource
 		{
 			return false;
 		}
-		if (_sceneCtx.shadowMapArray.TexDepthMapArray == null || _sceneCtx.shadowMapArray.TexDepthMapArray.IsDisposed)
+		if (_sceneCtx.shadowMapArray.TexDepthMapArray is null || _sceneCtx.shadowMapArray.TexDepthMapArray.IsDisposed)
 		{
 			Logger.LogError("Can't begin drawing shadow map using null shadow map texture array!");
 			return false;
@@ -181,7 +221,7 @@ internal abstract class LightInstance(GraphicsCore _core) : ILightSource
 		ShadowMapIdx = _newShadowMapIdx;
 
 		// Ensure shadow cascades are all ready to go:
-		if (shadowCascades == null || shadowCascades.Length < data.shadowCascades + 1)
+		if (shadowCascades is null || shadowCascades.Length < data.shadowCascades + 1)
 		{
 			DisposeShadowCascades();
 
@@ -198,6 +238,7 @@ internal abstract class LightInstance(GraphicsCore _core) : ILightSource
 			return false;
 		}
 
+		staticLightDirtyFlags &= ~StaticLightDirtyFlags.Frame;
 		return true;
 	}
 
@@ -271,10 +312,25 @@ internal abstract class LightInstance(GraphicsCore _core) : ILightSource
 
 	public bool EndDrawShadowCascade()
 	{
-		return !IsDisposed && shadowCameraInstance != null && shadowCameraInstance.EndDrawing();
+		if (IsDisposed) return false;
+
+		bool success = true;
+
+		if (staticLightDirtyFlags.HasFlag(StaticLightDirtyFlags.Cascades))
+		{
+			success &= shadowCameraInstance is not null && shadowCameraInstance.EndDrawing();
+		}
+		return success;
 	}
 
-	public bool EndDrawShadowMap() => true;
+	public bool EndDrawShadowMap()
+	{
+		// Drop render flags for static lighting mode:
+		staticLightDirtyFlags &= ~StaticLightDirtyFlags.Cascades;
+		staticLightDirtyFlags &= ~StaticLightDirtyFlags.Frame;
+
+		return true;
+	}
 
 	protected abstract bool UpdateShadowMapCameraInstance(float _shadingFocalPointRadius);
 

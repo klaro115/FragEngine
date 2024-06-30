@@ -53,11 +53,14 @@ internal sealed class PointLightInstance : LightInstance
 
     public override LightSourceData GetLightSourceData()
     {
-        data.position = worldPose.position;
+		if (IsStaticLight && staticLightDirtyFlags.HasFlag(StaticLightDirtyFlags.Data)) return data;
+
+		data.position = worldPose.position;
         data.shadowMapIdx = ShadowMapIdx;
 
+		staticLightDirtyFlags &= ~StaticLightDirtyFlags.Data;
         return data;
-    }
+	}
 
     public override bool CheckVisibilityByCamera(in Camera _camera)
     {

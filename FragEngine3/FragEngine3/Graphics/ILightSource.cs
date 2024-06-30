@@ -61,6 +61,18 @@ public interface ILightSource : IDisposable
 	uint ShadowCascades { get; }
 
 	/// <summary>
+	/// Gets whether this is a static light source. Static lights render shadow maps only once (or on demand),
+	/// and then re-use that shadow map for all subsequent frames, drastically reducing shadow rendering overhead.
+	/// </summary>
+	bool IsStaticLight { get; }
+
+	/// <summary>
+	/// For static lights, gets whether this light has a redraw scheduled or in progress. If false, the graphics stack
+	/// may skip issuing any draw calls for shadow maps pertaining to this static light source.
+	/// </summary>
+	bool IsStaticLightDirty { get; }
+
+	/// <summary>
 	/// Gets the graphics core this light source was created with.
 	/// </summary>
 	GraphicsCore GraphicsCore { get; }

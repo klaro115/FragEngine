@@ -43,13 +43,16 @@ internal sealed class DirectionalLightInstance : LightInstance
 
     public override LightSourceData GetLightSourceData()
     {
+        if (IsStaticLight && staticLightDirtyFlags.HasFlag(StaticLightDirtyFlags.Data)) return data;
+
         data.direction = worldPose.Forward;
         data.shadowMapIdx = ShadowMapIdx;
         data.shadowCascades = ShadowCascades;
         data.shadowCascadeRange = LightConstants.directionalLightSize;
 
+		staticLightDirtyFlags &= ~StaticLightDirtyFlags.Data;
         return data;
-    }
+	}
 
     public override bool CheckVisibilityByCamera(in Camera _camera)
     {

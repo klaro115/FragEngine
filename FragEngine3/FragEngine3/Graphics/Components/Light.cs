@@ -121,6 +121,14 @@ namespace FragEngine3.Graphics.Components
 			set => lightInstance.ShadowBias = value;
 		}
 
+		public bool IsStaticLight
+		{
+			get => lightInstance.IsStaticLight;
+			set => lightInstance.IsStaticLight = value;
+		}
+
+		public bool IsStaticLightDirty => lightInstance.IsStaticLightDirty;
+
 		/// <summary>
 		/// Gets the world space position of the light source. Only relevant for point and spot lights.
 		/// </summary>
