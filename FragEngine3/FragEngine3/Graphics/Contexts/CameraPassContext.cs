@@ -41,7 +41,7 @@ public sealed class CameraPassContext(
 	public readonly uint passIdx = _passIdx;
 	public readonly uint lightCountShadowMapped = Math.Min(_lightCountShadowMapped, _lightDataBuffer.Count);
 	public readonly Matrix4x4 mtxWorld2Clip = _mtxWorld2Clip;
-	public readonly OutputDescription outputDesc = _framebuffer.OutputDescription;
+	public readonly OutputDescription outputDesc = _framebuffer is not null ? _framebuffer.OutputDescription : default;
 	public readonly bool mirrorY = _cameraInstance.ProjectionSettings.mirrorY;
 
 	#endregion

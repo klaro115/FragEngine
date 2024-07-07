@@ -219,7 +219,7 @@ namespace FragEngine3.Graphics.Components
 
 		public bool EndDrawShadowMap()
 		{
-			return !IsDisposed;
+			return !IsDisposed && lightInstance.EndDrawShadowMap();
 		}
 
 		/// <summary>

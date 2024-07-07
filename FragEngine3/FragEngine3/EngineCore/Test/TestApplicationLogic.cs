@@ -143,7 +143,7 @@ public sealed class TestApplicationLogic : ApplicationLogic
 		{
 			light.node.WorldPosition = new Vector3(0, 0, -3);
 			light.node.LocalRotation = Quaternion.Identity;
-			//light.node.SetEnabled(false);
+			light.node.SetEnabled(false);
 
 			light.LightIntensity = 10;
 			light.SpotAngleDegrees = 35;

@@ -22,6 +22,7 @@ internal abstract class LightInstance(GraphicsCore _core) : ILightSource
 		Frame			= 2,
 		FirstCascade	= 4,
 
+		All_Drawing		= Frame | FirstCascade,
 		All				= Data | Frame | FirstCascade,
 	}
 
@@ -147,7 +148,7 @@ internal abstract class LightInstance(GraphicsCore _core) : ILightSource
 		}
 	}
 
-	public bool IsStaticLightDirty => isStaticLight && staticLightDirtyFlags != 0;
+	public bool IsStaticLightDirty => isStaticLight && (staticLightDirtyFlags & StaticLightDirtyFlags.All_Drawing) != 0;
 
 	// MISC:
 
@@ -269,6 +270,7 @@ internal abstract class LightInstance(GraphicsCore _core) : ILightSource
 		_cascadeIdx = Math.Min(_cascadeIdx, data.shadowCascades);
 
 		ShadowCascadeResources cascade = shadowCascades![_cascadeIdx];
+		Framebuffer? framebuffer = null;
 
 		bool drawShadowPass = !isStaticLight || staticLightDirtyFlags.HasFlag(StaticLightDirtyFlags.Frame);
 
@@ -295,7 +297,6 @@ internal abstract class LightInstance(GraphicsCore _core) : ILightSource
 			}
 
 			// Draw static lights to local framebuffer first:
-			Framebuffer framebuffer;
 			if (isStaticLight)
 			{
 				staticShadowMapArray!.GetFramebuffer(_cascadeIdx, out framebuffer);
@@ -323,10 +324,27 @@ internal abstract class LightInstance(GraphicsCore _core) : ILightSource
 		// Cached static light:
 		else if (isStaticLight && !staticLightDirtyFlags.HasFlag(StaticLightDirtyFlags.Frame))
 		{
-			//TODO: Copy contents of local targets to shadow map array!
+			uint shadowResolution = staticShadowMapArray!.TexDepthMapArray.Width;
 
-			_outCameraPassCtx = null!;
-			return true;
+			// Copy contents of local targets to shadow map array:
+			CopyShadowTexture(_cmdList, staticShadowMapArray.TexNormalMapArray, _sceneCtx.shadowMapArray.TexNormalMapArray);
+			CopyShadowTexture(_cmdList, staticShadowMapArray.TexDepthMapArray, _sceneCtx.shadowMapArray.TexDepthMapArray);
+
+			_sceneCtx.shadowMapArray.SetShadowProjectionMatrices(ShadowMapIdx + _cascadeIdx, in cascade.mtxShadowWorld2Clip);		//TEMP
+
+
+			// Local helper method for copying texture contents from locally cached shadow targets to scene's shadow map array:
+			void CopyShadowTexture(CommandList _cmdList, Texture _texStaticCached, Texture _texShadowMapArray)
+			{
+				_cmdList.CopyTexture(
+					_texStaticCached,
+					0, 0, 0, 0, 0,
+					_texShadowMapArray,
+					0, 0, 0, 0, ShadowMapIdx + _cascadeIdx,
+					shadowResolution,
+					shadowResolution,
+					1, 1);
+			}
 		}
 
 		// Determine version number for this pass' resources:
@@ -336,7 +354,7 @@ internal abstract class LightInstance(GraphicsCore _core) : ILightSource
 		_outCameraPassCtx = new(
 			shadowCameraInstance!,
 			_cmdList,
-			cascade.ShadowMapFrameBuffer!,
+			framebuffer!,
 			cascade.ShadowResSetCamera!,
 			cascade.ShadowCbCamera!,
 			_sceneCtx.dummyLightDataBuffer,
