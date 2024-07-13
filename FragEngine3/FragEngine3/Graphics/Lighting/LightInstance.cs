@@ -20,10 +20,8 @@ internal abstract class LightInstance(GraphicsCore _core) : ILightSource
 	{
 		Data			= 1,
 		Frame			= 2,
-		FirstCascade	= 4,
 
-		All_Drawing		= Frame | FirstCascade,
-		All				= Data | Frame | FirstCascade,
+		All				= Data | Frame,
 	}
 
 	#endregion
@@ -148,7 +146,7 @@ internal abstract class LightInstance(GraphicsCore _core) : ILightSource
 		}
 	}
 
-	public bool IsStaticLightDirty => isStaticLight && (staticLightDirtyFlags & StaticLightDirtyFlags.All_Drawing) != 0;
+	public bool IsStaticLightDirty => isStaticLight && staticLightDirtyFlags.HasFlag(StaticLightDirtyFlags.Frame);
 
 	// MISC:
 
@@ -330,8 +328,6 @@ internal abstract class LightInstance(GraphicsCore _core) : ILightSource
 			CopyShadowTexture(_cmdList, staticShadowMapArray.TexNormalMapArray, _sceneCtx.shadowMapArray.TexNormalMapArray);
 			CopyShadowTexture(_cmdList, staticShadowMapArray.TexDepthMapArray, _sceneCtx.shadowMapArray.TexDepthMapArray);
 
-			_sceneCtx.shadowMapArray.SetShadowProjectionMatrices(ShadowMapIdx + _cascadeIdx, in cascade.mtxShadowWorld2Clip);		//TEMP
-
 
 			// Local helper method for copying texture contents from locally cached shadow targets to scene's shadow map array:
 			void CopyShadowTexture(CommandList _cmdList, Texture _texStaticCached, Texture _texShadowMapArray)
@@ -364,7 +360,6 @@ internal abstract class LightInstance(GraphicsCore _core) : ILightSource
 			0,
 			in cascade.mtxShadowWorld2Clip);
 
-		staticLightDirtyFlags &= ~StaticLightDirtyFlags.FirstCascade;
 		return true;
 	}
 
@@ -384,7 +379,7 @@ internal abstract class LightInstance(GraphicsCore _core) : ILightSource
 	public bool EndDrawShadowMap()
 	{
 		// Drop render flags for static lighting mode:
-		staticLightDirtyFlags &= ~(StaticLightDirtyFlags.Frame | StaticLightDirtyFlags.FirstCascade);
+		staticLightDirtyFlags &= ~StaticLightDirtyFlags.Frame;
 
 		return true;
 	}

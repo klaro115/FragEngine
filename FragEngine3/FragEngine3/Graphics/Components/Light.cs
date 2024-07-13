@@ -200,8 +200,6 @@ namespace FragEngine3.Graphics.Components
 			bool _rebuildResSetCamera = false,
 			bool _texShadowMapsHasChanged = false)
 		{
-			lightInstance.WorldPose = node.WorldTransformation;			//TODO: Redundant?
-
 			return lightInstance.BeginDrawShadowCascade(
 				in _sceneCtx,
 				in _cmdList,

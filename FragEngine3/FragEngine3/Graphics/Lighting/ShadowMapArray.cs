@@ -374,8 +374,8 @@ public sealed class ShadowMapArray : IDisposable
 	private bool CreateShadowMapSampler()
 	{
 		SamplerDescription samplerDesc = new(
-			SamplerAddressMode.Clamp,
-			SamplerAddressMode.Clamp,
+			SamplerAddressMode.Border,
+			SamplerAddressMode.Border,
 			SamplerAddressMode.Clamp,
 			SamplerFilter.MinLinear_MagLinear_MipPoint,
 			null,
