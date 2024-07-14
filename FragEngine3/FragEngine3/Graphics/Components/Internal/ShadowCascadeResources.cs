@@ -83,7 +83,7 @@ internal sealed class ShadowCascadeResources(LightInstance _light, uint _shadowC
 
 		// Select framebuffer:
 		uint shadowMapArrayIdx = _shadowMapIdx + shadowCascadeIdx;
-		if (!_sceneCtx.shadowMapArray.GetFramebuffer(shadowMapArrayIdx, out Framebuffer framebuffer))
+		if (!_sceneCtx.ShadowMapArray.GetFramebuffer(shadowMapArrayIdx, out Framebuffer framebuffer))
 		{
 			logger.LogError($"Failed to select framebuffer for drawing shadow map {_shadowMapIdx} for cascade {shadowCascadeIdx}!");
 			_outCbCameraChanged = false;
@@ -117,7 +117,7 @@ internal sealed class ShadowCascadeResources(LightInstance _light, uint _shadowC
 			in core,
 			in _sceneCtx,
 			in shadowCbCamera!,
-			in _sceneCtx.dummyLightDataBuffer!,
+			_sceneCtx.DummyLightDataBuffer!,
 			ref shadowResSetCamera,
 			out bool recreatedResSetCamera,
 			_rebuildResSetCamera))

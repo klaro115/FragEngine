@@ -364,7 +364,7 @@ public sealed class StaticMeshRendererInstance : IRenderer
 		if (LastUpdatedForFrameIdx < _cameraPassCtx.FrameIdx)
 		{
 			LastUpdatedForFrameIdx = (int)_cameraPassCtx.FrameIdx;
-			UpdateCBObject(_cameraPassCtx.CmdList, in _sceneCtx.resLayoutObject);
+			UpdateCBObject(_cameraPassCtx.CmdList, _sceneCtx.ResLayoutObject);
 		}
 
 		// Recreate pipeline if necessary:

@@ -457,7 +457,7 @@ public sealed class Camera : Component, IOnNodeDestroyedListener, IOnComponentRe
 		}
 
 		// Determine version number for this pass' resources:
-		ushort cameraResourceVersion = (ushort)(resourceVersion ^ _sceneCtx.sceneResourceVersion);
+		ushort cameraResourceVersion = (ushort)(resourceVersion ^ _sceneCtx.SceneResourceVersion);
 
 		// Assemble context for rendering this pass:
 		_outCameraPassCtx = new()

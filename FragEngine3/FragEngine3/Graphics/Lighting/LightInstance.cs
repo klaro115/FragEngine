@@ -214,7 +214,7 @@ internal abstract class LightInstance(GraphicsCore _core) : ILightSource
 		{
 			return false;
 		}
-		if (_sceneCtx.shadowMapArray.TexDepthMapArray is null || _sceneCtx.shadowMapArray.TexDepthMapArray.IsDisposed)
+		if (_sceneCtx.ShadowMapArray.TexDepthMapArray is null || _sceneCtx.ShadowMapArray.TexDepthMapArray.IsDisposed)
 		{
 			Logger.LogError("Can't begin drawing shadow map using null shadow map texture array!");
 			return false;
@@ -325,8 +325,8 @@ internal abstract class LightInstance(GraphicsCore _core) : ILightSource
 			uint shadowResolution = staticShadowMapArray!.TexDepthMapArray.Width;
 
 			// Copy contents of local targets to shadow map array:
-			CopyShadowTexture(_cmdList, staticShadowMapArray.TexNormalMapArray, _sceneCtx.shadowMapArray.TexNormalMapArray);
-			CopyShadowTexture(_cmdList, staticShadowMapArray.TexDepthMapArray, _sceneCtx.shadowMapArray.TexDepthMapArray);
+			CopyShadowTexture(_cmdList, staticShadowMapArray.TexNormalMapArray, _sceneCtx.ShadowMapArray.TexNormalMapArray);
+			CopyShadowTexture(_cmdList, staticShadowMapArray.TexDepthMapArray, _sceneCtx.ShadowMapArray.TexDepthMapArray);
 
 
 			// Local helper method for copying texture contents from locally cached shadow targets to scene's shadow map array:
@@ -344,7 +344,7 @@ internal abstract class LightInstance(GraphicsCore _core) : ILightSource
 		}
 
 		// Determine version number for this pass' resources:
-		ushort cameraResourceVersion = (ushort)(cascade.resourceVersion ^ _sceneCtx.sceneResourceVersion);
+		ushort cameraResourceVersion = (ushort)(cascade.resourceVersion ^ _sceneCtx.SceneResourceVersion);
 
 		// Assemble context object for renderers to reference when issuing draw calls:
 		_outCameraPassCtx = new()
@@ -354,7 +354,7 @@ internal abstract class LightInstance(GraphicsCore _core) : ILightSource
 			Framebuffer = framebuffer!,
 			ResSetCamera = cascade.ShadowResSetCamera!,
 			CbCamera = cascade.ShadowCbCamera!,
-			LightDataBuffer = _sceneCtx.dummyLightDataBuffer,
+			LightDataBuffer = _sceneCtx.DummyLightDataBuffer,
 			CameraResourceVersion = cameraResourceVersion,
 			FrameIdx = 0,
 			PassIdx = ShadowMapIdx,

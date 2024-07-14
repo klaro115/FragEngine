@@ -474,8 +474,8 @@ public class Material(GraphicsCore _core, ResourceHandle _handle) : Resource(_ha
 			}
 
 			ResourceLayout[] resourceLayouts = boundResourceLayout != null
-				? [ _sceneCtx.resLayoutCamera, _sceneCtx.resLayoutObject, boundResourceLayout ]
-				: [ _sceneCtx.resLayoutCamera, _sceneCtx.resLayoutObject ];
+				? [ _sceneCtx.ResLayoutCamera, _sceneCtx.ResLayoutObject, boundResourceLayout ]
+				: [ _sceneCtx.ResLayoutCamera, _sceneCtx.ResLayoutObject ];
 
 			GraphicsPipelineDescription pipelineDesc = new(
 				BlendStateDescription.SingleAlphaBlend,

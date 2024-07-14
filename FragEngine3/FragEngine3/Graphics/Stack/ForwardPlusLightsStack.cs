@@ -413,16 +413,16 @@ public sealed class ForwardPlusLightsStack(GraphicsCore _core) : IGraphicsStack	
 		// Recreate updated scene context if values changed between passes:
 		if (shadowMapLightCount != sceneCtx.lightCountShadowMapped)
 		{
-			sceneCtx = new(
-				Scene,
-				resLayoutCamera!,
-				resLayoutObject!,
-				cbScene!,
-				dummyLightDataBuffer!,
-				shadowMapArray!,
-				sceneResourceVersion,
-				sceneCtx.lightCount,
-				shadowMapLightCount);
+			sceneCtx = new(sceneCtx.lightCount, shadowMapLightCount)
+			{
+				Scene = Scene,
+				ResLayoutCamera = resLayoutCamera!,
+				ResLayoutObject = resLayoutObject!,
+				CbScene = cbScene!,
+				DummyLightDataBuffer = dummyLightDataBuffer!,
+				ShadowMapArray = shadowMapArray!,
+				SceneResourceVersion = sceneResourceVersion,
+			};
 		}
 
 		// Draw each active camera component in the scene, and composite output:
@@ -554,17 +554,16 @@ public sealed class ForwardPlusLightsStack(GraphicsCore _core) : IGraphicsStack	
 			return false;
 		}
 
-		_outSceneCtx = new(
-			Scene,
-			resLayoutCamera!,
-			resLayoutObject!,
-			cbScene!,
-			dummyLightDataBuffer!,
-			shadowMapArray!,
-			sceneResourceVersion,
-			(uint)activeLights.Count,
-			(uint)activeLightsShadowMapped.Count);
-
+		_outSceneCtx = new((uint)activeLights.Count, (uint)activeLightsShadowMapped.Count)
+		{
+			Scene = Scene,
+			ResLayoutCamera = resLayoutCamera!,
+			ResLayoutObject = resLayoutObject!,
+			CbScene = cbScene!,
+			DummyLightDataBuffer = dummyLightDataBuffer!,
+			ShadowMapArray = shadowMapArray!,
+			SceneResourceVersion = sceneResourceVersion,
+		};
 		return true;
 	}
 
