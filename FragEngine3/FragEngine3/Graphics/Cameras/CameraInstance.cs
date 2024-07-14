@@ -86,7 +86,7 @@ public sealed class CameraInstance : IDisposable
 		};
 		set
 		{
-			if (value.mtxWorld != null)
+			if (value.mtxWorld is not null)
 			{
 				mtxWorld = value.mtxWorld.Value;
 				MarkDirty(DirtyFlags.Transformation);
@@ -155,6 +155,9 @@ public sealed class CameraInstance : IDisposable
 		}
 	}
 
+	/// <summary>
+	/// Marks all of the camera's settings and resources as dirty, to force them updating prior to the next draw call.
+	/// </summary>
 	public void MarkDirty()
 	{
 		dirtyFlags = DirtyFlags.All;
@@ -173,7 +176,7 @@ public sealed class CameraInstance : IDisposable
 			return false;
 		}
 
-		if (_forceRecreate || framebuffer == null || framebuffer.IsDisposed)
+		if (_forceRecreate || framebuffer is null || framebuffer.IsDisposed)
 		{
 			if (!hasOwnershipOfFramebuffer)
 			{
@@ -201,6 +204,14 @@ public sealed class CameraInstance : IDisposable
 		return true;
 	}
 
+	/// <summary>
+	/// Assign a set of render targets to this camera via a framebuffer that is not owned by the camera instance.
+	/// This can be used to draw multiple render passes to different textures for compositing, or to just keep ownership of the render targets elsewhere.
+	/// </summary>
+	/// <param name="_newOverrideFramebuffer">A framebuffer that shall be drawn to. If null, any previously assigned override framebuffer will unset.</param>
+	/// <param name="_adjustParamsIfOverrideMismatched">Whether to allow and adjust camera settings to the new framebuffer. If true, the output of the camera
+	/// will be changed to support the override target, if false, attempting to assign an incompatible override target will fail and an error thrown.</param>
+	/// <returns>True if the new framebuffer was set, or if the previous render targets were dropped, false on failure to assign the override target.</returns>
 	public bool SetOverrideFramebuffer(Framebuffer? _newOverrideFramebuffer, bool _adjustParamsIfOverrideMismatched)
 	{
 		if (IsDisposed)
@@ -215,7 +226,7 @@ public sealed class CameraInstance : IDisposable
 		}
 
 		// If null, reset override and draw to own targets instead:
-		if (_newOverrideFramebuffer == null || _newOverrideFramebuffer == framebuffer)
+		if (_newOverrideFramebuffer is null || _newOverrideFramebuffer == framebuffer)
 		{
 			overrideFramebuffer = null;
 			return true;
@@ -244,14 +255,31 @@ public sealed class CameraInstance : IDisposable
 		return true;
 	}
 
+	/// <summary>
+	/// Checks whether a given framebuffer if compatible with the camera's current settings.
+	/// </summary>
+	/// <param name="_framebuffer">A set of render targets that shall be checked against the instance's settings.</param>
+	/// <returns>True if the given framebuffer may be used by this camera instance as-is, false otherwise.</returns>
 	public bool IsFramebufferCompatible(in Framebuffer _framebuffer)
 	{
 		return !output.HaveSettingsChanged(in _framebuffer);
 	}
 
+	/// <summary>
+	/// Begin rendering using this camera. This will bind the camera instance's framebuffer and projection setting to the graphics pipeline for all subsequent draw calls.
+	/// </summary>
+	/// <param name="_cmdList">A command list through which subsequent draw calls will be issued.</param>
+	/// <param name="_clearRenderTargets">Whether to clear the current framebuffer's target textures (color and depth) before draw calls are issued.<para/>
+	/// NOTE: Color targets will only be cleared if <see cref="CameraClearing.clearColor"/> is true, and depth targets will only be cleared if <see cref="CameraClearing.clearDepth"/>
+	/// is true. This parameter merely serves as an override to disable all clearing for an upcoming batch of draw calls. When in doubt, set this to true.</param>
+	/// <param name="_allowRecalculateMatrices">Whether to recalculate projection matrices for the upcoming batch of draw calls. If false, matrix values that were calculated
+	/// in previous passes and frames will be reused. This should be true for the very first pass rendered with this camera instance, at the very least. If no settings have changed
+	/// and no we're rendering multiple passes from a same viewpoint, this may be set to false, to skip unnecessary recalculations.</param>
+	/// <param name="_outMtxWorld2Clip">Outputs the projection matrix that will be used throughout the upcoming batch of draw calls. Transforms from world space to clip space.</param>
+	/// <returns>True if a render pass using this camera instance was successfully started, false otherwise.</returns>
 	public bool BeginDrawing(CommandList _cmdList, bool _clearRenderTargets, bool _allowRecalculateMatrices, out Matrix4x4 _outMtxWorld2Clip)
 	{
-		if (_cmdList == null || _cmdList.IsDisposed)
+		if (_cmdList is null || _cmdList.IsDisposed)
 		{
 			Logger.LogError("Cannot begin frame on camera instance using null or disposed command list!");
 			_outMtxWorld2Clip = Matrix4x4.Identity;

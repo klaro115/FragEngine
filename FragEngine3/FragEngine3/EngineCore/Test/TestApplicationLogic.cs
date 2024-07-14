@@ -130,7 +130,7 @@ public sealed class TestApplicationLogic : ApplicationLogic
 
 			light.LightIntensity = 0.5f;
 			light.CastShadows = true;
-			light.ShadowCascades = 2;
+			light.ShadowCascades = 1;
 		}
 		if (SceneSpawner.CreateLight(scene, LightType.Directional, out light))
 		{

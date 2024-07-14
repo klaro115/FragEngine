@@ -672,7 +672,7 @@ public sealed class ForwardPlusLightsStack(GraphicsCore _core) : IGraphicsStack	
 					result &= light.EndDrawShadowCascade();
 
 					// Store projection matrix for later scene rendering calls:
-					shadowMapArray!.SetShadowProjectionMatrices((uint)shadowMapArrayIdx++, lightCtx.mtxWorld2Clip);
+					shadowMapArray!.SetShadowProjectionMatrices((uint)shadowMapArrayIdx++, lightCtx.MtxWorld2Clip);
 				}
 
 				result &= light.EndDrawShadowMap();

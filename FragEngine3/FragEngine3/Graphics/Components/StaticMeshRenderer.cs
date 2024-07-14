@@ -114,7 +114,7 @@ public sealed class StaticMeshRenderer : Component, IRenderer
 	{
 		if (!IsVisible) return true;
 
-		if (instance.LastUpdatedForFrameIdx != _cameraPassCtx.frameIdx)
+		if (instance.LastUpdatedForFrameIdx != _cameraPassCtx.FrameIdx)
 		{
 			instance.SetWorldPose(node.WorldTransformation);
 		}
@@ -125,7 +125,7 @@ public sealed class StaticMeshRenderer : Component, IRenderer
 	{
 		if (!IsVisible) return true;
 
-		if (instance.LastUpdatedForFrameIdx != _cameraPassCtx.frameIdx)
+		if (instance.LastUpdatedForFrameIdx != _cameraPassCtx.FrameIdx)
 		{
 			instance.SetWorldPose(node.WorldTransformation);
 		}

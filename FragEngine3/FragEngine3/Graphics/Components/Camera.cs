@@ -460,18 +460,22 @@ public sealed class Camera : Component, IOnNodeDestroyedListener, IOnComponentRe
 		ushort cameraResourceVersion = (ushort)(resourceVersion ^ _sceneCtx.sceneResourceVersion);
 
 		// Assemble context for rendering this pass:
-		_outCameraPassCtx = new(
-			instance,
-			_cmdList,
-			activeFramebuffer,
-			passResources.resSetCamera!,
-			passResources.cbCamera,
-			LightDataBuffer!,
-			cameraResourceVersion,
-			FrameCounter,
-			PassCounter,
-			_shadowMappedLightCount,
-			in mtxWorld2Clip);
+		_outCameraPassCtx = new()
+		{
+			CameraInstance = instance,
+			CmdList = _cmdList,
+			Framebuffer = activeFramebuffer,
+			ResSetCamera = passResources.resSetCamera!,
+			CbCamera = passResources.cbCamera,
+			LightDataBuffer = LightDataBuffer!,
+			CameraResourceVersion = cameraResourceVersion,
+			FrameIdx = FrameCounter,
+			PassIdx = PassCounter,
+			LightCountShadowMapped = _shadowMappedLightCount,
+			MtxWorld2Clip = mtxWorld2Clip,
+			OutputDesc = activeFramebuffer.OutputDescription,
+			MirrorY = instance.ProjectionSettings.mirrorY,
+		};
 
 		return true;
 	}

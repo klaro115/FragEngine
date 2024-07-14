@@ -347,18 +347,22 @@ internal abstract class LightInstance(GraphicsCore _core) : ILightSource
 		ushort cameraResourceVersion = (ushort)(cascade.resourceVersion ^ _sceneCtx.sceneResourceVersion);
 
 		// Assemble context object for renderers to reference when issuing draw calls:
-		_outCameraPassCtx = new(
-			shadowCameraInstance!,
-			_cmdList,
-			framebuffer!,
-			cascade.ShadowResSetCamera!,
-			cascade.ShadowCbCamera!,
-			_sceneCtx.dummyLightDataBuffer,
-			cameraResourceVersion,
-			0,
-			ShadowMapIdx,
-			0,
-			in cascade.mtxShadowWorld2Clip);
+		_outCameraPassCtx = new()
+		{
+			CameraInstance = shadowCameraInstance!,
+			CmdList = _cmdList,
+			Framebuffer = framebuffer!,
+			ResSetCamera = cascade.ShadowResSetCamera!,
+			CbCamera = cascade.ShadowCbCamera!,
+			LightDataBuffer = _sceneCtx.dummyLightDataBuffer,
+			CameraResourceVersion = cameraResourceVersion,
+			FrameIdx = 0,
+			PassIdx = ShadowMapIdx,
+			LightCountShadowMapped = 0,
+			MtxWorld2Clip = cascade.mtxShadowWorld2Clip,
+			OutputDesc = framebuffer is not null ? framebuffer.OutputDescription : default,
+			MirrorY = shadowCameraInstance!.ProjectionSettings.mirrorY,
+		};
 
 		return true;
 	}

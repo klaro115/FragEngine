@@ -66,7 +66,13 @@ public enum RenderMode : int
 /// </summary>
 public enum CameraProjectionType
 {
+	/// <summary>
+	/// Orthographic camera projection, where light rays reaching the camera all travel in parallel.
+	/// </summary>
 	Orthographic = 0,
+	/// <summary>
+	/// Perspective camera projection, where light rays reaching the camera all converge in the camera's position.
+	/// </summary>
 	Perspective
 }
 
