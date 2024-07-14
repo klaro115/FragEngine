@@ -78,7 +78,12 @@ internal sealed class SpotLightInstance : LightInstance
         return true;
     }
 
-    protected override Matrix4x4 RecalculateShadowProjectionMatrix(Vector3 _shadingFocalPoint, uint _cascadeIdx)
+	public override bool CheckIsRendererInRange(in IPhysicalRenderer _renderer)
+	{
+		return true;    //TODO
+	}
+
+	protected override Matrix4x4 RecalculateShadowProjectionMatrix(Vector3 _shadingFocalPoint, uint _cascadeIdx)
     {
         // Transform from a world space position, to the light's local space, to perspective projection clip space:
         if (!Matrix4x4.Invert(worldPose.Matrix, out Matrix4x4 mtxWorld2Local))

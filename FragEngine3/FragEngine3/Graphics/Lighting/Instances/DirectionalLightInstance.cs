@@ -1,9 +1,9 @@
-﻿using FragEngine3.Graphics.Components.Data;
-using FragEngine3.Graphics.Components;
+﻿using FragEngine3.Graphics.Components;
+using FragEngine3.Graphics.Components.Data;
+using FragEngine3.Graphics.Lighting.Data;
 using FragEngine3.Graphics.Utility;
 using FragEngine3.Scenes;
 using System.Numerics;
-using FragEngine3.Graphics.Lighting.Data;
 
 namespace FragEngine3.Graphics.Lighting.Instances;
 
@@ -59,7 +59,12 @@ internal sealed class DirectionalLightInstance : LightInstance
         return true;
     }
 
-    protected override Matrix4x4 RecalculateShadowProjectionMatrix(Vector3 _shadingFocalPoint, uint _cascadeIdx)
+	public override bool CheckIsRendererInRange(in IPhysicalRenderer _renderer)
+	{
+        return true;
+	}
+
+	protected override Matrix4x4 RecalculateShadowProjectionMatrix(Vector3 _shadingFocalPoint, uint _cascadeIdx)
     {
         float maxRange = LightConstants.directionalLightSize * Math.Max(MathF.Pow(2, ShadowCascades), 1);
         float maxDirectionalRange = LightConstants.directionalLightSize * MathF.Floor(MathF.Pow(2, _cascadeIdx));
@@ -142,5 +147,5 @@ internal sealed class DirectionalLightInstance : LightInstance
         return true;
     }
 
-    #endregion
+	#endregion
 }

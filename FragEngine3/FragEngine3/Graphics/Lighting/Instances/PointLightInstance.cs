@@ -67,7 +67,12 @@ internal sealed class PointLightInstance : LightInstance
         return true;
     }
 
-    protected override Matrix4x4 RecalculateShadowProjectionMatrix(Vector3 _shadingFocalPoint, uint _cascadeIdx)
+	public override bool CheckIsRendererInRange(in IPhysicalRenderer _renderer)
+	{
+		return true;    //TODO
+	}
+
+	protected override Matrix4x4 RecalculateShadowProjectionMatrix(Vector3 _shadingFocalPoint, uint _cascadeIdx)
     {
         // NOTE: Not supported at this time, as there is no linear way of evenly projecting a sphere surface to a square framebuffer.
         // Yes, I know that cubemaps exist, but I kind of don't feel like doing that just yet. Might repurpose cascade-like mapping for it though...

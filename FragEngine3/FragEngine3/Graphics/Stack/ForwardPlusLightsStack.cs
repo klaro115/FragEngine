@@ -621,6 +621,8 @@ public sealed class ForwardPlusLightsStack(GraphicsCore _core) : IGraphicsStack	
 
 		int shadowMappedLightCount = Math.Min(activeLightsShadowMapped.Count, (int)_maxActiveLightCount);
 
+		List<IRenderer> filteredShadowCasters = new(activeShadowCasters.Count);
+
 		try
 		{
 			bool result = true;
@@ -638,7 +640,28 @@ public sealed class ForwardPlusLightsStack(GraphicsCore _core) : IGraphicsStack	
 
 				if (!result) break;
 
-				//TODO [later]: Exclude renderers that are entirely outside of point/spot lights' maximum range.
+				// Draw renderers only for non-static or dirty lights:
+				bool redrawShadowMap = !light.IsStaticLight || light.IsStaticLightDirty;
+
+				// Exclude renderers that are entirely outside of point/spot lights' maximum range:
+				if (redrawShadowMap)
+				{
+					filteredShadowCasters.Clear();
+					foreach (IRenderer renderer in activeShadowCasters)
+					{
+						if (renderer is IPhysicalRenderer physicalRenderer)
+						{
+							if (light.CheckIsRendererInRange(in physicalRenderer))
+							{
+								filteredShadowCasters.Add(renderer);
+							}
+						}
+						else
+						{
+							filteredShadowCasters.Add(renderer);
+						}
+					}
+				}
 
 				// Render shadow cascades one at after the other:
 				uint shadowCascadeCount = light.ShadowCascades + 1;
@@ -655,11 +678,10 @@ public sealed class ForwardPlusLightsStack(GraphicsCore _core) : IGraphicsStack	
 						_rebuildResSetCamera,
 						_texShadowsHasChanged);
 
-					// Draw renderers only for non-static or dirty lights:
-					if (!light.IsStaticLight || light.IsStaticLightDirty)
+					if (redrawShadowMap)
 					{
 						// Draw renderers for opaque and tranparent geometry, ignore UI:
-						foreach (IRenderer renderer in activeShadowCasters)
+						foreach (IRenderer renderer in filteredShadowCasters)
 						{
 							if ((light.LayerMask & renderer.LayerFlags) != 0)
 							{

@@ -393,6 +393,7 @@ internal abstract class LightInstance(GraphicsCore _core) : ILightSource
 	protected abstract Matrix4x4 RecalculateShadowProjectionMatrix(Vector3 _shadingFocalPoint, uint _cascadeIdx);
 
 	public abstract bool CheckVisibilityByCamera(in Camera _camera);
+	public abstract bool CheckIsRendererInRange(in IPhysicalRenderer _renderer);
 
 	public abstract bool LoadFromData(in LightData _lightData);
 	public abstract bool SaveToData(out LightData _outLightData);

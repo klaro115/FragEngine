@@ -103,8 +103,15 @@ public interface ILightSource : IDisposable
 	/// Check whether light emitted by this light source has any chance of being seen by a given camera.
 	/// </summary>
 	/// <param name="_camera">The camera whose pixels may or may not be illuminated by this light source.</param>
-	/// <returns>True if this instance's light could possible be seen by the camera, false otherwise.</returns>
+	/// <returns>True if this instance's light could possibly be seen by the camera, false otherwise.</returns>
 	bool CheckVisibilityByCamera(in Camera _camera);
+
+	/// <summary>
+	/// Check whether light emitted by this light source has any chance of reaching a given renderer.
+	/// </summary>
+	/// <param name="_renderer">The renderer that may or may not be in range of the light source.</param>
+	/// <returns>True if this instance's light could possibly illuminate the renderer, false otherwise.</returns>
+	bool CheckIsRendererInRange(in IPhysicalRenderer _renderer);
 
 	public static int CompareLightsForSorting(ILightSource _a, ILightSource _b)
 	{

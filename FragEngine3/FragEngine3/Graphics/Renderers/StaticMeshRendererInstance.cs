@@ -11,7 +11,7 @@ using Veldrid;
 
 namespace FragEngine3.Graphics.Renderers;
 
-public sealed class StaticMeshRendererInstance : IRenderer
+public sealed class StaticMeshRendererInstance : IPhysicalRenderer
 {
 
 	#region Constructors
@@ -83,6 +83,9 @@ public sealed class StaticMeshRendererInstance : IRenderer
 	public int LastUpdatedForFrameIdx { get; private set; } = -1;
 	public RenderMode RenderMode => materialScene is not null ? materialScene.RenderMode : RenderMode.Opaque;
 	public uint LayerFlags { get; set; } = 1;
+
+	public Vector3 VisualCenterPoint => worldPose.position;
+	public float BoundingRadius => mesh is not null ? worldPose.scale.X * mesh.BoundingRadius : 0;
 
 	public Logger Logger => graphicsCore.graphicsSystem.engine.Logger ?? Logger.Instance!;
 

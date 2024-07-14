@@ -12,7 +12,7 @@ using Veldrid;
 
 namespace FragEngine3.Graphics.Components
 {
-    public sealed class Light : Component, ILightSource, IOnNodeDestroyedListener, IOnComponentRemovedListener			//TODO: Consider splitting this into different components based on type.
+	public sealed class Light : Component, ILightSource, IOnNodeDestroyedListener, IOnComponentRemovedListener			//TODO: Consider splitting this into different components based on type.
 	{
 		#region Constructors
 
@@ -226,6 +226,8 @@ namespace FragEngine3.Graphics.Components
 		/// <param name="_camera">The camera whose pixels may or may not be illuminated by this light source.</param>
 		/// <returns>True if this instance's light could possible be seen by the camera, false otherwise.</returns>
 		public bool CheckVisibilityByCamera(in Camera _camera) => lightInstance.CheckVisibilityByCamera(_camera);
+
+		public bool CheckIsRendererInRange(in IPhysicalRenderer _renderer) => lightInstance.CheckIsRendererInRange(_renderer);
 
 		public override bool LoadFromData(in ComponentData _componentData, in Dictionary<int, ISceneElement> _idDataMap)
 		{
