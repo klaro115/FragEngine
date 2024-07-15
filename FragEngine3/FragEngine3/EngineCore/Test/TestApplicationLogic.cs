@@ -141,6 +141,7 @@ public sealed class TestApplicationLogic : ApplicationLogic
 		// Create a spot light:
 		if (SceneSpawner.CreateLight(scene, LightType.Spot, out light))
 		{
+			light.node.Name = "Spotlight";
 			light.node.WorldPosition = new Vector3(0, 0, -3);
 			light.node.LocalRotation = Quaternion.Identity;
 			light.node.SetEnabled(false);

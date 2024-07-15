@@ -80,7 +80,9 @@ internal sealed class SpotLightInstance : LightInstance
 
 	public override bool CheckIsRendererInRange(in IPhysicalRenderer _renderer)
 	{
-		return true;    //TODO
+		float maxEffectRange = MaxLightRange + _renderer.BoundingRadius;
+		float lightDistSq = Vector3.DistanceSquared(_renderer.VisualCenterPoint, worldPose.position);
+		return lightDistSq < maxEffectRange * maxEffectRange;
 	}
 
 	protected override Matrix4x4 RecalculateShadowProjectionMatrix(Vector3 _shadingFocalPoint, uint _cascadeIdx)
