@@ -349,12 +349,12 @@ public sealed class ForwardPlusLightsStack(GraphicsCore _core) : IGraphicsStack	
 			Logger.LogError("Cannot draw graphics stack for null or mismatched scene!");
 			return false;
 		}
-		if (_renderers == null)
+		if (_renderers is null)
 		{
 			Logger.LogError("Cannot draw graphics stack for null list of node-renderers pairs!");
 			return false;
 		}
-		if (_cameras == null)
+		if (_cameras is null)
 		{
 			Logger.LogError("Cannot draw graphics stack using null camera list!");
 			return false;
@@ -627,7 +627,7 @@ public sealed class ForwardPlusLightsStack(GraphicsCore _core) : IGraphicsStack	
 		{
 			bool result = true;
 			int i = 0;
-			int shadowMapArrayIdx = 0;
+			uint shadowMapArrayIdx = 0;
 
 			while (i < shadowMappedLightCount && result)
 			{
@@ -693,7 +693,7 @@ public sealed class ForwardPlusLightsStack(GraphicsCore _core) : IGraphicsStack	
 					result &= light.EndDrawShadowCascade();
 
 					// Store projection matrix for later scene rendering calls:
-					shadowMapArray!.SetShadowProjectionMatrices((uint)shadowMapArrayIdx++, lightCtx.MtxWorld2Clip);
+					shadowMapArray!.SetShadowProjectionMatrices(shadowMapArrayIdx++, lightCtx.MtxWorld2Clip);
 				}
 
 				result &= light.EndDrawShadowMap();
@@ -906,7 +906,7 @@ public sealed class ForwardPlusLightsStack(GraphicsCore _core) : IGraphicsStack	
 		out Framebuffer _outResultFramebuffer)
 	{
 		// if post-processing stack is unavailable, try continuing with unchanged input framebuffer:
-		if (_postProcessingStack == null || _postProcessingStack.IsDisposed)
+		if (_postProcessingStack is null || _postProcessingStack.IsDisposed)
 		{
 			_outResultFramebuffer = _inputFramebuffer;
 			return true;
@@ -954,7 +954,7 @@ public sealed class ForwardPlusLightsStack(GraphicsCore _core) : IGraphicsStack	
 			_outSceneFramebuffer = null!;
 			return false;
 		}
-		if (compositeSceneRenderer == null || compositeSceneRenderer.IsDisposed)
+		if (compositeSceneRenderer is null || compositeSceneRenderer.IsDisposed)
 		{
 			_outSceneFramebuffer = null!;
 			return false;
@@ -985,7 +985,7 @@ public sealed class ForwardPlusLightsStack(GraphicsCore _core) : IGraphicsStack	
 
 		// Create resource set containing all render targets that were previously drawn to:
 		ResourceLayout resourceLayout = compositionMaterial.BoundResourceLayout!;
-		if (resourceLayout != null && (compositeSceneResourceSet == null || compositeSceneResourceSet.IsDisposed))
+		if (resourceLayout is not null && (compositeSceneResourceSet is null || compositeSceneResourceSet.IsDisposed))
 		{
 			success &= _camera.GetOrCreateCameraTarget(RenderMode.Opaque, out CameraTarget? opaqueTarget);
 			success &= _camera.GetOrCreateCameraTarget(RenderMode.Transparent, out CameraTarget? transparentTarget);
@@ -1019,7 +1019,7 @@ public sealed class ForwardPlusLightsStack(GraphicsCore _core) : IGraphicsStack	
 		}
 
 		// Bind render targets:
-		if (compositeSceneResourceSet != null && !compositeSceneRenderer.SetOverrideBoundResourceSet(compositeSceneResourceSet))
+		if (compositeSceneResourceSet is not null && !compositeSceneRenderer.SetOverrideBoundResourceSet(compositeSceneResourceSet))
 		{
 			Logger.LogError("Failed to override bound resource set for graphics stack's scene composition pass!");
 			return false;
@@ -1052,7 +1052,7 @@ public sealed class ForwardPlusLightsStack(GraphicsCore _core) : IGraphicsStack	
 			_outFinalFramebuffer = null!;
 			return false;
 		}
-		if (compositeUIRenderer == null || compositeUIRenderer.IsDisposed)
+		if (compositeUIRenderer is null || compositeUIRenderer.IsDisposed)
 		{
 			_outFinalFramebuffer = null!;
 			return false;
@@ -1102,7 +1102,7 @@ public sealed class ForwardPlusLightsStack(GraphicsCore _core) : IGraphicsStack	
 
 		// Create resource set containing all render targets that were previously drawn to:
 		ResourceLayout resourceLayout = compositionMaterial.BoundResourceLayout!;
-		if (resourceLayout != null && (compositeUIResourceSet == null || compositeUIResourceSet.IsDisposed))
+		if (resourceLayout is not null && (compositeUIResourceSet is null || compositeUIResourceSet.IsDisposed))
 		{
 			success &= _camera.GetOrCreateCameraTarget(RenderMode.UI, out CameraTarget? uiTarget);
 			if (!success)
@@ -1134,7 +1134,7 @@ public sealed class ForwardPlusLightsStack(GraphicsCore _core) : IGraphicsStack	
 		}
 
 		// Bind render targets:
-		if (compositeUIResourceSet != null && !compositeUIRenderer.SetOverrideBoundResourceSet(compositeUIResourceSet))
+		if (compositeUIResourceSet is not null && !compositeUIRenderer.SetOverrideBoundResourceSet(compositeUIResourceSet))
 		{
 			Logger.LogError("Failed to override bound resource set for graphics stack's UI composition pass!");
 			return false;
