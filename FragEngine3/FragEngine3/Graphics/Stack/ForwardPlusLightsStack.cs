@@ -796,7 +796,7 @@ public sealed class ForwardPlusLightsStack(GraphicsCore _core) : IGraphicsStack	
 				}
 
 				// Post-processing on scene render:
-				if (result && postProcessingStackScene != null)
+				if (result && postProcessingStackScene is not null)
 				{
 					result &= DrawPostProcessingStack(
 						in _sceneCtx,
@@ -824,7 +824,7 @@ public sealed class ForwardPlusLightsStack(GraphicsCore _core) : IGraphicsStack	
 				}
 				
 				// Post-processing on final image:
-				if (result && postProcessingStackFinal != null)
+				if (result && postProcessingStackFinal is not null)
 				{
 					result &= DrawPostProcessingStack(
 						in _sceneCtx,

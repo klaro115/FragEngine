@@ -30,10 +30,6 @@ public abstract class GraphicsCore : IDisposable
 	public readonly GraphicsSystem graphicsSystem;
 	protected readonly EngineConfig config;
 
-	public PixelFormat DefaultColorTargetPixelFormat { get; protected set; } = PixelFormat.R8_G8_B8_A8_UNorm;
-	public PixelFormat DefaultDepthTargetPixelFormat { get; protected set; } = PixelFormat.D24_UNorm_S8_UInt;
-	public PixelFormat DefaultShadowMapDepthTargetFormat { get; protected set; } = PixelFormat.D24_UNorm_S8_UInt;
-
 	protected readonly List<CommandList> cmdListQueue = new(1);
 
 	protected CommandList? blittingCmdList = null;
@@ -54,6 +50,10 @@ public abstract class GraphicsCore : IDisposable
 	public CommandList MainCommandList { get; protected set; } = null!;
 	public ResourceFactory MainFactory { get; protected set; } = null!;
 	public SamplerManager SamplerManager { get; protected set; } = null!;
+
+	public PixelFormat DefaultColorTargetPixelFormat { get; protected set; } = PixelFormat.R8_G8_B8_A8_UNorm;
+	public PixelFormat DefaultDepthTargetPixelFormat { get; protected set; } = PixelFormat.D24_UNorm_S8_UInt;
+	public PixelFormat DefaultShadowMapDepthTargetFormat { get; protected set; } = PixelFormat.D24_UNorm_S8_UInt;
 
 	public abstract EnginePlatformFlag ApiPlatformFlag { get; }
 	public abstract bool DefaultMirrorY { get; }
@@ -153,6 +153,12 @@ public abstract class GraphicsCore : IDisposable
 	/// <returns>A read-only descriptor of device/framework capabilities.</returns>
 	public abstract GraphicsCapabilities GetCapabilities();
 
+	/// <summary>
+	/// Creates a new command list.
+	/// </summary>
+	/// <param name="_outCmdList">Outputs the newly created command list, or null, if creation failed.</param>
+	/// <param name="_cmdListDesc">An optional description of the command list. If null, a default command list for rasterized graphics is created.</param>
+	/// <returns>True if a command list was created successfully, false otherwise.</returns>
 	public bool CreateCommandList(out CommandList? _outCmdList, CommandListDescription? _cmdListDesc = null)
 	{
 		if (!IsInitialized)
@@ -164,10 +170,10 @@ public abstract class GraphicsCore : IDisposable
 
 		try
 		{
-			_outCmdList = _cmdListDesc != null
+			_outCmdList = _cmdListDesc is not null
 				? Device.ResourceFactory.CreateCommandList(_cmdListDesc.Value)
 				: Device.ResourceFactory.CreateCommandList();
-			return _outCmdList != null && !_outCmdList.IsDisposed;
+			return _outCmdList is not null && !_outCmdList.IsDisposed;
 		}
 		catch (Exception ex)
 		{
@@ -177,6 +183,12 @@ public abstract class GraphicsCore : IDisposable
 		}
 	}
 
+	/// <summary>
+	/// Submit a completed command list for rendering.
+	/// </summary>
+	/// <param name="_cmdList">The command list you wish to commit for the next frame.
+	/// <see cref="CommandList.End"/> must have been called on the command list before committing it.</param>
+	/// <returns>True if the command list was accepted and queued up for execution, false otherwise.</returns>
 	public bool CommitCommandList(CommandList _cmdList)
 	{
 		if (!IsInitialized)
