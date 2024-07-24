@@ -5,18 +5,25 @@ The engine is designed to be open-source, and available for both free and commer
 
 <h3>Table of Contents:</h3>
 
+- [Development State](#development-state)
 - [Dependencies](#dependencies)
+- [Architecture](#architecture)
 - [Assets](#assets)
     - [Resource Files](#resource-files)
     - [Shaders \& Graphics](#shaders--graphics)
-- [Architecture](#architecture)
 - [Platforms](#platforms)
     - [Windows](#windows)
     - [Linux](#linux)
     - [Apple](#apple)
+    - [Mobile (iOS/Android)](#mobile-iosandroid)
 - [Work In Progress](#work-in-progress)
 - [Roadmap](#roadmap)
 
+<br>
+
+
+## Development State
+The engine is in active development and is not yet in a usable state for game development. The graphics system is presently the main focal point, with basic asset support a close second. Once graphics have been polished to a serviceable level, work will shift towards creating a UI system. Only after these main systems enter a functional state should the engine be considered for use in any kind of software development.
 <br>
 
 
@@ -27,6 +34,13 @@ As much of the code and functionality as possible are written custom for this pr
 The main dependency at this time is [Veldrid](https://veldrid.dev/), a cross-platform wrapper for graphics APIs, which is used as the basis for the engine's graphics, input, and window management modules.
 
 Beyond that, the [Magick.NET](https://github.com/dlemstra/Magick.NET) library was added for image file import. A small number of file formats will still see custom implementations for this project.
+<br>
+
+
+## Architecture
+The engine is designed with multithreading in mind. To this end, there are 3 main ways for developers to implement application logic using this engine. These include a component system, with behaviours attached to individual nodes in the scene, but also 2 interface points for driving application-level or scene-level logic without the need for the engine's node/component system.
+
+For more information on how to implement app logic, see the [Architecture Guide](./FragEngine3/Documentation/Architecture.md).
 <br>
 
 
@@ -46,37 +60,33 @@ The following document provides a rough overview of default resource bindings an
 <br>
 
 
-## Architecture
-The engine is designed with multithreading in mind. To this end, there are 3 main ways for developers to implement application logic using this engine. These include a component system, with behaviours attached to individual nodes in the scene, but also 2 interface points for driving application-level or scene-level logic without the need for the engine's node/component system.
-
-For more information on how to implement app logic, see the [Architecture Guide](./FragEngine3/Documentation/Architecture.md).
-<br>
-
-
 ## Platforms
 
 #### Windows
-Windows 10+ is currently the main development target, and all code will be developped for this platform first.
+Windows 10+ is currently the main development target, and all code will be developed for this platform first.
 D3D11 being a very developer-friendly API, all features will be completed and polished with priority for Windows platforms.
 
 #### Linux
 Linux support is planned but not currently implemented. A Vulkan backend and SPIR-V shaders are currently missing and may be added in the near future.
 
 #### Apple
-Support for MacOS exists to some degree, but active development has been put on hold indefinitely.
-The platform is reliant on its proprietary Metal API, which is so poorly documented and cumbersome to work with, that the time and effort it takes to implement even basic functionality is just not worth it.
+Support for MacOS exists to some degree, but active development has been put on hold.
+The platform is reliant on its proprietary Metal API, which is so poorly documented and cumbersome to work with, that the time and effort it takes to implement even basic functionality is often just not worth it.
 Support may be resumed in the future if express interest arises, and may possibly use MoltenVK, to bypass Apple's insufferable software ecosystem.
+
+#### Mobile (iOS/Android)
+No support is planned for the foreseeable future. Android will have to wait until a Vulkan graphics backend is fully implemented, while iOS support hinges entirely on a functional Metal backend.
 <br>
 
 
 ## Work In Progress
 
-- Refactor graphics architecture:
-    - Simplify code & reduce draw logic overhead
-- Lighting system: **[awaiting graphics refactoring]**
-    - Indirect lighting
+- Lighting system:
+    - Static lighting
+    - Indirect lighting **[awaiting graphics refactoring]**
 - File format support: **[on hold]**
-    - FBX (geometry)
+    - FBX _(3D geometry)_
+    - DDS _(textures)_
 <br>
 
 
@@ -87,6 +97,13 @@ The following is a rough and very short-sighted roadmap of features that are goi
 - Refactor graphics architecture:
     - Refactor Forward+Lights graphics stack _(split into sub-modules)_
     - Add rendering groups for auto-parallelizing draw call creation
+- Engine systems:
+    - Job scheduling system _(for asynchronous workloads)_
+- UI:
+    - Text rendering
+    - Basic UI controls _(labels, buttons, etc.)_
+    - Layouting groups
+    - Touch support _(much later, required for mobile platforms)_
 - Rework engine state machine:
     - More granular thread sleep timings
 - Post-processing:
@@ -107,5 +124,6 @@ The following is a rough and very short-sighted roadmap of features that are goi
 - Additional I/O support:
     - Webcams _(probably via WMF on Windows?)_
     - Gamepads
+    - Touchscreens
 - Linux support: _(distant-ish future)_
     - Vulkan graphics core and shaders
