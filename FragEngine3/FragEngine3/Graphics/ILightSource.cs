@@ -62,7 +62,9 @@ public interface ILightSource : IDisposable
 
 	/// <summary>
 	/// Gets whether this is a static light source. Static lights render shadow maps only once (or on demand),
-	/// and then re-use that shadow map for all subsequent frames, drastically reducing shadow rendering overhead.
+	/// and then re-use that shadow map for all subsequent frames, drastically reducing shadow rendering overhead.<para/>
+	/// LIMITATION: Static lights do not support having multiple cascades at this stage. <see cref="ShadowCascades"/> should
+	/// be set to 0 to avoid projection artefacts.
 	/// </summary>
 	bool IsStaticLight { get; }
 
