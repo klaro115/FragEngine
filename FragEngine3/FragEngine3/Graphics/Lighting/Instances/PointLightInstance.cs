@@ -108,7 +108,7 @@ internal sealed class PointLightInstance : LightInstance
 
 		CastShadows = _lightData.CastShadows;
 		ShadowCascades = _lightData.ShadowCascades;
-		ShadowBias = _lightData.ShadowBias;
+		ShadowNormalBias = _lightData.ShadowBias;
 
 		return true;
 	}
@@ -125,7 +125,7 @@ internal sealed class PointLightInstance : LightInstance
 
 			CastShadows = CastShadows,
 			ShadowCascades = ShadowCascades,
-			ShadowBias = ShadowBias,
+			ShadowBias = ShadowNormalBias,
 		};
 		return true;
 	}

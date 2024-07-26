@@ -113,12 +113,22 @@ namespace FragEngine3.Graphics.Components
 
 		/// <summary>
 		/// A bias for shadow map evaluation in the shader, which is implemented as a distance offset away from a mesh's surface.
-		/// Setting this value too low may cause stair-stepping artifacts in lighting calculations.
+		/// Setting this value too low may cause stair-stepping artifacts in lighting calculations, commonly referred to as "shadow acne".
 		/// </summary>
-		public float ShadowBias
+		public float ShadowNormalBias
 		{
-			get => lightInstance.ShadowBias;
-			set => lightInstance.ShadowBias = value;
+			get => lightInstance.ShadowNormalBias;
+			set => lightInstance.ShadowNormalBias = value;
+		}
+
+		/// <summary>
+		/// A bias for shadow map evaluation in shadow projection, which is implemented as a distance offset towards the light source.
+		/// Setting this value too high may cause "Peter-Panning" artifacts in lighting calculations, where objects appear detached from their shadow.
+		/// </summary>
+		public float ShadowDepthBias
+		{
+			get => lightInstance.ShadowDepthBias;
+			set => lightInstance.ShadowDepthBias = value;
 		}
 
 		public bool IsStaticLight

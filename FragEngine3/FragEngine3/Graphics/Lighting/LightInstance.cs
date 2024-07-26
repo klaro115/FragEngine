@@ -44,10 +44,12 @@ internal abstract class LightInstance(GraphicsCore _core) : ILightSource
 		direction = Vector3.UnitZ,
 		spotMinDot = 0,
 		shadowMapIdx = 0,
-		shadowBias = 0.02f,
+		shadowNormalBias = 0.015f,
 		shadowCascades = 0,
 		shadowCascadeRange = LightConstants.directionalLightSize,
+		shadowDepthBias = Vector3.Zero,
 	};
+	protected float shadowDepthBias = 0.01f;
 
 	protected CameraInstance? shadowCameraInstance = null;
 	protected ShadowCascadeResources[]? shadowCascades = null;
@@ -126,12 +128,22 @@ internal abstract class LightInstance(GraphicsCore _core) : ILightSource
 
 	/// <summary>
 	/// A bias for shadow map evaluation in the shader, which is implemented as a distance offset away from a mesh's surface.
-	/// Setting this value too low may cause stair-stepping artifacts in lighting calculations.
+	/// Setting this value too low may cause stair-stepping artifacts in lighting calculations, commonly referred to as "shadow acne".
 	/// </summary>
-	public float ShadowBias
+	public float ShadowNormalBias
 	{
-		get => data.shadowBias;
-		set => data.shadowBias = Math.Clamp(value, 0, 10);
+		get => data.shadowNormalBias;
+		set => data.shadowNormalBias = Math.Clamp(value, 0, 10);
+	}
+
+	/// <summary>
+	/// A bias for shadow map evaluation in shadow projection, which is implemented as a distance offset towards the light source.
+	/// Setting this value too high may cause "Peter-Panning" artifacts in lighting calculations, where objects appear detached from their shadow.
+	/// </summary>
+	public float ShadowDepthBias
+	{
+		get => shadowDepthBias;
+		set => shadowDepthBias = Math.Clamp(value, -10.0f, 10.0f);
 	}
 
 	// STATIC SHADOWS:
@@ -245,6 +257,9 @@ internal abstract class LightInstance(GraphicsCore _core) : ILightSource
 
 		if (!isStaticLight || IsStaticLightDirty)
 		{
+			// Calculate offset vector for shadow depth bias:
+			data.shadowDepthBias = worldPose.Forward * -shadowDepthBias;
+
 			// Ensure a camera instance is ready for drawing the scene:
 			if (!UpdateShadowMapCameraInstance(_shadingFocalPointRadius))
 			{

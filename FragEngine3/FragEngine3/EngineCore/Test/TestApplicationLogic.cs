@@ -130,7 +130,8 @@ public sealed class TestApplicationLogic : ApplicationLogic
 
 			light.LightIntensity = 0.5f;
 			light.CastShadows = true;
-			light.ShadowCascades = 1;
+			light.ShadowCascades = 2;
+			light.ShadowDepthBias = 0.01f;
 		}
 		if (SceneSpawner.CreateLight(scene, LightType.Directional, out light))
 		{
@@ -149,7 +150,7 @@ public sealed class TestApplicationLogic : ApplicationLogic
 			light.LightIntensity = 10;
 			light.SpotAngleDegrees = 35;
 			light.CastShadows = true;
-			light.ShadowBias = 0.02f;
+			light.ShadowNormalBias = 0.02f;
 		}
 		if (SceneSpawner.CreateLight(scene, LightType.Spot, out light))
 		{

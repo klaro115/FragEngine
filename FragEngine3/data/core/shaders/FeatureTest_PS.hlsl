@@ -57,6 +57,8 @@ struct Light
     float shadowBias;
     uint shadowCascades;
     float shadowCascadeRange;
+    float3 shadowDepthBias;
+    float _padding;
 };
 
 StructuredBuffer<Light> BufLights : register(ps, t0);   // Buffer containing an array of light source data. Number of lights is given in 'CBGlobal.lightCount'.

@@ -51,11 +51,12 @@ struct Light
     uint lightType;
     float3 lightDirection;
     float lightSpotMinDot;
-    float4x4 mtxShadowWorld2Clip;
     uint shadowMapIdx;
     float shadowBias;
     uint shadowCascades;
     float shadowCascadeRange;
+    float3 shadowDepthBias;
+    float _padding;
 };
 
 /**************** VERTEX OUTPUT: ***************/

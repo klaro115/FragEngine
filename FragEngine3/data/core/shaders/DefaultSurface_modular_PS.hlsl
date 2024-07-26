@@ -93,6 +93,8 @@ struct Light
     float shadowBias;
     uint shadowCascades;
     float shadowCascadeRange;
+    float3 shadowDepthBias;
+    float _padding;
 };
 
 StructuredBuffer<Light> BufLights : register(ps, t0);               // Buffer containing an array of light source data. Number of lights is given in 'CBGlobal.lightCount'.
@@ -100,7 +102,7 @@ StructuredBuffer<Light> BufLights : register(ps, t0);               // Buffer co
 
 #ifdef FEATURE_LIGHT_SHADOWMAPS
 Texture2DArray<half> TexShadowMaps : register(ps, t1);
-StructuredBuffer<float4x4> BufShadowMatrices : register(ps, t3);    // Buffer containing an array of projectionm matrices for shadow maps, transforming world position to clip space.
+StructuredBuffer<float4x4> BufShadowMatrices : register(ps, t3);    // Buffer containing an array of projection matrices for shadow maps, transforming world position to clip space and back.
 SamplerState SamplerShadowMaps : register(ps, s0);
     #if defined(FEATURE_LIGHT_INDIRECT) && FEATURE_LIGHT_INDIRECT > 1
     Texture2DArray<half3> TexShadowNormalMaps : register(ps, t2);
@@ -274,7 +276,7 @@ half CalculateShadowMapLightWeight(const in Light _light, const in float3 _world
     const uint shadowMapIdx = _light.shadowMapIdx + cascadeIdx;
 
     // Add a bias to position along surface normal, to counter-act stair-stepping artifacts:
-    const float4 worldPosBiased = float4(_worldPosition + _surfaceNormal * _light.shadowBias, 1);
+    const float4 worldPosBiased = float4(_worldPosition + _surfaceNormal * _light.shadowBias + _light.shadowDepthBias, 1);
 
     // Transform pixel position to light's clip space, then to UV space:
     float4 shadowProj = mul(BufShadowMatrices[2 * shadowMapIdx], worldPosBiased);

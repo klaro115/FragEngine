@@ -164,7 +164,7 @@ public sealed class ShadowMapArray : IDisposable
 			return false;
 		}
 		
-		if (_shadowMapArrayIdx >= Capacity)		//Note: 'Count' would be more correct here, but 'Capacity' is safer against creashes and aborts.
+		if (_shadowMapArrayIdx >= Capacity)		//Note: 'Count' would be more correct here, but 'Capacity' is safer against crashes and aborts.
 		{
 			Logger.LogError($"Shadow map index {_shadowMapArrayIdx} is out of range! Make sure you call 'Prepare()' with the right number of array elements!");
 			_outFramebuffer = null!;
