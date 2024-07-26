@@ -4,34 +4,25 @@ using Veldrid;
 
 namespace FragEngine3.Graphics.Contexts;
 
-public sealed class SceneContext(
-	// References:
-	Scene _scene,
-
-	// Scene resources:
-	ResourceLayout _resLayoutCamera,
-	ResourceLayout _resLayoutObject,
-	DeviceBuffer _cbScene,
-	LightDataBuffer _dummyLightDataBuffer,
-	ShadowMapArray _shadowMapArray,
-	ushort _sceneResourceVersion,
-
-	// Parameters:
-	uint _lightCount,
-	uint _lightCountShadowMapped)
+/// <summary>
+/// Context type containing resources and parameters that are shared by all renderers across an entire scene.
+/// </summary>
+/// <param name="_lightCount">Total number of active lights in the scene.</param>
+/// <param name="_lightCountShadowMapped">Total number of shadow-casting lights in the scene.</param>
+public sealed class SceneContext(uint _lightCount, uint _lightCountShadowMapped)
 {
 	#region Fields
 
 	// References:
-	public readonly Scene scene = _scene;
+	public Scene Scene { get; init; } = null!;
 
 	// Scene resources:
-	public readonly ResourceLayout resLayoutCamera = _resLayoutCamera;
-	public readonly ResourceLayout resLayoutObject = _resLayoutObject;
-	public readonly DeviceBuffer cbScene = _cbScene;
-	public readonly LightDataBuffer dummyLightDataBuffer = _dummyLightDataBuffer;
-	public readonly ShadowMapArray shadowMapArray = _shadowMapArray;
-	public readonly ushort sceneResourceVersion = _sceneResourceVersion;
+	public ResourceLayout ResLayoutCamera { get; init; } = null!;
+	public ResourceLayout ResLayoutObject { get; init; } = null!;
+	public DeviceBuffer CbScene { get; init; } = null!;
+	public LightDataBuffer DummyLightDataBuffer { get; init; } = null!;
+	public ShadowMapArray ShadowMapArray { get; init; } = null!;
+	public ushort SceneResourceVersion { get; init; }
 
 	// Parameters:
 	public readonly uint lightCount = _lightCount;

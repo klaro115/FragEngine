@@ -463,7 +463,7 @@ public class Material(GraphicsCore _core, ResourceHandle _handle) : Resource(_ha
 			if (dsd.enableCulling)
 			{
 				rasterizerState = RasterizerStateDescription.Default;
-				if (_cameraPassCtx.mirrorY)
+				if (_cameraPassCtx.MirrorY)
 				{
 					rasterizerState.FrontFace = FrontFace.CounterClockwise;
 				}
@@ -474,8 +474,8 @@ public class Material(GraphicsCore _core, ResourceHandle _handle) : Resource(_ha
 			}
 
 			ResourceLayout[] resourceLayouts = boundResourceLayout != null
-				? [ _sceneCtx.resLayoutCamera, _sceneCtx.resLayoutObject, boundResourceLayout ]
-				: [ _sceneCtx.resLayoutCamera, _sceneCtx.resLayoutObject ];
+				? [ _sceneCtx.ResLayoutCamera, _sceneCtx.ResLayoutObject, boundResourceLayout ]
+				: [ _sceneCtx.ResLayoutCamera, _sceneCtx.ResLayoutObject ];
 
 			GraphicsPipelineDescription pipelineDesc = new(
 				BlendStateDescription.SingleAlphaBlend,
@@ -484,14 +484,14 @@ public class Material(GraphicsCore _core, ResourceHandle _handle) : Resource(_ha
 				PrimitiveTopology.TriangleList,
 				shaderSetDesc.Value,
 				resourceLayouts,
-				_cameraPassCtx.outputDesc);
+				_cameraPassCtx.OutputDesc);
 
 			Pipeline pipeline = core.MainFactory.CreateGraphicsPipeline(ref pipelineDesc);
 			uint newPipelineVersion = materialVersion ^ _rendererVersion;
 
-			if (_cameraPassCtx.outputDesc.ColorAttachments != null && _cameraPassCtx.outputDesc.ColorAttachments.Length != 0)
+			if (_cameraPassCtx.OutputDesc.ColorAttachments != null && _cameraPassCtx.OutputDesc.ColorAttachments.Length != 0)
 			{
-				PixelFormat colorFormat = _cameraPassCtx.outputDesc.ColorAttachments[0].Format;
+				PixelFormat colorFormat = _cameraPassCtx.OutputDesc.ColorAttachments[0].Format;
 				pipeline.Name = $"{resourceKey}_{colorFormat}";
 			}
 			else

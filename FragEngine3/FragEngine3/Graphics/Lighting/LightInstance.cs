@@ -11,8 +11,20 @@ using Veldrid;
 
 namespace FragEngine3.Graphics.Lighting;
 
-internal abstract class LightInstance(GraphicsCore _core) : IDisposable
+internal abstract class LightInstance(GraphicsCore _core) : ILightSource
 {
+	#region Types
+
+	[Flags]
+	protected enum StaticLightDirtyFlags
+	{
+		Data			= 1,
+		Frame			= 2,
+
+		All				= Data | Frame,
+	}
+
+	#endregion
 	#region Constructors
 
 	~LightInstance()
@@ -23,8 +35,6 @@ internal abstract class LightInstance(GraphicsCore _core) : IDisposable
 	#endregion
 	#region Fields
 
-	public readonly GraphicsCore core = _core;
-
 	protected LightSourceData data = new()
 	{
 		color = Vector3.One,
@@ -34,15 +44,20 @@ internal abstract class LightInstance(GraphicsCore _core) : IDisposable
 		direction = Vector3.UnitZ,
 		spotMinDot = 0,
 		shadowMapIdx = 0,
-		shadowBias = 0.02f,
+		shadowNormalBias = 0.015f,
 		shadowCascades = 0,
 		shadowCascadeRange = LightConstants.directionalLightSize,
+		shadowDepthBias = Vector3.Zero,
 	};
+	protected float shadowDepthBias = 0.01f;
 
 	protected CameraInstance? shadowCameraInstance = null;
 	protected ShadowCascadeResources[]? shadowCascades = null;
+	protected ShadowMapArray? staticShadowMapArray = null;
 
 	protected bool castShadows = false;
+	protected bool isStaticLight = false;
+	protected StaticLightDirtyFlags staticLightDirtyFlags = 0;
 
 	protected Pose worldPose = Pose.Identity;
 
@@ -50,9 +65,12 @@ internal abstract class LightInstance(GraphicsCore _core) : IDisposable
 	#region Properties
 
 	public bool IsDisposed { get; private set; } = false;
+	public bool IsVisible => !IsDisposed;
 
 	// LIGHT:
 
+	public int LightPriority { get; set; } = 1;
+	public uint LayerMask { get; set; } = 0xFFu;
 	public abstract LightType Type { get; }
 
 	/// <summary>
@@ -88,6 +106,10 @@ internal abstract class LightInstance(GraphicsCore _core) : IDisposable
 				shadowCameraInstance = null;
 				DisposeShadowCascades();
 			}
+			else
+			{
+				staticLightDirtyFlags = isStaticLight ? StaticLightDirtyFlags.All : 0;
+			}
 		}
 	}
 
@@ -97,10 +119,6 @@ internal abstract class LightInstance(GraphicsCore _core) : IDisposable
 		protected set => data.shadowMapIdx = value;
 	}
 
-	/// <summary>
-	/// Gets or sets the number of shadow cascades to create and render for this light source.
-	/// Directional and spot lights only. Must be a value between 0 and 4, where 0 disables cascades for this light.
-	/// </summary>
 	public uint ShadowCascades
 	{
 		get => data.shadowCascades;
@@ -110,17 +128,43 @@ internal abstract class LightInstance(GraphicsCore _core) : IDisposable
 
 	/// <summary>
 	/// A bias for shadow map evaluation in the shader, which is implemented as a distance offset away from a mesh's surface.
-	/// Setting this value too low may cause stair-stepping artifacts in lighting calculations.
+	/// Setting this value too low may cause stair-stepping artifacts in lighting calculations, commonly referred to as "shadow acne".
 	/// </summary>
-	public float ShadowBias
+	public float ShadowNormalBias
 	{
-		get => data.shadowBias;
-		set => data.shadowBias = Math.Clamp(value, 0, 10);
+		get => data.shadowNormalBias;
+		set => data.shadowNormalBias = Math.Clamp(value, 0, 10);
 	}
+
+	/// <summary>
+	/// A bias for shadow map evaluation in shadow projection, which is implemented as a distance offset towards the light source.
+	/// Setting this value too high may cause "Peter-Panning" artifacts in lighting calculations, where objects appear detached from their shadow.
+	/// </summary>
+	public float ShadowDepthBias
+	{
+		get => shadowDepthBias;
+		set => shadowDepthBias = Math.Clamp(value, -10.0f, 10.0f);
+	}
+
+	// STATIC SHADOWS:
+
+	public bool IsStaticLight
+	{
+		get => isStaticLight;
+		set
+		{
+			isStaticLight = value;
+			staticLightDirtyFlags = CastShadows && isStaticLight ? StaticLightDirtyFlags.All : 0;
+		}
+	}
+
+	public bool IsStaticLightDirty => isStaticLight && staticLightDirtyFlags.HasFlag(StaticLightDirtyFlags.Frame);
 
 	// MISC:
 
-	protected Logger Logger => core.graphicsSystem.engine.Logger;
+	public GraphicsCore GraphicsCore { get; } = _core;
+
+	protected Logger Logger => GraphicsCore.graphicsSystem.engine.Logger;
 
 	#endregion
 	#region Methods
@@ -140,7 +184,7 @@ internal abstract class LightInstance(GraphicsCore _core) : IDisposable
 
 	private void DisposeShadowCascades()
 	{
-		if (shadowCascades != null)
+		if (shadowCascades is not null)
 		{
 			foreach (ShadowCascadeResources cascade in shadowCascades)
 			{
@@ -148,6 +192,19 @@ internal abstract class LightInstance(GraphicsCore _core) : IDisposable
 			}
 			shadowCascades = null;
 		}
+
+		staticShadowMapArray?.Dispose();
+	}
+
+	/// <summary>
+	/// For static lights (i.e. <see cref="IsStaticLight"/> is true), a redraw of all shadow maps and lighting data is scheduled
+	/// for the next frame. On non-static lights, this does nothing.
+	/// </summary>
+	public void RequestRedrawStaticLighting()
+	{
+		if (IsDisposed || !IsStaticLight) return;
+
+		staticLightDirtyFlags = StaticLightDirtyFlags.All;
 	}
 
 	/// <summary>
@@ -156,9 +213,9 @@ internal abstract class LightInstance(GraphicsCore _core) : IDisposable
 	public abstract LightSourceData GetLightSourceData();
 
 	public bool BeginDrawShadowMap(
-			in SceneContext _sceneCtx,
-			float _shadingFocalPointRadius,
-			uint _newShadowMapIdx)
+		in SceneContext _sceneCtx,
+		float _shadingFocalPointRadius,
+		uint _newShadowMapIdx)
 	{
 		if (IsDisposed)
 		{
@@ -169,7 +226,7 @@ internal abstract class LightInstance(GraphicsCore _core) : IDisposable
 		{
 			return false;
 		}
-		if (_sceneCtx.shadowMapArray.TexDepthMapArray == null || _sceneCtx.shadowMapArray.TexDepthMapArray.IsDisposed)
+		if (_sceneCtx.ShadowMapArray.TexDepthMapArray is null || _sceneCtx.ShadowMapArray.TexDepthMapArray.IsDisposed)
 		{
 			Logger.LogError("Can't begin drawing shadow map using null shadow map texture array!");
 			return false;
@@ -178,7 +235,7 @@ internal abstract class LightInstance(GraphicsCore _core) : IDisposable
 		ShadowMapIdx = _newShadowMapIdx;
 
 		// Ensure shadow cascades are all ready to go:
-		if (shadowCascades == null || shadowCascades.Length < data.shadowCascades + 1)
+		if (shadowCascades is null || shadowCascades.Length < data.shadowCascades + 1)
 		{
 			DisposeShadowCascades();
 
@@ -189,86 +246,161 @@ internal abstract class LightInstance(GraphicsCore _core) : IDisposable
 			}
 		}
 
-		// Ensure a camera instance is ready for drawing the scene:
-		if (!UpdateShadowMapCameraInstance(_shadingFocalPointRadius))
+		if (isStaticLight)
 		{
-			return false;
+			// For static lights, ensure local light render targets are ready to go:
+			if (!UpdateStaticLightingTargets())
+			{
+				return false;
+			}
+		}
+
+		if (!isStaticLight || IsStaticLightDirty)
+		{
+			// Calculate offset vector for shadow depth bias:
+			data.shadowDepthBias = worldPose.Forward * -shadowDepthBias;
+
+			// Ensure a camera instance is ready for drawing the scene:
+			if (!UpdateShadowMapCameraInstance(_shadingFocalPointRadius))
+			{
+				return false;
+			}
 		}
 
 		return true;
 	}
 
 	public bool BeginDrawShadowCascade(
-			in SceneContext _sceneCtx,
-			in CommandList _cmdList,
-			Vector3 _shadingFocalPoint,
-			uint _cascadeIdx,
-			out CameraPassContext _outCameraPassCtx,
-			bool _rebuildResSetCamera = false,
-			bool _texShadowMapsHasChanged = false)
+		in SceneContext _sceneCtx,
+		in CommandList _cmdList,
+		Vector3 _shadingFocalPoint,
+		uint _cascadeIdx,
+		out CameraPassContext _outCameraPassCtx,
+		bool _rebuildResSetCamera = false,
+		bool _texShadowMapsHasChanged = false)
 	{
 		// Select the right shadow cascade resource container:
 		_cascadeIdx = Math.Min(_cascadeIdx, data.shadowCascades);
 
 		ShadowCascadeResources cascade = shadowCascades![_cascadeIdx];
+		Framebuffer? framebuffer = null;
 
-		// Recalculate projection for this cascade:
-		cascade.mtxShadowWorld2Clip = RecalculateShadowProjectionMatrix(_shadingFocalPoint, _cascadeIdx);
+		bool drawShadowPass = !isStaticLight || staticLightDirtyFlags.HasFlag(StaticLightDirtyFlags.Frame);
 
-		// Update framebuffer, constant buffers and resource sets:
-		if (!cascade.UpdateResources(
-			in _sceneCtx,
-			in shadowCameraInstance!,
-			in worldPose,
-			ShadowMapIdx,
-			_rebuildResSetCamera,
-			_texShadowMapsHasChanged,
-			out bool _,
-			out bool _))
+		// Non-static light or redraw of a static light:
+		if (drawShadowPass)
 		{
-			Logger.LogError($"Failed to update shadow cascade resources for cascade {_cascadeIdx} of shadow map index {ShadowMapIdx}!");
-			_outCameraPassCtx = null!;
-			return false;
+			// Recalculate projection for this cascade:
+			cascade.mtxShadowWorld2Clip = RecalculateShadowProjectionMatrix(_shadingFocalPoint, _cascadeIdx);
+
+			// Update framebuffer, constant buffers and resource sets:
+			if (!cascade.UpdateResources(
+				in _sceneCtx,
+				in shadowCameraInstance!,
+				in worldPose,
+				ShadowMapIdx,
+				_rebuildResSetCamera,
+				_texShadowMapsHasChanged,
+				out bool _,
+				out bool _))
+			{
+				Logger.LogError($"Failed to update shadow cascade resources for cascade {_cascadeIdx} of shadow map index {ShadowMapIdx}!");
+				_outCameraPassCtx = null!;
+				return false;
+			}
+
+			// Draw static lights to local framebuffer first:
+			if (isStaticLight)
+			{
+				staticShadowMapArray!.GetFramebuffer(_cascadeIdx, out framebuffer);
+			}
+			else
+			{
+				framebuffer = cascade.ShadowMapFrameBuffer!;
+			}
+
+			if (!shadowCameraInstance!.SetOverrideFramebuffer(framebuffer, true))
+			{
+				Logger.LogError($"Failed to set framebuffer for shadow cascade {_cascadeIdx} of shadow map index {ShadowMapIdx}!");
+				_outCameraPassCtx = null!;
+				return false;
+			}
+
+			// Bind framebuffers and clear targets:
+			if (!shadowCameraInstance!.BeginDrawing(_cmdList, true, false, out _))
+			{
+				Logger.LogError("Failed to begin drawing light instance's shadow map!");
+				_outCameraPassCtx = null!;
+				return false;
+			}
 		}
-
-		if (!shadowCameraInstance!.SetOverrideFramebuffer(cascade.ShadowMapFrameBuffer, true))
+		// Cached static light:
+		else if (isStaticLight && !staticLightDirtyFlags.HasFlag(StaticLightDirtyFlags.Frame))
 		{
-			Logger.LogError($"Failed to set framebuffer for shadow cascade {_cascadeIdx} of shadow map index {ShadowMapIdx}!");
-			_outCameraPassCtx = null!;
-			return false;
-		}
+			uint shadowResolution = staticShadowMapArray!.TexDepthMapArray.Width;
 
-		// Bind framebuffers and clear targets:
-		if (!shadowCameraInstance!.BeginDrawing(_cmdList, true, false, out _))
-		{
-			Logger.LogError("Failed to begin drawing light instance's shadow map!");
-			_outCameraPassCtx = null!;
-			return false;
+			// Copy contents of local targets to shadow map array:
+			CopyShadowTexture(_cmdList, staticShadowMapArray.TexNormalMapArray, _sceneCtx.ShadowMapArray.TexNormalMapArray);
+			CopyShadowTexture(_cmdList, staticShadowMapArray.TexDepthMapArray, _sceneCtx.ShadowMapArray.TexDepthMapArray);
+
+
+			// Local helper method for copying texture contents from locally cached shadow targets to scene's shadow map array:
+			void CopyShadowTexture(CommandList _cmdList, Texture _texStaticCached, Texture _texShadowMapArray)
+			{
+				_cmdList.CopyTexture(
+					_texStaticCached,
+					0, 0, 0, 0, 0,
+					_texShadowMapArray,
+					0, 0, 0, 0, ShadowMapIdx + _cascadeIdx,
+					shadowResolution,
+					shadowResolution,
+					1, 1);
+			}
 		}
 
 		// Determine version number for this pass' resources:
-		ushort cameraResourceVersion = (ushort)(cascade.resourceVersion ^ _sceneCtx.sceneResourceVersion);
+		ushort cameraResourceVersion = (ushort)(cascade.resourceVersion ^ _sceneCtx.SceneResourceVersion);
 
 		// Assemble context object for renderers to reference when issuing draw calls:
-		_outCameraPassCtx = new(
-			shadowCameraInstance,
-			_cmdList,
-			cascade.ShadowMapFrameBuffer!,
-			cascade.ShadowResSetCamera!,
-			cascade.ShadowCbCamera!,
-			_sceneCtx.dummyLightDataBuffer,
-			cameraResourceVersion,
-			0,
-			ShadowMapIdx,
-			0,
-			in cascade.mtxShadowWorld2Clip);
+		_outCameraPassCtx = new()
+		{
+			CameraInstance = shadowCameraInstance!,
+			CmdList = _cmdList,
+			Framebuffer = framebuffer!,
+			ResSetCamera = cascade.ShadowResSetCamera!,
+			CbCamera = cascade.ShadowCbCamera!,
+			LightDataBuffer = _sceneCtx.DummyLightDataBuffer,
+			CameraResourceVersion = cameraResourceVersion,
+			FrameIdx = 0,
+			PassIdx = ShadowMapIdx,
+			LightCountShadowMapped = 0,
+			MtxWorld2Clip = cascade.mtxShadowWorld2Clip,
+			OutputDesc = framebuffer is not null ? framebuffer.OutputDescription : default,
+			MirrorY = shadowCameraInstance!.ProjectionSettings.mirrorY,
+		};
 
 		return true;
 	}
 
 	public bool EndDrawShadowCascade()
 	{
-		return !IsDisposed && shadowCameraInstance != null && shadowCameraInstance.EndDrawing();
+		if (IsDisposed) return false;
+
+		bool success = true;
+
+		if (!isStaticLight || staticLightDirtyFlags.HasFlag(StaticLightDirtyFlags.Frame))
+		{
+			success &= shadowCameraInstance is not null && shadowCameraInstance.EndDrawing();
+		}
+		return success;
+	}
+
+	public bool EndDrawShadowMap()
+	{
+		// Drop render flags for static lighting mode:
+		staticLightDirtyFlags &= ~StaticLightDirtyFlags.Frame;
+
+		return true;
 	}
 
 	protected abstract bool UpdateShadowMapCameraInstance(float _shadingFocalPointRadius);
@@ -276,9 +408,21 @@ internal abstract class LightInstance(GraphicsCore _core) : IDisposable
 	protected abstract Matrix4x4 RecalculateShadowProjectionMatrix(Vector3 _shadingFocalPoint, uint _cascadeIdx);
 
 	public abstract bool CheckVisibilityByCamera(in Camera _camera);
+	public abstract bool CheckIsRendererInRange(in IPhysicalRenderer _renderer);
 
 	public abstract bool LoadFromData(in LightData _lightData);
 	public abstract bool SaveToData(out LightData _outLightData);
+
+	private bool UpdateStaticLightingTargets()
+	{
+		if (staticShadowMapArray is null || staticShadowMapArray.IsDisposed)
+		{
+			uint shadowMapCount = ShadowCascades + 1;
+			staticShadowMapArray = new(GraphicsCore, shadowMapCount);
+		}
+
+		return !staticShadowMapArray.IsDisposed;
+	}
 
 	#endregion
 }

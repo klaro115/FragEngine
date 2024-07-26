@@ -35,8 +35,8 @@ public sealed class ForwardPlusLightsStack(GraphicsCore _core) : IGraphicsStack	
 
 	// Lists & object management:
 	private readonly List<Camera> activeCameras = new(2);
-	private readonly List<Light> activeLights = new(10);
-	private readonly List<Light> activeLightsShadowMapped = new(5);
+	private readonly List<ILightSource> activeLights = new(10);
+	private readonly List<ILightSource> activeLightsShadowMapped = new(5);
 	private LightSourceData[] activeLightData = [];
 
 	private readonly List<IRenderer> activeRenderersOpaque = new(128);
@@ -337,7 +337,7 @@ public sealed class ForwardPlusLightsStack(GraphicsCore _core) : IGraphicsStack	
 		return true;
 	}
 
-	public bool DrawStack(Scene _scene, List<IRenderer> _renderers, in IList<Camera> _cameras, in IList<Light> _lights)
+	public bool DrawStack(Scene _scene, List<IRenderer> _renderers, in IList<Camera> _cameras, in IList<ILightSource> _lights)
 	{
 		if (!IsInitialized)
 		{
@@ -349,12 +349,12 @@ public sealed class ForwardPlusLightsStack(GraphicsCore _core) : IGraphicsStack	
 			Logger.LogError("Cannot draw graphics stack for null or mismatched scene!");
 			return false;
 		}
-		if (_renderers == null)
+		if (_renderers is null)
 		{
 			Logger.LogError("Cannot draw graphics stack for null list of node-renderers pairs!");
 			return false;
 		}
-		if (_cameras == null)
+		if (_cameras is null)
 		{
 			Logger.LogError("Cannot draw graphics stack using null camera list!");
 			return false;
@@ -413,16 +413,16 @@ public sealed class ForwardPlusLightsStack(GraphicsCore _core) : IGraphicsStack	
 		// Recreate updated scene context if values changed between passes:
 		if (shadowMapLightCount != sceneCtx.lightCountShadowMapped)
 		{
-			sceneCtx = new(
-				Scene,
-				resLayoutCamera!,
-				resLayoutObject!,
-				cbScene!,
-				dummyLightDataBuffer!,
-				shadowMapArray!,
-				sceneResourceVersion,
-				sceneCtx.lightCount,
-				shadowMapLightCount);
+			sceneCtx = new(sceneCtx.lightCount, shadowMapLightCount)
+			{
+				Scene = Scene,
+				ResLayoutCamera = resLayoutCamera!,
+				ResLayoutObject = resLayoutObject!,
+				CbScene = cbScene!,
+				DummyLightDataBuffer = dummyLightDataBuffer!,
+				ShadowMapArray = shadowMapArray!,
+				SceneResourceVersion = sceneResourceVersion,
+			};
 		}
 
 		// Draw each active camera component in the scene, and composite output:
@@ -435,7 +435,7 @@ public sealed class ForwardPlusLightsStack(GraphicsCore _core) : IGraphicsStack	
 	private bool BeginDrawScene(
 		in List<IRenderer> _renderers,
 		in IList<Camera> _cameras,
-		in IList<Light> _lights,
+		in IList<ILightSource> _lights,
 		uint _maxActiveLightCount,
 		out SceneContext _outSceneCtx,
 		out Vector3 _outRenderFocalPoint,
@@ -461,10 +461,10 @@ public sealed class ForwardPlusLightsStack(GraphicsCore _core) : IGraphicsStack	
 			}
 		}
 
-		foreach (Light light in _lights)
+		foreach (ILightSource light in _lights)
 		{
 			// Skip disabled and overly dim light sources:
-			if (light.IsDisposed || light.layerMask == 0 || light.LightIntensity < 0.0001f || !light.node.IsEnabledInHierarchy())
+			if (light.IsDisposed || light.LayerMask == 0 || !light.IsVisible)
 				continue;
 
 			// Only retain sources whose light may be seen by an active camera:
@@ -478,8 +478,8 @@ public sealed class ForwardPlusLightsStack(GraphicsCore _core) : IGraphicsStack	
 			}
 		}
 		// Sort lights, to prioritize shadow casters first, and higher priority lights second:
-		activeLights.Sort(Light.CompareLightsForSorting);
-		foreach (Light light in activeLights)
+		activeLights.Sort(ILightSource.CompareLightsForSorting);
+		foreach (ILightSource light in activeLights)
 		{
 			if (light.CastShadows)
 			{
@@ -554,17 +554,16 @@ public sealed class ForwardPlusLightsStack(GraphicsCore _core) : IGraphicsStack	
 			return false;
 		}
 
-		_outSceneCtx = new(
-			Scene,
-			resLayoutCamera!,
-			resLayoutObject!,
-			cbScene!,
-			dummyLightDataBuffer!,
-			shadowMapArray!,
-			sceneResourceVersion,
-			(uint)activeLights.Count,
-			(uint)activeLightsShadowMapped.Count);
-
+		_outSceneCtx = new((uint)activeLights.Count, (uint)activeLightsShadowMapped.Count)
+		{
+			Scene = Scene,
+			ResLayoutCamera = resLayoutCamera!,
+			ResLayoutObject = resLayoutObject!,
+			CbScene = cbScene!,
+			DummyLightDataBuffer = dummyLightDataBuffer!,
+			ShadowMapArray = shadowMapArray!,
+			SceneResourceVersion = sceneResourceVersion,
+		};
 		return true;
 	}
 
@@ -575,7 +574,7 @@ public sealed class ForwardPlusLightsStack(GraphicsCore _core) : IGraphicsStack	
 		uint minLightCountShadowMapped = Math.Min((uint)activeLightsShadowMapped.Count, _maxActiveLightCount);
 		uint totalShadowCascadeCount = minLightCountShadowMapped;
 
-		foreach (Light light in activeLightsShadowMapped)
+		foreach (ILightSource light in activeLightsShadowMapped)
 		{
 			totalShadowCascadeCount += Math.Max(light.ShadowCascades, 1);
 		}
@@ -622,16 +621,18 @@ public sealed class ForwardPlusLightsStack(GraphicsCore _core) : IGraphicsStack	
 
 		int shadowMappedLightCount = Math.Min(activeLightsShadowMapped.Count, (int)_maxActiveLightCount);
 
+		List<IRenderer> filteredShadowCasters = new(activeShadowCasters.Count);
+
 		try
 		{
 			bool result = true;
 			int i = 0;
-			int shadowMapArrayIdx = 0;
+			uint shadowMapArrayIdx = 0;
 
 			while (i < shadowMappedLightCount && result)
 			{
 				// Begin drawing shadow maps for the current light source:
-				Light light = activeLightsShadowMapped[i];
+				ILightSource light = activeLightsShadowMapped[i];
 				result &= light.BeginDrawShadowMap(
 					in _sceneCtx,
 					_renderFocalRadius,
@@ -639,7 +640,28 @@ public sealed class ForwardPlusLightsStack(GraphicsCore _core) : IGraphicsStack	
 
 				if (!result) break;
 
-				//TODO [later]: Exclude renderers that are entirely outside of point/spot lights' maximum range.
+				// Draw renderers only for non-static or dirty lights:
+				bool redrawShadowMap = !light.IsStaticLight || light.IsStaticLightDirty;
+
+				// Exclude renderers that are entirely outside of point/spot lights' maximum range:
+				if (redrawShadowMap)
+				{
+					filteredShadowCasters.Clear();
+					foreach (IRenderer renderer in activeShadowCasters)
+					{
+						if (renderer is IPhysicalRenderer physicalRenderer)
+						{
+							if (light.CheckIsRendererInRange(in physicalRenderer))
+							{
+								filteredShadowCasters.Add(renderer);
+							}
+						}
+						else
+						{
+							filteredShadowCasters.Add(renderer);
+						}
+					}
+				}
 
 				// Render shadow cascades one at after the other:
 				uint shadowCascadeCount = light.ShadowCascades + 1;
@@ -650,26 +672,28 @@ public sealed class ForwardPlusLightsStack(GraphicsCore _core) : IGraphicsStack	
 					result &= light.BeginDrawShadowCascade(
 						in _sceneCtx,
 						in cmdList,
-						in dummyLightDataBuffer!,
 						_renderFocalPoint,
 						cascadeIdx,
 						out CameraPassContext lightCtx,
 						_rebuildResSetCamera,
 						_texShadowsHasChanged);
 
-					// Draw renderers for opaque and tranparent geometry, ignore UI:
-					foreach (IRenderer renderer in activeShadowCasters)
+					if (redrawShadowMap)
 					{
-						if ((light.layerMask & renderer.LayerFlags) != 0)
+						// Draw renderers for opaque and tranparent geometry, ignore UI:
+						foreach (IRenderer renderer in filteredShadowCasters)
 						{
-							result &= renderer.DrawShadowMap(_sceneCtx, lightCtx);
+							if ((light.LayerMask & renderer.LayerFlags) != 0)
+							{
+								result &= renderer.DrawShadowMap(_sceneCtx, lightCtx);
+							}
 						}
 					}
 
 					result &= light.EndDrawShadowCascade();
 
 					// Store projection matrix for later scene rendering calls:
-					shadowMapArray!.SetShadowProjectionMatrices((uint)shadowMapArrayIdx++, lightCtx.mtxWorld2Clip);
+					shadowMapArray!.SetShadowProjectionMatrices(shadowMapArrayIdx++, lightCtx.MtxWorld2Clip);
 				}
 
 				result &= light.EndDrawShadowMap();
@@ -716,7 +740,7 @@ public sealed class ForwardPlusLightsStack(GraphicsCore _core) : IGraphicsStack	
 		}
 		cmdList.Begin();
 
-		List<Light> visibleLights = new(activeLights.Count);
+		List<ILightSource> visibleLights = new(activeLights.Count);
 
 		for (uint i = 0; i < activeCameras.Count; ++i)
 		{
@@ -724,7 +748,7 @@ public sealed class ForwardPlusLightsStack(GraphicsCore _core) : IGraphicsStack	
 
 			// Pre-filter lights to only include those are actually visible by current camera:
 			visibleLights.Clear();
-			foreach (Light light in activeLights)
+			foreach (ILightSource light in activeLights)
 			{
 				if (light.CheckVisibilityByCamera(in camera))
 				{
@@ -772,7 +796,7 @@ public sealed class ForwardPlusLightsStack(GraphicsCore _core) : IGraphicsStack	
 				}
 
 				// Post-processing on scene render:
-				if (result && postProcessingStackScene != null)
+				if (result && postProcessingStackScene is not null)
 				{
 					result &= DrawPostProcessingStack(
 						in _sceneCtx,
@@ -800,7 +824,7 @@ public sealed class ForwardPlusLightsStack(GraphicsCore _core) : IGraphicsStack	
 				}
 				
 				// Post-processing on final image:
-				if (result && postProcessingStackFinal != null)
+				if (result && postProcessingStackFinal is not null)
 				{
 					result &= DrawPostProcessingStack(
 						in _sceneCtx,
@@ -882,7 +906,7 @@ public sealed class ForwardPlusLightsStack(GraphicsCore _core) : IGraphicsStack	
 		out Framebuffer _outResultFramebuffer)
 	{
 		// if post-processing stack is unavailable, try continuing with unchanged input framebuffer:
-		if (_postProcessingStack == null || _postProcessingStack.IsDisposed)
+		if (_postProcessingStack is null || _postProcessingStack.IsDisposed)
 		{
 			_outResultFramebuffer = _inputFramebuffer;
 			return true;
@@ -930,7 +954,7 @@ public sealed class ForwardPlusLightsStack(GraphicsCore _core) : IGraphicsStack	
 			_outSceneFramebuffer = null!;
 			return false;
 		}
-		if (compositeSceneRenderer == null || compositeSceneRenderer.IsDisposed)
+		if (compositeSceneRenderer is null || compositeSceneRenderer.IsDisposed)
 		{
 			_outSceneFramebuffer = null!;
 			return false;
@@ -961,7 +985,7 @@ public sealed class ForwardPlusLightsStack(GraphicsCore _core) : IGraphicsStack	
 
 		// Create resource set containing all render targets that were previously drawn to:
 		ResourceLayout resourceLayout = compositionMaterial.BoundResourceLayout!;
-		if (resourceLayout != null && (compositeSceneResourceSet == null || compositeSceneResourceSet.IsDisposed))
+		if (resourceLayout is not null && (compositeSceneResourceSet is null || compositeSceneResourceSet.IsDisposed))
 		{
 			success &= _camera.GetOrCreateCameraTarget(RenderMode.Opaque, out CameraTarget? opaqueTarget);
 			success &= _camera.GetOrCreateCameraTarget(RenderMode.Transparent, out CameraTarget? transparentTarget);
@@ -995,7 +1019,7 @@ public sealed class ForwardPlusLightsStack(GraphicsCore _core) : IGraphicsStack	
 		}
 
 		// Bind render targets:
-		if (compositeSceneResourceSet != null && !compositeSceneRenderer.SetOverrideBoundResourceSet(compositeSceneResourceSet))
+		if (compositeSceneResourceSet is not null && !compositeSceneRenderer.SetOverrideBoundResourceSet(compositeSceneResourceSet))
 		{
 			Logger.LogError("Failed to override bound resource set for graphics stack's scene composition pass!");
 			return false;
@@ -1028,7 +1052,7 @@ public sealed class ForwardPlusLightsStack(GraphicsCore _core) : IGraphicsStack	
 			_outFinalFramebuffer = null!;
 			return false;
 		}
-		if (compositeUIRenderer == null || compositeUIRenderer.IsDisposed)
+		if (compositeUIRenderer is null || compositeUIRenderer.IsDisposed)
 		{
 			_outFinalFramebuffer = null!;
 			return false;
@@ -1078,7 +1102,7 @@ public sealed class ForwardPlusLightsStack(GraphicsCore _core) : IGraphicsStack	
 
 		// Create resource set containing all render targets that were previously drawn to:
 		ResourceLayout resourceLayout = compositionMaterial.BoundResourceLayout!;
-		if (resourceLayout != null && (compositeUIResourceSet == null || compositeUIResourceSet.IsDisposed))
+		if (resourceLayout is not null && (compositeUIResourceSet is null || compositeUIResourceSet.IsDisposed))
 		{
 			success &= _camera.GetOrCreateCameraTarget(RenderMode.UI, out CameraTarget? uiTarget);
 			if (!success)
@@ -1110,7 +1134,7 @@ public sealed class ForwardPlusLightsStack(GraphicsCore _core) : IGraphicsStack	
 		}
 
 		// Bind render targets:
-		if (compositeUIResourceSet != null && !compositeUIRenderer.SetOverrideBoundResourceSet(compositeUIResourceSet))
+		if (compositeUIResourceSet is not null && !compositeUIRenderer.SetOverrideBoundResourceSet(compositeUIResourceSet))
 		{
 			Logger.LogError("Failed to override bound resource set for graphics stack's UI composition pass!");
 			return false;

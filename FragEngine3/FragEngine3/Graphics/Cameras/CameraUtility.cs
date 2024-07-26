@@ -151,14 +151,14 @@ namespace FragEngine3.Graphics.Cameras
 				try
 				{
 					ResourceSetDescription resSetDesc = new(
-						_sceneCtx.resLayoutCamera,
-						_sceneCtx.cbScene,
+						_sceneCtx.ResLayoutCamera,
+						_sceneCtx.CbScene,
 						_cbCamera,
 						_lightDataBuffer.BufLights,
-						_sceneCtx.shadowMapArray.TexDepthMapArray,
-						_sceneCtx.shadowMapArray.TexNormalMapArray,
-						_sceneCtx.shadowMapArray.BufShadowMatrices,
-						_sceneCtx.shadowMapArray.SamplerShadowMaps);
+						_sceneCtx.ShadowMapArray.TexDepthMapArray,
+						_sceneCtx.ShadowMapArray.TexNormalMapArray,
+						_sceneCtx.ShadowMapArray.BufShadowMatrices,
+						_sceneCtx.ShadowMapArray.SamplerShadowMaps);
 
 					_resSetCamera = _graphicsCore.MainFactory.CreateResourceSet(ref resSetDesc);
 					_resSetCamera.Name = $"ResSetCamera";

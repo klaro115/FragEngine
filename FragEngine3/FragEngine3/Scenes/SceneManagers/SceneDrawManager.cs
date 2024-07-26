@@ -18,7 +18,7 @@ internal sealed class SceneDrawManager(Scene _scene) : IDisposable
 	private readonly List<IRenderer> renderers = [];        //TODO [later]: Split into multiple renderer groups that may populate command lists in parallel, each in their own thread.
 
 	private readonly List<Camera> cameras = new(4);
-	private readonly List<Light> lights = new(64);
+	private readonly List<ILightSource> lights = new(64);
 
 	private readonly object lockObj = new();
 
@@ -66,7 +66,7 @@ internal sealed class SceneDrawManager(Scene _scene) : IDisposable
 		lock(lockObj)
 		{
 			cameras.Sort((a, b) => a.cameraPriority.CompareTo(b.cameraPriority));
-			lights.Sort((a, b) => a.lightPriority.CompareTo(b.lightPriority));
+			lights.Sort((a, b) => a.LightPriority.CompareTo(b.LightPriority));
 		}
 
 		// If null, create and initialize default forward+light graphics stack:
@@ -161,7 +161,7 @@ internal sealed class SceneDrawManager(Scene _scene) : IDisposable
 		return true;
 	}
 
-	public bool RegisterLight(Light _newLight)
+	public bool RegisterLight(ILightSource _newLight)
 	{
 		if (_newLight is null || _newLight.IsDisposed)
 		{
@@ -179,7 +179,7 @@ internal sealed class SceneDrawManager(Scene _scene) : IDisposable
 		return true;
 	}
 
-	public bool UnregisterLight(Light _oldLight)
+	public bool UnregisterLight(ILightSource _oldLight)
 	{
 		if (_oldLight is null)
 		{

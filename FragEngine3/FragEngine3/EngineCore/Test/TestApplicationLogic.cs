@@ -28,6 +28,8 @@ public sealed class TestApplicationLogic : ApplicationLogic
 
 	protected override bool RunStartupLogic()
 	{
+		Engine.TimeManager.TargetFrameRate = 60;
+
 		return true;
 	}
 
@@ -129,6 +131,7 @@ public sealed class TestApplicationLogic : ApplicationLogic
 			light.LightIntensity = 0.5f;
 			light.CastShadows = true;
 			light.ShadowCascades = 2;
+			light.ShadowDepthBias = 0.01f;
 		}
 		if (SceneSpawner.CreateLight(scene, LightType.Directional, out light))
 		{
@@ -139,14 +142,15 @@ public sealed class TestApplicationLogic : ApplicationLogic
 		// Create a spot light:
 		if (SceneSpawner.CreateLight(scene, LightType.Spot, out light))
 		{
+			light.node.Name = "Spotlight";
 			light.node.WorldPosition = new Vector3(0, 0, -3);
 			light.node.LocalRotation = Quaternion.Identity;
-			//light.node.SetEnabled(false);
+			light.node.SetEnabled(false);
 
 			light.LightIntensity = 10;
 			light.SpotAngleDegrees = 35;
 			light.CastShadows = true;
-			light.ShadowBias = 0.02f;
+			light.ShadowNormalBias = 0.02f;
 		}
 		if (SceneSpawner.CreateLight(scene, LightType.Spot, out light))
 		{
@@ -415,6 +419,13 @@ public sealed class TestApplicationLogic : ApplicationLogic
 			{
 				Engine.Logger.LogError("Geometry download request failed.");
 			}
+		}
+
+		// Switch main directional light between static and non-static mode when pressing 'Z':
+		if (Engine.InputManager.GetKeyUp(Key.Y) && scene.FindNode("Sun", out SceneNode? sunNode) && sunNode is not null)
+		{
+			Light light = sunNode.GetComponent<Light>()!;
+			light.IsStaticLight = !light.IsStaticLight;
 		}
 
 		return true;

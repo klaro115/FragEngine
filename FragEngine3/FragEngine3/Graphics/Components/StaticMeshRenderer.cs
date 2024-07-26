@@ -11,7 +11,7 @@ using Veldrid;
 
 namespace FragEngine3.Graphics.Components;
 
-public sealed class StaticMeshRenderer : Component, IRenderer
+public sealed class StaticMeshRenderer : Component, IPhysicalRenderer
 {
 	#region Constructors
 
@@ -62,6 +62,10 @@ public sealed class StaticMeshRenderer : Component, IRenderer
 		get => instance.LayerFlags;
 		set => instance.LayerFlags = value;
 	}
+
+	public Vector3 VisualCenterPoint => instance.VisualCenterPoint;
+
+	public float BoundingRadius => instance.BoundingRadius;
 
 	#endregion
 	#region Methods
@@ -114,7 +118,7 @@ public sealed class StaticMeshRenderer : Component, IRenderer
 	{
 		if (!IsVisible) return true;
 
-		if (instance.LastUpdatedForFrameIdx != _cameraPassCtx.frameIdx)
+		if (instance.LastUpdatedForFrameIdx != _cameraPassCtx.FrameIdx)
 		{
 			instance.SetWorldPose(node.WorldTransformation);
 		}
@@ -125,7 +129,7 @@ public sealed class StaticMeshRenderer : Component, IRenderer
 	{
 		if (!IsVisible) return true;
 
-		if (instance.LastUpdatedForFrameIdx != _cameraPassCtx.frameIdx)
+		if (instance.LastUpdatedForFrameIdx != _cameraPassCtx.FrameIdx)
 		{
 			instance.SetWorldPose(node.WorldTransformation);
 		}

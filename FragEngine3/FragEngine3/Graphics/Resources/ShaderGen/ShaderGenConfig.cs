@@ -164,7 +164,7 @@ public struct ShaderGenConfig
 		}
 		else if (albedoSource == ShaderGenAlbedoSource.Color)
 		{
-			// Format: "As_0xFF0000FF"
+			// Format: "Al_0xFF0000FF"
 			txt += $"_Al={new Color32(albedoColor).ToHexStringLower()}";
 		}
 

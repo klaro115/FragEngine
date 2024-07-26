@@ -87,6 +87,7 @@ struct Light
     float4x4 mtxShadowWorld2Clip;
     uint shadowMapIdx;
     float shadowBias;
+    float shadowDepthBias;
     uint shadowCascades;
     float shadowCascadeRange;
 };

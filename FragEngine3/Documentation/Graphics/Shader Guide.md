@@ -2,14 +2,18 @@
 
 **SLIGHTLY OUT-DATED! The Metal bindings and layouts are updated as specification, but do not reflect the current state of the implementation. At this time, the Metal rendering pipeline is not fully implemented and may not run without crashes.**
 
-- [Vertex Buffers:](#vertex-buffers)
-- [System-bound Constants \& Lights:](#system-bound-constants--lights)
-- [User-bound Resources:](#user-bound-resources)
+This guide provides a general overview of what vertex buffer data and which resources are available to shaders at run-time. These resources are provided by the standard graphics stack and are targeting standard shaders. If your game's shading requires different or additional resources, you may assign them yourself via [user-bound resources](#user-bound-resources).
+For more information about the engine's lighting system and standard shaders, have a look at the [Lighting & Shading Guide](./Lighting&Shading%20Guide.md).
+<br>
+
+- [Vertex Buffers](#vertex-buffers)
+- [System-bound Constants \& Lights](#system-bound-constants--lights)
+- [User-bound Resources](#user-bound-resources)
 
 <br>
 
 
-## Vertex Buffers:
+## Vertex Buffers
 _Source code:_ [BasicVertex, ExtendedVertex, ...](../../FragEngine3/Graphics/Resources/VertexDataTypes.cs)
 
 The engine expects between 1 and 4 vertex buffers for each piece of scene geometry. The first vertex buffer (`VertexInput_Basic`) contains positions, normals, and texture coordinates for each vertex of surface. The other 3 vertex buffers are optional, and contain additional geometry data or animation data for the those same vertices.
@@ -27,7 +31,7 @@ The engine's graphics device is created using Veldrid's `ResourceBindingModel.De
 <br>
 
 
-## System-bound Constants & Lights:
+## System-bound Constants & Lights
 _Source code:_ [CBScene](../../FragEngine3/Graphics/Components/ConstantBuffers/CBScene.cs), [CBCamera](../../FragEngine3/Graphics/Components/ConstantBuffers/CBCamera.cs), [CBObject](../../FragEngine3/Graphics/Components/ConstantBuffers/CBObject.cs)
 
 The engine's graphics system defines 3 constant buffers that are updated and bound automatically for all renderers that draw scene geometry. A scene-wide constant buffer (`CBScene`) is owned by the graphics stack, and updated when a new frame begins. A second constant buffer (`CBCamera`) contains per-camera data. Each scene renderer component (ex.: `StaticMeshRenderer`) will own an instance of a constant buffer with object data (`CBObject`) that is updated on-demand right before a new draw call is issued.
@@ -53,7 +57,7 @@ The struct `LightSourceData` details the number and starting offset of its set o
 <br>
 
 
-## User-bound Resources:
+## User-bound Resources
 
 Any additional buffers may be bound by user code or the graphics stack after the above buffers' slots.
 
