@@ -78,6 +78,16 @@ cbuffer CBObject : register(b2)
     float boundingRadius;           // Bounding sphere radius of the object.
 };
 
+// Constant buffer containing material-specific settings:
+cbuffer CBDefaultSurface : register(b3)
+{
+    float4 tintColor;               // Color tint applied to albedo.
+    float roughness;                // Roughness rating of the surface.
+    float shininess;                // How shiny or metallic the surface is.
+    float reflectionIndex;          // Reflection index of the material's surface.
+    float refractionIndex;          // Refraction index of the material's substance.
+};
+
 /****************** RESOURCES: *****************/
 
 // ResSetCamera:

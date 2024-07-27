@@ -57,7 +57,7 @@ public class Material(GraphicsCore _core, ResourceHandle _handle) : Resource(_ha
 	#endregion
 	#region Fields
 
-	public GraphicsCore core = _core ?? throw new ArgumentNullException(nameof(_core), "Graphics core may not be null!");
+	public readonly GraphicsCore core = _core ?? throw new ArgumentNullException(nameof(_core), "Graphics core may not be null!");
 
 	private uint materialVersion = 1000;
 
