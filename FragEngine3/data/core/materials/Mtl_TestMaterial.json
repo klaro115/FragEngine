@@ -40,9 +40,5 @@
         "SimplifiedVersion": "",
         "ShadowMap": ""
     },
-    "Resources":
-    {
-        "BoundResourceCount": 0,
-        "BoundResources": null
-    }
+    "Resources": null
 }
