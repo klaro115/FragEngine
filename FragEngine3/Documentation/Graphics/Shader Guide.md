@@ -24,8 +24,8 @@ The engine's graphics device is created using Veldrid's `ResourceBindingModel.De
 
 | **Order** | **HLSL Struct**           | **Status** | **C\# Type**            | **MSL Index** |
 | --------- | ------------------------- | ---------- | ----------------------- | ------------- |
-|    1st    |     `VertexInput_Basic`   |  required  |      `BasicVertex`      |  buffer(0)    |
-|    2nd    |   `VertexInput_Extended`  |  optional  |     `ExtendedVertex`    |  buffer(1)    |
+|    1st    | `VertexInput_Basic`       |  required  | `BasicVertex`           |  buffer(0)    |
+|    2nd    | `VertexInput_Extended`    |  optional  | `ExtendedVertex`        |  buffer(1)    |
 |    3rd    | `VertexInput_BlendShapes` |  optional  | `IndexedWeightedVertex` |  buffer(2)    |
 |    4th    | `VertexInput_BoneWeights` |  optional  | `IndexedWeightedVertex` |  buffer(3)    |
 <br>
@@ -45,10 +45,11 @@ On Vulkan and Direct3D, the light buffer buffer is always bound to the first tex
 | `CBScene`             | Constant Buffer              | `CBScene`                 | b0                | buffer(+1)    | Graphics Stack  |
 | `CBCamera`            | Constant Buffer              | `CBCamera`                | b1                | buffer(+2)    | Camera          |
 | `CBObject`            | Constant Buffer              | `CBObject`                | b2                | buffer(+3)    | Renderer        |
-| `BufLights`           | Structured Buffer (readonly) | `LightSourceData`         | t0                | buffer(+4)    | LightDataBuffer |
+| `CBDefaultSurface`    | Constant Buffer (optional)   | `CBDefaultSurface`        | b3                | buffer(+4)    | Material        |
+| `BufLights`           | Structured Buffer (readonly) | `LightSourceData`         | t0                | buffer(+5)    | LightDataBuffer |
 | `TexShadowMaps`       | Texture2DArray               | `Texture` (depth)         | t1                | texture(0)    | ShadowMapArray  |
 | `TexShadowNormalMaps` | Texture2DArray               | `Texture` (RGBA32_Unorm)  | t2                | texture(0)    | ShadowMapArray  |
-| `BufShadowMatrices`   | Structured Buffer (readonly) | `Matrix4x4[]`<sup>1</sup> | t3                | buffer(+5)    | ShadowMapArray  |
+| `BufShadowMatrices`   | Structured Buffer (readonly) | `Matrix4x4[]`<sup>1</sup> | t3                | buffer(+6)    | ShadowMapArray  |
 | `SamplerShadowMaps`   | Sampler                      | `Sampler`                 | s0                | sampler(0)    | ShadowMapArray  |
 
 <sup>1</sup> _The shadow matrix buffer contains more matrices than there are shadow-casting lights in the scene. For each light source that generates shadow maps, 2 matrices are created per shadow cascade. The first matrix is the shadow projection matrix, the second one is its inverse.
@@ -63,8 +64,9 @@ Any additional buffers may be bound by user code or the graphics stack after the
 
 | **HLSL Resource** | **Type**                     |  **C\# Type** | **HLSL Register** | **MSL Index** | **Owner**                 |
 | ----------------- | ---------------------------- | ------------- | ----------------- | ------------- | ------------------------- |
-| `[TexCustom]`     | Texture (any)                | `Texture`     | t4+               | buffer(6+)    | Material<sup>2</sup>      |
-| `[BufCustom]`     | Structured Buffer (readonly) | `<T>`         | t4+               | texture(1+)   | Material<sup>2</sup>      |
+| `[CbCustom]`      | Constant Buffer              | `<T>`         | b4+               | buffer(7+)    | Material<sup>2</sup>      |
+| `[BufCustom]`     | Structured Buffer (readonly) | `<T>`         | t4+               | buffer(7+)    | Material<sup>2</sup>      |
+| `[TexCustom]`     | Texture (any)                | `Texture`     | t4+               | texture(1+)   | Material<sup>2</sup>      |
 | `[SamplerCustom]` | Sampler                      | `Sampler`     | s1+               | sampler(1+)   | Graphics Core<sup>3</sup> |
 
 <sup>2</sup> _Custom textures and buffers are managed and assigned by the material, but the actual ownership of the resource objects remains with ResourceManager._

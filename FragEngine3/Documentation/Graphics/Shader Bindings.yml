@@ -35,6 +35,7 @@ RENDERER:
 MATERIAL:                                 owned by material, semi-persistent
   - ResLayoutBound          LAYOUT 2
   - ResSetBound             SET 2
+  - CBDefaultSurface        b3            optional, required by standard shaders
 
 
 ############################################
@@ -56,13 +57,14 @@ MATERIAL:                                 owned by material, semi-persistent
 
 - SET 2:    (ResSetBound)                                 owned by renderer, different for each material (main + shadow)
   Name:                     HLSL Slot:      Mtl Slot:     Updated:    Owner:
-  - [...] Bound Resources   b3+, t4+, s1+   b6+, t2+, s1+ -           mat       all
+  - CBDefaultSurface        b3              b+4           -           mat       ps
+  - [...] Bound Resources   b3+, t4+, s1+   b7+, t2+, s1+ -           mat       all
 
 
 ############################################
 # ShaderGen Example:
 
-Import:     shadergen=At_Nyy_Ly100p0
+Import:     shadergen=At_Nyy_Ly100p000
 Backend:    D3D11, HLSL
 
 - SET 0:    ResSetCamera
@@ -78,6 +80,7 @@ Backend:    D3D11, HLSL
   - CBObject                b2    VS only
 
 - SET 2:    ResSetBound
+  - CBDefaultSurface        b3    PS only
   - TexMain                 t4
   - TexNormals              t5
   - TexParallax             t6
