@@ -271,22 +271,32 @@ half3 CalculateIndirectLightScatter(const in Light _light, const in float3 _worl
 
 #if defined(FEATURE_LIGHT_SHADOWMAPS_AA) && FEATURE_LIGHT_SHADOWMAPS_AA > 1
     // MSAA offsets for shadow depth sampling:
-    static const float shadowSamplingOffsetA = 1.0 / FEATURE_LIGHT_SHADOWMAPS_RES;
-    static const float shadowSamplingOffsetB = 0.5 / FEATURE_LIGHT_SHADOWMAPS_RES;
-
     #if FEATURE_LIGHT_SHADOWMAPS_AA == 2
         static const float2 shadowSamplingOffsets[] =
         {
-            { -shadowSamplingOffsetA, -shadowSamplingOffsetB },
-            {  shadowSamplingOffsetA,  shadowSamplingOffsetB }
+            { -0.5 / FEATURE_LIGHT_SHADOWMAPS_RES, -0.25 / FEATURE_LIGHT_SHADOWMAPS_RES },
+            {  0.5 / FEATURE_LIGHT_SHADOWMAPS_RES,  0.25 / FEATURE_LIGHT_SHADOWMAPS_RES }
         };
     #elif FEATURE_LIGHT_SHADOWMAPS_AA == 4
         static const float2 shadowSamplingOffsets[] =
         {
-            { -shadowSamplingOffsetA, -shadowSamplingOffsetB },
-            {  shadowSamplingOffsetA,  shadowSamplingOffsetB },
-            { -shadowSamplingOffsetB,  shadowSamplingOffsetA },
-            {  shadowSamplingOffsetB, -shadowSamplingOffsetA }
+            {  0, 0 },
+            {  0, 0.5 / FEATURE_LIGHT_SHADOWMAPS_RES },
+            { -0.25 / FEATURE_LIGHT_SHADOWMAPS_RES, -0.25 / FEATURE_LIGHT_SHADOWMAPS_RES },
+            {  0.25 / FEATURE_LIGHT_SHADOWMAPS_RES, -0.25 / FEATURE_LIGHT_SHADOWMAPS_RES },
+        };
+    #elif FEATURE_LIGHT_SHADOWMAPS_AA == 8
+        static const float2 shadowSamplingOffsets[] =
+        {
+            {  0, 0 },
+            {  0,  0.5 / FEATURE_LIGHT_SHADOWMAPS_RES },
+            {  0, -0.5 / FEATURE_LIGHT_SHADOWMAPS_RES },
+            {  0.5 / FEATURE_LIGHT_SHADOWMAPS_RES, 0 },
+            { -0.5 / FEATURE_LIGHT_SHADOWMAPS_RES, 0 },
+            { -0.25 / FEATURE_LIGHT_SHADOWMAPS_RES, 0.2 / FEATURE_LIGHT_SHADOWMAPS_RES },
+            { -0.25 / FEATURE_LIGHT_SHADOWMAPS_RES, -0.2 / FEATURE_LIGHT_SHADOWMAPS_RES },
+            {  0.25 / FEATURE_LIGHT_SHADOWMAPS_RES, 0.2 / FEATURE_LIGHT_SHADOWMAPS_RES },
+            {  0.25 / FEATURE_LIGHT_SHADOWMAPS_RES, -0.2 / FEATURE_LIGHT_SHADOWMAPS_RES },
         };
     #else
         #error "Shadow sampling count FEATURE_LIGHT_SHADOWMAPS_AA can only be 2 or 4"
@@ -310,24 +320,22 @@ half CalculateShadowMapLightWeight(const in Light _light, const in float3 _world
     const float2 shadowUv = float2(shadowProj.x + 1, 1 - shadowProj.y) * 0.5;
 
 #if defined(FEATURE_LIGHT_SHADOWMAPS_AA) && FEATURE_LIGHT_SHADOWMAPS_AA > 1
-    static const half invShadowSampleCount = 1.0 / FEATURE_LIGHT_SHADOWMAPS_AA;
-
     // Calculate shadow depth by averaging from multiple samples:
-    half shadowDepth = 0;
+    static const half invShadowSampleCount = 1.0 / FEATURE_LIGHT_SHADOWMAPS_AA;
+    half lightWeight = 0;
     for (uint i = 0; i < FEATURE_LIGHT_SHADOWMAPS_AA; ++i)
     {
-        float2 shadowSampleUv = shadowUv + shadowSamplingOffsets[i];
-        shadowDepth += TexShadowMaps.Sample(SamplerShadowMaps, float3(shadowSampleUv.x, shadowSampleUv.y, shadowMapIdx));
+        const float2 shadowSampleUv = shadowUv + shadowSamplingOffsets[i];
+        const half shadowDepth = TexShadowMaps.Sample(SamplerShadowMaps, float3(shadowSampleUv.x, shadowSampleUv.y, shadowMapIdx));
+        lightWeight += shadowDepth > shadowProj.z ? 1 : 0;
     }
-    shadowDepth *= invShadowSampleCount;
+    lightWeight *= invShadowSampleCount;
 #else
     // Calculate shadow depth from a single sample:
     const half shadowDepth = TexShadowMaps.Sample(SamplerShadowMaps, float3(shadowUv.x, shadowUv.y, shadowMapIdx));
+    half lightWeight = shadowDepth > shadowProj.z ? 1 : 0;
 #endif //FEATURE_LIGHT_SHADOWMAPS_AA
     
-    // Load corresponding depth value from shadow texture array:
-    half lightWeight = shadowDepth > shadowProj.z ? 1 : 0;
-
     // Fade shadows out near boundaries of UV/Depth space:
     if (_light.lightType == 2 && shadowMapIdx == _light.shadowCascades)
     {

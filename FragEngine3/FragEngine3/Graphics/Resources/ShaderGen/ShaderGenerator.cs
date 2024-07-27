@@ -146,7 +146,7 @@ public static class ShaderGenerator
 			ReplaceDefineValue(
 				codeBuilder,
 				"#define FEATURE_LIGHT_SHADOWMAPS_RES",
-				$"#define FEATURE_LIGHT_SHADOWMAPS_RES {LightConstants.shadowResolution}",
+				$"#define FEATURE_LIGHT_SHADOWMAPS_RES {LightConstants.SHADOW_RESOLUTION}",
 				_config.useShadowMaps);
 			
 			ReplaceDefineValue(

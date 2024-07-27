@@ -257,7 +257,7 @@ public sealed class ShadowMapArray : IDisposable
 
 		DisposeTextureArrays();
 
-		const uint resolution = LightConstants.shadowResolution;
+		const uint resolution = LightConstants.SHADOW_RESOLUTION;
 		const PixelFormat normalFormat = PixelFormat.R8_G8_B8_A8_UNorm;
 		PixelFormat depthFormat = core.DefaultShadowMapDepthTargetFormat;
 
