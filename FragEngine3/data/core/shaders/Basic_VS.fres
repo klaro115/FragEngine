@@ -1,5 +1,5 @@
 {
-    "DataFilePath": "./Test_VS.hlsl",
+    "DataFilePath": "./Basic_VS.hlsl",
     "DataFileType": 0,
     "DataFileSize": 0,
     "UncompressedFileSize": 0,
@@ -9,7 +9,7 @@
     "Resources":
     [
         {
-            "ResourceKey": "Test_VS",
+            "ResourceKey": "Basic_VS",
             "ResourceType": 4,
             "PlatformFlags": 0,
             "DataOffset": 0,

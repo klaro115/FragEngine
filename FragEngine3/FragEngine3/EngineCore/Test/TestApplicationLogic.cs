@@ -182,7 +182,6 @@ public sealed class TestApplicationLogic : ApplicationLogic
 
 			rabbit.SetMesh("Rabbit.obj");
 			rabbit.SetMaterial("Mtl_DefaultSurface");
-			//rabbit.SetMaterial("Mtl_FeatureTest");
 			rabbit.DontDrawUnlessFullyLoaded = true;
 		}
 
@@ -210,7 +209,6 @@ public sealed class TestApplicationLogic : ApplicationLogic
 			//cylinder.node.SetEnabled(false);
 
 			cylinder.SetMesh(cylinderHandle);
-			//cylinder.SetMaterial("Mtl_FeatureTest");
 			cylinder.SetMaterial("Mtl_DefaultSurface");
 		}
 
@@ -224,7 +222,6 @@ public sealed class TestApplicationLogic : ApplicationLogic
 			//cone.node.SetEnabled(false);
 
 			cone.SetMesh(coneHandle);
-			//cone.SetMaterial("Mtl_FeatureTest");
 			cone.SetMaterial("Mtl_DefaultSurface");
 		}
 
@@ -322,7 +319,6 @@ public sealed class TestApplicationLogic : ApplicationLogic
 
 			quad.SetMesh(quadHandle);
 			quad.SetMaterial("Mtl_DefaultSurface");
-			//quad.SetMaterial("Mtl_TestMaterial");
 		}
 
 		return true;

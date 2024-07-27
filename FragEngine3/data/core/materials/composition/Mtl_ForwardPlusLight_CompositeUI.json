@@ -29,7 +29,7 @@
     {
         "IsSurfaceMaterial": true,
         "Compute": "",
-        "Vertex": "Test_VS",
+        "Vertex": "Basic_VS",
         "Geometry": "",
         "TesselationCtrl": "",
         "TesselationEval": "",
