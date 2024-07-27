@@ -12,10 +12,10 @@ The engine is designed to be open-source, and available for both free and commer
     - [Resource Files](#resource-files)
     - [Shaders \& Graphics](#shaders--graphics)
 - [Platforms](#platforms)
-    - [Windows](#windows)
-    - [Linux](#linux)
-    - [Apple](#apple)
-    - [Mobile (iOS/Android)](#mobile-iosandroid)
+    - [Windows ✅](#windows-)
+    - [Linux ❌](#linux-)
+    - [Apple 🛠️](#apple-️)
+    - [Mobile (iOS/Android) ❌](#mobile-iosandroid-)
 - [Work In Progress](#work-in-progress)
 - [Roadmap](#roadmap)
 
@@ -62,19 +62,19 @@ The following document provides a rough overview of default resource bindings an
 
 ## Platforms
 
-#### Windows
+#### Windows ✅
 Windows 10+ is currently the main development target, and all code will be developed for this platform first.
 D3D11 being a very developer-friendly API, all features will be completed and polished with priority for Windows platforms.
 
-#### Linux
+#### Linux ❌
 Linux support is planned but not currently implemented. A Vulkan backend and SPIR-V shaders are currently missing and may be added in the near future.
 
-#### Apple
+#### Apple 🛠️
 Support for MacOS exists to some degree, but active development has been put on hold.
 The platform is reliant on its proprietary Metal API, which is so poorly documented and cumbersome to work with, that the time and effort it takes to implement even basic functionality is often just not worth it.
 Support may be resumed in the future if express interest arises, and may possibly use MoltenVK, to bypass Apple's insufferable software ecosystem.
 
-#### Mobile (iOS/Android)
+#### Mobile (iOS/Android) ❌
 No support is planned for the foreseeable future. Android will have to wait until a Vulkan graphics backend is fully implemented, while iOS support hinges entirely on a functional Metal backend.
 <br>
 

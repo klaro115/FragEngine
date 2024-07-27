@@ -59,10 +59,10 @@ public sealed class TestApplicationLogic : ApplicationLogic
 	protected override bool EndLoadingState()
 	{
 		// Create scene's graphics stack:
-		ForwardPlusLightsStack stack = new(Engine.GraphicsSystem.graphicsCore);
-
-		if (Engine.SceneManager.MainScene != null)
+		if (Engine.SceneManager.MainScene is not null)
 		{
+			ForwardPlusLightsStack stack = new(Engine.GraphicsSystem.graphicsCore);
+
 			Engine.SceneManager.MainScene.GraphicsStack = stack;
 		}
 
@@ -389,23 +389,6 @@ public sealed class TestApplicationLogic : ApplicationLogic
 
 			Camera.MainCamera.node.LocalTransformation = p;
 		}
-
-		/*
-		// Reposition quad to visualize directional light's far-clip-plane:
-		if (scene.FindNode("Quad", out SceneNode? quadNode) && quadNode != null &&
-			scene.FindNode("Sun", out SceneNode? sunNode) && sunNode != null)
-		{
-			Light sunLight = sunNode.GetComponent<Light>()!;
-			float range = ShadowMapUtility.directionalLightSize * Math.Max(MathF.Pow(2, sunLight.ShadowCascades), 1);
-
-			Pose sunPose = sunNode.WorldTransformation;
-			Pose quadPose = new(
-				Camera.MainCamera!.node.WorldPosition + sunPose.Forward * 0.5f * range,
-				sunPose.rotation,
-				Vector3.One * 0.5f * range);
-			quadNode.WorldTransformation = quadPose;
-		}
-		*/
 
 		// Try downloading mesh geometry data from GPU memory when pressing 'T':
 		if (Engine.InputManager.GetKeyUp(Key.T) && Engine.ResourceManager.GetResource("Cube", out ResourceHandle meshHandle))

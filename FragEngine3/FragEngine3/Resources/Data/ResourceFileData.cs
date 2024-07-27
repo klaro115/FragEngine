@@ -4,6 +4,7 @@ using FragEngine3.Utility.Serialization;
 namespace FragEngine3.Resources.Data;
 
 [Serializable]
+[ResourceDataType(typeof(ResourceFileHandle))]
 public sealed class ResourceFileData
 {
 	#region Properties
@@ -27,6 +28,9 @@ public sealed class ResourceFileData
 	#endregion
 	#region Properties
 
+	/// <summary>
+	/// An invalid empty file handle's data. This should be used instead of null, to prevent null errors as much as possible.
+	/// </summary>
 	public static ResourceFileData None => none;
 
 	#endregion

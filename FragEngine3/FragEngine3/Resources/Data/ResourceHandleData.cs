@@ -3,6 +3,7 @@
 namespace FragEngine3.Resources.Data;
 
 [Serializable]
+[ResourceDataType(typeof(ResourceHandle))]
 public sealed class ResourceHandleData
 {
 	#region Properties
