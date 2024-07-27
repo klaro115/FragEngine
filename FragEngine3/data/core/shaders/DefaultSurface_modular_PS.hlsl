@@ -18,12 +18,14 @@
 #define FEATURE_LIGHT_SOURCES                   // Whether to use light sources from the scene to light up the object
 #define FEATURE_LIGHT_MODEL Phong
 #define FEATURE_LIGHT_SHADOWMAPS                // Whether to use shadow maps to mask out light rays coming from light sources
-#define FEATURE_LIGHT_INDIRECT 5
+#define FEATURE_LIGHT_SHADOWMAPS_RES 1024       // The resolution of shadow maps, in pixels per side.
+#define FEATURE_LIGHT_SHADOWMAPS_AA 2           // If defined, controls the number of depth samples read from shadow map per pixel 
+#define FEATURE_LIGHT_INDIRECT 5                // If defined, controls the number of indirect light samples per pixel, sample count is NxN, must be 2 or higher
 
 // Variants:
 #define VARIANT_EXTENDED                        // Whether to always create a shader variant using extended surface data
 #define VARIANT_BLENDSHAPES                     // Whether to always create a shader variant using blend shape data
-#define VARIANT_ANIMATED                        // Whether to always create a shader variant using bone animation data    
+#define VARIANT_ANIMATED                        // Whether to always create a shader variant using bone animation data
 
 #if FEATURE_ALBEDO_TEXTURE == 0
     #ifndef FEATURE_ALBEDO_COLOR
@@ -267,6 +269,30 @@ half3 CalculateIndirectLightScatter(const in Light _light, const in float3 _worl
 #endif //FEATURE_LIGHT_INDIRECT
 #define SHADOW_EDGE_FACE_SCALE 10.0
 
+#if defined(FEATURE_LIGHT_SHADOWMAPS_AA) && FEATURE_LIGHT_SHADOWMAPS_AA > 1
+    // MSAA offsets for shadow depth sampling:
+    static const float shadowSamplingOffsetA = 1.0 / FEATURE_LIGHT_SHADOWMAPS_RES;
+    static const float shadowSamplingOffsetB = 0.5 / FEATURE_LIGHT_SHADOWMAPS_RES;
+
+    #if FEATURE_LIGHT_SHADOWMAPS_AA == 2
+        static const float2 shadowSamplingOffsets[] =
+        {
+            { -shadowSamplingOffsetA, -shadowSamplingOffsetB },
+            {  shadowSamplingOffsetA,  shadowSamplingOffsetB }
+        };
+    #elif FEATURE_LIGHT_SHADOWMAPS_AA == 4
+        static const float2 shadowSamplingOffsets[] =
+        {
+            { -shadowSamplingOffsetA, -shadowSamplingOffsetB },
+            {  shadowSamplingOffsetA,  shadowSamplingOffsetB },
+            { -shadowSamplingOffsetB,  shadowSamplingOffsetA },
+            {  shadowSamplingOffsetB, -shadowSamplingOffsetA }
+        };
+    #else
+        #error "Shadow sampling count FEATURE_LIGHT_SHADOWMAPS_AA can only be 2 or 4"
+    #endif
+#endif
+
 half CalculateShadowMapLightWeight(const in Light _light, const in float3 _worldPosition, const in float3 _surfaceNormal)
 {
     // Determine shadow cascade for this pixel:
@@ -282,9 +308,24 @@ half CalculateShadowMapLightWeight(const in Light _light, const in float3 _world
     float4 shadowProj = mul(BufShadowMatrices[2 * shadowMapIdx], worldPosBiased);
     shadowProj /= shadowProj.w;
     const float2 shadowUv = float2(shadowProj.x + 1, 1 - shadowProj.y) * 0.5;
+
+#if defined(FEATURE_LIGHT_SHADOWMAPS_AA) && FEATURE_LIGHT_SHADOWMAPS_AA > 1
+    static const half invShadowSampleCount = 1.0 / FEATURE_LIGHT_SHADOWMAPS_AA;
+
+    // Calculate shadow depth by averaging from multiple samples:
+    half shadowDepth = 0;
+    for (uint i = 0; i < FEATURE_LIGHT_SHADOWMAPS_AA; ++i)
+    {
+        float2 shadowSampleUv = shadowUv + shadowSamplingOffsets[i];
+        shadowDepth += TexShadowMaps.Sample(SamplerShadowMaps, float3(shadowSampleUv.x, shadowSampleUv.y, shadowMapIdx));
+    }
+    shadowDepth *= invShadowSampleCount;
+#else
+    // Calculate shadow depth from a single sample:
+    const half shadowDepth = TexShadowMaps.Sample(SamplerShadowMaps, float3(shadowUv.x, shadowUv.y, shadowMapIdx));
+#endif //FEATURE_LIGHT_SHADOWMAPS_AA
     
     // Load corresponding depth value from shadow texture array:
-    const half shadowDepth = TexShadowMaps.Sample(SamplerShadowMaps, float3(shadowUv.x, shadowUv.y, shadowMapIdx));
     half lightWeight = shadowDepth > shadowProj.z ? 1 : 0;
 
     // Fade shadows out near boundaries of UV/Depth space:

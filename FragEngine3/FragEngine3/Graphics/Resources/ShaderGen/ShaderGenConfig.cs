@@ -24,6 +24,7 @@ public struct ShaderGenConfig
 	public bool useLightSources;						// For lighting, whether to use light sources in the scene to light up surfaces. "BufLights" buffer and "Light" struct are added.
 	public ShaderGenLightingModel lightingModel;		// For lighting, which lighting model to use for light sources.
 	public bool useShadowMaps;                          // For lighting, whether to use shadow maps to mask out light coming from light sources.
+	public uint shadowSamplingCount;					// For shadow maps, how many depth samples are averaged to calculate depth per pixel.
 	public uint indirectLightResolution;				// For indirect lighting, how many samples per side of a grid to use for approximating nearby indirect light scattering.
 
 	// Variants:
@@ -51,6 +52,7 @@ public struct ShaderGenConfig
 		useLightSources = true,
 		lightingModel = ShaderGenLightingModel.Phong,
 		useShadowMaps = true,
+		shadowSamplingCount = 1,
 		indirectLightResolution = 0u,
 	};
 
@@ -71,6 +73,7 @@ public struct ShaderGenConfig
 		useLightSources = true,
 		lightingModel = ShaderGenLightingModel.Phong,
 		useShadowMaps = true,
+		shadowSamplingCount = 1,
 		indirectLightResolution = 0u,
 	};
 
@@ -91,6 +94,7 @@ public struct ShaderGenConfig
 		useLightSources = true,
 		lightingModel = ShaderGenLightingModel.Phong,
 		useShadowMaps = true,
+		shadowSamplingCount = 1,
 		indirectLightResolution = 0u,
 	};
 
@@ -117,6 +121,10 @@ public struct ShaderGenConfig
 		useLightMaps &= applyLighting;
 		useLightSources &= applyLighting;
 		useShadowMaps &= useLightSources;
+		if (!useShadowMaps)
+		{
+			shadowSamplingCount = 0;
+		}
 		if (!useLightSources)
 		{
 			lightingModel = ShaderGenLightingModel.Phong;
@@ -144,6 +152,7 @@ public struct ShaderGenConfig
 		char useLgtSrcs = BoolTo01(applyLighting && useLightSources);
 		char lightModel = BoolToCustom(applyLighting && useLightSources && lightingModel == ShaderGenLightingModel.Phong, 'p', '?');
 		char useShaMaps = BoolTo01(applyLighting && useLightSources && useShadowMaps);
+		char shaSampNum = UintToHex(Math.Min(shadowSamplingCount, 8));
 		char indirectRes = UintToHex(Math.Min(indirectLightResolution, 15));
 
 		// Variants:
@@ -154,7 +163,7 @@ public struct ShaderGenConfig
 
 		// Assemble base text containing only flags:
 		// Format: "Ac_Nyn_Ly101p1_V100"
-		string txt = $"A{albedoSrc}_N{normalsYN}{parallaxYN}{parallaxFull}_L{lightingYN}{useAmbient}{useLgtMaps}{useLgtSrcs}{lightModel}{useShaMaps}{indirectRes}_V{variantExt}{variantBle}{variantAni}";
+		string txt = $"A{albedoSrc}_N{normalsYN}{parallaxYN}{parallaxFull}_L{lightingYN}{useAmbient}{useLgtMaps}{useLgtSrcs}{lightModel}{useShaMaps}{shaSampNum}{indirectRes}_V{variantExt}{variantBle}{variantAni}";
 
 		// Albedo start color literal or sampler name:
 		if (albedoSource == ShaderGenAlbedoSource.SampleTexMain && !string.IsNullOrEmpty(samplerTexMain))
@@ -282,7 +291,8 @@ public struct ShaderGenConfig
 						return false;
 				}
 				config.useShadowMaps = _part[6] == '1';
-				config.indirectLightResolution = _part.Length > 7 ? HexToUint(_part[7]) : 0;
+				config.shadowSamplingCount = _part.Length > 7 ? HexToUint(_part[7]) : 0;
+				config.indirectLightResolution = _part.Length > 8 ? HexToUint(_part[8]) : 0;
 			}
 			return true;
 
