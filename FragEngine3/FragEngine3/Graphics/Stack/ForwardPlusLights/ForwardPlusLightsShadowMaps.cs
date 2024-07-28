@@ -18,7 +18,7 @@ internal sealed class ForwardPlusLightsShadowMaps(ForwardPlusLightsStack _stack,
 	#endregion
 	#region Fields
 
-	public readonly GraphicsCore core = _stack.core;
+	public readonly GraphicsCore core = _stack.Core;
 	public readonly ForwardPlusLightsStack stack = _stack;
 	private readonly ForwardPlusLightsSceneObjects sceneObjects = _sceneObjects;
 
@@ -27,8 +27,8 @@ internal sealed class ForwardPlusLightsShadowMaps(ForwardPlusLightsStack _stack,
 
 	public bool IsDisposed { get; private set; } = false;
 
-	public ShadowMapArray? shadowMapArray { get; private set; } = null;
-	public LightDataBuffer? dummyLightDataBuffer { get; private set; } = null;
+	public ShadowMapArray? ShadowMapArray { get; private set; } = null;
+	public LightDataBuffer? DummyLightDataBuffer { get; private set; } = null;
 
 	private Logger Logger => core.graphicsSystem.engine.Logger ?? Logger.Instance!;
 
@@ -41,24 +41,30 @@ internal sealed class ForwardPlusLightsShadowMaps(ForwardPlusLightsStack _stack,
 		Dispose(true);
 	}
 
-	private void Dispose(bool _)
+	private void Dispose(bool _disposing)
 	{
 		IsDisposed = true;
 
-		dummyLightDataBuffer?.Dispose();
-		shadowMapArray?.Dispose();
+		DummyLightDataBuffer?.Dispose();
+		ShadowMapArray?.Dispose();
+
+		if (_disposing)
+		{
+			DummyLightDataBuffer = null;
+			ShadowMapArray = null;
+		}
 	}
 
 	public bool Initialize()
 	{
-		if (dummyLightDataBuffer is null || dummyLightDataBuffer.IsDisposed)
+		if (DummyLightDataBuffer is null || DummyLightDataBuffer.IsDisposed)
 		{
-			dummyLightDataBuffer = new(core, 1);
+			DummyLightDataBuffer = new(core, 1);
 		}
 
-		if (shadowMapArray is null || shadowMapArray.IsDisposed)
+		if (ShadowMapArray is null || ShadowMapArray.IsDisposed)
 		{
-			shadowMapArray = new(core, 1);
+			ShadowMapArray = new(core, 1);
 		}
 
 		return true;
@@ -77,7 +83,7 @@ internal sealed class ForwardPlusLightsShadowMaps(ForwardPlusLightsStack _stack,
 		}
 
 		// Prepare shadow map texture arrays, sampler, and matrix buffer:
-		if (!shadowMapArray!.PrepareTextureArrays(totalShadowCascadeCount, out _outTexShadowsHasChanged))
+		if (!ShadowMapArray!.PrepareTextureArrays(totalShadowCascadeCount, out _outTexShadowsHasChanged))
 		{
 			return false;
 		}
@@ -190,7 +196,7 @@ internal sealed class ForwardPlusLightsShadowMaps(ForwardPlusLightsStack _stack,
 					result &= light.EndDrawShadowCascade();
 
 					// Store projection matrix for later scene rendering calls:
-					shadowMapArray!.SetShadowProjectionMatrices(shadowMapArrayIdx++, lightCtx.MtxWorld2Clip);
+					ShadowMapArray!.SetShadowProjectionMatrices(shadowMapArrayIdx++, lightCtx.MtxWorld2Clip);
 				}
 
 				result &= light.EndDrawShadowMap();
@@ -205,7 +211,7 @@ internal sealed class ForwardPlusLightsShadowMaps(ForwardPlusLightsStack _stack,
 		}
 
 		// Upload all shadow projection matrices to GPU buffer:
-		success &= shadowMapArray!.FinalizeProjectionMatrices();
+		success &= ShadowMapArray!.FinalizeProjectionMatrices();
 
 		// If any shadows maps were rendered, submit command list for execution:
 		cmdList.End();

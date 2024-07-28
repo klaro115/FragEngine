@@ -99,7 +99,7 @@ public sealed class StaticMeshRenderer : Component, IPhysicalRenderer
 	/// <returns>True if the mesh was assigned, false otherwise.</returns>
 	public bool SetMesh(ResourceHandle? _meshHandle) => !IsDisposed && instance.SetMesh(_meshHandle);
 
-	public bool SetMaterial(string _resourceKey) => !IsDisposed && !instance.SetMaterial(_resourceKey);
+	public bool SetMaterial(string _resourceKey) => !IsDisposed && instance.SetMaterial(_resourceKey);
 
 	/// <summary>
 	/// Assigns a material for rendering the mesh.

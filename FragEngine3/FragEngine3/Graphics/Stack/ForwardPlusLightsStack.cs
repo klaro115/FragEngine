@@ -2,14 +2,11 @@
 using FragEngine3.Graphics.Cameras;
 using FragEngine3.Graphics.Components;
 using FragEngine3.Graphics.Components.ConstantBuffers;
-using FragEngine3.Graphics.Components.Internal;
 using FragEngine3.Graphics.Contexts;
 using FragEngine3.Graphics.Lighting;
 using FragEngine3.Graphics.PostProcessing;
-using FragEngine3.Graphics.Resources;
 using FragEngine3.Graphics.Stack.ForwardPlusLights;
 using FragEngine3.Graphics.Utility;
-using FragEngine3.Resources;
 using FragEngine3.Scenes;
 using System.Numerics;
 using Veldrid;
@@ -22,9 +19,10 @@ public sealed class ForwardPlusLightsStack : IGraphicsStack		//TODO: This type i
 
 	public ForwardPlusLightsStack(GraphicsCore _core)
 	{
-		core = _core ?? throw new ArgumentNullException(nameof(_core), "Graphics core may not be null!");
+		Core = _core ?? throw new ArgumentNullException(nameof(_core), "Graphics core may not be null!");
 
 		shadowMaps = new(this, sceneObjects);
+		composition = new(this);
 	}
 
 	~ForwardPlusLightsStack()
@@ -34,8 +32,6 @@ public sealed class ForwardPlusLightsStack : IGraphicsStack		//TODO: This type i
 
 	#endregion
 	#region Fields
-
-	public readonly GraphicsCore core;
 
 	private bool isInitialized = false;
 	private bool isDrawing = false;
@@ -53,38 +49,25 @@ public sealed class ForwardPlusLightsStack : IGraphicsStack		//TODO: This type i
 	private ushort sceneResourceVersion = 0;
 
 	// Shadow maps:
-	private readonly ForwardPlusLightsShadowMaps shadowMaps;
+	private ForwardPlusLightsShadowMaps shadowMaps;
 
 	// Output composition:
-	private ResourceSet? compositeSceneResourceSet = null;
-	private ResourceSet? compositeUIResourceSet = null;
-	private StaticMeshRenderer? compositeSceneRenderer = null;
-	private StaticMeshRenderer? compositeUIRenderer = null;
+	private readonly ForwardPlusLightsComposition composition;
 
 	// Postprocessing:
 	private IPostProcessingStack? postProcessingStackScene = null;
 	private IPostProcessingStack? postProcessingStackFinal = null;
 
 	#endregion
-	#region Constants
-
-	public const string RESOURCE_KEY_FULLSCREEN_QUAD_MESH = "FullscreenQuad";
-	public const string RESOURCE_KEY_COMPOSITE_SCENE_MATERIAL = "Mtl_ForwardPlusLight_CompositeScene";
-	public const string RESOURCE_KEY_COMPOSITE_UI_MATERIAL = "Mtl_ForwardPlusLight_CompositeUI";
-	public const string NODE_NAME_COMPOSITE_SCENE_RENDERER = "ForwardPlusLight_Composite_Scene";
-	public const string NODE_NAME_COMPOSITE_UI_RENDERER = "ForwardPlusLight_Composite_UI";
-	public const uint COMPOSITION_LAYER_MASK = 0x800000u;
-
-	#endregion
 	#region Properties
 
 	public bool IsDisposed { get; private set; } = false;
-	public bool IsValid => !IsDisposed && core.IsInitialized && Scene != null && !Scene.IsDisposed;	//TODO
+	public bool IsValid => !IsDisposed && Core.IsInitialized && Scene != null && !Scene.IsDisposed;	//TODO
 	public bool IsInitialized => !IsDisposed && isInitialized;
 	public bool IsDrawing => IsInitialized && isDrawing;
 
 	public Scene? Scene { get; private set; } = null;
-	public GraphicsCore Core => core;
+	public GraphicsCore Core { get; init; }
 
 	public IPostProcessingStack? PostProcessingStackScene
 	{
@@ -101,7 +84,7 @@ public sealed class ForwardPlusLightsStack : IGraphicsStack		//TODO: This type i
 	public int SkippedRendererCount { get; private set; } = 0;
 	public int FailedRendererCount { get; private set; } = 0;
 
-	private Logger Logger => core.graphicsSystem.engine.Logger ?? Logger.Instance!;
+	private Logger Logger => Core.graphicsSystem.engine.Logger ?? Logger.Instance!;
 
 	#endregion
 	#region Methods
@@ -123,10 +106,9 @@ public sealed class ForwardPlusLightsStack : IGraphicsStack		//TODO: This type i
 		cbScene?.Dispose();
 		resLayoutCamera?.Dispose();
 		resLayoutObject?.Dispose();
-		compositeSceneResourceSet?.Dispose();
-		compositeUIResourceSet?.Dispose();
-
+		
 		shadowMaps.Dispose();
+		composition.Dispose();
 
 		postProcessingStackScene?.Dispose();
 		postProcessingStackFinal?.Dispose();
@@ -169,13 +151,13 @@ public sealed class ForwardPlusLightsStack : IGraphicsStack		//TODO: This type i
 
 		// GLOBAL RESOURCES:
 
-		if (!CameraUtility.CreateCameraResourceLayout(in core, out resLayoutCamera))
+		if (!CameraUtility.CreateCameraResourceLayout(Core, out resLayoutCamera))
 		{
 			Logger.LogError("Failed to create default camera resource layout for graphics stack!");
 			return false;
 		}
 
-		if (!SceneUtility.CreateObjectResourceLayout(in core, out resLayoutObject))
+		if (!SceneUtility.CreateObjectResourceLayout(Core, out resLayoutObject))
 		{
 			Logger.LogError("Failed to create default object resource layout for graphics stack!");
 			return false;
@@ -183,6 +165,10 @@ public sealed class ForwardPlusLightsStack : IGraphicsStack		//TODO: This type i
 
 		// SHADOW MAPPING:
 
+		if (shadowMaps is null || shadowMaps.IsDisposed)
+		{
+			shadowMaps = new(this, sceneObjects);
+		}
 		if (!shadowMaps.Initialize())
 		{
 			Logger.LogError("Failed to initialize graphics stack's shadow map module!");
@@ -191,34 +177,12 @@ public sealed class ForwardPlusLightsStack : IGraphicsStack		//TODO: This type i
 
 		// OUTPUT COMPOSITION:
 
-		if (!Scene.engine.ResourceManager.GetResource(RESOURCE_KEY_FULLSCREEN_QUAD_MESH, out ResourceHandle fullscreenQuadHandle))
+		if (!composition.Initialize())
 		{
-			MeshPrimitiveFactory.CreateFullscreenQuadMesh(RESOURCE_KEY_FULLSCREEN_QUAD_MESH, core.graphicsSystem.engine, false, out _, out _, out fullscreenQuadHandle);
+			Logger.LogError("Failed to initialize graphics stack's composition module!");
+			return false;
 		}
-
-		if (!Scene.FindNode(NODE_NAME_COMPOSITE_SCENE_RENDERER, out SceneNode? compositionNode))
-		{
-			compositionNode = Scene.rootNode.CreateChild(NODE_NAME_COMPOSITE_SCENE_RENDERER);
-			compositionNode.LocalTransformation = Pose.Identity;
-			if (compositionNode.CreateComponent(out compositeSceneRenderer) && compositeSceneRenderer != null)
-			{
-				compositeSceneRenderer.SetMaterial(RESOURCE_KEY_COMPOSITE_SCENE_MATERIAL);
-				compositeSceneRenderer.SetMesh(fullscreenQuadHandle);
-				compositeSceneRenderer.LayerFlags = COMPOSITION_LAYER_MASK;
-			}
-		}
-		if (!Scene.FindNode(NODE_NAME_COMPOSITE_UI_RENDERER, out compositionNode))
-		{
-			compositionNode = Scene.rootNode.CreateChild(NODE_NAME_COMPOSITE_UI_RENDERER);
-			compositionNode.LocalTransformation = Pose.Identity;
-			if (compositionNode.CreateComponent(out compositeUIRenderer) && compositeUIRenderer != null)
-			{
-				compositeUIRenderer.SetMaterial(RESOURCE_KEY_COMPOSITE_UI_MATERIAL);
-				compositeUIRenderer.SetMesh(fullscreenQuadHandle);
-				compositeUIRenderer.LayerFlags = COMPOSITION_LAYER_MASK;
-			}
-		}
-
+		
 		Logger.LogMessage($"Initialized graphics stack of type '{nameof(ForwardPlusLightsStack)}' for scene '{Scene.Name}'.");
 
 		isDrawing = false;
@@ -230,28 +194,13 @@ public sealed class ForwardPlusLightsStack : IGraphicsStack		//TODO: This type i
 	{
 		if (!isInitialized) return;
 
-		if (Scene != null)
-		{
-			if (compositeSceneRenderer != null)
-			{
-				Scene.rootNode.DestroyChild(compositeSceneRenderer.node);
-				compositeSceneRenderer = null;
-			}
-			if (compositeUIRenderer != null)
-			{
-				Scene.rootNode.DestroyChild(compositeUIRenderer.node);
-				compositeUIRenderer = null;
-			}
-		}
-
+		composition.Shutdown();
 		sceneObjects.Clear();
 
 		cbScene?.Dispose();
 		resLayoutCamera?.Dispose();
 		resLayoutObject?.Dispose();
-		compositeSceneResourceSet?.Dispose();
-		compositeUIResourceSet?.Dispose();
-
+		
 		shadowMaps.Dispose();
 
 		foreach (CommandList cmdList in commandListPool)
@@ -319,7 +268,7 @@ public sealed class ForwardPlusLightsStack : IGraphicsStack		//TODO: This type i
 		}
 		else
 		{
-			_outCmdList = core.MainFactory.CreateCommandList();
+			_outCmdList = Core.MainFactory.CreateCommandList();
 		}
 		commandListsInUse.Push(_outCmdList);
 		return true;
@@ -360,7 +309,7 @@ public sealed class ForwardPlusLightsStack : IGraphicsStack		//TODO: This type i
 		bool success = true;
 		isDrawing = true;
 
-		uint maxActiveLightCount = Math.Max(core.graphicsSystem.Settings.MaxActiveLightCount, 1);
+		uint maxActiveLightCount = Math.Max(Core.graphicsSystem.Settings.MaxActiveLightCount, 1);
 
 		// Prepare global resources for drawing the scene and sort out non-visible objects:
 		success &= BeginDrawScene(
@@ -407,8 +356,8 @@ public sealed class ForwardPlusLightsStack : IGraphicsStack		//TODO: This type i
 				ResLayoutCamera = resLayoutCamera!,
 				ResLayoutObject = resLayoutObject!,
 				CbScene = cbScene!,
-				DummyLightDataBuffer = shadowMaps.dummyLightDataBuffer!,
-				ShadowMapArray = shadowMaps.shadowMapArray!,
+				DummyLightDataBuffer = shadowMaps.DummyLightDataBuffer!,
+				ShadowMapArray = shadowMaps.ShadowMapArray!,
 				SceneResourceVersion = sceneResourceVersion,
 			};
 		}
@@ -453,7 +402,6 @@ public sealed class ForwardPlusLightsStack : IGraphicsStack		//TODO: This type i
 				? Camera.MainCamera
 				: _cameras[0];
 
-			float cameraFarClipPlane = focalCamera.ProjectionSettings.farClipPlane;
 			Pose cameraWorldPose = focalCamera.node.WorldTransformation;
 			_outRenderFocalRadius = LightConstants.directionalLightSize;
 			_outRenderFocalPoint = cameraWorldPose.position;
@@ -461,7 +409,7 @@ public sealed class ForwardPlusLightsStack : IGraphicsStack		//TODO: This type i
 
 		// Update scene constant buffer:
 		if (!CameraUtility.UpdateConstantBuffer_CBScene(
-			in core,
+			Core,
 			in Scene!.settings,
 			ref cbSceneData,
 			ref cbScene,
@@ -494,8 +442,8 @@ public sealed class ForwardPlusLightsStack : IGraphicsStack		//TODO: This type i
 			ResLayoutCamera = resLayoutCamera!,
 			ResLayoutObject = resLayoutObject!,
 			CbScene = cbScene!,
-			DummyLightDataBuffer = shadowMaps.dummyLightDataBuffer!,
-			ShadowMapArray = shadowMaps.shadowMapArray!,
+			DummyLightDataBuffer = shadowMaps.DummyLightDataBuffer!,
+			ShadowMapArray = shadowMaps.ShadowMapArray!,
 			SceneResourceVersion = sceneResourceVersion,
 		};
 		return true;
@@ -562,7 +510,7 @@ public sealed class ForwardPlusLightsStack : IGraphicsStack		//TODO: This type i
 				Framebuffer sceneFramebuffer = null!;			//TODO [later]: Add all-in-one compositing option, in case no post-processing is needed on scene render.
 				if (result)
 				{
-					result &= CompositeSceneOutput(
+					result &= composition.CompositeSceneOutput(
 						in _sceneCtx,
 						camera,
 						rebuildResSetCamera,
@@ -589,7 +537,7 @@ public sealed class ForwardPlusLightsStack : IGraphicsStack		//TODO: This type i
 				Framebuffer finalFramebuffer = null!;
 				if (result)
 				{
-					result &= CompositeFinalOutput(
+					result &= composition.CompositeFinalOutput(
 						in _sceneCtx,
 						in sceneFramebuffer,
 						camera,
@@ -626,7 +574,7 @@ public sealed class ForwardPlusLightsStack : IGraphicsStack		//TODO: This type i
 
 		// If any shadows maps were rendered, submit command list for execution:
 		cmdList.End();
-		success &= core.CommitCommandList(cmdList);
+		success &= Core.CommitCommandList(cmdList);
 
 		return success;
 	}
@@ -705,7 +653,7 @@ public sealed class ForwardPlusLightsStack : IGraphicsStack		//TODO: This type i
 		// If this is the main camera, and we're on operating on final image, ouput results directly to the swapchain's backbuffer:
 		if (_camera.IsMainCamera && _renderMode == RenderMode.PostProcessing_PostUI)
 		{
-			Framebuffer backbuffer = core.Device.SwapchainFramebuffer;
+			Framebuffer backbuffer = Core.Device.SwapchainFramebuffer;
 			if (!_camera.SetOverrideCameraTarget(backbuffer, false))
 			{
 				Logger.LogError("Failed to set override render targets for graphics stack's scene composition pass!");
@@ -715,218 +663,6 @@ public sealed class ForwardPlusLightsStack : IGraphicsStack		//TODO: This type i
 		}
 
 		return _postProcessingStack.Draw(in _sceneCtx, in cameraCtx, in _inputFramebuffer, out _outResultFramebuffer);
-	}
-
-	private bool CompositeSceneOutput(
-		in SceneContext _sceneCtx,
-		Camera _camera,
-		bool _rebuildResSetCamera,
-		uint _cameraIdx,
-		out Framebuffer _outSceneFramebuffer)
-	{
-		if (!GetOrCreateCommandList(out CommandList cmdList))
-		{
-			_outSceneFramebuffer = null!;
-			return false;
-		}
-		if (compositeSceneRenderer is null || compositeSceneRenderer.IsDisposed)
-		{
-			_outSceneFramebuffer = null!;
-			return false;
-		}
-		Material compositionMaterial = (compositeSceneRenderer.MaterialHandle!.GetResource(true, true) as Material)!;
-
-		_outSceneFramebuffer = _camera.GetOrCreateCameraTarget(RenderMode.Composition, out CameraTarget target)
-			? target.framebuffer
-			: null!;
-
-		cmdList.Begin();
-		if (!_camera.BeginPass(
-			in _sceneCtx,
-			cmdList,
-			RenderMode.Composition,
-			true,
-			_cameraIdx,
-			0, 0,
-			out CameraPassContext cameraPassCtx,
-			_rebuildResSetCamera))
-		{
-			Logger.LogError("Failed to begin frame on graphics stack's composition pass!");
-			_camera.SetOverrideCameraTarget(null);
-			return false;
-		}
-
-		bool success = true;
-
-		// Create resource set containing all render targets that were previously drawn to:
-		ResourceLayout resourceLayout = compositionMaterial.BoundResourceLayout!;
-		if (resourceLayout is not null && (compositeSceneResourceSet is null || compositeSceneResourceSet.IsDisposed))
-		{
-			success &= _camera.GetOrCreateCameraTarget(RenderMode.Opaque, out CameraTarget? opaqueTarget);
-			success &= _camera.GetOrCreateCameraTarget(RenderMode.Transparent, out CameraTarget? transparentTarget);
-			if (!success)
-			{
-				Logger.LogError("Failed to get camera's targets needed for output composition!");
-				return false;
-			}
-
-			try
-			{
-				Texture texNull = core.graphicsSystem.TexPlaceholderTransparent.GetResource<TextureResource>(false, false)!.Texture!;
-
-				BindableResource[] resources =
-				[
-					opaqueTarget?.texColorTarget ?? texNull,
-					opaqueTarget?.texDepthTarget ?? texNull,
-					transparentTarget?.texColorTarget ?? texNull,
-					transparentTarget?.texDepthTarget ?? texNull,
-				];
-				ResourceSetDescription resourceSetDesc = new(resourceLayout, resources);
-
-				compositeSceneResourceSet = core.MainFactory.CreateResourceSet(ref resourceSetDesc);
-				compositeSceneResourceSet.Name = $"ResSet_Bound_{RESOURCE_KEY_COMPOSITE_SCENE_MATERIAL}";
-			}
-			catch (Exception ex)
-			{
-				Logger.LogException("Failed to create resource set containing render targets for scene composition!", ex, EngineCore.Logging.LogEntrySeverity.Major);
-				return false;
-			}
-		}
-
-		// Bind render targets:
-		if (compositeSceneResourceSet is not null && !compositeSceneRenderer.SetOverrideBoundResourceSet(compositeSceneResourceSet))
-		{
-			Logger.LogError("Failed to override bound resource set for graphics stack's scene composition pass!");
-			return false;
-		}
-
-		// Send draw calls for output composition:
-		success &= compositeSceneRenderer.Draw(_sceneCtx, cameraPassCtx);
-
-		// Finish drawing and submit command list to GPU:
-		success &= _camera.EndPass();
-		cmdList.End();
-
-		core.CommitCommandList(cmdList);
-
-		// Reset camera state:
-		_camera.SetOverrideCameraTarget(null);
-		return success;
-	}
-
-	private bool CompositeFinalOutput(
-		in SceneContext _sceneCtx,
-		in Framebuffer _inputFramebuffer,
-		Camera _camera,
-		bool _rebuildResSetCamera,
-		uint _cameraIdx,
-		out Framebuffer _outFinalFramebuffer)
-	{
-		if (!GetOrCreateCommandList(out CommandList cmdList))
-		{
-			_outFinalFramebuffer = null!;
-			return false;
-		}
-		if (compositeUIRenderer is null || compositeUIRenderer.IsDisposed)
-		{
-			_outFinalFramebuffer = null!;
-			return false;
-		}
-		Material compositionMaterial = (compositeUIRenderer.MaterialHandle!.GetResource(true, true) as Material)!;
-
-		// If this is the main camera, and there's no post-UI post-processing stack, ouput composited image directly to the swapchain's backbuffer:
-		if (_camera.IsMainCamera && postProcessingStackFinal == null)
-		{
-			Framebuffer backbuffer = core.Device.SwapchainFramebuffer;
-			if (!_camera.SetOverrideCameraTarget(backbuffer, false))
-			{
-				Logger.LogError("Failed to set override render targets for graphics stack's UI composition pass!");
-				_outFinalFramebuffer = null!;
-				return false;
-			}
-			_outFinalFramebuffer = backbuffer;
-		}
-		else if (_camera.GetOrCreateCameraTarget(RenderMode.Composition, out CameraTarget target))
-		{
-			_outFinalFramebuffer = target.framebuffer;
-		}
-		else
-		{
-			Logger.LogError("Failed to retrieve final output framebuffer for graphics stack's UI composition pass!");
-			_outFinalFramebuffer = null!;
-			return false;
-		}
-
-		cmdList.Begin();
-		if (!_camera.BeginPass(
-			in _sceneCtx,
-			cmdList,
-			RenderMode.Composition,
-			true,
-			_cameraIdx,
-			0, 0,
-			out CameraPassContext cameraPassCtx,
-			_rebuildResSetCamera))
-		{
-			Logger.LogError("Failed to begin frame on graphics stack's composition pass!");
-			_camera.SetOverrideCameraTarget(null);
-			return false;
-		}
-
-		bool success = true;
-
-		// Create resource set containing all render targets that were previously drawn to:
-		ResourceLayout resourceLayout = compositionMaterial.BoundResourceLayout!;
-		if (resourceLayout is not null && (compositeUIResourceSet is null || compositeUIResourceSet.IsDisposed))
-		{
-			success &= _camera.GetOrCreateCameraTarget(RenderMode.UI, out CameraTarget? uiTarget);
-			if (!success)
-			{
-				Logger.LogError("Failed to get camera's targets needed for UI output composition!");
-				return false;
-			}
-
-			try
-			{
-				Texture texNull = core.graphicsSystem.TexPlaceholderTransparent.GetResource<TextureResource>(false, false)!.Texture!;
-
-				BindableResource[] resources =
-				[
-					_inputFramebuffer.ColorTargets?[0].Target ?? texNull,
-					_inputFramebuffer.DepthTarget?.Target ?? texNull,
-					uiTarget?.texColorTarget ?? texNull,
-				];
-				ResourceSetDescription resourceSetDesc = new(resourceLayout, resources);
-
-				compositeUIResourceSet = core.MainFactory.CreateResourceSet(ref resourceSetDesc);
-				compositeUIResourceSet.Name = $"ResSet_Bound_{RESOURCE_KEY_COMPOSITE_UI_MATERIAL}";
-			}
-			catch (Exception ex)
-			{
-				Logger.LogException("Failed to create resource set containing render targets for UI output composition!", ex, EngineCore.Logging.LogEntrySeverity.Major);
-				return false;
-			}
-		}
-
-		// Bind render targets:
-		if (compositeUIResourceSet is not null && !compositeUIRenderer.SetOverrideBoundResourceSet(compositeUIResourceSet))
-		{
-			Logger.LogError("Failed to override bound resource set for graphics stack's UI composition pass!");
-			return false;
-		}
-
-		// Send draw calls for output composition:
-		success &= compositeUIRenderer.Draw(_sceneCtx, cameraPassCtx);
-
-		// Finish drawing and submit command list to GPU:
-		success &= _camera.EndPass();
-		cmdList.End();
-
-		core.CommitCommandList(cmdList);
-
-		// Reset camera state:
-		_camera.SetOverrideCameraTarget(null);
-		return success;
 	}
 
 	#endregion
