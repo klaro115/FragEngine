@@ -349,7 +349,7 @@ internal abstract class LightInstance(GraphicsCore _core) : ILightSource
 			{
 				_cmdList.CopyTexture(
 					_texStaticCached,
-					0, 0, 0, 0, 0,
+					0, 0, 0, 0, _cascadeIdx,
 					_texShadowMapArray,
 					0, 0, 0, 0, ShadowMapIdx + _cascadeIdx,
 					shadowResolution,

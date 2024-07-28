@@ -93,7 +93,6 @@ No support is planned for the foreseeable future. Android will have to wait unti
 - Refactor graphics architecture:
     - Refactor Forward+Lights graphics stack _(split into sub-modules)_
 - Lighting system: **[on hold]**
-    - Static lighting **[shadow cascades are buggy]**
     - Indirect lighting **[awaiting graphics refactoring]**
 - File format support: **[on hold]**
     - FBX _(3D geometry)_
