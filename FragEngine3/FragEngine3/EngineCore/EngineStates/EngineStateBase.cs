@@ -1,4 +1,5 @@
-﻿using FragEngine3.Graphics;
+﻿using FragEngine3.EngineCore.Jobs;
+using FragEngine3.Graphics;
 using FragEngine3.Scenes;
 
 namespace FragEngine3.EngineCore.EngineStates;
@@ -137,6 +138,7 @@ internal abstract class EngineStateBase(Engine _engine, ApplicationLogic _applic
 	{
 		bool success = true;
 
+		JobManager jobManager = engine.JobManager;
 		SceneManager sceneManager = engine.SceneManager;
 		GraphicsSystem graphicsSystem = engine.GraphicsSystem;
 
@@ -147,21 +149,35 @@ internal abstract class EngineStateBase(Engine _engine, ApplicationLogic _applic
 			success &= applicationLogic.UpdateRunningState();
 		}
 
+		// Fixed Update:
+		success &= jobManager.ProcessJobsOnMainThread(JobScheduleType.MainThread_FixedUpdate);
 		success &= sceneManager.UpdateAllScenes(SceneUpdateStage.Fixed, State);
 
+		// Early Update:
+		success &= jobManager.ProcessJobsOnMainThread(JobScheduleType.MainThread_EarlyUpdate);
 		success &= sceneManager.UpdateAllScenes(SceneUpdateStage.Early, State);
+
+		// Main Update:
+		success &= jobManager.ProcessJobsOnMainThread(JobScheduleType.MainThread_MainUpdate);
 		success &= sceneManager.UpdateAllScenes(SceneUpdateStage.Main, State);
+
+		// Late Update:
+		success &= jobManager.ProcessJobsOnMainThread(JobScheduleType.MainThread_LateUpdate);
 		success &= sceneManager.UpdateAllScenes(SceneUpdateStage.Late, State);
 
 		// DRAW:
 
+		success &= jobManager.ProcessJobsOnMainThread(JobScheduleType.MainThread_PreDraw);
 		success &= graphicsSystem.BeginFrame();
+
 		if (State == EngineState.Running)
 		{
 			success &= applicationLogic.DrawRunningState();
 		}
 		success &= sceneManager.DrawAllScenes(State);
+
 		success &= graphicsSystem.EndFrame();
+		success &= jobManager.ProcessJobsOnMainThread(JobScheduleType.MainThread_PostDraw);
 
 		return success;
 	}

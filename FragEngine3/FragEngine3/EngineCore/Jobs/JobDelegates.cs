@@ -7,6 +7,13 @@
 public delegate bool FuncJobAction();
 
 /// <summary>
+/// Callback function that executes a job's workload in iterative steps.
+/// </summary>
+/// <param name="_cancellationToken">A cancellation token for interrupting and aborting the action's progress prematurely.</param>
+/// <returns>An increasing progress value, in the range from 0.0 to 1.0. If error was met or the job was aborted, the value will be negative.</returns>
+public delegate IEnumerator<float> FuncIterativeJobAction(CancellationToken _cancellationToken);
+
+/// <summary>
 /// Callback function for when a job has ended.
 /// </summary>
 /// <param name="_wasCompleted">Whether the job has run through completely. If false, it was aborted or met with an error.</param>

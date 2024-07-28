@@ -7,14 +7,32 @@ public abstract class Job
 	internal Job(FuncJobAction _funcJobAction, FuncJobEndedCallback? _funcJobEndedCallback, FuncJobStatusChanged _funcStatusChanged)
 	{
 		funcJobAction = _funcJobAction ?? throw new ArgumentNullException(nameof(_funcJobAction), "Job action delegate may not be null!");
+		funcIterativeJobAction = null;
+
 		funcJobEndedCallback = _funcJobEndedCallback;
 		funcStatusChanged = _funcStatusChanged;
+
+		cancellationToken = default;
+	}
+
+	internal Job(FuncIterativeJobAction _funcIterativeJobAction, FuncJobEndedCallback? _funcJobEndedCallback, FuncJobStatusChanged _funcStatusChanged, CancellationToken _cancellationToken)
+	{
+		funcJobAction = null;
+		funcIterativeJobAction = _funcIterativeJobAction ?? throw new ArgumentNullException(nameof(_funcIterativeJobAction), "Job action delegate may not be null!");
+
+		funcJobEndedCallback = _funcJobEndedCallback;
+		funcStatusChanged = _funcStatusChanged;
+
+		cancellationToken = _cancellationToken;
 	}
 
 	#endregion
 	#region Fields
 
-	protected readonly FuncJobAction funcJobAction;
+	protected readonly FuncJobAction? funcJobAction;
+	protected readonly FuncIterativeJobAction? funcIterativeJobAction;
+	protected readonly CancellationToken cancellationToken;
+
 	public readonly FuncJobEndedCallback? funcJobEndedCallback;
 	private readonly FuncJobStatusChanged funcStatusChanged;
 
@@ -40,7 +58,10 @@ public abstract class Job
 	public bool Run()
 	{
 		Run_Impl();
-		funcStatusChanged(this, true);
+		if (IsDone)
+		{
+			funcStatusChanged(this, true);
+		}
 		return IsDone && !IsError;
 	}
 	protected abstract void Run_Impl();

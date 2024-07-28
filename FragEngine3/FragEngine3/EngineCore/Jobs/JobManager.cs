@@ -1,8 +1,18 @@
-﻿namespace FragEngine3.EngineCore.Jobs;
+﻿using FragEngine3.Containers;
+using System.Diagnostics;
 
-public sealed class JobManager(Engine _engine) : IEngineSystem			//TODO: Call update/draw stage events from engine's mainloop states!
+namespace FragEngine3.EngineCore.Jobs;
+
+public sealed class JobManager : IEngineSystem
 {
 	#region Constructors
+
+	public JobManager(Engine _engine)
+	{
+		Engine = _engine ?? throw new ArgumentNullException(nameof(_engine), "Engine may not be null!");
+
+		stopwatch.Start();
+	}
 
 	~JobManager()
 	{
@@ -12,15 +22,17 @@ public sealed class JobManager(Engine _engine) : IEngineSystem			//TODO: Call up
 	#endregion
 	#region Fields
 
-	public readonly Engine engine = _engine ?? throw new ArgumentNullException(nameof(_engine), "Engine may not be null!");
-
-	private readonly Dictionary<JobScheduleType, List<Job>> mainThreadJobQueues = new(4);	// Job queues for each schedule on the main thread.
+	private readonly Dictionary<JobScheduleType, List<Job>> mainThreadJobQueues = new(4);		//TODO: Change lists to act as stacks instead; shifting around all contents when dequeueing is kinda bad.
 	private readonly List<ThreadedJob> jobsInCustomThreads = new(1);
 	private readonly List<Job> workerThreadJobs = new(4);
 	private Job? currentWorkerThreadJob = null;
 
+	private readonly Stopwatch stopwatch = new();
 	private Thread? workerThread = null;
 	private CancellationTokenSource? cancellationTokenSrc = new();
+
+	private long maxMillisecondsPerUpdateStage = 4;
+	private int maxJobsPerUpdateStage = 20;
 
 	private readonly object mainThreadLockObj = new();
 	private readonly object customThreadLockObj = new();
@@ -31,7 +43,29 @@ public sealed class JobManager(Engine _engine) : IEngineSystem			//TODO: Call up
 
 	public bool IsDisposed { get; private set; } = false;
 
-	public Engine Engine => throw new NotImplementedException();
+	/// <summary>
+	/// Gets or sets the maximum time that may be spent executing jobs on the main thread, per update/draw stage, in milliseconds.
+	/// Working through too many jobs may impact frame rate, therefore no more than a few milliseconds should be spent on jobs per
+	/// stage, so that a minimum of 60 FPS can be be guaranteed at all times.
+	/// </summary>
+	public long MaxMillisecondsPerUpdateStage
+	{
+		get => maxMillisecondsPerUpdateStage;
+		set => maxMillisecondsPerUpdateStage = Math.Clamp(value, 1, 100);
+	}
+	/// <summary>
+	/// Gets or sets the maximum number of jobs that may be executed on the main thread, per update/draw stage.
+	/// Limiting time spent on jobs through their number can be a good way to ensure they are leisurely worked off in the background
+	/// and without impacting performance in a noticeable way. Jobs are not meant to be high-priority tasks, therefore a low number
+	/// should be perfectly fine.
+	/// </summary>
+	public int MaxJobsPerUpdateStage
+	{
+		get => maxJobsPerUpdateStage;
+		set => maxJobsPerUpdateStage = Math.Clamp(value, 1, 500);
+	}
+
+	public Engine Engine { get; init; }
 
 	#endregion
 	#region Methods
@@ -42,16 +76,22 @@ public sealed class JobManager(Engine _engine) : IEngineSystem			//TODO: Call up
 		Dispose(true);
 	}
 
-	private void Dispose(bool disposing)
+	private void Dispose(bool _)
 	{
 		IsDisposed = true;
 
+		stopwatch.Stop();
+
 		ClearAllJobs(false);
-		
+
 		cancellationTokenSrc?.Dispose();
 	}
 
-	public void ClearAllJobs(bool _executeEndedCallbacks)
+	/// <summary>
+	/// Abort and clear out all pending jobs.
+	/// </summary>
+	/// <param name="_executeEndedCallbacks">Whether to allow jobs to trigger their end callback as they are aborted.</param>
+	public void ClearAllJobs(bool _executeEndedCallbacks = false)
 	{
 		// Notify all thread of their cancellation:
 		if (cancellationTokenSrc is not null && !cancellationTokenSrc.IsCancellationRequested)
@@ -105,11 +145,20 @@ public sealed class JobManager(Engine _engine) : IEngineSystem			//TODO: Call up
 		cancellationTokenSrc = null;
 	}
 
+	/// <summary>
+	/// Queues up a new job for execution in the near-ish future.
+	/// </summary>
+	/// <param name="_funcJobAction">An action that contains the job's workload.</param>
+	/// <param name="_schedule">A schedule type, describing at what time the job may be executed.
+	/// If the job is scheduled on a worker thread or on its own thread, the job's action must be thread-safe, as it will not be executed on the main thread.</param>
+	/// <param name="_priority">A priority rating for the job's scheduling. Higher priority jobs are pushed ahead in the queue. Keep in mind though, that jobs are
+	/// intended to be low-priority tasks that can be set aside for a few update cycles; using complex priotization schemes is rarely a good idea.</param>
+	/// <returns>True if the job was queued up for execution, false otherwise.</returns>
 	public bool AddJob(FuncJobAction _funcJobAction, JobScheduleType _schedule = JobScheduleType.MainThread_MainUpdate, uint _priority = 0u)
 	{
 		if (_funcJobAction is null)
 		{
-			engine.Logger.LogError("Cannot schedule job using null action delegate!");
+			Engine.Logger.LogError("Cannot schedule job using null action delegate!");
 			return false;
 		}
 
@@ -142,6 +191,42 @@ public sealed class JobManager(Engine _engine) : IEngineSystem			//TODO: Call up
 		return true;
 	}
 
+	/// <summary>
+	/// Queues up a new iterative job for execution in the near-ish future. This job will be executed in its own thread.
+	/// </summary>
+	/// <param name="_funcIterativeJobAction">An action that contains the job's workload. The action is completed over several steps,
+	/// and the progress is reflected by the <see cref="float"/> value yielded at each step, progressing from 0 to 1 as the task nears
+	/// completion. If the task encounters an error and must abort early, a negative progress value should be yielded instead.</param>
+	/// <param name="_outProgress">Outputs a progress tracker instance for the caller to monitor the job's gradual completion.</param>
+	/// <returns>True if the job has started execution in its own thread, false otherwise.</returns>
+	public bool AddJob(FuncIterativeJobAction _funcIterativeJobAction, out Progress? _outProgress)
+	{
+		if (_funcIterativeJobAction is null)
+		{
+			Engine.Logger.LogError("Cannot schedule job using null action delegate!");
+			_outProgress = null;
+			return false;
+		}
+
+		// Ensure a cancellation source is ready to terminate threaded operations if necessary:
+		cancellationTokenSrc ??= new();
+
+		_outProgress = new("Job Progress", 100);
+
+		// Launch job in its own new thread:
+		ThreadedJob newJob = new(_funcIterativeJobAction, null, OnJobStatusChanged, _outProgress, cancellationTokenSrc.Token)
+		{
+			Schedule = JobScheduleType.NewThread,
+			Priority = 0u,
+		};
+
+		lock (customThreadLockObj)
+		{
+			jobsInCustomThreads.Add(newJob);
+		}
+		return true;
+	}
+
 	private void EnqueueJob(Job _newJob)
 	{
 		// A) Main thread:
@@ -165,8 +250,92 @@ public sealed class JobManager(Engine _engine) : IEngineSystem			//TODO: Call up
 			lock (workerThreadLockObj)
 			{
 				SortedInsert(workerThreadJobs, _newJob);
+
+				if (workerThread is null || !workerThread.IsAlive)
+				{
+					workerThread = new(RunWorkerThread);
+					workerThread.Start();
+				}
 			}
 		}
+	}
+
+	private void RunWorkerThread()
+	{
+		if (IsDisposed)
+		{
+			return;
+		}
+		if (cancellationTokenSrc is not null && cancellationTokenSrc.IsCancellationRequested)
+		{
+			return;
+		}
+
+		cancellationTokenSrc ??= new();
+
+		while (!IsDisposed && !cancellationTokenSrc.IsCancellationRequested)
+		{
+			if (workerThreadJobs.Count != 0)
+			{
+				// Dequeue first job in the list:
+				lock(workerThreadLockObj)
+				{
+					currentWorkerThreadJob = workerThreadJobs[0];
+					workerThreadJobs.RemoveAt(0);
+				}
+
+				// Execute job unless it was previously aborted:
+				if (!currentWorkerThreadJob.IsError)
+				{
+					currentWorkerThreadJob.Run();
+					Thread.Sleep(1);
+				}
+			}
+			else
+			{
+				// No jobs queued up? Sleep until there are:
+				Thread.Sleep(16);
+			}
+		}
+	}
+
+	/// <summary>
+	/// Work off some of the jobs that have been scheduled for update/draw stages on the main thread. Does nothing if no jobs are queued up for the given schedule type.
+	/// </summary>
+	/// <param name="_schedule">A main thread schedule type, for which queued-up jobs shall be executed.</param>
+	/// <returns>True if jobs were executed successfully or if the queue was empty, false if an error arose.</returns>
+	internal bool ProcessJobsOnMainThread(JobScheduleType _schedule)
+	{
+		if (!_schedule.IsScheduledOnMainThread())
+		{
+			Engine.Logger.LogError($"Job queue for schedule '{_schedule}' cannot be processed; only jobs scheduled on main thread can be triggered directly!");
+			return false;
+		}
+
+		if (!mainThreadJobQueues.TryGetValue(_schedule, out List<Job>? queue) || queue.Count == 0)
+		{
+			return true;
+		}
+
+		cancellationTokenSrc ??= new();
+
+		long batchStartTimeMs = stopwatch.ElapsedMilliseconds;
+		int batchJobCount = 0;
+
+		while (
+			!cancellationTokenSrc.IsCancellationRequested &&
+			queue.Count != 0 &&
+			stopwatch.ElapsedMilliseconds - batchStartTimeMs < maxMillisecondsPerUpdateStage &&
+			batchJobCount < maxJobsPerUpdateStage)
+		{
+			Job job = queue[batchJobCount++];
+			if (!job.IsError)
+			{
+				job.Run();
+			}
+		}
+
+		return true;
 	}
 
 	private void OnJobStatusChanged(Job _job, bool _executeEndedCallback)
