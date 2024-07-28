@@ -90,8 +90,8 @@ No support is planned for the foreseeable future. Android will have to wait unti
 
 ## Work In Progress
 
-- Refactor graphics architecture:
-    - Refactor Forward+Lights graphics stack _(split into sub-modules)_
+- Engine systems:
+    - Job scheduling system _(for asynchronous workloads)_
 - Lighting system: **[on hold]**
     - Indirect lighting **[awaiting graphics refactoring]**
 - File format support: **[on hold]**
@@ -105,10 +105,17 @@ No support is planned for the foreseeable future. Android will have to wait unti
 
 The following is a rough and very short-sighted roadmap of features that are going to be added in the near future. The order of implementation may be subject to change.
 
+- Project structure:
+    - Convert engine project to class library
+    - Split test app into its own executable project
 - Refactor graphics architecture:
     - Add rendering groups for auto-parallelizing draw call creation
-- Engine systems:
-    - Job scheduling system _(for asynchronous workloads)_
+    - Shader assets: **[awaiting asset pipeline tool]**
+        - Bundle shader description in asset file _(maybe JSON header?)_
+    - Rework materials: **[blocked by shader assets]**
+        - Standard shader constant buffer _(i.e. CBDefaultSurface)_
+        - Support for user-supplied constant buffers
+        - Split material type into standard/user variants
 - UI:
     - Text rendering
     - Basic UI controls _(labels, buttons, etc.)_
