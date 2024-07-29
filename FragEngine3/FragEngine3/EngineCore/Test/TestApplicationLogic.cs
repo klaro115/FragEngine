@@ -365,7 +365,7 @@ public sealed class TestApplicationLogic : ApplicationLogic
 		//}
 
 		// Camera controls:
-		if (Camera.MainCamera != null)
+		if (Camera.MainCamera is not null)
 		{
 			Pose p = Camera.MainCamera.node.LocalTransformation;
 			Vector3 inputWASD = Engine.InputManager.GetKeyAxesSmoothed(InputAxis.WASD);
@@ -393,11 +393,22 @@ public sealed class TestApplicationLogic : ApplicationLogic
 		// Try downloading mesh geometry data from GPU memory when pressing 'T':
 		if (Engine.InputManager.GetKeyUp(Key.T) && Engine.ResourceManager.GetResource("Cube", out ResourceHandle meshHandle))
 		{
-			Mesh? mesh = meshHandle?.GetResource<Mesh>(false);
-			if (mesh is null || !mesh.RequestGeometryDownload(CallbackMeshGeometryDownload))
+			const Jobs.JobScheduleType jobSchedule = Jobs.JobScheduleType.MainThread_PreDraw;
+			Engine.JobManager.AddJob(() =>
 			{
-				Engine.Logger.LogError("Geometry download request failed.");
-			}
+				Mesh? mesh = meshHandle?.GetResource<Mesh>(false);
+				if (mesh is null || !mesh.RequestGeometryDownload(CallbackMeshGeometryDownload))
+				{
+					Engine.Logger.LogError("Geometry download request failed.");
+					return false;
+				}
+				return true;
+			},
+			(wasCompleted, returnValue) =>
+			{
+				Console.WriteLine($"Job scheduled for '{jobSchedule}' has ended. Completed: {wasCompleted}, Success: {returnValue}");
+			},
+			jobSchedule);
 		}
 
 		// Switch main directional light between static and non-static mode when pressing 'Z':

@@ -1,6 +1,7 @@
 ﻿using FragEngine3.EngineCore.Config;
 using FragEngine3.EngineCore.EngineStates;
 using FragEngine3.EngineCore.Input;
+using FragEngine3.EngineCore.Jobs;
 using FragEngine3.EngineCore.Logging;
 using FragEngine3.Graphics;
 using FragEngine3.Resources;
@@ -31,8 +32,9 @@ public sealed class Engine : IDisposable
 		InputManager = new InputManager(this);
 		GraphicsSystem = new GraphicsSystem(this);
 		SceneManager = new SceneManager(this);
+		JobManager = new JobManager(this);
 		//...
-
+		
 		// Create all engine state instances:
 		startupState = new(this, applicationLogic);
 		loadingState = new(this, applicationLogic);
@@ -76,13 +78,14 @@ public sealed class Engine : IDisposable
 	public bool IsRunning => !IsDisposed && State == EngineState.Running;
 	public EngineState State { get; private set; } = EngineState.None;
 
-	public Logger Logger { get; private set; } = null!;
-	public PlatformSystem PlatformSystem { get; private set; } = null!;
-	public TimeManager TimeManager { get; private set; } = null!;
-	public ResourceManager ResourceManager { get; private set; } = null!;
-	public InputManager InputManager { get; private set; } = null!;
-	public GraphicsSystem GraphicsSystem { get; private set; } = null!;
-	public SceneManager SceneManager { get; private set; } = null!;
+	public Logger Logger { get; init; } = null!;
+	public PlatformSystem PlatformSystem { get; init; } = null!;
+	public TimeManager TimeManager { get; init; } = null!;
+	public ResourceManager ResourceManager { get; init; } = null!;
+	public InputManager InputManager { get; init; } = null!;
+	public GraphicsSystem GraphicsSystem { get; init; } = null!;
+	public SceneManager SceneManager { get; init; } = null!;
+	public JobManager JobManager { get; init; } = null!;
 	//...
 
 	public static Engine? Instance { get; private set; } = null;
@@ -101,6 +104,7 @@ public sealed class Engine : IDisposable
 
 		IsDisposed = true;
 
+		JobManager?.Dispose();
 		SceneManager?.Dispose();
 		GraphicsSystem?.Dispose();
 		InputManager?.Dispose();
@@ -161,6 +165,7 @@ public sealed class Engine : IDisposable
 		mainLoopCancellationSrc = new CancellationTokenSource();
 
 		TimeManager.Reset();
+		JobManager.ClearAllJobs(false);
 
 		bool success = true;
 
