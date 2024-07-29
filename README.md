@@ -90,8 +90,9 @@ No support is planned for the foreseeable future. Android will have to wait unti
 
 ## Work In Progress
 
-- Engine systems:
-    - Job scheduling system _(for asynchronous workloads)_
+- Project structure:
+    - Convert engine project to class library
+    - Split test app into its own executable project
 - Lighting system: **[on hold]**
     - Indirect lighting **[awaiting graphics refactoring]**
 - File format support: **[on hold]**
@@ -105,9 +106,6 @@ No support is planned for the foreseeable future. Android will have to wait unti
 
 The following is a rough and very short-sighted roadmap of features that are going to be added in the near future. The order of implementation may be subject to change.
 
-- Project structure:
-    - Convert engine project to class library
-    - Split test app into its own executable project
 - Refactor graphics architecture:
     - Add rendering groups for auto-parallelizing draw call creation
     - Shader assets: **[awaiting asset pipeline tool]**
