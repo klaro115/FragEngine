@@ -1,4 +1,6 @@
-﻿namespace FragEngine3.EngineCore.Jobs;
+﻿using FragEngine3.Scenes;
+
+namespace FragEngine3.EngineCore.Jobs;
 
 /// <summary>
 /// Enumeration of different schedules and threading options, used to control when a job is executed.<para/>
@@ -23,19 +25,15 @@ public enum JobScheduleType
 	// UPDATE STAGES:
 
 	/// <summary>
-	/// Execute the job at the start of the engine's early update stage, on the main thread.
+	/// Execute the job just before the start of the engine's <see cref="SceneUpdateStage.Early"/> stage, on the main thread.
 	/// </summary>
-	MainThread_EarlyUpdate	= 10,
+	MainThread_PreUpdate	= 10,
 	/// <summary>
-	/// Execute the job at the start of the engine's main update stage, on the main thread.
+	/// Execute the job right after the end of the engine's <see cref="SceneUpdateStage.Late"/> stage, on the main thread.
 	/// </summary>
-	MainThread_MainUpdate,
+	MainThread_PostUpdate,
 	/// <summary>
-	/// Execute the job at the start of the engine's late update stage, on the main thread.
-	/// </summary>
-	MainThread_LateUpdate,
-	/// <summary>
-	/// Execute the job at the start of the engine's fixed/physics update stage, on the main thread. Intended for jobs that directly effect the physics engine.
+	/// Execute the job at the start of the engine's <see cref="SceneUpdateStage.Fixed"/> stage, on the main thread. Intended for jobs that directly effect the physics engine.
 	/// </summary>
 	MainThread_FixedUpdate,
 
@@ -62,7 +60,7 @@ public static class JobScheduleTypeExt
 	/// <returns>True if executing on main thread, false otherwise.</returns>
 	public static bool IsScheduledOnMainThread(this JobScheduleType _scheduleType)
 	{
-		return _scheduleType >= JobScheduleType.MainThread_EarlyUpdate;
+		return _scheduleType >= JobScheduleType.MainThread_PreUpdate;
 	}
 
 	#endregion

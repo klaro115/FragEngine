@@ -149,12 +149,14 @@ public sealed class JobManager : IEngineSystem
 	/// Queues up a new job for execution in the near-ish future.
 	/// </summary>
 	/// <param name="_funcJobAction">An action that contains the job's workload.</param>
+	/// <param name="_funcJobEndedCallback">A callback that should be invoked when the job has ended. This is called either if the job'e execution completes, or
+	/// if the job was aborted.</param>
 	/// <param name="_schedule">A schedule type, describing at what time the job may be executed.
 	/// If the job is scheduled on a worker thread or on its own thread, the job's action must be thread-safe, as it will not be executed on the main thread.</param>
 	/// <param name="_priority">A priority rating for the job's scheduling. Higher priority jobs are pushed ahead in the queue. Keep in mind though, that jobs are
 	/// intended to be low-priority tasks that can be set aside for a few update cycles; using complex priotization schemes is rarely a good idea.</param>
 	/// <returns>True if the job was queued up for execution, false otherwise.</returns>
-	public bool AddJob(FuncJobAction _funcJobAction, JobScheduleType _schedule = JobScheduleType.MainThread_MainUpdate, uint _priority = 0u)
+	public bool AddJob(FuncJobAction _funcJobAction, FuncJobEndedCallback? _funcJobEndedCallback = null, JobScheduleType _schedule = JobScheduleType.MainThread_PreUpdate, uint _priority = 0u)
 	{
 		if (_funcJobAction is null)
 		{
@@ -168,7 +170,7 @@ public sealed class JobManager : IEngineSystem
 		// A) Launch job in its own new thread:
 		if (_schedule == JobScheduleType.NewThread)
 		{
-			ThreadedJob newJob = new(_funcJobAction, null, OnJobStatusChanged, cancellationTokenSrc.Token)
+			ThreadedJob newJob = new(_funcJobAction, _funcJobEndedCallback, OnJobStatusChanged, cancellationTokenSrc.Token)
 			{
 				Schedule = _schedule,
 				Priority = _priority,
@@ -177,11 +179,12 @@ public sealed class JobManager : IEngineSystem
 			{
 				jobsInCustomThreads.Add(newJob);
 			}
+			newJob.Run();
 		}
 		// B) Enqueue job for execution on main or worker thread:
 		else
 		{
-			BasicJob newJob = new(_funcJobAction, null, OnJobStatusChanged)
+			BasicJob newJob = new(_funcJobAction, _funcJobEndedCallback, OnJobStatusChanged)
 			{
 				Schedule = _schedule,
 				Priority = _priority,
@@ -197,9 +200,11 @@ public sealed class JobManager : IEngineSystem
 	/// <param name="_funcIterativeJobAction">An action that contains the job's workload. The action is completed over several steps,
 	/// and the progress is reflected by the <see cref="float"/> value yielded at each step, progressing from 0 to 1 as the task nears
 	/// completion. If the task encounters an error and must abort early, a negative progress value should be yielded instead.</param>
+	/// <param name="_funcJobEndedCallback">A callback that should be invoked when the job has ended. This is called either if the job'e execution completes, or
+	/// if the job was aborted.</param>
 	/// <param name="_outProgress">Outputs a progress tracker instance for the caller to monitor the job's gradual completion.</param>
 	/// <returns>True if the job has started execution in its own thread, false otherwise.</returns>
-	public bool AddJob(FuncIterativeJobAction _funcIterativeJobAction, out Progress? _outProgress)
+	public bool AddJob(FuncIterativeJobAction _funcIterativeJobAction, out Progress? _outProgress, FuncJobEndedCallback? _funcJobEndedCallback = null)
 	{
 		if (_funcIterativeJobAction is null)
 		{
@@ -214,7 +219,7 @@ public sealed class JobManager : IEngineSystem
 		_outProgress = new("Job Progress", 100);
 
 		// Launch job in its own new thread:
-		ThreadedJob newJob = new(_funcIterativeJobAction, null, OnJobStatusChanged, _outProgress, cancellationTokenSrc.Token)
+		ThreadedJob newJob = new(_funcIterativeJobAction, _funcJobEndedCallback, OnJobStatusChanged, _outProgress, cancellationTokenSrc.Token)
 		{
 			Schedule = JobScheduleType.NewThread,
 			Priority = 0u,
@@ -312,29 +317,49 @@ public sealed class JobManager : IEngineSystem
 			return false;
 		}
 
-		if (!mainThreadJobQueues.TryGetValue(_schedule, out List<Job>? queue) || queue.Count == 0)
+		// Check if there are any jobs queued up for the current schedule:
+		List<Job>? queue;
+		int queueCount;
+		lock (mainThreadLockObj)
 		{
-			return true;
+			if (!mainThreadJobQueues.TryGetValue(_schedule, out queue) || queue.Count == 0)
+			{
+				return true;
+			}
+			queueCount = queue.Count;
 		}
 
 		cancellationTokenSrc ??= new();
 
+		// Execute as many jobs as possible during the alloted limits:
 		long batchStartTimeMs = stopwatch.ElapsedMilliseconds;
 		int batchJobCount = 0;
 
 		while (
 			!cancellationTokenSrc.IsCancellationRequested &&
-			queue.Count != 0 &&
+			batchJobCount < queueCount &&
 			stopwatch.ElapsedMilliseconds - batchStartTimeMs < maxMillisecondsPerUpdateStage &&
 			batchJobCount < maxJobsPerUpdateStage)
 		{
-			Job job = queue[batchJobCount++];
+			Job job;
+			lock (mainThreadLockObj)
+			{
+				job = queue[batchJobCount++];
+			}
 			if (!job.IsError)
 			{
 				job.Run();
 			}
 		}
 
+		// Dequeue all jobs that were just completed:
+		if (batchJobCount != 0)
+		{
+			lock (mainThreadLockObj)
+			{
+				queue.RemoveRange(0, batchJobCount);
+			}
+		}
 		return true;
 	}
 
@@ -358,7 +383,7 @@ public sealed class JobManager : IEngineSystem
 			threadedJob.Dispose();
 		}
 		// ^NOTE: all other queues will dequeue and drop jobs automatically once they expire.
-    }
+	}
 
 	private static void SortedInsert(List<Job> _list, Job _newJob)		//TODO [important]: Reverse order, to go from highest to lowest instead!
 	{

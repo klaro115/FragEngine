@@ -1,6 +1,6 @@
 ﻿namespace FragEngine3.EngineCore.Jobs;
 
-public abstract class Job
+internal abstract class Job
 {
 	#region Constructors
 
@@ -34,12 +34,12 @@ public abstract class Job
 	protected readonly CancellationToken cancellationToken;
 
 	public readonly FuncJobEndedCallback? funcJobEndedCallback;
-	private readonly FuncJobStatusChanged funcStatusChanged;
+	protected readonly FuncJobStatusChanged funcStatusChanged;
 
 	#endregion
 	#region Properties
 
-	public JobScheduleType Schedule { get; init; } = JobScheduleType.MainThread_MainUpdate;
+	public JobScheduleType Schedule { get; init; } = JobScheduleType.MainThread_PreUpdate;
 	public uint Priority { get; init; } = 0;
 
 	public bool IsDone { get; protected set; } = false;

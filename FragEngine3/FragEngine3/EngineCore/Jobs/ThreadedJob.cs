@@ -82,6 +82,7 @@ internal sealed class ThreadedJob : Job, IDisposable
 		IsDone = true;
 		progress?.CompleteAllTasks();
 		progress?.Finish();
+		funcStatusChanged(this, true);
 	}
 
 	private void RunThreadIterative()
@@ -105,7 +106,8 @@ internal sealed class ThreadedJob : Job, IDisposable
 		IsError = progressValue < 0;
 		IsDone = progressValue >= 1;
 		progress?.Finish();
+		funcStatusChanged(this, true);
 	}
-	
+
 	#endregion
 }
