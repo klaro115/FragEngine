@@ -90,9 +90,8 @@ No support is planned for the foreseeable future. Android will have to wait unti
 
 ## Work In Progress
 
-- Project structure:
-    - ✅ Convert engine project to class library
-    - ✅ Split test app into its own executable project
+- Linux support:
+    - Vulkan graphics core
 - Lighting system: **[on hold]**
     - Indirect lighting **[awaiting graphics refactoring]**
 - File format support: **[on hold]**
@@ -141,5 +140,4 @@ The following is a rough and very short-sighted roadmap of features that are goi
     - Gamepads
     - Touchscreens
 - Linux support: _(distant-ish future)_
-    - Vulkan graphics core
     - Vulkan/SPIR-V shaders
