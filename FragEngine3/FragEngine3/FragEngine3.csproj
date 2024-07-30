@@ -1,12 +1,21 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <OutputType>Exe</OutputType>
+    <OutputType>Library</OutputType>
     <TargetFramework>net8.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <Configurations>Debug;Debug_MacOS;Release;Release_MacOS</Configurations>
+    <GenerateDocumentationFile>True</GenerateDocumentationFile>
   </PropertyGroup>
+	
+	<PropertyGroup>
+    <Authors>KlaRo115</Authors>
+    <PackageProjectUrl></PackageProjectUrl>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
+    <RepositoryUrl>https://github.com/klaro115/FragEngine</RepositoryUrl>
+    <RepositoryType>git</RepositoryType>
+	</PropertyGroup>
 
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
@@ -24,6 +33,7 @@
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release_MacOS|AnyCPU'">
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
 		<DefineConstants>MACOS</DefineConstants>
+		<Optimize>True</Optimize>
   </PropertyGroup>
 	
   <ItemGroup>
@@ -46,6 +56,12 @@
     <Folder Include="Graphics\MacOS\" />
     <Folder Include="EngineCore\Logging\" />
     <Folder Include="Utility\Unicode\" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="..\..\README.md">
+      <Pack>True</Pack>
+      <PackagePath>\</PackagePath>
+    </None>
   </ItemGroup>
   <ItemGroup>
     <PackageReference Include="Magick.NET-Q16-AnyCPU" Version="13.8.0" />
