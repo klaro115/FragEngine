@@ -99,9 +99,9 @@ StyleCopReport.xml
 *.scc
 
 # [Custom] Exceptions for assets:
-!FragEngine3/data/**/*.obj
-!FragEngine3/data/**/**/*.obj
-!FragEngine3/data/**/**/**/*.obj
+!data/**/*.obj
+!data/**/**/*.obj
+!data/**/**/**/*.obj
 
 # Chutzpah Test files
 _Chutzpah*
