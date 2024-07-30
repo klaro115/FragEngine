@@ -1,5 +1,7 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
+	<!-- Project Type: -->
+	
   <PropertyGroup>
     <OutputType>Library</OutputType>
     <TargetFramework>net8.0</TargetFramework>
@@ -8,6 +10,15 @@
     <Configurations>Debug;Debug_MacOS;Release;Release_MacOS</Configurations>
     <GenerateDocumentationFile>True</GenerateDocumentationFile>
   </PropertyGroup>
+
+	<!-- Version: -->
+	
+	<PropertyGroup>
+		<VersionPrefix>0.0.1</VersionPrefix>
+		<VersionSuffix>dev</VersionSuffix>
+	</PropertyGroup>
+	
+	<!-- Authors & Source: -->
 	
 	<PropertyGroup>
     <Authors>KlaRo115</Authors>
@@ -17,6 +28,8 @@
     <RepositoryType>git</RepositoryType>
 	</PropertyGroup>
 
+	<!-- Build Configurations: -->
+	
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <WarningLevel>4</WarningLevel>
@@ -35,6 +48,8 @@
 		<DefineConstants>MACOS</DefineConstants>
 		<Optimize>True</Optimize>
   </PropertyGroup>
+	
+	<!-- Project Contents: -->
 	
   <ItemGroup>
     <None Remove="Graphics\" />
@@ -63,6 +78,9 @@
       <PackagePath>\</PackagePath>
     </None>
   </ItemGroup>
+	
+	<!-- Dependencies: -->
+	
   <ItemGroup>
     <PackageReference Include="Magick.NET-Q16-AnyCPU" Version="13.8.0" />
     <PackageReference Include="NativeLibraryLoader" Version="1.0.13" />
