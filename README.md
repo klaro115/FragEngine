@@ -42,7 +42,7 @@ Beyond that, the [Magick.NET](https://github.com/dlemstra/Magick.NET) library wa
 ## Architecture
 The engine is designed with multithreading in mind. To this end, there are 3 main ways for developers to implement application logic using this engine. These include a component system, with behaviours attached to individual nodes in the scene, but also 2 interface points for driving application-level or scene-level logic without the need for the engine's node/component system.
 
-For more information on how to implement app logic, see the [Architecture Guide](./FragEngine3/Documentation/Architecture.md).
+For more information on how to implement app logic, see the [Architecture Guide](./Documentation/Architecture.md).
 
 <br>
 
@@ -54,12 +54,12 @@ Eventually, a proper asset pipeline is planned, to replace and automate asset pr
 
 #### Resource Files
 
-Resources are primarily loaded from files located within the "data" folder. Each resource file might contain one or more resources, and must be accompanied by a descriptive resource metadata file. You may refer to the [Resource Guide](./FragEngine3/Documentation/Resources/Resource%20Guide.md) for more details on asset management.
+Resources are primarily loaded from files located within the "data" folder. Each resource file might contain one or more resources, and must be accompanied by a descriptive resource metadata file. You may refer to the [Resource Guide](./Documentation/Resources/Resource%20Guide.md) for more details on asset management.
 
 #### Shaders & Graphics
 
 Standard shaders exist in HLSL (Direct3D shading language) in the most up-to-date form, and in MSL (Metal shading language) in an out-dated form.
-The following document provides a rough overview of default resource bindings and pipeline behaviour: [Shader Guide](./FragEngine3/Documentation/Graphics/Shader%20Guide.md)
+The following document provides a rough overview of default resource bindings and pipeline behaviour: [Shader Guide](./Documentation/Graphics/Shader%20Guide.md)
 
 <br>
 
