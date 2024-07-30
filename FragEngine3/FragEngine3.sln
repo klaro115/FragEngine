@@ -7,6 +7,8 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "FragEngine3", "FragEngine3\
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TestApp", "TestApp\TestApp.csproj", "{D53AEEE7-C301-4842-9138-FA6111B40055}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "FragAssetPipeline", "FragAssetPipeline\FragAssetPipeline.csproj", "{BFCF2ABD-1D12-4529-AECE-BEBE61DBEF03}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug_MacOS|Any CPU = Debug_MacOS|Any CPU
@@ -31,6 +33,14 @@ Global
 		{D53AEEE7-C301-4842-9138-FA6111B40055}.Release_MacOS|Any CPU.Build.0 = Release|Any CPU
 		{D53AEEE7-C301-4842-9138-FA6111B40055}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{D53AEEE7-C301-4842-9138-FA6111B40055}.Release|Any CPU.Build.0 = Release|Any CPU
+		{BFCF2ABD-1D12-4529-AECE-BEBE61DBEF03}.Debug_MacOS|Any CPU.ActiveCfg = Debug|Any CPU
+		{BFCF2ABD-1D12-4529-AECE-BEBE61DBEF03}.Debug_MacOS|Any CPU.Build.0 = Debug|Any CPU
+		{BFCF2ABD-1D12-4529-AECE-BEBE61DBEF03}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{BFCF2ABD-1D12-4529-AECE-BEBE61DBEF03}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{BFCF2ABD-1D12-4529-AECE-BEBE61DBEF03}.Release_MacOS|Any CPU.ActiveCfg = Release|Any CPU
+		{BFCF2ABD-1D12-4529-AECE-BEBE61DBEF03}.Release_MacOS|Any CPU.Build.0 = Release|Any CPU
+		{BFCF2ABD-1D12-4529-AECE-BEBE61DBEF03}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{BFCF2ABD-1D12-4529-AECE-BEBE61DBEF03}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
