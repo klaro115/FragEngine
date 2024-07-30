@@ -91,8 +91,8 @@ No support is planned for the foreseeable future. Android will have to wait unti
 ## Work In Progress
 
 - Project structure:
-    - Convert engine project to class library
-    - Split test app into its own executable project
+    - ✅ Convert engine project to class library
+    - ✅ Split test app into its own executable project
 - Lighting system: **[on hold]**
     - Indirect lighting **[awaiting graphics refactoring]**
 - File format support: **[on hold]**
