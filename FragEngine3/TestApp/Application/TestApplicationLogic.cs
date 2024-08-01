@@ -14,7 +14,7 @@ using System.Numerics;
 using Veldrid;
 using Veldrid.Sdl2;
 
-namespace TestApp.Application.Test;
+namespace TestApp.Application;
 
 public sealed class TestApplicationLogic : ApplicationLogic
 {

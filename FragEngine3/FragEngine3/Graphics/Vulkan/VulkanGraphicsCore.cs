@@ -159,6 +159,7 @@ public sealed class VulkanGraphicsCore(GraphicsSystem _graphicsSystem, EngineCon
 				Logger.LogMessage($"  - Driver info: {vkInfo.DriverInfo}");
 				Logger.LogMessage($"  - Queue index: {vkInfo.GraphicsQueueFamilyIndex}");
 
+				/* // Commented out because this spams too much stuff into the console and logs.
 				var deviceExts = vkInfo.AvailableDeviceExtensions;
 				if (deviceExts is not null && deviceExts.Count != 0)
 				{
@@ -168,6 +169,7 @@ public sealed class VulkanGraphicsCore(GraphicsSystem _graphicsSystem, EngineCon
 						Logger.LogMessage($"    * {extension.Name}: v{extension.SpecVersion}");
 					}
 				}
+				*/
 				var instanceExts = vkInfo.AvailableInstanceExtensions;
 				if (instanceExts is not null && instanceExts.Count != 0)
 				{
