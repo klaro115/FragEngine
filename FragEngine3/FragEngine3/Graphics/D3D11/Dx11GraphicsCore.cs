@@ -15,13 +15,11 @@ internal sealed class Dx11GraphicsCore(GraphicsSystem _graphicsSystem, EngineCon
 
 	private static readonly GraphicsCapabilities capabilities = new();
 
-        #endregion
-        #region Properties
+    #endregion
+    #region Properties
 
-        public override EnginePlatformFlag ApiPlatformFlag => EnginePlatformFlag.GraphicsAPI_D3D;
+    public override EnginePlatformFlag ApiPlatformFlag => EnginePlatformFlag.GraphicsAPI_D3D;
 	public override bool DefaultMirrorY => true;
-
-	private Logger Logger => graphicsSystem.engine.Logger ?? Logger.Instance!;
 
 	#endregion
 	#region Methods

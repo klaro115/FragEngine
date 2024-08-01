@@ -5,6 +5,7 @@ using FragEngine3.Graphics.Config;
 using FragEngine3.Graphics.D3D11;
 using FragEngine3.Graphics.MacOS;
 using FragEngine3.Graphics.Resources;
+using FragEngine3.Graphics.Vulkan;
 using FragEngine3.Resources;
 using FragEngine3.Utility.Serialization;
 using Veldrid;
@@ -188,6 +189,8 @@ public class GraphicsSystem : IEngineSystem
 	{
 		if (IsDisposed) throw new ObjectDisposedException("Graphics system", "Cannot create core for disposed graphics system!");
 
+		Logger.LogMessage($"+ Creating graphics core for platform: '{engine.PlatformSystem.PlatformFlags}'");
+
 		GraphicsCore newCore;
 
 		if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
@@ -199,7 +202,7 @@ public class GraphicsSystem : IEngineSystem
 			}
 			else
 			{
-				throw new NotImplementedException("Windows Vulkan graphics have not been implemented!");
+				newCore = new VulkanGraphicsCore(this, config);
 			}
 		}
 		else if (RuntimeInformation.IsOSPlatform(OSPlatform.OSX))
@@ -210,7 +213,7 @@ public class GraphicsSystem : IEngineSystem
 		else if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
 		{
 			// On Linux, Vulkan is the only supported framework:
-			throw new NotImplementedException("Linux graphics support has not been implemented!");
+			newCore = new VulkanGraphicsCore(this, config);
 		}
 		else
 		{

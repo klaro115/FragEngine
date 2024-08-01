@@ -58,7 +58,7 @@ public abstract class GraphicsCore : IDisposable
 	public abstract EnginePlatformFlag ApiPlatformFlag { get; }
 	public abstract bool DefaultMirrorY { get; }
 
-	private Logger Logger => graphicsSystem.engine.Logger ?? Logger.Instance!;
+	protected Logger Logger => graphicsSystem.engine.Logger ?? Logger.Instance!;
 
 	#endregion
 	#region Methods

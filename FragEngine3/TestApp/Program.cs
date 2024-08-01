@@ -5,6 +5,7 @@ using TestApp.Application.Test;
 Console.WriteLine("### Starting...\n");
 
 EngineConfig config = new();
+config.Graphics.PreferNativeFramework = false;	// default to Vulkan
 
 Engine? engine = null;
 try
