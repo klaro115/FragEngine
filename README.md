@@ -7,6 +7,7 @@ The engine is designed to be open-source, and available for both free and commer
 
 - [Development State](#development-state)
 - [Dependencies](#dependencies)
+    - [Thrid-Party Tools:](#thrid-party-tools)
 - [Architecture](#architecture)
 - [Assets](#assets)
     - [Resource Files](#resource-files)
@@ -17,6 +18,7 @@ The engine is designed to be open-source, and available for both free and commer
     - [Linux](#linux)
     - [Mobile (iOS/Android)](#mobile-iosandroid)
 - [Work In Progress](#work-in-progress)
+    - [On Hold](#on-hold)
 - [Roadmap](#roadmap)
 
 <br>
@@ -35,6 +37,9 @@ As much of the code and functionality as possible are written custom for this pr
 The main dependency at this time is [Veldrid](https://veldrid.dev/), a cross-platform wrapper for graphics APIs, which is used as the basis for the engine's graphics, input, and window management modules.
 
 Beyond that, the [Magick.NET](https://github.com/dlemstra/Magick.NET) library was added for image file import. A small number of file formats will still see custom implementations for this project.
+
+#### Thrid-Party Tools:
+This repository contains a folder with any third-party tools and softwares that may be used by the engine's development toolchain. See [About Tools](./Tools/AboutTools.md) for more details.
 
 <br>
 
@@ -90,11 +95,16 @@ No support is planned for the foreseeable future. Android will have to wait unti
 
 ## Work In Progress
 
-- Linux support:
+- Asset importer/bundler toolchain
+    - Shader toolchain
+- Linux support: **[awaiting shader toolchain]**
     - Vulkan graphics core
-- Lighting system: **[on hold]**
+
+#### On Hold
+
+- Lighting system:
     - Indirect lighting **[awaiting graphics refactoring]**
-- File format support: **[on hold]**
+- File format support:
     - FBX _(3D geometry)_
     - DDS _(textures)_
 
@@ -128,7 +138,6 @@ The following is a rough and very short-sighted roadmap of features that are goi
     - Non-static mesh renderers
     - Blend shape logic
     - Bone animation logic
-- Asset importer/bundler toolchain
 - File format support:
     - FBX _(blend shapes, bone animation)_
     - GLTF
