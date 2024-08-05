@@ -14,6 +14,7 @@ public sealed class ShaderData
 	// GENERAL:
 
 	public ShaderDataFileHeader FileHeader { get; init; }
+	public ShaderDescriptionData Description { get; init; } = ShaderDescriptionData.none;
 
 	// SOURCE CODE:
 
@@ -28,7 +29,21 @@ public sealed class ShaderData
 	#endregion
 	#region Methods
 
-	public static bool Read(BinaryReader _reader, out ShaderData? _outData)
+	public bool IsValid()
+	{
+		if (Description is null || !Description.IsValid())
+		{
+			return false;
+		}
+		// Data must contain compiled byte code of any kind, or at least source code:
+		if (ByteCodeDxbc is null && ByteCodeDxil is null && ByteCodeSpirv is null)
+		{
+			return SourceCode is not null && !SourceCode.IsEmpty();
+		}
+		return true;
+	}
+
+	public static bool Read(BinaryReader _reader, out ShaderData? _outData, CompiledShaderDataType _typeFlags = CompiledShaderDataType.ALL)
 	{
 		if (_reader is null)
 		{
@@ -50,7 +65,12 @@ public sealed class ShaderData
 		long jsonStartPosition = fileStartPosition + fileHeader.jsonByteOffset;
 		_reader.JumpToPosition(jsonStartPosition);
 
-		//TODO: Read and deserialize JSON
+		// Read and deserialize JSON:
+		if (!ShaderDescriptionData.Read(_reader, fileHeader.jsonByteLength, out ShaderDescriptionData description))
+		{
+			_outData = null;
+			return false;
+		}
 
 		// Try reading source code data, if available:
 		ShaderSourceCodeData? sourceCodeData = null;
@@ -60,16 +80,38 @@ public sealed class ShaderData
 			return false;
 		}
 
-		//TODO: Read compiled shader data.
+		//... (reserved for additional headers)
 
+		// Read compiled shader data:
+		if (!ReadCompiledShaderByteCode(
+			_reader,
+			in fileHeader,
+			description,
+			_typeFlags,
+			out byte[]? byteCodeDxbc,
+			out byte[]? byteCodeDxil,
+			out byte[]? byteCodeSpirv))
+		{
+			_outData = null;
+			return false;
+		}
+
+		// Assemble data object:
 		_outData = new()
 		{
+			// General:
 			FileHeader = fileHeader,
-			//TODO: Assign description read from JSON.
+			Description = description,
+
+			// Source code:
 			SourceCode = sourceCodeData,
-			//TODO: Assign compiled shader data.
+
+			// Compiled byte code:
+			ByteCodeDxbc = byteCodeDxbc,
+			ByteCodeDxil = byteCodeDxil,
+			ByteCodeSpirv = byteCodeSpirv,
 		};
-		return true;
+		return _outData.IsValid();
 	}
 
 	public bool Write(BinaryWriter _writer, bool _bundleSourceCode = false)
@@ -122,6 +164,65 @@ public sealed class ShaderData
 		//TODO 1: Pre-calculate all sizes and offsets.
 		//TODO 2: Update sizes and offsets in header.
 
+		return true;
+	}
+
+	private static bool ReadCompiledShaderByteCode(
+		BinaryReader _reader,
+		in ShaderDataFileHeader _fileHeader,
+		ShaderDescriptionData _desc,
+		CompiledShaderDataType _typeFlags,
+		out byte[]? _outByteCodeDxbc,
+		out byte[]? _outByteCodeDxil,
+		out byte[]? _outByteCodeSpirv)
+	{
+		_outByteCodeDxbc = null;
+		_outByteCodeDxil = null;
+		_outByteCodeSpirv = null;
+
+		foreach (var compiledShaderData in _desc.CompiledShaders)
+		{
+			CompiledShaderDataType type = compiledShaderData.type;
+			if (!_typeFlags.HasFlag(type))
+				continue;
+
+			if (!_desc.GetCompiledShaderByteOffsetAndSize(type, _fileHeader.shaderDataOffset, out uint dataStartPosition, out uint expectedByteSize))
+				continue;
+
+			try
+			{
+				_reader.JumpToPosition(dataStartPosition);
+
+				byte[] byteCode = new byte[expectedByteSize];
+				int actualByteSize = _reader.Read(byteCode, 0, (int)expectedByteSize);
+				if (actualByteSize < expectedByteSize)
+				{
+					byte[] trimmedByteCode = new byte[actualByteSize];
+					Array.Copy(byteCode, trimmedByteCode, actualByteSize);
+					byteCode = trimmedByteCode;
+				}
+
+				switch (type)
+				{
+					case CompiledShaderDataType.DXBC:
+						_outByteCodeDxbc = byteCode;
+						break;
+					case CompiledShaderDataType.DXIL:
+						_outByteCodeDxil = byteCode;
+						break;
+					case CompiledShaderDataType.SPIRV:
+						_outByteCodeSpirv = byteCode;
+						break;
+					default:
+						break;
+				}
+			}
+			catch (Exception ex)
+			{
+				Logger.Instance?.LogException($"Reading compiled shader data has failed on byte code type '{type}'!", ex);
+				return false;
+			}
+		}
 		return true;
 	}
 
