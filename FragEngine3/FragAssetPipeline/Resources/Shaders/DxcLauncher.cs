@@ -18,8 +18,6 @@ public static class DxcLauncher
 	#endregion
 	#region Fields
 
-	private static string? dxcExeAbsolutePath = null;
-
 	private static readonly DxcCompilerOptions compilerOptionsDXBC = new()
 	{
 		// General:

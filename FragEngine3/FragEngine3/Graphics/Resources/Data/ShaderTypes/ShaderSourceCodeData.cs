@@ -30,7 +30,7 @@ public sealed class ShaderSourceCodeData
 	#endregion
 	#region Constants
 
-	public uint HEADER_BYTE_SIZE = sizeof(uint) + sizeof(short);
+	public const uint HEADER_BYTE_SIZE = sizeof(uint) + sizeof(short);
 
 	#endregion
 	#region Methods

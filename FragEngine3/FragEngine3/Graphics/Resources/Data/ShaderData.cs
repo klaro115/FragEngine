@@ -13,7 +13,7 @@ public sealed class ShaderData
 
 	// GENERAL:
 
-	public ShaderDataFileHeader FileHeader { get; init; }
+	public ShaderDataFileHeader FileHeader { get; set; } = new();
 	public ShaderDescriptionData Description { get; init; } = ShaderDescriptionData.none;
 
 	// SOURCE CODE:
@@ -122,12 +122,16 @@ public sealed class ShaderData
 			return false;
 		}
 
-		//TODO: Serialize description to JSON.
-		uint jsonByteSize = 0;  //TEMP
+		// Serialize description to JSON:
+		if (!Description.Write(out byte[] jsonUtf8Bytes))
+		{
+			return false;
+		}
+		int jsonByteSize = jsonUtf8Bytes.Length;
 
 		bool hasSourceCode = _bundleSourceCode && SourceCode is not null && !SourceCode.IsEmpty();
 
-		if (!RecalculateOffsetsAndSizes(jsonByteSize, hasSourceCode))
+		if (!RecalculateOffsetsAndSizes((ushort)jsonByteSize, hasSourceCode))
 		{
 			return false;
 		}
@@ -138,7 +142,8 @@ public sealed class ShaderData
 			return false;
 		}
 
-		//TODO: Write description JSON.
+		// Write description JSON:
+		_writer.Write(jsonUtf8Bytes, 0, jsonByteSize);
 
 		// Write source code header, if available:
 		if (hasSourceCode && !SourceCode!.WriteHeader(_writer))
@@ -159,11 +164,29 @@ public sealed class ShaderData
 		return true;
 	}
 
-	private bool RecalculateOffsetsAndSizes(uint _jsonByteSize, bool _hasSourceCode)
+	private bool RecalculateOffsetsAndSizes(ushort _jsonByteSize, bool _hasSourceCode)
 	{
-		//TODO 1: Pre-calculate all sizes and offsets.
-		//TODO 2: Update sizes and offsets in header.
+		ShaderDataFileHeader fileHeader = FileHeader;
 
+		// Pre-calculate all sizes and offsets:
+		ushort jsonByteOffset = ShaderDataFileHeader.minFileHeaderSize;
+		ushort sourceCodeOffset = 0;
+		uint sourceCodeSize = 0;
+		if (_hasSourceCode)
+		{
+			sourceCodeOffset = (ushort)(jsonByteOffset + _jsonByteSize);
+			sourceCodeSize = ShaderSourceCodeData.HEADER_BYTE_SIZE + (uint)SourceCode!.HlslByteLength;
+		}
+		uint shaderDataOffset = sourceCodeOffset + sourceCodeSize;
+
+		// Update sizes and offsets in header:
+		fileHeader.fileHeaderSize = ShaderDataFileHeader.minFileHeaderSize;
+		fileHeader.jsonByteOffset = jsonByteOffset;
+		fileHeader.jsonByteLength = _jsonByteSize;
+		fileHeader.sourceCodeOffset = sourceCodeOffset;
+		fileHeader.shaderDataOffset = shaderDataOffset;
+
+		FileHeader = fileHeader;
 		return true;
 	}
 

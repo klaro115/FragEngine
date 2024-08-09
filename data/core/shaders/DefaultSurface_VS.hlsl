@@ -118,3 +118,5 @@ void Main_Vertex_Ext(
     outputExt.binormal = cross(outputBasic.normal, outputExt.tangent);
     outputExt.uv2 = inputExt.uv2;
 }
+
+//TODO [later]: Add blendshape and bone animation variant entrypoints.

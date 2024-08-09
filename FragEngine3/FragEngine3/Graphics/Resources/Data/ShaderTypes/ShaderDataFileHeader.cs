@@ -2,14 +2,23 @@
 
 namespace FragEngine3.Graphics.Resources.Data.ShaderTypes;
 
-public struct ShaderDataFileHeader
+public struct ShaderDataFileHeader()
 {
+	#region Types
+
+	public struct Version()
+	{
+		public byte major = 1;
+		public byte minor = 0;
+	}
+
+	#endregion
 	#region Fields
 
 	// FORMAT IDENTIFIERS:
 
-	public string formatSpecifier;  // 4 letter ASCII, file format specifier. Ex.: "FSHA" = 'Fragment Shader'
-	public Version formatVersion;	// Version of the shader file format. Default: "10" (2x 4-bit number formatted as 2-digit hex)
+	public string formatSpecifier = "FSHA";	// 4 letter ASCII, file format specifier. Ex.: "FSHA" = 'Fragment Shader'
+	public Version formatVersion = new();	// Version of the shader file format. Default: "10" (2x 4-bit number formatted as 2-digit hex)
 
 	// CONTENT TABLE:
 
@@ -56,7 +65,11 @@ public struct ShaderDataFileHeader
 
 			_reader.Read(buffer, 0, 2);
 			_reader.ReadByte();
-			_outFileHeader.formatVersion = new((int)HexCharToValue(buffer[0]), (int)HexCharToValue(buffer[1]));
+			_outFileHeader.formatVersion = new()
+			{
+				major = (byte)HexCharToValue(buffer[0]),
+				minor = (byte)HexCharToValue(buffer[1])
+			};
 
 			// Content table:
 
@@ -94,8 +107,8 @@ public struct ShaderDataFileHeader
 			_writer.Write((byte)formatSpecifier[3]);    // 'A'
 			_writer.Write((byte)'_');
 
-			_writer.Write(ValueToHexChar((uint)formatVersion.Major));	// 0-9, A-F
-			_writer.Write(ValueToHexChar((uint)formatVersion.Minor));	// 0-9, A-F
+			_writer.Write(ValueToHexChar(formatVersion.major));	// 0-9, A-F
+			_writer.Write(ValueToHexChar(formatVersion.minor));	// 0-9, A-F
 			_writer.Write((byte)'_');
 
 			// Content table:
@@ -177,8 +190,8 @@ public struct ShaderDataFileHeader
 	{
 		value &= 0x0Fu;
 		uint hex = value > 9
-			? value + '0'
-			: value + 'A';
+			? value + 'A'
+			: value + '0';
 		return (byte)hex;
 	}
 

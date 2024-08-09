@@ -1,0 +1,16 @@
+FSHA_10_001M_001M_00O6_0000_00000000_{
+  "ShaderStage": 1,
+  "Variants": {
+    "EntryPointNameBase": "Main_Vertex",
+    "VariantVertexFlags": [
+      1,
+      3
+    ]
+  },
+  "CompiledShaders": [
+    {
+      "type": 1,
+      "byteSize": 2244
+    }
+  ]
+}
