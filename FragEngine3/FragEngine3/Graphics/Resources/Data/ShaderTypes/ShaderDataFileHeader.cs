@@ -1,4 +1,5 @@
 ﻿using FragEngine3.EngineCore;
+using System;
 
 namespace FragEngine3.Graphics.Resources.Data.ShaderTypes;
 
@@ -12,6 +13,44 @@ public struct ShaderDataFileHeader()
 		public byte minor = 0;
 	}
 
+	public struct OffsetAndSize
+	{
+		public uint byteOffset;
+		public uint byteSize;
+
+		public readonly bool IsEmpty() => byteOffset == 0 || byteSize == 0;
+
+		public static OffsetAndSize Read16(BinaryReader _reader, byte[] _buffer)
+		{
+			OffsetAndSize value = new()
+			{
+				byteOffset = ReadUInt16(_reader, _buffer),
+				byteSize = ReadUInt16(_reader, _buffer),
+			};
+			return value;
+		}
+		public static OffsetAndSize Read32(BinaryReader _reader, byte[] _buffer)
+		{
+			OffsetAndSize value = new()
+			{
+				byteOffset = ReadUInt32(_reader, _buffer),
+				byteSize = ReadUInt32(_reader, _buffer),
+			};
+			return value;
+		}
+
+		public readonly void Write16(BinaryWriter _writer)
+		{
+			WriteUInt16(_writer, (ushort)byteOffset);
+			WriteUInt16(_writer, (ushort)byteSize);
+		}
+		public readonly void Write32(BinaryWriter _writer)
+		{
+			WriteUInt32(_writer, byteOffset);
+			WriteUInt32(_writer, byteSize);
+		}
+	}
+
 	#endregion
 	#region Fields
 
@@ -22,11 +61,11 @@ public struct ShaderDataFileHeader()
 
 	// CONTENT TABLE:
 
-	public ushort fileHeaderSize;   // Total byte size of this file header. Default: "001C" (16-bit ushort formatted as 4-digit hex)
-	public ushort jsonByteOffset;   // Byte offset from file start to the start of the JSON-encoded shader description. (16-bit ushort formatted as 4-digit hex)
-	public ushort jsonByteLength;   // Byte size of the JSON-encoded shader description. Ex.: "CF31" (16-bit ushort formatted as 4-digit hex)
-	public ushort sourceCodeOffset; // Byte offset of the source code header. Ex.: "CF95" (16-bit ushort formatted as 4-digit hex)
-	public uint shaderDataOffset;	// Byte offset of the compiled shader blocks. Ex.: "0000F326" (32-bit ushort formatted as 8-digit hex)
+	public ushort fileHeaderSize;           // Total byte size of this file header. Default: "001C" (16-bit format)
+	public OffsetAndSize jsonDescription;   // JSON-encoded shader description. (16-bit format)
+	public OffsetAndSize sourceCode;        // Optional shader source code, generally in HLSL, encoded as UTF-8 or ASCII. (16-bit format)
+	public ushort shaderDataBlockCount;		// Number of shader variant blocks in shader data. (16-bit format)
+	public OffsetAndSize shaderData;		// Shader data, arranged as contiguous blocks of compiled variants. (32-bit format)
 	//...
 
 	#endregion
@@ -74,10 +113,10 @@ public struct ShaderDataFileHeader()
 			// Content table:
 
 			_outFileHeader.fileHeaderSize = ReadUInt16(_reader, buffer);
-			_outFileHeader.jsonByteOffset = ReadUInt16(_reader, buffer);
-			_outFileHeader.jsonByteLength = ReadUInt16(_reader, buffer);
-			_outFileHeader.sourceCodeOffset = ReadUInt16(_reader, buffer);
-			_outFileHeader.shaderDataOffset = ReadUInt32(_reader, buffer);
+			_outFileHeader.jsonDescription = OffsetAndSize.Read16(_reader, buffer);
+			_outFileHeader.sourceCode = OffsetAndSize.Read16(_reader, buffer);
+			_outFileHeader.shaderDataBlockCount = ReadUInt16(_reader, buffer);
+			_outFileHeader.shaderData = OffsetAndSize.Read32(_reader, buffer);
 
 			return true;
 		}
@@ -114,10 +153,10 @@ public struct ShaderDataFileHeader()
 			// Content table:
 
 			WriteUInt16(_writer, fileHeaderSize);
-			WriteUInt16(_writer, jsonByteOffset);
-			WriteUInt16(_writer, jsonByteLength);
-			WriteUInt16(_writer, sourceCodeOffset);
-			WriteUInt32(_writer, shaderDataOffset);
+			jsonDescription.Write16(_writer);
+			sourceCode.Write16(_writer);
+			WriteUInt16(_writer, shaderDataBlockCount);
+			shaderData.Write32(_writer);
 
 			return true;
 		}
@@ -181,7 +220,7 @@ public struct ShaderDataFileHeader()
 	private static uint HexCharToValue(byte _x)
 	{
 		uint value = _x > '9'
-			? _x - (uint)'A'
+			? _x - (uint)'A' + 10
 			: _x - (uint)'0';
 		return value;
 	}
@@ -190,7 +229,7 @@ public struct ShaderDataFileHeader()
 	{
 		value &= 0x0Fu;
 		uint hex = value > 9
-			? value + 'A'
+			? value + 'A' - 10
 			: value + '0';
 		return (byte)hex;
 	}
