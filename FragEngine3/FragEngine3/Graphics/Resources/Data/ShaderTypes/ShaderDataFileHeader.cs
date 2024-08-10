@@ -103,6 +103,12 @@ public struct ShaderDataFileHeader()
 			_reader.ReadByte();
 			_outFileHeader.formatSpecifier = $"{(char)buffer[0]}{(char)buffer[1]}{(char)buffer[2]}{(char)buffer[3]}";
 
+			if (_outFileHeader.formatSpecifier != "FSHA")
+			{
+				Logger.Instance?.LogError($"Shader asset file uses invalid format specifier '{_outFileHeader.formatSpecifier}' where 'FSHA' was expected! Aborting import.");
+				return false;
+			}
+
 			_reader.Read(buffer, 0, 2);
 			_reader.ReadByte();
 			_outFileHeader.formatVersion = new()
