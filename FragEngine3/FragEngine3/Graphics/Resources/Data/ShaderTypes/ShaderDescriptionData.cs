@@ -6,52 +6,137 @@ using Veldrid;
 namespace FragEngine3.Graphics.Resources.Data.ShaderTypes;
 
 [Serializable]
-public sealed class ShaderDescriptionData
+public sealed class ShaderDescriptionVariantData
 {
-	#region Types
+	#region Properties
 
-	[Serializable]
-	public sealed class VariantData
+	/// <summary>
+	/// The type of compiled shader data. Basically, what backend/runtime is was compiled for.
+	/// </summary>
+	public CompiledShaderDataType Type { get; init; }
+
+	/// <summary>
+	/// Vertex data flags of this variant.
+	/// </summary>
+	public MeshVertexDataFlags VariantFlags { get; init; } = 0;
+	/// <summary>
+	/// String-encoded description of variant features and flags. May be decoded to <see cref="ShaderGen.ShaderGenConfig"/>.
+	/// </summary>
+	public string VariantDescriptionTxt { get; init; } = string.Empty;
+	/// <summary>
+	/// Name of this variant's entrypoint function within the source code.
+	/// </summary>
+	public string EntryPoint { get; init; } = string.Empty;
+
+	/// <summary>
+	/// Starting position offset relative to beginning of compiled shader data section.
+	/// </summary>
+	public uint ByteOffset { get; set; }
+	/// <summary>
+	/// Size of the compiled data block, in bytes.
+	/// </summary>
+	public uint ByteSize { get; init; }
+
+	#endregion
+	#region Methods
+
+	public bool IsValid()
 	{
-		public string? EntryPointNameBase { get; init; } = null;
-		public MeshVertexDataFlags[]? VariantVertexFlags { get; init; } =
-		[
-			MeshVertexDataFlags.BasicSurfaceData
-		];
-
-		public bool IsValid() => !string.IsNullOrEmpty(EntryPointNameBase) || (VariantVertexFlags is not null && VariantVertexFlags.Length > 0);
-	}
-
-	[Serializable]
-	public struct CompiledShaderData
-	{
-		public CompiledShaderDataType type;
-		public uint byteSize;
-
-		public readonly bool IsValid() => byteSize != 0;
+		bool result =
+			Type != CompiledShaderDataType.Other &&
+			VariantFlags != 0 &&
+			ByteSize != 0 &&
+			!string.IsNullOrEmpty(VariantDescriptionTxt);
+		return result;
 	}
 
 	#endregion
+}
+
+[Serializable]
+public sealed class ShaderDescriptionSourceCodeData
+{
+	#region Fields
+
+	[Serializable]
+	public sealed class VariantEntryPoint
+	{
+		public MeshVertexDataFlags VariantFlags { get; init; } = MeshVertexDataFlags.BasicSurfaceData;
+		public string EntryPoint { get; init; } = string.Empty;
+	}
+
+	#endregion
+	#region Properties
+
+	// ENTRY POINTS:
+
+	/// <summary>
+	/// Name base of all entry point functions within the source code for this stage.
+	/// Suffixes added to this name may be used to find and identify variants during run-time compilation.
+	/// </summary>
+	public string EntryPointNameBase { get; init; } = string.Empty;
+	/// <summary>
+	/// An array of all variant entry points and their respective vertex data flags. If null, entry points will be scanned and identified
+	/// based on '<see cref="EntryPointNameBase"/>' and standard variant suffixes instead.
+	/// </summary>
+	public VariantEntryPoint[]? EntryPoints { get; init; } = null;
+
+	// FEATURES:
+
+	/// <summary>
+	/// String-encoded list of all ShaderGen features supported by this shader's source code. (i.e. what is possible)
+	/// </summary>
+	public string SupportedFeaturesTxt { get; init; } = string.Empty;
+	/// <summary>
+	/// String-encoded list of all ShaderGen features that were enabled for the most fully-featured variant. (i.e. what has been pre-compiled)
+	/// </summary>
+	public string MaximumCompiledFeaturesTxt { get; init; } = string.Empty;
+
+	#endregion
+	#region Methods
+
+	public bool IsValid()
+	{
+		bool result =
+			!string.IsNullOrEmpty(EntryPointNameBase) &&
+			!string.IsNullOrEmpty(SupportedFeaturesTxt) &&
+			!string.IsNullOrEmpty(MaximumCompiledFeaturesTxt);
+		return result;
+	}
+
+	#endregion
+}
+
+[Serializable]
+public sealed class ShaderDescriptionData
+{
 	#region Fields
 
 	public static readonly ShaderDescriptionData none = new()
 	{
 		ShaderStage = ShaderStages.None,
-		Variants = new()
-		{
-			EntryPointNameBase = null,
-			VariantVertexFlags = null,
-		},
-		CompiledShaders = [],
+		SourceCode = null,
+		CompiledVariants = [],
 	};
 
 	#endregion
 	#region Properties
 
+	/// <summary>
+	/// Which stage of the shader pipeline this file's shader programs belong to.
+	/// </summary>
 	public ShaderStages ShaderStage { get; init; } = ShaderStages.None;
 
-	public VariantData Variants { get; init; } = new();
-	public CompiledShaderData[] CompiledShaders {  get; init; } = [];
+	/// <summary>
+	/// Optional description of source code data bundled within this file.
+	/// If source code is provided, source code may be used to compile missing shader variants on-demand.
+	/// </summary>
+	public ShaderDescriptionSourceCodeData? SourceCode { get; init; } = null;
+	/// <summary>
+	/// An array of all pre-compiled shader variants contained within this file.<para/>
+	/// Variants in this array must be sorted in ascending order by type, then vertex data flags, and lastly feature-completeness.
+	/// </summary>
+	public ShaderDescriptionVariantData[] CompiledVariants { get; init; } = [];
 
 	#endregion
 	#region Methods
@@ -60,11 +145,10 @@ public sealed class ShaderDescriptionData
 	{
 		bool isValid =
 			ShaderStage != ShaderStages.None &&
-			Variants is not null &&
-			Variants.IsValid() &&
-			CompiledShaders is not null &&
-			CompiledShaders!.Length >= 1 &&
-			CompiledShaders![0].IsValid();
+			(SourceCode is null || SourceCode.IsValid()) &&
+			CompiledVariants is not null &&
+			CompiledVariants.Length != 0 &&
+			CompiledVariants[0].IsValid();
 		return isValid;
 	}
 
@@ -72,27 +156,43 @@ public sealed class ShaderDescriptionData
 	/// Calculates the byte offset from start of file, where compiled shader data of a specific type starts.
 	/// </summary>
 	/// <param name="_type">The type of compiled shader data we're looking for.</param>
-	/// <param name="_shaderDataOffset"></param>
-	/// <param name="_outByteOffset">Outputs the byte offset where the compiled data starts, or zero, if the type wasn't found.</param>
-	/// <param name="_outByteSize">Outputs the byte size of the compiled data, or zero, if the type wasn't found.</param>
+	/// <param name="_variantFlags">Vertex data flags of the shader variant we're looking for.</param>
+	/// <param name="_variantDescriptionTxt">A string-encoded description of the feature set we're looking for. If null, this is ignored. If provided, this is prioritized.
+	/// This description's format corresponds to the output of <see cref="ShaderGen.ShaderGenConfig.CreateDescriptionTxt"/>, and it is case-sensitive.</param>
+	/// <param name="_outVariantData">Outputs description data for the most first fitting variant that is present in pre-compiled form.</param>
 	/// <returns>True if compiled data of the given type exists within this file, false otherwise.</returns>
-	public bool GetCompiledShaderByteOffsetAndSize(CompiledShaderDataType _type, uint _shaderDataOffset, out uint _outByteOffset, out uint _outByteSize)
+	public bool GetCompiledShaderVariantData(CompiledShaderDataType _type, MeshVertexDataFlags _variantFlags, string? _variantDescriptionTxt, out ShaderDescriptionVariantData _outVariantData)
 	{
-		if (CompiledShaders is not null)
+		if (CompiledVariants is null || _variantFlags == 0)
 		{
-			_outByteOffset = _shaderDataOffset;
-			for (int i = 0; i < CompiledShaders.Length; i++)
+			_outVariantData = null!;
+			return false;
+		}
+
+		// Prioritize matching the exact ShaderGen variant description, if provided:
+		if (string.IsNullOrEmpty(_variantDescriptionTxt))
+		{
+			foreach (ShaderDescriptionVariantData variant in CompiledVariants)
 			{
-				if (CompiledShaders[i].type == _type)
+				if (variant.Type == _type && variant.VariantDescriptionTxt == _variantDescriptionTxt)
 				{
-					_outByteSize = CompiledShaders[i].byteSize;
+					_outVariantData = variant;
 					return true;
 				}
-				_outByteOffset += CompiledShaders[i].byteSize;
 			}
 		}
-		_outByteOffset = 0u;
-		_outByteSize = 0u;
+		
+		// Find the first compatible vertex variant based on vertex data flags: (lowest feature set is assumed to be listed first)
+		foreach (ShaderDescriptionVariantData variant in CompiledVariants)
+		{
+			if (variant.Type == _type && variant.VariantFlags.HasFlag(_variantFlags))
+			{
+				_outVariantData = variant;
+				return true;
+			}
+		}
+
+		_outVariantData = null!;
 		return false;
 	}
 
@@ -104,19 +204,12 @@ public sealed class ShaderDescriptionData
 			return false;
 		}
 
-		string jsonTxt;
-		try
+		if (!ShaderData.ReadUtf8Bytes(_reader, _jsonByteLength, out string jsonTxt))
 		{
-			byte[] utf8Bytes = _reader.ReadBytes((int)_jsonByteLength);
-			jsonTxt = Encoding.UTF8.GetString(utf8Bytes);
-		}
-		catch (Exception ex)
-		{
-			Logger.Instance?.LogException("Failed to read shader description JSON from stream!", ex);
 			_outDesc = none;
 			return false;
 		}
-
+		
 		if (!DeserializeFromJson(jsonTxt, out _outDesc!))
 		{
 			_outDesc = none;

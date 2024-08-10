@@ -1,5 +1,4 @@
 ﻿using FragEngine3.EngineCore;
-using System;
 
 namespace FragEngine3.Graphics.Resources.Data.ShaderTypes;
 
@@ -42,11 +41,13 @@ public struct ShaderDataFileHeader()
 		public readonly void Write16(BinaryWriter _writer)
 		{
 			WriteUInt16(_writer, (ushort)byteOffset);
+			_writer.Write((byte)'_');
 			WriteUInt16(_writer, (ushort)byteSize);
 		}
 		public readonly void Write32(BinaryWriter _writer)
 		{
 			WriteUInt32(_writer, byteOffset);
+			_writer.Write((byte)'_');
 			WriteUInt32(_writer, byteSize);
 		}
 	}
@@ -61,7 +62,7 @@ public struct ShaderDataFileHeader()
 
 	// CONTENT TABLE:
 
-	public ushort fileHeaderSize;           // Total byte size of this file header. Default: "001C" (16-bit format)
+	public ushort fileHeaderSize = minFileHeaderSize; // Total byte size of this file header. Default: "001C" (16-bit format)
 	public OffsetAndSize jsonDescription;   // JSON-encoded shader description. (16-bit format)
 	public OffsetAndSize sourceCode;        // Optional shader source code, generally in HLSL, encoded as UTF-8 or ASCII. (16-bit format)
 	public ushort shaderDataBlockCount;		// Number of shader variant blocks in shader data. (16-bit format)
@@ -71,7 +72,7 @@ public struct ShaderDataFileHeader()
 	#endregion
 	#region Constants
 
-	public const int minFileHeaderSize = 5 + 3 + 4 * 5; // = 28 bytes
+	public const int minFileHeaderSize = 57;	// 0x39
 
 	#endregion
 	#region Methods
@@ -153,10 +154,16 @@ public struct ShaderDataFileHeader()
 			// Content table:
 
 			WriteUInt16(_writer, fileHeaderSize);
+			_writer.Write((byte)'_');
 			jsonDescription.Write16(_writer);
+			_writer.Write((byte)'_');
 			sourceCode.Write16(_writer);
+			_writer.Write((byte)'_');
 			WriteUInt16(_writer, shaderDataBlockCount);
+			_writer.Write((byte)'_');
 			shaderData.Write32(_writer);
+			_writer.Write((byte)'\r');
+			_writer.Write((byte)'\n');
 
 			return true;
 		}
@@ -203,7 +210,6 @@ public struct ShaderDataFileHeader()
 			byte hex = ValueToHexChar((uint)(_value >> shift));
 			_writer.Write(hex);
 		}
-		_writer.Write((byte)'_');
 	}
 
 	private static void WriteUInt32(BinaryWriter _writer, uint _value)
@@ -214,7 +220,6 @@ public struct ShaderDataFileHeader()
 			byte hex = ValueToHexChar(_value >> shift);
 			_writer.Write(hex);
 		}
-		_writer.Write((byte)'_');
 	}
 
 	private static uint HexCharToValue(byte _x)

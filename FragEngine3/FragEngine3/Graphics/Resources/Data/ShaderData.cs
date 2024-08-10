@@ -2,7 +2,6 @@
 using FragEngine3.Graphics.Resources.Data.ShaderTypes;
 using FragEngine3.Resources.Data;
 using FragEngine3.Utility;
-using System.Reflection.PortableExecutable;
 using System.Text;
 
 namespace FragEngine3.Graphics.Resources.Data;
@@ -75,6 +74,8 @@ public sealed class ShaderData
 			return false;
 		}
 
+		//... (reserved for additional headers)
+
 		// Try reading source code data, if available:
 		byte[]? sourceCodeUtf8Bytes = null;
 		if (!fileHeader.sourceCode.IsEmpty())
@@ -89,14 +90,13 @@ public sealed class ShaderData
 			}
 		}
 
-		//... (reserved for additional headers)
-
 		// Read compiled shader data:
+		long compiledDataStartPosition = fileStartPosition + fileHeader.shaderData.byteOffset;
 		if (!ReadCompiledShaderByteCode(
 			_reader,
-			in fileHeader,
 			description,
 			_typeFlags,
+			compiledDataStartPosition,
 			out byte[]? byteCodeDxbc,
 			out byte[]? byteCodeDxil,
 			out byte[]? byteCodeSpirv))
@@ -193,10 +193,10 @@ public sealed class ShaderData
 		ushort jsonByteOffset = ShaderDataFileHeader.minFileHeaderSize;
 		ushort sourceCodeOffset = 0;
 		uint sourceCodeSize = 0;
-		if (_hasSourceCode)
+		if (_hasSourceCode && SourceCode is not null)
 		{
 			sourceCodeOffset = (ushort)(jsonByteOffset + _jsonByteSize);
-			sourceCodeSize = (uint)SourceCode!.Length;
+			sourceCodeSize = (uint)SourceCode.Length;
 		}
 		uint shaderDataOffset = sourceCodeOffset + sourceCodeSize;
 		uint shaderDataByteSize = 0;
@@ -228,61 +228,110 @@ public sealed class ShaderData
 
 	private static bool ReadCompiledShaderByteCode(
 		BinaryReader _reader,
-		in ShaderDataFileHeader _fileHeader,
 		ShaderDescriptionData _desc,
 		CompiledShaderDataType _typeFlags,
+		long _shaderDataStartPosition,
 		out byte[]? _outByteCodeDxbc,
 		out byte[]? _outByteCodeDxil,
 		out byte[]? _outByteCodeSpirv)
 	{
-		_outByteCodeDxbc = null;
-		_outByteCodeDxil = null;
-		_outByteCodeSpirv = null;
+		const int readBufferCapacity = 2048;
 
-		foreach (var compiledShaderData in _desc.CompiledShaders)
+		if (_desc.CompiledVariants is null || _desc.CompiledVariants.Length == 0)
 		{
-			CompiledShaderDataType type = compiledShaderData.type;
-			if (!_typeFlags.HasFlag(type))
-				continue;
+			_outByteCodeDxbc = null;
+			_outByteCodeDxil = null;
+			_outByteCodeSpirv = null;
+			return false;
+		}
 
-			if (!_desc.GetCompiledShaderByteOffsetAndSize(type, _fileHeader.shaderData.byteOffset, out uint dataStartPosition, out uint expectedByteSize))
-				continue;
+		List<byte>? bufferListDxbc = null;
+		List<byte>? bufferListDxil = null;
+		List<byte>? bufferListSpirv = null;
+		byte[] byteBuffer = new byte[readBufferCapacity];
+
+		foreach (ShaderDescriptionVariantData variantData in _desc.CompiledVariants)
+		{
+			if (!_typeFlags.HasFlag(variantData.Type)) continue;
+			if (!variantData.IsValid()) continue;
+
+			List<byte>? bufferList = GetBufferList(variantData.Type);
+			if (bufferList is null) continue;
+
+			uint variantStartIdx = (uint)bufferList.Count;
 
 			try
 			{
-				_reader.JumpToPosition(dataStartPosition);
+				// Jump to compiled code's start position on the reader stream:
+				long variantStartPosition = _shaderDataStartPosition + variantData.ByteOffset;
+				_reader.JumpToPosition(variantStartPosition);
 
-				byte[] byteCode = new byte[expectedByteSize];
-				int actualByteSize = _reader.Read(byteCode, 0, (int)expectedByteSize);
-				if (actualByteSize < expectedByteSize)
+				// Read all variant bytes from stream into buffer list:
+				int remainingSize = (int)variantData.ByteSize;
+				while (remainingSize > readBufferCapacity)
 				{
-					byte[] trimmedByteCode = new byte[actualByteSize];
-					Array.Copy(byteCode, trimmedByteCode, actualByteSize);
-					byteCode = trimmedByteCode;
+					_reader.Read(byteBuffer, 0, readBufferCapacity);
+					bufferList.AddRange(byteBuffer);
+					remainingSize -= readBufferCapacity;
+				}
+				if (remainingSize != 0)
+				{
+					_reader.Read(byteBuffer, 0, remainingSize);
+					ReadOnlySpan<byte> span = new(byteBuffer, 0, remainingSize);
+					bufferList.AddRange(span);
 				}
 
-				switch (type)
-				{
-					case CompiledShaderDataType.DXBC:
-						_outByteCodeDxbc = byteCode;
-						break;
-					case CompiledShaderDataType.DXIL:
-						_outByteCodeDxil = byteCode;
-						break;
-					case CompiledShaderDataType.SPIRV:
-						_outByteCodeSpirv = byteCode;
-						break;
-					default:
-						break;
-				}
+				// Update raw variant data to use imported array indices instead of file byte offsets:
+				variantData.ByteOffset = variantStartIdx;
 			}
 			catch (Exception ex)
 			{
-				Logger.Instance?.LogException($"Reading compiled shader data has failed on byte code type '{type}'!", ex);
+				Logger.Instance?.LogException($"Reading compiled shader data has failed on byte code type '{variantData.Type}'!", ex);
+				_outByteCodeDxbc = null;
+				_outByteCodeDxil = null;
+				_outByteCodeSpirv = null;
 				return false;
 			}
 		}
+
+		_outByteCodeDxbc = bufferListDxbc?.ToArray();
+		_outByteCodeDxil = bufferListDxil?.ToArray();
+		_outByteCodeSpirv = bufferListSpirv?.ToArray();
 		return true;
+
+
+		// Local helper method for fetching the right buffer list for a given shader data type:
+		List<byte>? GetBufferList(CompiledShaderDataType _type)
+		{
+			return _type switch
+			{
+				CompiledShaderDataType.DXBC => bufferListDxbc ??= new(readBufferCapacity),
+				CompiledShaderDataType.DXIL => bufferListDxil ??= new(readBufferCapacity),
+				CompiledShaderDataType.SPIRV => bufferListSpirv ??= new(readBufferCapacity),
+				_ => null,
+			};
+		}
+	}
+
+	public static bool ReadUtf8Bytes(BinaryReader _reader, uint _expectedByteSize, out string _outText)
+	{
+		if (!ReadUtf8Bytes(_reader, _expectedByteSize, out byte[] utf8Bytes))
+		{
+			_outText = string.Empty;
+			return false;
+		}
+
+		try
+		{
+			_outText = Encoding.UTF8.GetString(utf8Bytes);
+			return true;
+		}
+		catch (Exception ex)
+		{
+			Logger.Instance?.LogException("Reading UTF-8 string for shader data has failed!", ex);
+			_outText = string.Empty;
+			return false;
+		}
 	}
 
 	public static bool ReadUtf8Bytes(BinaryReader _reader, uint _expectedByteSize, out byte[] _outUtf8Bytes)

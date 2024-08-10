@@ -16,38 +16,68 @@ var result = DxcLauncher.CompileShaderToDXBC(testShaderFilePath, testShaderStage
 
 Console.WriteLine($"Shader compilation: {(result.isSuccess ? "SUCCESS" : "FAILURE")}");
 
+byte[] testShaderSourceCodeUtf8 = File.ReadAllBytes(testShaderFilePath);
+
 ShaderData shaderData = new()
 {
 	Description = new()
 	{
 		ShaderStage = testShaderStage,
-		Variants = new()
+		SourceCode = new ShaderDescriptionSourceCodeData()
 		{
 			EntryPointNameBase = testShaderEntryPoint,
-			VariantVertexFlags =
+			EntryPoints =
 			[
-				MeshVertexDataFlags.BasicSurfaceData,
-				MeshVertexDataFlags.BasicSurfaceData | MeshVertexDataFlags.ExtendedSurfaceData,
+				new()
+				{
+					EntryPoint = testShaderEntryPoint,
+					VariantFlags = MeshVertexDataFlags.BasicSurfaceData,
+				},
+				new()
+				{
+					EntryPoint = testShaderEntryPoint + "_Ext",
+					VariantFlags = MeshVertexDataFlags.BasicSurfaceData | MeshVertexDataFlags.ExtendedSurfaceData,
+				},
 			],
+			SupportedFeaturesTxt = "Ac_Nnn_Ln000p0_V100",
+			MaximumCompiledFeaturesTxt = "Ac_Nnn_Ln000p0_V100"
 		},
-		CompiledShaders =
+		CompiledVariants =
 		[
-			new ShaderDescriptionData.CompiledShaderData()
+			new ShaderDescriptionVariantData()
 			{
-				type = CompiledShaderDataType.DXBC,
-				byteSize = (uint)result.compiledShader.Length,
-			}
+				Type = CompiledShaderDataType.DXBC,
+				VariantFlags = MeshVertexDataFlags.BasicSurfaceData,
+				VariantDescriptionTxt = "Ac_Nnn_Ln000p0_V000",
+				EntryPoint = testShaderEntryPoint,
+				ByteOffset = 0,
+				ByteSize = (uint)result.compiledShader.Length,
+			},
 		],
 	},
+	SourceCode = testShaderSourceCodeUtf8,
 	ByteCodeDxbc = result.compiledShader,
 	//...
 };
 
 string outputPath = Path.GetFullPath(Path.Combine(ResourceConstants.coreFolderRelativePath, $"shaders/{testShaderName}.fsha"));
-using FileStream stream = new(outputPath, FileMode.Create);
-using BinaryWriter writer = new(stream);
 
-shaderData.Write(writer);
-stream.Close();
+// Write shader file:
+using (FileStream stream = new(outputPath, FileMode.Create))
+{
+	using BinaryWriter writer = new(stream);
+
+	shaderData.Write(writer, true);
+	stream.Close();
+}
+
+// Read shader file:
+using (FileStream stream = new(outputPath, FileMode.Open, FileAccess.Read))
+{
+	using BinaryReader reader = new(stream);
+
+	ShaderData.Read(reader, out ShaderData? shaderData2, CompiledShaderDataType.ALL);
+	stream.Close();
+}
 
 Console.WriteLine("\n#### END ####");
