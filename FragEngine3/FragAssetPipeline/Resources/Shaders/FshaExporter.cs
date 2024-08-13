@@ -57,12 +57,6 @@ public static class FshaExporter
 			_outFshaShaderData = null;
 			return false;
 		}
-		if (!GetShaderStageFromFileNameSuffix(_filePath, out _shaderStage))
-		{
-			Console.WriteLine($"Error! Cannot export FSHA, unable to determine shader stage from HLSL source file path! File path: '{_filePath}'");
-			_outFshaShaderData = null;
-			return false;
-		}
 
 		// Read source code from file:
 		string sourceCode;
@@ -84,7 +78,7 @@ public static class FshaExporter
 		foreach (MeshVertexDataFlags variantFlags in validVertexDataVariantFlags)
 		{
 			// Assemble variant entry point name:
-			entryPointBuilder.Append(' ').Append(_entryPointBase);
+			entryPointBuilder.Append(_entryPointBase);
 			foreach (MeshVertexDataFlags optionalVertexFlag in allOptionalVertexFlags)
 			{
 				if (variantFlags.HasFlag(optionalVertexFlag) && GraphicsConstants.shaderVariantsForEntryPointSuffixes.TryGetValue(optionalVertexFlag, out string? vertexDataSuffix))
@@ -92,13 +86,12 @@ public static class FshaExporter
 					entryPointBuilder.Append('_').Append(vertexDataSuffix);
 				}
 			}
-			entryPointBuilder.Append('(');
 
 			string entryPoint = entryPointBuilder.ToString();
 			entryPointBuilder.Clear();
 
 			// Check if this variant entrypoint function exists in source code:
-			if (sourceCode.Contains(entryPoint))
+			if (sourceCode.Contains($" {entryPoint}("))
 			{
 				entryPoints.Add(variantFlags, entryPoint);
 			}
@@ -122,7 +115,7 @@ public static class FshaExporter
 			_outFshaShaderData = null;
 			return false;
 		}
-		if (!GetShaderStageFromFileNameSuffix(_filePath, out _shaderStage))
+		if (_shaderStage == ShaderStages.None && !GetShaderStageFromFileNameSuffix(_filePath, out _shaderStage))
 		{
 			Console.WriteLine($"Error! Cannot export FSHA, unable to determine shader stage from HLSL source file path! File path: '{_filePath}'");
 			_outFshaShaderData = null;
@@ -181,7 +174,7 @@ public static class FshaExporter
 			{
 				Type = CompiledShaderDataType.DXBC,
 				VariantFlags = compiledVariant.vertexDataFlags,
-				VariantDescriptionTxt = string.Empty,				//TODO
+				VariantDescriptionTxt = "At_Nyn_Ly101p0_V100",		//TODO
 				EntryPoint = compiledVariant.entryPoint,
 				ByteOffset = compiledVariant.byteOffset,
 				ByteSize = (uint)compiledVariant.compiledData.Length,
@@ -195,6 +188,18 @@ public static class FshaExporter
 				compiledVariant.compiledData, 0,
 				allByteCodeDxbc, compiledVariant.byteOffset,
 				compiledVariant.compiledData.Length);
+		}
+
+		// Try to determine entry point functions' base name: (generally the most basic variant)
+		string entryPointBase;
+		CompiledVariant? baseVariant = compiledVariants.FirstOrDefault(o => o.vertexDataFlags == MeshVertexDataFlags.BasicSurfaceData);
+		if (baseVariant is not null)
+		{
+			entryPointBase = baseVariant.entryPoint;
+		}
+		else
+		{
+			entryPointBase = compiledVariants[0].entryPoint;
 		}
 
 		// Assemble shader data:
@@ -220,13 +225,16 @@ public static class FshaExporter
 				ShaderStage = _shaderStage,
 				SourceCode = new ShaderDescriptionSourceCodeData()
 				{
-					EntryPointNameBase = string.Empty,
+					EntryPointNameBase = entryPointBase,
 					EntryPoints = entryPointData,
-					SupportedFeaturesTxt = string.Empty,		//TODO
-					MaximumCompiledFeaturesTxt = string.Empty,	//TODO
+					SupportedFeaturesTxt = "At_Nyy_Ly111pF_V110",       //TODO
+					MaximumCompiledFeaturesTxt = "At_Nyn_Ly101p0_V110",	//TODO
 				},
 				CompiledVariants = compiledVariantData,
 			},
+			ByteCodeDxbc = allByteCodeDxbc,
+			ByteCodeDxil = null,
+			ByteCodeSpirv = null,
 		};
 
 		// Check validity and complete-ness before returning success:
