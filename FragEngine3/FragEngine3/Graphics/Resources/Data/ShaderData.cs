@@ -10,6 +10,15 @@ namespace FragEngine3.Graphics.Resources.Data;
 [ResourceDataType(typeof(ShaderResource))]
 public sealed class ShaderData
 {
+	#region Fields
+
+	private static readonly byte[] SECTION_SPACER =
+	[
+		(byte)'#', (byte)'#', (byte)'#', (byte)'#', (byte)'#', (byte)'#', (byte)'#', (byte)'#', (byte)'\r', (byte)'\n',
+	];
+	private static readonly uint SECTION_SPACER_SIZE = (uint)SECTION_SPACER.Length * sizeof(byte);
+
+	#endregion
 	#region Properties
 
 	// GENERAL:
@@ -150,12 +159,14 @@ public sealed class ShaderData
 		{
 			return false;
 		}
+		_writer.Write(SECTION_SPACER);
 
 		// Write description JSON:
 		if (!WriteByteData(_writer, jsonUtf8Bytes, jsonByteSize))
 		{
 			return false;
 		}
+		_writer.Write(SECTION_SPACER);
 
 		//... (reserved for additional headers)
 
@@ -163,6 +174,7 @@ public sealed class ShaderData
 		if (hasSourceCode)
 		{
 			_writer.Write(SourceCode!);
+			_writer.Write(SECTION_SPACER);
 		}
 
 		bool success = true;
@@ -190,15 +202,15 @@ public sealed class ShaderData
 		ShaderDataFileHeader fileHeader = FileHeader;
 
 		// Pre-calculate all sizes and offsets:
-		ushort jsonByteOffset = ShaderDataFileHeader.minFileHeaderSize;
-		ushort sourceCodeOffset = 0;
+		uint jsonByteOffset = ShaderDataFileHeader.minFileHeaderSize + SECTION_SPACER_SIZE;
+		uint sourceCodeOffset = 0;
 		uint sourceCodeSize = 0;
 		if (_hasSourceCode && SourceCode is not null)
 		{
-			sourceCodeOffset = (ushort)(jsonByteOffset + _jsonByteSize);
+			sourceCodeOffset = jsonByteOffset + _jsonByteSize + SECTION_SPACER_SIZE;
 			sourceCodeSize = (uint)SourceCode.Length;
 		}
-		uint shaderDataOffset = sourceCodeOffset + sourceCodeSize;
+		uint shaderDataOffset = sourceCodeOffset + sourceCodeSize + SECTION_SPACER_SIZE;
 		uint shaderDataByteSize = 0;
 		if (ByteCodeDxbc is not null) shaderDataByteSize += (uint)ByteCodeDxbc.Length;
 		if (ByteCodeDxil is not null) shaderDataByteSize += (uint)ByteCodeDxil.Length;

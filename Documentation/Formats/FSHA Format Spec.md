@@ -36,6 +36,8 @@ The format consists of multiple sections, some of which are designed to be human
 
 The file header contains a file format version number. For future versions of the format, it is possible that additional headers or sections may be added to the format's structure. These may be mapped directly within the extra headers section, and have their data located in new sections after the compiled data section. All minor versions within a same major version should remain interoperable and garantee at least basic functionality.
 
+While there is nothing stopping anyone from packing all sections of the format as tightly as possible, the implementation for the Fragment engine uses the ASCII string `"########\r\n"` to separate them. While this adds around 30 bytes to average file size, it makes the files ever so slightly more human-readable.
+
 
 
 ### 1. File Header
@@ -121,7 +123,15 @@ _Source code:_ [CompiledShaderDataType](../../FragEngine3/FragEngine3/Graphics/R
 
 
 ### 3. Source Code
-TODO
+The source code section is an optional data section which contains the HLSL source code that was used to compile the bundled shader variants. Source code must encoded as ASCII or UTF-8 plaintext.
+
+This section should only be present and contain code if the `Source code offset` and `Source code size` properties in the file header are non-zero, and if entry points and supported features were fully documented in the JSON description's `SourceCode` field.
+
+There are 2 reasons to include shader source code in your release build:
+- Variant compilation at run-time
+- Provide code reference for modding
+
+If you need to bundle source code for run-time compilation, but you do not wish to make the files publicly visible, consider using encrypted resource data files. Inside of an encrypted and compressed resource file, all assets contained therein should be safe from leaking unless users can gain access to the decryption key. See [Resource Guide](../Resources/Resource%20Guide.md) for details.
 
 ### 4. Compiled Data
 TODO

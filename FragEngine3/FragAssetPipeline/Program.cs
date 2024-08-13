@@ -7,10 +7,10 @@ using Veldrid;
 
 Console.WriteLine("### BEGIN ###\n");
 
-const string testShaderName = "Basic_VS";
+const string testShaderName = "DefaultSurface_modular_PS";
 string testShaderFilePath = Path.GetFullPath(Path.Combine(ResourceConstants.coreFolderRelativePath, $"shaders/{testShaderName}.hlsl"));
-const ShaderStages testShaderStage = ShaderStages.Vertex;
-const string testShaderEntryPoint = "Main_Vertex";
+const ShaderStages testShaderStage = ShaderStages.Fragment;
+const string testShaderEntryPoint = "Main_Pixel";
 
 var result = DxcLauncher.CompileShaderToDXBC(testShaderFilePath, testShaderStage, testShaderEntryPoint);
 
@@ -39,8 +39,8 @@ ShaderData shaderData = new()
 					VariantFlags = MeshVertexDataFlags.BasicSurfaceData | MeshVertexDataFlags.ExtendedSurfaceData,
 				},
 			],
-			SupportedFeaturesTxt = "Ac_Nnn_Ln000p0_V100",
-			MaximumCompiledFeaturesTxt = "Ac_Nnn_Ln000p0_V100"
+			SupportedFeaturesTxt = "At_Nyy_Ly111pF_V110",
+			MaximumCompiledFeaturesTxt = "At_Nyn_Ly101p0_V110"
 		},
 		CompiledVariants =
 		[
@@ -48,8 +48,17 @@ ShaderData shaderData = new()
 			{
 				Type = CompiledShaderDataType.DXBC,
 				VariantFlags = MeshVertexDataFlags.BasicSurfaceData,
-				VariantDescriptionTxt = "Ac_Nnn_Ln000p0_V000",
+				VariantDescriptionTxt = "At_Nyn_Ly101p0_V100",
 				EntryPoint = testShaderEntryPoint,
+				ByteOffset = 0,
+				ByteSize = (uint)result.compiledShader.Length,
+			},
+			new ShaderDescriptionVariantData()
+			{
+				Type = CompiledShaderDataType.DXBC,
+				VariantFlags = MeshVertexDataFlags.BasicSurfaceData | MeshVertexDataFlags.ExtendedSurfaceData,
+				VariantDescriptionTxt = "At_Nyn_Ly101p0_V110",
+				EntryPoint = testShaderEntryPoint + "_Ext",
 				ByteOffset = 0,
 				ByteSize = (uint)result.compiledShader.Length,
 			},

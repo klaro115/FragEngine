@@ -104,9 +104,11 @@ public static class DxcLauncher
 			return new(false);
 		}
 
+		DxcShaderStage dxStage = GetDxShaderStage(_shaderStage);
+
 		try
 		{
-			using var results = DxcCompiler.Compile(DxcShaderStage.Vertex, hlslCode, _entryPoint, compilerOptionsDXBC);
+			using var results = DxcCompiler.Compile(dxStage, hlslCode, _entryPoint, compilerOptionsDXBC);
 
 			// Check for errors:
 			using var errorBlob = results.GetOutput(DxcOutKind.Errors);
@@ -165,6 +167,20 @@ public static class DxcLauncher
 		}
 
 		return GraphicsConstants.defaultShaderStageEntryPoints.TryGetValue(_shaderStage, out _entryPoint);
+	}
+
+	private static DxcShaderStage GetDxShaderStage(ShaderStages _shaderStage)
+	{
+		return _shaderStage switch
+		{
+			ShaderStages.Vertex => DxcShaderStage.Vertex,
+			ShaderStages.Geometry => DxcShaderStage.Geometry,
+			ShaderStages.TessellationControl => DxcShaderStage.Domain,	// untested
+			ShaderStages.TessellationEvaluation => DxcShaderStage.Hull,	// untested
+			ShaderStages.Fragment => DxcShaderStage.Pixel,
+			ShaderStages.Compute => DxcShaderStage.Compute,
+			_ => 0,
+		};
 	}
 
 	#endregion

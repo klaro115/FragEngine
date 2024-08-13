@@ -1,0 +1,652 @@
+FSHA_10_0039_0043_033B_0388_5C02_0000_00005F94_00001EB4
+########
+{
+  "ShaderStage": 16,
+  "SourceCode": {
+    "EntryPointNameBase": "Main_Pixel",
+    "EntryPoints": [
+      {
+        "VariantFlags": 1,
+        "EntryPoint": "Main_Pixel"
+      },
+      {
+        "VariantFlags": 3,
+        "EntryPoint": "Main_Pixel_Ext"
+      }
+    ],
+    "SupportedFeaturesTxt": "At_Nyy_Ly111pF_V110",
+    "MaximumCompiledFeaturesTxt": "At_Nyn_Ly101p0_V110"
+  },
+  "CompiledVariants": [
+    {
+      "Type": 1,
+      "VariantFlags": 1,
+      "VariantDescriptionTxt": "At_Nyn_Ly101p0_V100",
+      "EntryPoint": "Main_Pixel",
+      "ByteOffset": 0,
+      "ByteSize": 7860
+    },
+    {
+      "Type": 1,
+      "VariantFlags": 3,
+      "VariantDescriptionTxt": "At_Nyn_Ly101p0_V110",
+      "EntryPoint": "Main_Pixel_Ext",
+      "ByteOffset": 0,
+      "ByteSize": 7860
+    }
+  ]
+}########
+//#pragma pack_matrix( column_major )
+
+/******************* DEFINES: ******************/
+
+// Albedo:
+#define FEATURE_ALBEDO_TEXTURE 1                // Whether to initialize albedo color from main texture. If false, a color literal is used
+#define FEATURE_ALBEDO_COLOR half4(1, 1, 1, 1)  // Color literal from which albedo may be initialized
+
+// Normals:
+#define FEATURE_NORMALS                         // Whether to use normal maps in all further shading
+#define FEATURE_PARALLAX                        // Whether to use height/parallax maps to modulate UV sampling
+#define FEATURE_PARALLAX_FULL                   // Whether to use full iteratively traced parallax with occlusion, instead of just simple UV offsetting.
+
+// Lighting:
+#define FEATURE_LIGHT                           // Whether to apply lighting
+#define FEATURE_LIGHT_AMBIENT                   // Whether to add directional ambient intensity to base lighting
+#define FEATURE_LIGHT_LIGHTMAPS                 // Whether to add light map intensity to base lighting
+#define FEATURE_LIGHT_SOURCES                   // Whether to use light sources from the scene to light up the object
+#define FEATURE_LIGHT_MODEL Phong
+#define FEATURE_LIGHT_SHADOWMAPS                // Whether to use shadow maps to mask out light rays coming from light sources
+#define FEATURE_LIGHT_SHADOWMAPS_RES 1024       // The resolution of shadow maps, in pixels per side.
+#define FEATURE_LIGHT_SHADOWMAPS_AA 2           // If defined, controls the number of depth samples read from shadow map per pixel 
+#define FEATURE_LIGHT_INDIRECT 5                // If defined, controls the number of indirect light samples per pixel, sample count is NxN, must be 2 or higher
+
+// Variants:
+#define VARIANT_EXTENDED                        // Whether to always create a shader variant using extended surface data
+#define VARIANT_BLENDSHAPES                     // Whether to always create a shader variant using blend shape data
+#define VARIANT_ANIMATED                        // Whether to always create a shader variant using bone animation data
+
+#if FEATURE_ALBEDO_TEXTURE == 0
+    #ifndef FEATURE_ALBEDO_COLOR
+        #define FEATURE_ALBEDO_COLOR half4(1, 1, 1, 1)
+    #endif
+#endif
+
+/****************** CONSTANTS: *****************/
+
+#ifdef FEATURE_LIGHT_AMBIENT
+// Constant buffer containing all scene-wide settings:
+cbuffer CBScene : register(b0)
+{
+    // Scene lighting:
+    float4 ambientLightLow;         // Ambient light color and intensity coming from bottom-up.
+    float4 ambientLightMid;         // Ambient light color and intensity coming from all sides.
+    float4 ambientLightHigh;        // Ambient light color and intensity coming from top-down.
+    float shadowFadeStart;          // Percentage of the shadow distance in projection space where they start fading out.
+};
+#endif //FEATURE_LIGHT_AMBIENT
+
+#if defined(FEATURE_LIGHT_SOURCES) || defined(FEATURE_PARALLAX)
+// Constant buffer containing all settings that apply for everything drawn by currently active camera:
+cbuffer CBCamera : register(b1)
+{
+    // Camera vectors & matrices:
+    float4x4 mtxWorld2Clip;         // Camera's full projection matrix, transforming from world space to clip space coordinates.
+    float4 cameraPosition;          // Camera position, in world space.
+    float4 cameraDirection;         // Camera forward facing direction, in world space.
+    float4x4 mtxCameraMotion;       // Camera movement matrix, encoding motion/transformation from previous to current frame.
+
+	// Camera parameters:
+    uint cameraIdx;                 // Index of the currently drawing camera.
+    uint resolutionX;               // Render target width, in pixels.
+    uint resolutionY;               // Render target height, in pixels.
+    float nearClipPlane;            // Camera's near clipping plane distance.
+    float farClipPlane;             // Camera's far clipping plane distance.
+
+    // Per-camera lighting:
+    uint lightCount;                // Total number of lights affecting this camera.
+    uint shadowMappedLightCount;    // Total number of lights that have a layer of the shadow map texture array assigned.
+};
+#endif //FEATURE_LIGHT_SOURCES
+
+// Constant buffer containing only object-specific settings:
+cbuffer CBObject : register(b2)
+{
+    float4x4 mtxLocal2World;        // Object world matrix, transforming vertices from model space to world space.
+    float3 worldPosition;           // World space position of the object.
+    float boundingRadius;           // Bounding sphere radius of the object.
+};
+
+// Constant buffer containing material-specific settings:
+cbuffer CBDefaultSurface : register(b3)
+{
+    float4 tintColor;               // Color tint applied to albedo.
+    float roughness;                // Roughness rating of the surface.
+    float shininess;                // How shiny or metallic the surface is.
+    float reflectionIndex;          // Reflection index of the material's surface.
+    float refractionIndex;          // Refraction index of the material's substance.
+};
+
+/****************** RESOURCES: *****************/
+
+// ResSetCamera:
+
+#ifdef FEATURE_LIGHT_SOURCES
+struct Light
+{
+    float3 lightColor;
+    float lightIntensity;
+    float3 lightPosition;
+    uint lightType;
+    float3 lightDirection;
+    float lightSpotMinDot;
+    uint shadowMapIdx;
+    float shadowBias;
+    uint shadowCascades;
+    float shadowCascadeRange;
+    float3 shadowDepthBias;
+    float _padding;
+};
+
+StructuredBuffer<Light> BufLights : register(ps, t0);               // Buffer containing an array of light source data. Number of lights is given in 'CBGlobal.lightCount'.
+#endif
+
+#ifdef FEATURE_LIGHT_SHADOWMAPS
+Texture2DArray<half> TexShadowMaps : register(ps, t1);
+StructuredBuffer<float4x4> BufShadowMatrices : register(ps, t3);    // Buffer containing an array of projection matrices for shadow maps, transforming world position to clip space and back.
+SamplerState SamplerShadowMaps : register(ps, s0);
+    #if defined(FEATURE_LIGHT_INDIRECT) && FEATURE_LIGHT_INDIRECT > 1
+    Texture2DArray<half3> TexShadowNormalMaps : register(ps, t2);
+    #endif
+#endif
+
+// ResSetBound:
+
+#if FEATURE_ALBEDO_TEXTURE == 1
+Texture2D<half4> TexMain : register(ps, t4);
+#endif //FEATURE_ALBEDO_TEXTURE == 1
+
+#ifdef FEATURE_NORMALS
+Texture2D<half3> TexNormal : register(ps, t5);
+#endif //FEATURE_NORMALS
+
+#ifdef FEATURE_PARALLAX
+Texture2D<half> TexParallax : register(ps, t6);
+#endif //FEATURE_PARALLAX
+
+#ifdef FEATURE_LIGHT_LIGHTMAPS
+Texture2D<half3> TexLightmap : register(ps, t7);
+#endif //FEATURE_LIGHT_LIGHTMAPS
+
+#if FEATURE_ALBEDO_TEXTURE == 1 || defined(FEATURE_NORMALS) || defined(FEATURE_PARALLAX) || defined(FEATURE_LIGHT_LIGHTMAPS)
+    #define HAS_SAMPLER_MAIN
+    SamplerState SamplerMain : register(s1);
+#endif //HAS_SAMPLER_MAIN
+
+
+/**************** VERTEX OUTPUT: ***************/
+
+struct VertexOutput_Basic
+{
+    float4 position : SV_POSITION;
+    float3 worldPosition : COLOR0;
+    float3 normal : NORMAL0;
+    float2 uv : TEXCOORD0;
+};
+
+#ifdef VARIANT_EXTENDED
+struct VertexOutput_Extended
+{
+    float3 tangent : TANGENT0;
+    float3 binormal : NORMAL1;
+    float2 uv2 : TEXCOORD1;
+};
+#endif //VARIANT_EXTENDED
+
+#ifdef FEATURE_LIGHT
+
+/****************** LIGHTING: ******************/
+
+#ifdef FEATURE_LIGHT_AMBIENT
+half3 CalculateAmbientLight(const in float3 _worldNormal)
+{
+    const half dotY = (half)dot(_worldNormal, float3(0, 1, 0));
+    const half wLow = max(-dotY, 0);
+    const half wHigh = max(dotY, 0);
+    const half wMid = 1.0 - wHigh - wLow;
+    return (wLow * (half4)ambientLightLow + wHigh * (half4)ambientLightHigh + wMid * (half4)ambientLightMid).xyz;
+}
+#endif //FEATURE_LIGHT_AMBIENT
+
+#ifdef FEATURE_LIGHT_LIGHTMAP
+half3 CalculateLightmaps(const in float2 _uv)
+{
+    return TexLightmap.Sample(SamplerMain, _uv);
+}
+#endif //FEATURE_LIGHT_LIGHTMAP
+
+#ifdef FEATURE_LIGHT_SOURCES
+#if FEATURE_LIGHT_MODEL == Phong
+half3 CalculatePhongLighting(const in Light _light, const in float3 _worldPosition, const in float3 _worldNormal)
+{
+    half3 lightIntens = (half3)(_light.lightColor * _light.lightIntensity);
+    float3 lightRayDir;
+
+    // Directional light:
+    if (_light.lightType == 2)
+    {
+        lightRayDir = _light.lightDirection;
+    }
+    // Point or Spot light:
+    else
+    {
+        const float3 lightOffset = _worldPosition - _light.lightPosition;
+        lightIntens /= (half)dot(lightOffset, lightOffset);
+        lightRayDir = normalize(lightOffset);
+
+        // Spot light angle:
+        if (_light.lightType == 1 && dot(_light.lightDirection, lightRayDir) < _light.lightSpotMinDot)
+        {
+            lightIntens = half3(0, 0, 0);
+        }
+    }
+
+    const half lightDot = max(-(half)dot(lightRayDir, _worldNormal), 0.0);
+    return lightIntens.xyz * lightDot;
+}
+//... (insert further lighting models here)
+#endif //FEATURE_LIGHT_MODEL == Phong
+
+#ifdef FEATURE_LIGHT_SHADOWMAPS
+#if defined(FEATURE_LIGHT_INDIRECT) && FEATURE_LIGHT_INDIRECT > 1
+half3 CalculateIndirectLightScatter(const in Light _light, const in float3 _worldPosition, const in float3 _surfaceNormal)
+{
+    static const int halfKernel = FEATURE_LIGHT_INDIRECT / 2;
+    static const half uvKernelSteps = 1.0 / 256;
+    static const float bounceAmount = 0.025;
+
+    // Determine shadow cascade for this pixel:
+    const float cameraDist = length(_worldPosition - cameraPosition.xyz);
+    const uint cascadeOffset = (uint)(2 * cameraDist / _light.shadowCascadeRange);
+    const uint cascadeIdx = min(cascadeOffset, _light.shadowCascades);
+    const uint shadowMapIdx = _light.shadowMapIdx + cascadeIdx;
+
+    const float4x4 mtxShadowWorld2Clip = BufShadowMatrices[2 * shadowMapIdx];
+    const float4x4 mtxShadowClip2World = BufShadowMatrices[2 * shadowMapIdx + 1];
+
+    // Add a bias to position along surface normal, to counter-act stair-stepping artifacts:
+    const float4 worldPosBiased = float4(_worldPosition + _surfaceNormal * _light.shadowBias, 1);
+
+    // Transform pixel position to light's clip space, then to UV space:
+    float4 shadowProj = mul(mtxShadowWorld2Clip, worldPosBiased);
+    shadowProj /= shadowProj.w;
+    const float2 shadowUv = float2(shadowProj.x + 1, 1 - shadowProj.y) * 0.5;
+
+    float lightBounceSum = 0.0;
+
+    for (int y = -halfKernel; y < halfKernel; ++y)
+    {
+        const half uvY = shadowUv.y + y * uvKernelSteps;
+        for (int x = -halfKernel; x < halfKernel; ++x)
+        {
+            const half uvX = shadowUv.x + x * uvKernelSteps;
+            const half3 uv = half3(uvX, uvY, _light.shadowMapIdx);
+
+            const half3 normal = TexShadowNormalMaps.Sample(SamplerShadowMaps, uv) * 2 - 1;
+            const half depth = TexShadowMaps.Sample(SamplerShadowMaps, uv);
+
+            const half4 posClipSpace = half4(uvX * 2 - 1, 1 - uvY * 2, depth, 1);
+            const float3 posWorld = mul(mtxShadowClip2World, posClipSpace).xyz;
+
+            // Determine approximate lighting at sampled point, pre-bounce:
+            const float3 lightOffset = posWorld - _light.lightPosition;
+            const float intensityPreBounce = max(-dot(lightOffset / length(lightOffset), normal), 0) / dot(lightOffset, lightOffset);
+
+            // Determine radiated lighting at center point, post-bounce:
+            const float3 offsetBounced = worldPosBiased.xyz - posWorld;
+            const float distSqBounced = dot(offsetBounced, offsetBounced);
+            const float intensityPostBounce = intensityPreBounce / distSqBounced;
+
+            lightBounceSum += dot(offsetBounced, _surfaceNormal) < 0 ? intensityPostBounce : 0;
+        }
+    }
+    lightBounceSum *= bounceAmount;
+
+    return lightBounceSum * _light.lightIntensity * _light.lightColor;
+}
+
+#endif //FEATURE_LIGHT_INDIRECT
+#define SHADOW_EDGE_FACE_SCALE 10.0
+
+#if defined(FEATURE_LIGHT_SHADOWMAPS_AA) && FEATURE_LIGHT_SHADOWMAPS_AA > 1
+    // MSAA offsets for shadow depth sampling:
+    #if FEATURE_LIGHT_SHADOWMAPS_AA == 2
+        static const float2 shadowSamplingOffsets[] =
+        {
+            { -0.5 / FEATURE_LIGHT_SHADOWMAPS_RES, -0.25 / FEATURE_LIGHT_SHADOWMAPS_RES },
+            {  0.5 / FEATURE_LIGHT_SHADOWMAPS_RES,  0.25 / FEATURE_LIGHT_SHADOWMAPS_RES }
+        };
+    #elif FEATURE_LIGHT_SHADOWMAPS_AA == 4
+        static const float2 shadowSamplingOffsets[] =
+        {
+            {  0, 0 },
+            {  0, 0.5 / FEATURE_LIGHT_SHADOWMAPS_RES },
+            { -0.25 / FEATURE_LIGHT_SHADOWMAPS_RES, -0.25 / FEATURE_LIGHT_SHADOWMAPS_RES },
+            {  0.25 / FEATURE_LIGHT_SHADOWMAPS_RES, -0.25 / FEATURE_LIGHT_SHADOWMAPS_RES },
+        };
+    #elif FEATURE_LIGHT_SHADOWMAPS_AA == 8
+        static const float2 shadowSamplingOffsets[] =
+        {
+            {  0, 0 },
+            {  0,  0.5 / FEATURE_LIGHT_SHADOWMAPS_RES },
+            {  0, -0.5 / FEATURE_LIGHT_SHADOWMAPS_RES },
+            {  0.5 / FEATURE_LIGHT_SHADOWMAPS_RES, 0 },
+            { -0.5 / FEATURE_LIGHT_SHADOWMAPS_RES, 0 },
+            { -0.25 / FEATURE_LIGHT_SHADOWMAPS_RES, 0.2 / FEATURE_LIGHT_SHADOWMAPS_RES },
+            { -0.25 / FEATURE_LIGHT_SHADOWMAPS_RES, -0.2 / FEATURE_LIGHT_SHADOWMAPS_RES },
+            {  0.25 / FEATURE_LIGHT_SHADOWMAPS_RES, 0.2 / FEATURE_LIGHT_SHADOWMAPS_RES },
+            {  0.25 / FEATURE_LIGHT_SHADOWMAPS_RES, -0.2 / FEATURE_LIGHT_SHADOWMAPS_RES },
+        };
+    #else
+        #error "Shadow sampling count FEATURE_LIGHT_SHADOWMAPS_AA can only be 2 or 4"
+    #endif
+#endif
+
+half CalculateShadowMapLightWeight(const in Light _light, const in float3 _worldPosition, const in float3 _surfaceNormal)
+{
+    // Determine shadow cascade for this pixel:
+    const float cameraDist = length(_worldPosition - cameraPosition.xyz);
+    const uint cascadeOffset = (uint)(2 * cameraDist / _light.shadowCascadeRange);
+    const uint cascadeIdx = min(cascadeOffset, _light.shadowCascades);
+    const uint shadowMapIdx = _light.shadowMapIdx + cascadeIdx;
+
+    // Add a bias to position along surface normal, to counter-act stair-stepping artifacts:
+    const float4 worldPosBiased = float4(_worldPosition + _surfaceNormal * _light.shadowBias + _light.shadowDepthBias, 1);
+
+    // Transform pixel position to light's clip space, then to UV space:
+    float4 shadowProj = mul(BufShadowMatrices[2 * shadowMapIdx], worldPosBiased);
+    shadowProj /= shadowProj.w;
+    const float2 shadowUv = float2(shadowProj.x + 1, 1 - shadowProj.y) * 0.5;
+
+#if defined(FEATURE_LIGHT_SHADOWMAPS_AA) && FEATURE_LIGHT_SHADOWMAPS_AA > 1
+    // Calculate shadow depth by averaging from multiple samples:
+    static const half invShadowSampleCount = 1.0 / FEATURE_LIGHT_SHADOWMAPS_AA;
+    half lightWeight = 0;
+    for (uint i = 0; i < FEATURE_LIGHT_SHADOWMAPS_AA; ++i)
+    {
+        const float2 shadowSampleUv = shadowUv + shadowSamplingOffsets[i];
+        const half shadowDepth = TexShadowMaps.Sample(SamplerShadowMaps, float3(shadowSampleUv.x, shadowSampleUv.y, shadowMapIdx));
+        lightWeight += shadowDepth > shadowProj.z ? 1 : 0;
+    }
+    lightWeight *= invShadowSampleCount;
+#else
+    // Calculate shadow depth from a single sample:
+    const half shadowDepth = TexShadowMaps.Sample(SamplerShadowMaps, float3(shadowUv.x, shadowUv.y, shadowMapIdx));
+    half lightWeight = shadowDepth > shadowProj.z ? 1 : 0;
+#endif //FEATURE_LIGHT_SHADOWMAPS_AA
+    
+    // Fade shadows out near boundaries of UV/Depth space:
+    if (_light.lightType == 2 && shadowMapIdx == _light.shadowCascades)
+    {
+        const half3 edgeUv = half3(shadowUv, shadowProj.z) * SHADOW_EDGE_FACE_SCALE;
+        const half3 edgeMax = min(min(edgeUv, SHADOW_EDGE_FACE_SCALE - edgeUv), 1);
+        const half k = 1 - min(min(edgeMax.x, edgeMax.y), edgeMax.z);
+        lightWeight = lerp(lightWeight, 1.0, clamp(k, 0, 1));
+    }
+
+    return lightWeight;
+}
+#endif //FEATURE_LIGHT_SHADOWMAPS
+#endif //FEATURE_LIGHT_SOURCES
+
+half3 CalculateTotalLightIntensity(const in float3 _worldPosition, const in float3 _worldNormal, const in float3 _surfaceNormal, const in float2 _uv)
+{
+    #ifdef FEATURE_LIGHT_AMBIENT
+    half3 totalLightIntensity = CalculateAmbientLight(_worldNormal);
+    #else
+    half3 totalLightIntensity = half3(0, 0, 0);
+    #endif //FEATURE_LIGHT_AMBIENT
+
+    // Apply light maps:
+    #ifdef FEATURE_LIGHT_LIGHTMAP
+    totalLightIntensity += CalculateLightmaps(_uv);
+    #endif
+
+    #ifdef FEATURE_LIGHT_SOURCES
+    {
+        uint i = 0;
+        #ifdef FEATURE_LIGHT_SHADOWMAPS
+        // Shadow-casting light sources:
+        for (; i < shadowMappedLightCount; ++i)
+        {
+            Light light = BufLights[i];
+
+            const half3 lightIntensity = CalculatePhongLighting(light, _worldPosition, _worldNormal);
+            const half lightWeight = CalculateShadowMapLightWeight(light, _worldPosition, _surfaceNormal);
+            totalLightIntensity += lightIntensity * lightWeight;
+
+            #ifdef FEATURE_LIGHT_INDIRECT
+            totalLightIntensity += CalculateIndirectLightScatter(light, _worldPosition, _surfaceNormal);
+            #endif //FEATURE_LIGHT_INDIRECT
+        }
+        #else
+        uint shadowMappedLightCount = 0;
+        #endif //FEATURE_LIGHT_SHADOWMAPS
+        // Simple light sources:
+        for (i = shadowMappedLightCount; i < lightCount; ++i)
+        {
+            totalLightIntensity += CalculatePhongLighting(BufLights[i], _worldPosition, _worldNormal);
+        }
+    }
+    #endif //FEATURE_LIGHT_SOURCES
+
+    return totalLightIntensity;
+}
+
+#endif //FEATURE_LIGHT
+
+#ifdef FEATURE_NORMALS
+/******************* NORMALS: ******************/
+
+half3 UnpackNormalMap(const in half3 _texNormal)
+{
+    // Unpack direction vector from normal map colors:
+    return half3(_texNormal.x * 2 - 1, _texNormal.z, _texNormal.y * 2 - 1); // NOTE: Texture normals are expected to be in OpenGL standard.
+}
+
+half3 ApplyNormalMap(const in half3 _worldNormal, const in half3 _worldTangent, const in half3 _worldBinormal, in half3 _texNormal)
+{
+    _texNormal = UnpackNormalMap(_texNormal);
+
+    // Create rotation matrix, projecting from flat surface (UV) space to surface in world space:
+    const half3x3 mtxNormalRot =
+    {
+        _worldBinormal.x, _worldNormal.x, _worldTangent.x,
+        _worldBinormal.y, _worldNormal.y, _worldTangent.y,
+        _worldBinormal.z, _worldNormal.z, _worldTangent.z,
+    };
+    const half3 normal = mul(mtxNormalRot, _texNormal);
+    return normal;
+}
+#endif //FEATURE_NORMALS
+
+#ifdef FEATURE_PARALLAX
+/****************** PARALLAX: ******************/
+
+float3 ProjectOnPlane(const float3 _vector, const float3 _planeNormal)
+{
+    return _vector - dot(_vector, _planeNormal);
+}
+
+half2 WorldOffset2Pixel(
+    const float3 _worldOffset,
+    const in float3 _worldPosition,
+    const in half2 _uv)
+{
+    const float3 ddxPos = ddx(_worldPosition);
+    const float3 ddyPos = ddy(_worldPosition);
+    const float invWorldPerPixelX = 1.0 / length(ddxPos);
+    const float invWorldPerPixelY = 1.0 / length(ddyPos);
+    return
+        ddx(_uv) * (half)dot(_worldOffset, ddxPos * invWorldPerPixelX) +
+        ddy(_uv) * (half)dot(_worldOffset, ddyPos * invWorldPerPixelY);
+}
+
+half2 ApplyParallaxMap(const in float3 _worldPosition, const in float3 _surfaceNormal, const half2 _uv)
+{
+    static const float MAX_DEPTH = 0.05;
+
+    const float3 viewOffset = _worldPosition - cameraPosition.xyz;
+    
+#ifdef FEATURE_PARALLAX_FULL
+    static const uint MAX_ITERATIONS = 6;
+
+    const float invViewDist = 1.0 / length(viewOffset);
+    const float3 viewDir = viewOffset * invViewDist;
+
+    const float3 maxRayOffset = viewDir * abs(MAX_DEPTH / dot(viewDir, _surfaceNormal));
+    const float3 maxSurfaceOffset = ProjectOnPlane(maxRayOffset, _surfaceNormal);
+    const half2 maxUvOffset = WorldOffset2Pixel(maxSurfaceOffset, _worldPosition, _uv) * 200 * invViewDist;
+
+    half2 uvOffset;
+    half2 curUV = _uv;
+    float minK = 0.0;
+    float maxK = 1.0;
+
+    for (uint i = 0; i < MAX_ITERATIONS; ++i)
+    {
+        float k = 0.5 * (minK + maxK);
+        
+        const float3 rayOffset = k * maxRayOffset;
+        uvOffset = k * maxUvOffset;
+        curUV = _uv + uvOffset;
+
+        const half sampledHeight = (1.0 - TexParallax.Sample(SamplerMain, curUV)) * MAX_DEPTH;
+        const half rayHeight = abs(dot(rayOffset, _surfaceNormal));
+
+        if (sampledHeight > rayHeight)
+        {
+            minK = k;
+        }
+        else
+        {
+            maxK = k;
+        }
+    }
+    return curUV + normalize(uvOffset) * 0.002;
+#else
+    const float3 surfaceDir = normalize(ProjectOnPlane(viewOffset, _surfaceNormal));
+    
+    const half depth = TexParallax.Sample(SamplerMain, _uv) * MAX_DEPTH;
+
+    return _uv - WorldOffset2Pixel(surfaceDir * depth, _worldPosition, _uv) * 100;
+#endif //FEATURE_PARALLAX_FULL
+}
+#endif
+
+/******************* SHADERS: ******************/
+
+half4 Main_Pixel(in VertexOutput_Basic inputBasic) : SV_Target0
+{
+    #ifdef FEATURE_PARALLAX
+    // Recalculate UV from parallax map:
+    float2 uv = ApplyParallaxMap(inputBasic.worldPosition, inputBasic.normal, inputBasic.uv);
+    #else
+    float2 uv = inputBasic.uv;
+    #endif //FEATURE_PARALLAX
+
+    #if FEATURE_ALBEDO_TEXTURE == 1
+    // Sample base color from main texture:
+    half4 albedo = TexMain.Sample(SamplerMain, uv);
+    #else
+    half4 albedo = FEATURE_ALBEDO_COLOR;
+    #endif //FEATURE_ALBEDO_TEXTURE == 1
+
+    #ifdef FEATURE_NORMALS
+    // Calculate normals from normal map:
+    half3 normal = TexNormal.Sample(SamplerMain, uv);
+    normal = ApplyNormalMap(inputBasic.normal, half3(0, 0, 1), half3(1, 0, 0), normal);
+    #else
+    half3 normal = inputBasic.normal;
+    #endif //FEATURE_NORMALS
+
+    #ifdef FEATURE_LIGHT
+    // Apply basic phong lighting:
+    const half3 totalLightIntensity = CalculateTotalLightIntensity(inputBasic.worldPosition, normal, inputBasic.normal, uv);
+
+    albedo *= half4(totalLightIntensity, 1);
+    #endif //FEATURE_LIGHT
+
+    // Return final color:
+    return albedo;
+};
+
+#ifdef VARIANT_EXTENDED
+half4 Main_Pixel_Ext(in VertexOutput_Basic inputBasic, in VertexOutput_Extended inputExt) : SV_Target0
+{
+    #ifdef FEATURE_PARALLAX
+    // Recalculate UV from parallax map:
+    float2 uv = ApplyParallaxMap(inputBasic.worldPosition, inputBasic.normal, inputBasic.uv);
+    #else
+    float2 uv = inputBasic.uv;
+    #endif //FEATURE_PARALLAX
+
+    #if FEATURE_ALBEDO_TEXTURE == 1
+    // Sample base color from main texture:
+    half4 albedo = TexMain.Sample(SamplerMain, uv);
+    #else
+    half4 albedo = FEATURE_ALBEDO_COLOR;
+    #endif //FEATURE_ALBEDO_TEXTURE == 1
+
+    #ifdef FEATURE_NORMALS
+    // Calculate normals from normal map:
+    half3 normal = TexNormal.Sample(SamplerMain, uv);
+    normal = ApplyNormalMap(inputBasic.normal, inputExt.tangent, inputExt.binormal, normal);
+    #else
+    half3 normal = inputBasic.normal;
+    #endif //FEATURE_NORMALS
+
+    #ifdef FEATURE_LIGHT
+    // Apply basic phong lighting:
+    const half3 totalLightIntensity = CalculateTotalLightIntensity(inputBasic.worldPosition, normal, inputBasic.normal, uv);
+
+    albedo *= half4(totalLightIntensity, 1);
+    #endif //FEATURE_LIGHT
+
+    // Return final color:
+    return albedo;
+};
+#endif //VARIANT_EXTENDED
+########
+DXBCr√nCˆâ,Ü?ﬂqB∂1   ¥     8   H   ¸   8  L  h  SFI0           ISG1¨             à                            î                           ö                           °                       SV_Position COLOR NORMAL TEXCOORD   OSG14             (       @                 SV_Target   PSV0  4                       ˇˇˇˇ                                                                                                                                                                                                                                                               $    COLOR NORMAL TEXCOORD Main_Pixel                      D         C          C          B            D                                                           HASH       Ù∆õ¬KCÜßÑï_ìI6DXILD  c   —  DXIL     ,  BC¿ﬁ!  »  Ç        Å#ëA»I29íÑ%ãbÄEBíB‰28K
+2ràHê CFà• 2B‰Hêë#ƒPAQÅå·ÉÂä9FQ     å‡ˇˇˇˇ@®Ñˇˇˇˇ m0Üˇˇˇˇ 	® I     Ç`B L    â     2"»	 dÖì#§Ñì#„Ñ°êLéåÑ‰L®¬@	 òò# É9§ÅP ê° ÅP‚¶·Ú'Ï!$%§ïò¸‚∂Q1*‹3\˛Ñ=Ñ‰á@3,
+ÖQå¡`0 jîa@–£ ¬`0)∆Ä04)áÇ¿ 
+™‹4\˛Ñ=Ñ‰ØÑ¥ìè‹6*ÅPéÅA Ñ)ƒÄ0ê¶Å@ú£ÜÀü∞áê|n£äïò¸‚∂1Ö˙5\˛Ñ=Ñ‰sU¨ƒ‰#∑çÅ@(Dà¿ ê®¬`0 “AP°@ òË40å0«HSD	ì_"∆1!F5PT¬Ä0PfÍ∆Å¬aÊ¡fÅ‰°∆ÅÍA ÅD°Ã¡ A¯Ä“·–Å¸ +bÕT„¿·0Û‡¥P¯@ı Â §
+Ú ·ê|Ä·¿Ê‡z†Ìê0ø@˘ ÂÄ¬L⁄8∞C8Ã√<∏-î>–C=»C9»)ÑÇ<»C8‰†C8∞É9¯.z#Cƒf∫txáy†vá|xáz†7váyò7òzêázz®y(rÖz0s(y‡Évzêát¿>0vxáp†6 :`0†? ?@Ååf3≈¡8∞C8Ã√<∏-î>–C=»C9»)ÑÇ<»C8‰ÿC9å=ºÉ<:Ñ;òÄ¡¯¯ÅËA;§<Ã√/–C>¿C9†Ä0ìå;Ñ√<ÃÉ–B9‡=‘É<îÉêB(»É<ÑC>Å=î√8–√;»†C8∞É9∞ÃÅÄÅ AU#€Ll0ÏÛ0n@ÂÄÙPÚPr@
+|`Â0ÙÚ¿ËÏ`l t‡`‡z†Ìê0ø@˘ ÂÄ¬La0ÏÛ0n@ÂÄÙPÚPr@
+|`Â0ÙÚ¿ËÏ`l t‡`‡Hà·(7å;Ñ√<ÃÉ–B9‡=‘É<îÉêÿC9å=ºÉ<:Ñ;òÄ¡¯¯ÅËA;§<Ã√/–C>¿C9†Ä0Så;Ñ√<ÃÉ–B9‡=‘É<îÉêÿC9å=ºÉ<:Ñ;òÄ¡¯¯T;‚Õ„¿·0Û‡¥P¯@ı Â §¿ËÏ`~†z–È ÛÙêP( ÃTç;Ñ√<ÃÉ–B9‡=‘É<îÉê†C8∞É9¯>˙›¡m¨@4"b±ÿÄÇ7é4- ÊPìœm¿ÄY,&#ÉÅ@√õ§)¢Ñ…gÊYààùÄâ@Åä	Aò# Ö)    r¿át`á6háyhr¿áØPm–zPm z0r†s mêq†s mêx†s mêq`z0r–È0r†s mêv@z`t–Êv†s m`s z0r–Ê`t†v@m‡x†q`z0r†v@Cû           Ü<        y         Ú4@        0‰yÄ        `»       ¿êg        Ä!O¿        CÄ       Ü<        y8         Ú|@        0‰         Úê        yŒ Ä       ≤@    2òLêå	&G∆C"î@D1å FÅîCIAB)Z·îJ¢
+a†
+ÑêB∞ ¢Õ –mÄt3 ‘õ ‡ 	g à8@∆ :é9  ¿Û<¿Û<¿ÛPk  y  ù   LêFDèoÏÌM$∆«EÜf∆eÜe,«∆&g&eCLàgÇ@@ÑÅò —a0(¿ÕMi√Ä$ƒÅò&m &5A ™¬lH¶Yñ¡Y†	ò¡Å∞&ƒµAX®… 5À0LK5A ∞	ú¡Å»6C∂!π∞f!g—&wÄÇkñkòñjÇ@h=HÉâ˜5ã7\K5A ∂	B®¡Ü$ƒ†Y¬`∏ñjÇ 
+k∞!I»†Yí·Z™GdmåALDÅ&∑YŒ†YñÄ	)¥¡ÅË6 É4À0¨∞AH6ò òÇl@7hñeXÄ»‡Õ2∞Ax8ÿ@ò–q0A8Ö7ÿÃ¡A ®4Ö•π}A•·ï±qô≤˙ÇzõK£K{sõ ﬂ° É¡2A(¬`ÇPà¡Üeπ<»=ÿÉa> X=1=IMä1ÿ ”Üe<‡=¯É!> NORMALñKÄÙ‡Ü<∏¯ àPa==Imb√BêÅ¸¡î¬¢BaLÅ…î’Uò‹Y›° É	·mUÿ∞,®Ä©†|0Ï¡¬´∞!`Ö√)¥0A@Ö2ÿ ,Ø∞°®;p9ÄÖ*llvm.identSÇ†
+ûã]ô‹\⁄õ€îÄhBÜÁb∆fW&7%0Íê·πÃ°Öëï…5Ωëï±M	í2dx.resourcesSÇ8®CÜÁbóVvóD6EFW6%òÉ:dx.entryPointsSX  y  Q   3Äƒ·f=àC8Ñ√åBÄyxsòqÊ ÌÙÄ3B¬¡Œ°f0=àC8ÑÉÃ=»C=å=Ãxåtp{yHáppzpvxáp áÃÏê·0n0„P3ƒﬁ!ÿ!¬af0â;ºÉ;–C9¥<ºÉ<Ñ;Ãv`{h7hárh7Äápêáp`v(v¯vxáwÄá_áqáròáyòÅ,ÓÓ‡ı¿Ï0b»°‰°Ã°‰°‹a !ƒÅ a÷êC9»C9òC9»C9∏√8îC8à;î√/ºÉ<¸Ç;‘;∞√ƒ!|pz(ávÄá—C¯‡‰ Á‡ˆÚ¿·êÔPÙ0ÉÅ»‹@‰°¬a‹@‰   q   =   †ò “¸)rã%@√Â;è a~q€¶ óÔ<~Ä4@Ñ˘»m€¬6\æÛ¯B@ï0îÑò_‹∂1l√Â;è/TQQÈ CIÄÄ˘»mõÉ4\æÛ¯BD Õ∞f‡óÔ<˛‡L∂_‹∂8√Â;è?8”Ì∑m”p˘Œ„/0àÕCM~q€vpóÔ<~XUDT:¿‡∑m◊p˘Œ„GÄµQEAD•>r€6 óÔ<æ0œB¯≈mõ@5\æÛ¯“‰DJM5˘≈m[É4\æÛ¯Ma~q€FóÔ<>’ Ê∑  a   Í  U,   *   d†B9îG	°†
+Æÿ™†∞
+ß¿J¶Ä
+§,
+5†L
+¶,ä´‹f JÆÏ
+© àc≠9Á¨7F Ç àsc Ç`7F Ç àÛ¬Ç ÿc ¬tåÄ ‚›Ç†
+cÔLöp7F–ösN{c Ç2åÄ Ç†0F Ç àˇ¬Ç ¸çÄ Ç`00F Ç à#     #	 Ç`p∞pÒ+∞Bå$ Ç¡ƒ÷§@
+n0bê  g ôòÇ)º¡àAÄ ú¡,h© #	 Ç`p¥∞ÅÇ*»Bå$ Ç¡‘
+¥@r0bê  g`ù(ƒB,Ã¡àAÄ ú¡-x•`∂@#	 Ç`p∏ô¬,ÃBå$ Ç¡‰ê.‡Çå$ Ç¡ËBîB-‘¬å$ ÇÅÅØê∂p
+c0bê  F:¿Ç.‹Çê¡àAÄ Í≥Ä©P#	 Ç``¨É,–B.‡Åå$ ÇÅ¡≥P∫†
+g0bê  F;–¬/Ï+†¡àAÄ ÓP‡¿{ê#	 Ç``ºÉ-ÑC/¥Çå Ç¡gi†‹¬hB å&¡h¬ ÿ1ƒ«é!>vÒ±aêèÉ|L‡c!¯å Ç¡ì{òÙ1%êè)Ç|L‰3b∞  Q?Ù¡ óUôÙ10 É$‰!∞¿êè	Ü|l0‰3b∞  —Hå¬ ∑ƒ«!>FÒ10 É%V¡10 É'%X¡10 ÉG%Z¡10 Ég%^!F ¡‡a	XÉ A0xZ"¬¿C>fÚ±@Äèá|L‡3b`  œL‘B`|–«E>¶(Ú±@Äè-ã|L‡3b`  èNB`£–gƒ¿ @û¯Ö;10 Éß'¿·L±‰cã%c,˘å, ÇA‡¿m⁄ Ú1¡êœàÅÄ <dÅ0b`  OY§√ÿ≤…«òM>÷lÚ1X É-–Å∆@!∞¿êè	Ü|LP‡cÇ£ÉpêèÉ|L‰3KTpúA0P1–p¡@Å*¿&± ‰cA»«Ñ:êèu #˘X°»«[Äè	∂ üÉ A0h¸‚∆ÅÑ¿Ã¡-‹bÃa4! ÏÇ¯XÚ1X É4@bQ]»\10 ÉG4Ë"é·õnx¶`∫aÇõˆ√A^Ä¡,É#	 Ç`0ôFM<Œ„å Ç¡ì1X§Ú±@êèI¸ ˘ÿ0¡«Ñ	># Ç`–ƒÜJ–√;A>‰ChÑÜK‰√hB å&¡h¬ å&√à¡Ä 4∂Ò˙@á·˛`¶1˛0ö £	B0ö06åÑ|,0	¯QÚ± %‡3bÄ  d@=a≈0bÄ  dP>aFIå  Çÿ∆Oÿ√aF–1X É<¿ÇîH	î∞ó‚3bp  öoD†# Ç`†˝FO+a-ƒ«Ç!># Ç`Å«Xånå&¿hÇå&Çà|lH‰cÉ"üÉ A0¯ŒC-TB7F`4AF¡G>6<Ú±íè
+|lP‡cÉüÉ A0¯‚É.h¢=F`4AF¡K>6\Ú±ìè)|L‡c  üÉ A0˝ãü8ç—Ñ@nÍfú!ò% *ÜTbòa†bH%Ü*ÜTbòa†ÇH%F~Ü A0®LD5“"–è›òè—Ñ MÇ—ÑA1P ÉJE\£-ä˛Ëç˚MÄ A0®X6ﬁ‚®ç»è—Ñ MÇ—ÑA1P ÏEhc.ñﬁè˛MÄ A0®dƒ6Í¢·çÛ¯è—Ñ MÇ—ÑA1P ¨Ft#/"ÒHèMÄ A0®pÑ7ˆbëı(ë—Ñ 1P ,G|£/™ıhèMÄ A0®x<˛‚ ç˜Hë—Ñ 1P É Gƒ#42ôèMÄ—!Mª6˘∂…«≤M>√çÄ¡,ÉQ#
+ Ç`Pôâz§F–G~Ã»hB XhlÒ±–ÿ‚c°±≈gƒ`@¢6ièA!0%†è)}LË3b`  èúËa"˘ÿÄ»g∏A÷F ¡ ≤˚0¯àAé‚´!–ÈÜXÇÈÒXÑÈÜÒXÜYc†bÄ¬(*8 åb†bÄ¬(*Z ¥b†b†B+*Z ¥bƒ`@"QëAÃ°∆¡‚#àœà¡Ä h†‚{Xê»«ÑD>6$Ú18 ÉOTJƒ<Êd4! FÑ`4al<Ü¯ÿxÒ±Ò‚c√ ˘ò¿«B>&10 ÉßVn$∞ D‰c¡–Á¬å Ç7+hÏA† ˆÙ!˙êèÖ}»«˙ÄèÙË>6¸|l¯¯ÿ)%Wnƒ@@*q1ì	l≈N^e4! FÑ`4aFàaƒ@@™sY1‡dOhe4! FÑ`4aFàaƒ@@*vÅìYÏTre4! FÑ`4aFàaƒ@@™x©Å˙§T|e4! FÑ`4aFà¡&L># Ç`@Ò¢'å  Ç»Àû,X`¡≥8˘å  Ç‘ãüH\0bÄ  d`/‚pÅ
+t,˘å  Ç‰ã®T`å  ÇËÀ®D`X–@«82êœàÄ êAøò
+F¡àÄ êÅøú
+EÅt¨	Ëcä@;˙ÿ@'±:‚cBû»«=ëè	§L>áÉ1x ÉÜfZÖN‚d>!íâ>MÄ·à@æÈ?Èì¿íVÅè%ØüÉ A0htfVÙ‰NÑ‡ïQô[ï—Ñ é ·õn ïQ	,8‡cA™»g∏°B
+ùe8ê¿*YëèU≥"√bE>&+C|lVÜ¯≠Ò18 Mlƒ≈F ¡@õq1ÜÉ A0–»Ü\åaƒ‡ @¥≤)óAVF ¡@3sfeƒ‡ @¥≥9óÅVF ¡@CtÑÉ A0–“&]¡n%àœà¡Ä hkì.¡≠å ÇÅ∆6Ï‰äÈ
+˘X`¡gñ ®Ñ√{á@>ˆÇ|Lê¯T-∏Õé( ÇAu7˚¬+¡⁄¨Ÿå&¿hÇå&¬àÅÄ T{Û/‡RêÃÀ†ÕhB å&¡h¬ å( ÇAı7#C.I Ã€å&¿hÇå&¬àÅÄ T£s2Ë“ºÃÕ¿ÕhB å&¡h¬ 9∞É|F ¡ÄDge¿ÅÇ A0 É—a^`á¿\Äéù<»gƒ @»¿t^f‡!1@ 28ò˘x,ÿËX:–É|F ¡ÄTgf ÅÇ A0 É’°ôp†á¿Ç^Äé%}ÃËc»¿«BFàè	%#LF>≥…@≈`bHH,Ñ¨!%±\00bF>ô%P*%πe†Ç‡µ‰îfÅÕ»«Ç>«É1x É}¬FeJF8ò¡‹)òMÄ—!MjF>6ÿå|l∏˘ÿ†3±ag‡cœ¿gƒ‡@˘Yôy&ZtF|ƒÁmtf4! ÃÈ˘X 6±Íg‰c>ƒ«>êœàÄ ê¡˚‡M¡àÄ ê¸‰çÅs ;˛@># Ç`@Û√7|`# Ç`@Ù”7y∞ÿtl˘å  Ç‹Ë¸Åå  Ç‡OË¡Xê–±d>‚c∆|ƒ«Ü˘àèÉ|l‰cÅ #˘ò¿gƒ¿ @ûjù¿íÄ>ñÙ±d†œà¡Ä D.‰:ÉÑ|÷7A|F ¡@c!’	fƒ`@¢äù«iß±∫»‚cua≈«Íbäœà¡Ä D5T;ÉB`A!;˙å, ÇAÑC∏cÑ‹ƒ‹G°C|”ÉËÏ|ld√Å
+Å¡,√¢&
+4Ç·ÜÄÖ¿`ñÅI€vêè=cÅèŸÔ»«ÇD>à|L‡˘ÿ¿#Ú±cÄè…√ C¯ôÑå ÇÅîQ˙®é¸å&¬p√ê¡,—≥Œ@≈ NÇ”T‚$8Õ@≈ NÇ”å ÇÅ¨—˚¿˛å&¬hÇ7Ã2<T0K TÒ 9œ@≈íÛTÒ 9œ@Ûå( ÇAÖG¸≥;µPç&¿hÇå&¬àÅÄ T|BøSº—•—hB å( ÇAÂG">«	Õ–ç( ÇÊG#$>…ç&¿àÅÄ T°TB‰£¨êπ—hB å&¡h¬ ¬»«F>¶0Ún@Óf§(1P É*ïZà}§‚!;MÄ—ÑFMpÇ—Ñ∞Û	‚cÁ3ƒ«Œßàœà¡Ä D≥4CÉB`M@k˙X3–gƒ¿ @\#¬D>& Ú±ëœpCK`0b∞  /ÒvYƒ GÒ’Ët√	-¡t
+-¬tC
+-√,Å4P1ÿdDÉ@F4P1ÿdDÉ(@Z4P1à§EÉ(@Z4b∞  :°— ,≥2)c7ƒgƒ‡ @4s"£@Ü,H‰cB"˘ÿÄ±‡c¿ß‡ú`ƒ‡ @ƒ`ùﬁÜh4!ÜÜÄf†)ò%†*ñpúi†b`	«ô*ñpú…¥ëèh#–F>#	 Ç`Ä¯S9µS;˘“0bê  à?ïS;µ+	#	 Ç`Ä¯S9µS;ıR0bê  à?ïS;µ8°       
