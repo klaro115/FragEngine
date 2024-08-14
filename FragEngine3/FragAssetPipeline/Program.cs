@@ -11,9 +11,21 @@ string testShaderFilePath = Path.GetFullPath(Path.Combine(ResourceConstants.core
 const ShaderStages testShaderStage = ShaderStages.Fragment;
 const string testShaderEntryPoint = "Main_Pixel";
 
-bool success = FshaExporter.ExportShaderFromHlslFile(testShaderFilePath, testShaderEntryPoint, testShaderStage, out ShaderData? shaderData);
+// Check FSHA exporter's platform support:
+bool success = FshaExporter.IsAvailableOnCurrentPlatform();
+if (!success)
+{
+	Console.WriteLine("Shader compilation: Not supported on this platform.");
+}
 
-Console.WriteLine($"Shader compilation: {(success ? "SUCCESS" : "FAILURE")}");
+// Export serializable shader data in FSHA-compliant format:
+ShaderData? shaderData = null;
+if (success)
+{
+	success &= FshaExporter.ExportShaderFromHlslFile(testShaderFilePath, testShaderEntryPoint, testShaderStage, out shaderData);
+
+	Console.WriteLine($"Shader compilation: {(success ? "SUCCESS" : "FAILURE")}");
+}
 
 string outputPath = Path.GetFullPath(Path.Combine(ResourceConstants.coreFolderRelativePath, $"shaders/{testShaderName}.fsha"));
 

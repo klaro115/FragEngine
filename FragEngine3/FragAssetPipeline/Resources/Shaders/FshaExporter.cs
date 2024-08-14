@@ -43,6 +43,16 @@ public static class FshaExporter
 	#endregion
 	#region Methods
 
+	/// <summary>
+	/// Checks if FSHA export is supported and implemented on the current executing platform.
+	/// </summary>
+	/// <remarks>The compiler uses dxcompiler.dll, which is a Windows/Direct3D dependency, and thus not available on MacOS or Linux.</remarks>
+	/// <returns>True if the exporter will run, false if it is not supported or not implemented.</returns>
+	public static bool IsAvailableOnCurrentPlatform()
+	{
+		return OperatingSystem.IsWindows();
+	}
+
 	public static bool ExportShaderFromHlslFile(string _filePath, string _entryPointBase, ShaderStages _shaderStage, out ShaderData? _outFshaShaderData)
 	{
 		if (string.IsNullOrEmpty(_entryPointBase))
