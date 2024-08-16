@@ -3,12 +3,12 @@
 [Flags]
 public enum CompiledShaderDataType : byte
 {
-	DXBC	= 1,
-	DXIL	= 2,
-	SPIRV	= 4,
-	// TODO: Add Metal compiled shader formats (Metal archive and/or library)
+	DXBC			= 1,
+	DXIL			= 2,
+	SPIRV			= 4,
+	MetalArchive	= 8,
 
-	Other	= 128,
+	Other			= 128,
 
-	ALL		= DXBC | DXIL | SPIRV, // | Metal
+	ALL				= DXBC | DXIL | SPIRV | MetalArchive
 }

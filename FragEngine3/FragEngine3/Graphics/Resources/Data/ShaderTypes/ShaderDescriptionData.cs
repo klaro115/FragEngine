@@ -1,4 +1,5 @@
 ﻿using FragEngine3.EngineCore;
+using FragEngine3.Graphics.Resources.ShaderGen;
 using FragEngine3.Utility.Serialization;
 using System.Text;
 using Veldrid;
@@ -65,6 +66,14 @@ public sealed class ShaderDescriptionSourceCodeData
 		public string EntryPoint { get; init; } = string.Empty;
 	}
 
+	[Serializable]
+	public sealed class SourceCodeBlock
+	{
+		public ShaderGenLanguage Language { get; init; } = 0;
+		public uint ByteOffset { get; set; } = 0;
+		public uint ByteSize { get; init; } = 0;
+	}
+
 	#endregion
 	#region Properties
 
@@ -92,6 +101,13 @@ public sealed class ShaderDescriptionSourceCodeData
 	/// </summary>
 	public string MaximumCompiledFeaturesTxt { get; init; } = string.Empty;
 
+	// CODE BLOCKS:
+
+	/// <summary>
+	/// An array of all source code blocks bundled with this file, each in a different language.
+	/// </summary>
+	public SourceCodeBlock[] SourceCodeBlocks { get; init; } = [];
+
 	#endregion
 	#region Methods
 
@@ -100,7 +116,9 @@ public sealed class ShaderDescriptionSourceCodeData
 		bool result =
 			!string.IsNullOrEmpty(EntryPointNameBase) &&
 			!string.IsNullOrEmpty(SupportedFeaturesTxt) &&
-			!string.IsNullOrEmpty(MaximumCompiledFeaturesTxt);
+			!string.IsNullOrEmpty(MaximumCompiledFeaturesTxt) &&
+			SourceCodeBlocks is not null &&
+			SourceCodeBlocks.Length != 0;
 		return result;
 	}
 

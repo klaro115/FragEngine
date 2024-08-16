@@ -15,6 +15,7 @@ public static class FshaExporter
 
 	private sealed class CompiledVariant
 	{
+		public CompiledShaderDataType shaderType = CompiledShaderDataType.Other;
 		public MeshVertexDataFlags vertexDataFlags = 0;
 		public string entryPoint = string.Empty;
 		public byte[] compiledData = [];
@@ -28,7 +29,7 @@ public static class FshaExporter
 	[
 		MeshVertexDataFlags.ExtendedSurfaceData,
 		MeshVertexDataFlags.BlendShapes,
-		MeshVertexDataFlags.Animations,
+		MeshVertexDataFlags.Animations
 	];
 	private static readonly MeshVertexDataFlags[] validVertexDataVariantFlags =
 	[
@@ -39,7 +40,7 @@ public static class FshaExporter
 		MeshVertexDataFlags.BasicSurfaceData | MeshVertexDataFlags.ExtendedSurfaceData,
 		MeshVertexDataFlags.BasicSurfaceData | MeshVertexDataFlags.ExtendedSurfaceData | MeshVertexDataFlags.BlendShapes,
 		MeshVertexDataFlags.BasicSurfaceData | MeshVertexDataFlags.ExtendedSurfaceData | MeshVertexDataFlags.Animations,
-		MeshVertexDataFlags.BasicSurfaceData | MeshVertexDataFlags.ExtendedSurfaceData | MeshVertexDataFlags.BlendShapes | MeshVertexDataFlags.Animations,
+		MeshVertexDataFlags.BasicSurfaceData | MeshVertexDataFlags.ExtendedSurfaceData | MeshVertexDataFlags.BlendShapes | MeshVertexDataFlags.Animations
 	];
 
 	#endregion
@@ -89,60 +90,35 @@ public static class FshaExporter
 			}
 		}
 
-		// Extract compiled data type flags:
-		if (_options.shaderTypeFlags == 0)
-		{
-			_options.shaderTypeFlags |= CompiledShaderDataType.DXBC;
-		}
-		List<CompiledShaderDataType> compiledShaderTypes = new(3);
-		{
-			const int shaderTypeFlagsMaxBits = sizeof(CompiledShaderDataType) * 8;
-			for (int i = 0; i < shaderTypeFlagsMaxBits; ++i)
-			{
-				CompiledShaderDataType shaderTypeFlag = (CompiledShaderDataType)(1 << i);
-				if (_options.shaderTypeFlags.HasFlag(shaderTypeFlag))
-				{
-					compiledShaderTypes.Add(shaderTypeFlag);
-				}
-			}
-		}
-
 		// Try compiling all variants from the provided entry points:
 		List<CompiledVariant> compiledVariants = new(_options.entryPoints!.Count);
 		ushort variantCount = 0;
 		uint currentByteOffset = 0;
 
 		// Group compiled and bundled variants by shader data type:
-		foreach (CompiledShaderDataType compiledType in compiledShaderTypes)
+		bool success = true;
+		if (_options.shaderTypeFlags.HasFlag(CompiledShaderDataType.DXBC))
 		{
-			//TODO
+			success &= CompileVariants_DXBC(_filePath, _options, compiledVariants, ref currentByteOffset, ref variantCount);
+		}
+		if (_options.shaderTypeFlags.HasFlag(CompiledShaderDataType.DXIL))
+		{
+			success &= CompileVariants_DXIL(_filePath, _options, compiledVariants, ref currentByteOffset, ref variantCount);
+		}
+		if (_options.shaderTypeFlags.HasFlag(CompiledShaderDataType.SPIRV))
+		{
+			success &= CompileVariants_SPIRV(_filePath, _options, compiledVariants, ref currentByteOffset, ref variantCount);
+		}
+		if (_options.shaderTypeFlags.HasFlag(CompiledShaderDataType.MetalArchive))
+		{
+			//TODO: Add Metal shader library/archive compiler.
 		}
 
-
-
-
-
-
-		
-		foreach (var kvp in _options.entryPoints)		//TODO: Refactor and move this into above loop.
+		if (!success)
 		{
-			var dxcResult = DxCompiler.CompileShaderToDXBC(_filePath, _options.shaderStage, kvp.Value);
-			if (!dxcResult.isSuccess)
-			{
-				Console.WriteLine($"Warning! Failed to compile FSHA shader variant for entry point '{kvp.Value}' ({kvp.Key})! File path: '{_filePath}'");
-				continue;
-			}
-
-			CompiledVariant compiledVariant = new()
-			{
-				vertexDataFlags = kvp.Key,
-				entryPoint = kvp.Value,
-				compiledData = dxcResult.compiledShader,
-				byteOffset = currentByteOffset,
-			};
-			compiledVariants.Add(compiledVariant);
-			currentByteOffset += (uint)dxcResult.compiledShader.Length;
-			variantCount++;
+			Console.WriteLine($"Warning: Compilation of one or more shader variants failed! File path: '{_filePath}'");
+			_outFshaShaderData = null;
+			return false;
 		}
 
 		if (compiledVariants.Count == 0)
@@ -163,9 +139,9 @@ public static class FshaExporter
 
 			compiledVariantData[i] = new()
 			{
-				Type = CompiledShaderDataType.DXBC,
+				Type = compiledVariant.shaderType,
 				VariantFlags = compiledVariant.vertexDataFlags,
-				VariantDescriptionTxt = "At_Nyn_Ly101p0_V100",		//TODO
+				VariantDescriptionTxt = "At_Nyn_Ly101p0_V100",      //TODO
 				EntryPoint = compiledVariant.entryPoint,
 				ByteOffset = compiledVariant.byteOffset,
 				ByteSize = (uint)compiledVariant.compiledData.Length,
@@ -183,6 +159,7 @@ public static class FshaExporter
 
 		// If source code should be included:
 		ShaderDescriptionSourceCodeData? sourceCodeData = null;
+		Dictionary<ShaderGenLanguage, byte[]>? sourceCodeUtf8Blocks = null;
 		if (isSourceCodeIncluded)
 		{
 			// Try to determine entry point functions' base name: (generally the most basic variant)
@@ -197,6 +174,33 @@ public static class FshaExporter
 				entryPointBase = compiledVariants[0].entryPoint;
 			}
 
+			// Read source code from files:
+			sourceCodeUtf8Blocks = [];
+			List<ShaderDescriptionSourceCodeData.SourceCodeBlock> sourceCodeBlocks = [];
+			uint sourceCodeCurrentOffset = 0u;
+			foreach (ShaderGenLanguage language in sourceCodeLanguages)
+			{
+				// Check if a source file of the same name, but using different extension exists:
+				if (!ShaderGenConstants.shaderLanguageFileExtensions.TryGetValue(language, out string? languageExt)) continue;
+
+				string sourceCodeFilePath = Path.ChangeExtension(_filePath, languageExt);
+				if (CheckIfFileExists(sourceCodeFilePath))
+				{
+					// Read and add source code byte data for this shader language:
+					byte[] sourceCodeUtf8Bytes = File.ReadAllBytes(sourceCodeFilePath);
+
+					ShaderDescriptionSourceCodeData.SourceCodeBlock block = new()
+					{
+						Language = language,
+						ByteOffset = sourceCodeCurrentOffset,
+						ByteSize = (uint)sourceCodeUtf8Bytes.Length,
+					};
+					sourceCodeUtf8Blocks.Add(language, sourceCodeUtf8Bytes);
+					sourceCodeBlocks.Add(block);
+					sourceCodeCurrentOffset += block.ByteSize;
+				}
+			}
+
 			// Assemble source code data:
 			sourceCodeData = new()
 			{
@@ -204,6 +208,7 @@ public static class FshaExporter
 				EntryPoints = entryPointData,
 				SupportedFeaturesTxt = "At_Nyy_Ly111pF_V110",       //TODO
 				MaximumCompiledFeaturesTxt = "At_Nyn_Ly101p0_V110", //TODO
+				SourceCodeBlocks = sourceCodeBlocks.ToArray(),
 			};
 		}
 
@@ -231,6 +236,7 @@ public static class FshaExporter
 				SourceCode = sourceCodeData,
 				CompiledVariants = compiledVariantData,
 			},
+			SourceCode = sourceCodeUtf8Blocks,
 			ByteCodeDxbc = allByteCodeDxbc,
 			ByteCodeDxil = null,
 			ByteCodeSpirv = null,
@@ -339,7 +345,98 @@ public static class FshaExporter
 		return true;
 	}
 
-	private bool 
+	private static bool CompileVariants_DXBC(
+		string _filePath,
+		FshaExportOptions _options,
+		List<CompiledVariant> _compiledVariants,
+		ref uint _currentByteOffset,
+		ref ushort _variantCount)
+	{
+		if (!DxCompiler.IsAvailableOnCurrentPlatform())
+		{
+			Console.WriteLine("Warning: DXBC compilation using DxCompiler is not supported on this platform.");
+			return false;
+		}
+
+		bool success = true;
+
+		foreach (var kvp in _options.entryPoints!)
+		{
+			var dxcResult = DxCompiler.CompileShaderToDXBC(_filePath, _options.shaderStage, kvp.Value);
+			success &= dxcResult.isSuccess;
+			if (!dxcResult.isSuccess)
+			{
+				Console.WriteLine($"Warning! Failed to compile DXBC shader variant for entry point '{kvp.Value}' ({kvp.Key})! File path: '{_filePath}'");
+				continue;
+			}
+
+			CompiledVariant compiledVariant = new()
+			{
+				shaderType = CompiledShaderDataType.DXBC,
+				vertexDataFlags = kvp.Key,
+				entryPoint = kvp.Value,
+				compiledData = dxcResult.compiledShader,
+				byteOffset = _currentByteOffset,
+			};
+			_compiledVariants.Add(compiledVariant);
+			_currentByteOffset += (uint)dxcResult.compiledShader.Length;
+			_variantCount++;
+		}
+
+		return success;
+	}
+
+	private static bool CompileVariants_DXIL(
+		string _filePath,
+		FshaExportOptions _options,
+		List<CompiledVariant> _compiledVariants,
+		ref uint _currentByteOffset,
+		ref ushort _variantCount)
+	{
+		Console.WriteLine($"Warning! DXIL compilation is not fully implemented yet! File path: '{_filePath}'");
+		return false;
+	}
+
+	private static bool CompileVariants_SPIRV(
+		string _filePath,
+		FshaExportOptions _options,
+		List<CompiledVariant> _compiledVariants,
+		ref uint _currentByteOffset,
+		ref ushort _variantCount)
+	{
+		if (!DxCompiler.IsAvailableOnCurrentPlatform())
+		{
+			Console.WriteLine("Warning: SPIR-V compilation using DxCompiler is not supported on this platform.");
+			return false;
+		}
+
+		bool success = true;
+
+		foreach (var kvp in _options.entryPoints!)
+		{
+			var dxcResult = DxCompiler.CompileShaderToSPIRV(_filePath, _options.shaderStage, kvp.Value);
+			success &= dxcResult.isSuccess;
+			if (!dxcResult.isSuccess)
+			{
+				Console.WriteLine($"Warning! Failed to compile SPIR-V shader variant for entry point '{kvp.Value}' ({kvp.Key})! File path: '{_filePath}'");
+				continue;
+			}
+
+			CompiledVariant compiledVariant = new()
+			{
+				shaderType = CompiledShaderDataType.SPIRV,
+				vertexDataFlags = kvp.Key,
+				entryPoint = kvp.Value,
+				compiledData = dxcResult.compiledShader,
+				byteOffset = _currentByteOffset,
+			};
+			_compiledVariants.Add(compiledVariant);
+			_currentByteOffset += (uint)dxcResult.compiledShader.Length;
+			_variantCount++;
+		}
+
+		return success;
+	}
 
 	#endregion
 }

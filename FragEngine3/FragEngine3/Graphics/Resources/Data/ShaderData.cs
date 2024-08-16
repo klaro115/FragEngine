@@ -1,5 +1,6 @@
 ﻿using FragEngine3.EngineCore;
 using FragEngine3.Graphics.Resources.Data.ShaderTypes;
+using FragEngine3.Graphics.Resources.ShaderGen;
 using FragEngine3.Resources.Data;
 using FragEngine3.Utility;
 using System.Text;
@@ -28,7 +29,7 @@ public sealed class ShaderData
 
 	// SOURCE CODE:
 
-	public byte[]? SourceCode = null;
+	public Dictionary<ShaderGenLanguage, byte[]>? SourceCode = null;
 
 	// COMPILED BYTE CODE:
 
@@ -86,16 +87,24 @@ public sealed class ShaderData
 		//... (reserved for additional headers)
 
 		// Try reading source code data, if available:
-		byte[]? sourceCodeUtf8Bytes = null;
-		if (!fileHeader.sourceCode.IsEmpty())
+		Dictionary<ShaderGenLanguage, byte[]>? sourceCodeUtf8Blocks = null;
+		if (!fileHeader.sourceCode.IsEmpty() && description.SourceCode?.SourceCodeBlocks is not null)
 		{
 			long sourceCodeStartPosition = fileStartPosition + fileHeader.sourceCode.byteOffset;
-			_reader.JumpToPosition(sourceCodeStartPosition);
+			sourceCodeUtf8Blocks = [];
 
-			if (!ReadUtf8Bytes(_reader, fileHeader.sourceCode.byteSize, out sourceCodeUtf8Bytes))
+			foreach (var block in description.SourceCode.SourceCodeBlocks)
 			{
-				_outData = null;
-				return false;
+				long blockStartPosition = sourceCodeStartPosition + block.ByteOffset;
+				_reader.JumpToPosition(blockStartPosition);
+
+				if (!ReadUtf8Bytes(_reader, block.ByteSize, out byte[] blockUtf8Bytes))
+				{
+					_outData = null;
+					continue;
+				}
+
+				sourceCodeUtf8Blocks.Add(block.Language, blockUtf8Bytes);
 			}
 		}
 
@@ -122,7 +131,7 @@ public sealed class ShaderData
 			Description = description,
 
 			// Source code:
-			SourceCode = sourceCodeUtf8Bytes,
+			SourceCode = sourceCodeUtf8Blocks,
 
 			// Compiled byte code:
 			ByteCodeDxbc = byteCodeDxbc,
@@ -147,7 +156,7 @@ public sealed class ShaderData
 		}
 		int jsonByteSize = jsonUtf8Bytes.Length;
 
-		bool hasSourceCode = _bundleSourceCode && SourceCode is not null && SourceCode.Length != 0;
+		bool hasSourceCode = _bundleSourceCode && SourceCode is not null && SourceCode.Count != 0;
 
 		if (!RecalculateOffsetsAndSizes((ushort)jsonByteSize, hasSourceCode))
 		{
@@ -173,8 +182,11 @@ public sealed class ShaderData
 		// Write HLSL source code, if available:
 		if (hasSourceCode)
 		{
-			_writer.Write(SourceCode!);
-			_writer.Write(SECTION_SPACER);
+			foreach (var kvp in SourceCode!)
+			{
+				_writer.Write(kvp.Value);
+				_writer.Write(SECTION_SPACER);
+			}
 		}
 
 		bool success = true;
@@ -208,7 +220,18 @@ public sealed class ShaderData
 		if (_hasSourceCode && SourceCode is not null)
 		{
 			sourceCodeOffset = jsonByteOffset + _jsonByteSize + SECTION_SPACER_SIZE;
-			sourceCodeSize = (uint)SourceCode.Length;
+			foreach (var kvp in SourceCode)
+			{
+				uint blockSize = (uint)kvp.Value.Length + SECTION_SPACER_SIZE;
+				sourceCodeSize += blockSize;
+
+				var blockData = Description.SourceCode?.SourceCodeBlocks.FirstOrDefault(o => o.Language == kvp.Key);
+				if (blockData is not null)
+				{
+					blockData.ByteOffset = sourceCodeOffset;
+				}
+				sourceCodeOffset += blockSize;
+			}
 		}
 		uint shaderDataOffset = sourceCodeOffset + sourceCodeSize + SECTION_SPACER_SIZE;
 		uint shaderDataByteSize = 0;
