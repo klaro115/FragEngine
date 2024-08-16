@@ -1,5 +1,6 @@
 ﻿using FragAssetPipeline.Resources;
 using FragAssetPipeline.Resources.Shaders;
+using FragEngine3.Graphics.Resources;
 using FragEngine3.Graphics.Resources.Data;
 using FragEngine3.Graphics.Resources.Data.ShaderTypes;
 using Veldrid;
@@ -11,21 +12,17 @@ string testShaderFilePath = Path.GetFullPath(Path.Combine(ResourceConstants.core
 const ShaderStages testShaderStage = ShaderStages.Fragment;
 const string testShaderEntryPoint = "Main_Pixel";
 
-// Check FSHA exporter's platform support:
-bool success = FshaExporter.IsAvailableOnCurrentPlatform();
-if (!success)
-{
-	Console.WriteLine("Shader compilation: Not supported on this platform.");
-}
-
 // Export serializable shader data in FSHA-compliant format:
-ShaderData? shaderData = null;
-if (success)
+FshaExportOptions exportOptions = new()
 {
-	success &= FshaExporter.ExportShaderFromHlslFile(testShaderFilePath, testShaderEntryPoint, testShaderStage, out shaderData);
+	shaderStage = testShaderStage,
+	entryPointBase = testShaderEntryPoint,
+	maxVertexVariantFlags = MeshVertexDataFlags.BasicSurfaceData | MeshVertexDataFlags.ExtendedSurfaceData,
+};
 
-	Console.WriteLine($"Shader compilation: {(success ? "SUCCESS" : "FAILURE")}");
-}
+bool success = FshaExporter.ExportShaderFromHlslFile(testShaderFilePath, exportOptions, out ShaderData? shaderData);
+
+Console.WriteLine($"Shader compilation: {(success ? "SUCCESS" : "FAILURE")}");
 
 string outputPath = Path.GetFullPath(Path.Combine(ResourceConstants.coreFolderRelativePath, $"shaders/{testShaderName}.fsha"));
 

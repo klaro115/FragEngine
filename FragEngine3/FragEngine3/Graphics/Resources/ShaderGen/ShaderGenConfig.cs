@@ -2,6 +2,14 @@
 
 namespace FragEngine3.Graphics.Resources.ShaderGen;
 
+/// <summary>
+/// Description structure for standard shader configurations. This type contains
+/// a comprehensive list of feature flags and paramaters that will be set at
+/// compile-time, or using the shader pre-processor. Most of these flags may be
+/// set using #define macros.<para/>
+/// The config type may however also be used as a simple description of a shader's
+/// features that are compliant with the engine's standard shader system.
+/// </summary>
 public struct ShaderGenConfig
 {
 	#region Fields
@@ -101,6 +109,13 @@ public struct ShaderGenConfig
 	#endregion
 	#region Methods
 
+	/// <summary>
+	/// Simplify configuration by propagating feature flags down the dependency hierarchy.
+	/// This will disable and unset all flags and values that were already disabled by
+	/// parent features.<para/>
+	/// Example: If light sources are disabled, shadow maps won't work either and can be
+	/// disabled as well.
+	/// </summary>
 	public void PropagateFlagStatesToHierarchy()
 	{
 		// Albedo:
@@ -132,6 +147,58 @@ public struct ShaderGenConfig
 		}
 	}
 
+	/// <summary>
+	/// Create a ShaderGen config that has the highest feature set of two given configurations.
+	/// </summary>
+	/// <param name="_a">The first config.</param>
+	/// <param name="_b">The second config.</param>
+	/// <returns>A new standard shader configuration with the highest feature set combination.</returns>
+	public static ShaderGenConfig Max(ShaderGenConfig _a, ShaderGenConfig _b)
+	{
+		bool useParallaxMap = _a.useParallaxMap || _b.useParallaxMap;
+		bool applyLighting = _a.applyLighting || _b.applyLighting;
+		bool useLightSources = applyLighting && (_a.useLightSources || _b.useLightSources);
+
+		ShaderGenConfig max = new()
+		{
+			// Albedo:
+			albedoSource = (ShaderGenAlbedoSource)Math.Max((int)_a.albedoSource, (int)_b.albedoSource),
+			samplerTexMain = !string.IsNullOrEmpty(_a.samplerTexMain)
+				? _a.samplerTexMain
+				: _a.samplerTexMain,
+
+			// Normals:
+			useNormalMap = _a.useNormalMap || _b.useNormalMap,
+			useParallaxMap = useParallaxMap,
+			useParallaxMapFull = useParallaxMap && (_a.useParallaxMapFull || _b.useParallaxMapFull),
+			samplerTexNormal = !string.IsNullOrEmpty(_a.samplerTexNormal)
+				? _a.samplerTexNormal
+				: _a.samplerTexNormal,
+
+			// Lighting:
+			applyLighting = applyLighting,
+			useAmbientLight = applyLighting && (_a.useAmbientLight || _b.useAmbientLight),
+			useLightMaps = applyLighting && (_a.useLightMaps || _b.useLightMaps),
+			useLightSources = useLightSources,
+			lightingModel = (ShaderGenLightingModel)Math.Max((int)_a.lightingModel, (int)_b.lightingModel),
+			useShadowMaps = useLightSources && (_a.useShadowMaps || _b.useShadowMaps),
+			shadowSamplingCount = useLightSources ? Math.Max(_a.shadowSamplingCount, _b.shadowSamplingCount) : 0,
+			indirectLightResolution = useLightSources ? Math.Max(_a.indirectLightResolution, _b.indirectLightResolution) : 0,
+
+			// Variants:
+			alwaysCreateExtendedVariant = _a.alwaysCreateExtendedVariant || _b.alwaysCreateExtendedVariant,
+			alwaysCreateBlendShapeVariant = _a.alwaysCreateBlendShapeVariant || _b.alwaysCreateBlendShapeVariant,
+			alwaysCreateAnimatedVariant = _a.alwaysCreateAnimatedVariant || _b.alwaysCreateAnimatedVariant,
+		};
+
+		max.PropagateFlagStatesToHierarchy();
+		return max;
+	}
+
+	/// <summary>
+	/// Creates a descriptive text that encodes all feature flags into a compact serializable string format.
+	/// </summary>
+	/// <returns>The descriptive string.</returns>
 	public readonly string CreateDescriptionTxt()
 	{
 		// Albedo:
@@ -196,6 +263,12 @@ public struct ShaderGenConfig
 			: (char)('A' + _value);
 	}
 
+	/// <summary>
+	/// Try to parse a descriptive text into a standard shader configuration.
+	/// </summary>
+	/// <param name="_txt">The descriptive text, may not be null or blank.</param>
+	/// <param name="_outConfig">Outputs the parsed shader configuration.</param>
+	/// <returns>True if the string could be parsed successfully, false if parsing failed.</returns>
 	public static bool TryParseDescriptionTxt(string _txt, out ShaderGenConfig _outConfig)
 	{
 		if (string.IsNullOrEmpty(_txt))

@@ -15,4 +15,10 @@
     <ProjectReference Include="..\FragEngine3\FragEngine3.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <None Remove="Resources\Shaders\Compilers\" />
+  </ItemGroup>
+  <ItemGroup>
+    <Folder Include="Resources\Shaders\Compilers\" />
+  </ItemGroup>
 </Project>

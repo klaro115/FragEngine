@@ -1,7 +1,9 @@
-﻿using FragEngine3.Graphics;
+﻿using FragAssetPipeline.Resources.Shaders.Compilers;
+using FragEngine3.Graphics;
 using FragEngine3.Graphics.Resources;
 using FragEngine3.Graphics.Resources.Data;
 using FragEngine3.Graphics.Resources.Data.ShaderTypes;
+using FragEngine3.Graphics.Resources.ShaderGen;
 using System.Text;
 using Veldrid;
 
@@ -43,21 +45,11 @@ public static class FshaExporter
 	#endregion
 	#region Methods
 
-	/// <summary>
-	/// Checks if FSHA export is supported and implemented on the current executing platform.
-	/// </summary>
-	/// <remarks>The compiler uses dxcompiler.dll, which is a Windows/Direct3D dependency, and thus not available on MacOS or Linux.</remarks>
-	/// <returns>True if the exporter will run, false if it is not supported or not implemented.</returns>
-	public static bool IsAvailableOnCurrentPlatform()
+	public static bool ExportShaderFromHlslFile(string _filePath, FshaExportOptions _options, out ShaderData? _outFshaShaderData)
 	{
-		return OperatingSystem.IsWindows();
-	}
-
-	public static bool ExportShaderFromHlslFile(string _filePath, string _entryPointBase, ShaderStages _shaderStage, out ShaderData? _outFshaShaderData)
-	{
-		if (string.IsNullOrEmpty(_entryPointBase))
+		if (_options is null)
 		{
-			Console.WriteLine("Error! Cannot export FSHA using null entry point function base name!");
+			Console.WriteLine("Error! Cannot export FSHA without export options!");
 			_outFshaShaderData = null;
 			return false;
 		}
@@ -67,85 +59,74 @@ public static class FshaExporter
 			_outFshaShaderData = null;
 			return false;
 		}
-
-		// Read source code from file:
-		string sourceCode;
-		try
-		{
-			sourceCode = File.ReadAllText(_filePath);
-		}
-		catch (Exception ex)
-		{
-			Console.WriteLine($"Error! Failed to read HLSL source code! File path: '{_filePath}'\nException: {ex}");
-			_outFshaShaderData = null;
-			return false;
-		}
-
-		// Try finding variant entry points within the source code:
-		StringBuilder entryPointBuilder = new(_entryPointBase.Length + 128);
-		Dictionary<MeshVertexDataFlags, string> entryPoints = [];
-
-		foreach (MeshVertexDataFlags variantFlags in validVertexDataVariantFlags)
-		{
-			// Assemble variant entry point name:
-			entryPointBuilder.Append(_entryPointBase);
-			foreach (MeshVertexDataFlags optionalVertexFlag in allOptionalVertexFlags)
-			{
-				if (variantFlags.HasFlag(optionalVertexFlag) && GraphicsConstants.shaderVariantsForEntryPointSuffixes.TryGetValue(optionalVertexFlag, out string? vertexDataSuffix))
-				{
-					entryPointBuilder.Append('_').Append(vertexDataSuffix);
-				}
-			}
-
-			string entryPoint = entryPointBuilder.ToString();
-			entryPointBuilder.Clear();
-
-			// Check if this variant entrypoint function exists in source code:
-			if (sourceCode.Contains($" {entryPoint}("))
-			{
-				entryPoints.Add(variantFlags, entryPoint);
-			}
-		}
-
-		if (entryPoints.Count == 0)
-		{
-			Console.WriteLine($"Error! Cannot export FSHA, could not find entry point functions in HLSL source code! File path: '{_filePath}'");
-			_outFshaShaderData = null;
-			return false;
-		}
-
-		return ExportShaderFromHlslFile(_filePath, entryPoints, _shaderStage, out _outFshaShaderData);
-	}
-
-	public static bool ExportShaderFromHlslFile(string _filePath, Dictionary<MeshVertexDataFlags, string> _entryPoints, ShaderStages _shaderStage, out ShaderData? _outFshaShaderData)
-	{
-		if (!CheckIfFileExists(_filePath))
-		{
-			Console.WriteLine($"Error! Cannot export FSHA, HLSL source file path is null or incorrect! File path: '{_filePath}'");
-			_outFshaShaderData = null;
-			return false;
-		}
-		if (_shaderStage == ShaderStages.None && !GetShaderStageFromFileNameSuffix(_filePath, out _shaderStage))
+		if (_options.shaderStage == ShaderStages.None && !GetShaderStageFromFileNameSuffix(_filePath, out _options.shaderStage))
 		{
 			Console.WriteLine($"Error! Cannot export FSHA, unable to determine shader stage from HLSL source file path! File path: '{_filePath}'");
 			_outFshaShaderData = null;
 			return false;
 		}
-		if (_entryPoints is null || _entryPoints.Count == 0)
+		if (!TryFindEntryPoints(_filePath, _options))
 		{
-			Console.WriteLine($"Error! Cannot export FSHA without entry point function names! File path: '{_filePath}'");
+			Console.WriteLine($"Error! Cannot export FSHA, unable to determine entry points! File path: '{_filePath}'");
 			_outFshaShaderData = null;
 			return false;
 		}
 
+		// Extract source code language flags:
+		bool isSourceCodeIncluded = _options.bundledSourceCodeLanguages != 0;
+		List<ShaderGenLanguage> sourceCodeLanguages = new(3);
+
+		if (isSourceCodeIncluded)
+		{
+			const int languageFlagsMaxBits = sizeof(ShaderGenLanguage) * 8;
+			for (int i = 0; i < languageFlagsMaxBits; ++i)
+			{
+				ShaderGenLanguage languageFlag = (ShaderGenLanguage)(1 << i);
+				if (_options.bundledSourceCodeLanguages.HasFlag(languageFlag))
+				{
+					sourceCodeLanguages.Add(languageFlag);
+				}
+			}
+		}
+
+		// Extract compiled data type flags:
+		if (_options.shaderTypeFlags == 0)
+		{
+			_options.shaderTypeFlags |= CompiledShaderDataType.DXBC;
+		}
+		List<CompiledShaderDataType> compiledShaderTypes = new(3);
+		{
+			const int shaderTypeFlagsMaxBits = sizeof(CompiledShaderDataType) * 8;
+			for (int i = 0; i < shaderTypeFlagsMaxBits; ++i)
+			{
+				CompiledShaderDataType shaderTypeFlag = (CompiledShaderDataType)(1 << i);
+				if (_options.shaderTypeFlags.HasFlag(shaderTypeFlag))
+				{
+					compiledShaderTypes.Add(shaderTypeFlag);
+				}
+			}
+		}
+
 		// Try compiling all variants from the provided entry points:
-		List<CompiledVariant> compiledVariants = new(_entryPoints.Count);
+		List<CompiledVariant> compiledVariants = new(_options.entryPoints!.Count);
 		ushort variantCount = 0;
 		uint currentByteOffset = 0;
 
-		foreach (var kvp in _entryPoints)
+		// Group compiled and bundled variants by shader data type:
+		foreach (CompiledShaderDataType compiledType in compiledShaderTypes)
 		{
-			var dxcResult = DxcLauncher.CompileShaderToDXBC(_filePath, _shaderStage, kvp.Value);
+			//TODO
+		}
+
+
+
+
+
+
+		
+		foreach (var kvp in _options.entryPoints)		//TODO: Refactor and move this into above loop.
+		{
+			var dxcResult = DxCompiler.CompileShaderToDXBC(_filePath, _options.shaderStage, kvp.Value);
 			if (!dxcResult.isSuccess)
 			{
 				Console.WriteLine($"Warning! Failed to compile FSHA shader variant for entry point '{kvp.Value}' ({kvp.Key})! File path: '{_filePath}'");
@@ -200,16 +181,30 @@ public static class FshaExporter
 				compiledVariant.compiledData.Length);
 		}
 
-		// Try to determine entry point functions' base name: (generally the most basic variant)
-		string entryPointBase;
-		CompiledVariant? baseVariant = compiledVariants.FirstOrDefault(o => o.vertexDataFlags == MeshVertexDataFlags.BasicSurfaceData);
-		if (baseVariant is not null)
+		// If source code should be included:
+		ShaderDescriptionSourceCodeData? sourceCodeData = null;
+		if (isSourceCodeIncluded)
 		{
-			entryPointBase = baseVariant.entryPoint;
-		}
-		else
-		{
-			entryPointBase = compiledVariants[0].entryPoint;
+			// Try to determine entry point functions' base name: (generally the most basic variant)
+			string entryPointBase;
+			CompiledVariant? baseVariant = compiledVariants.FirstOrDefault(o => o.vertexDataFlags == MeshVertexDataFlags.BasicSurfaceData);
+			if (baseVariant is not null)
+			{
+				entryPointBase = baseVariant.entryPoint;
+			}
+			else
+			{
+				entryPointBase = compiledVariants[0].entryPoint;
+			}
+
+			// Assemble source code data:
+			sourceCodeData = new()
+			{
+				EntryPointNameBase = entryPointBase,
+				EntryPoints = entryPointData,
+				SupportedFeaturesTxt = "At_Nyy_Ly111pF_V110",       //TODO
+				MaximumCompiledFeaturesTxt = "At_Nyn_Ly101p0_V110", //TODO
+			};
 		}
 
 		// Assemble shader data:
@@ -232,14 +227,8 @@ public static class FshaExporter
 			},
 			Description = new ShaderDescriptionData()
 			{
-				ShaderStage = _shaderStage,
-				SourceCode = new ShaderDescriptionSourceCodeData()
-				{
-					EntryPointNameBase = entryPointBase,
-					EntryPoints = entryPointData,
-					SupportedFeaturesTxt = "At_Nyy_Ly111pF_V110",       //TODO
-					MaximumCompiledFeaturesTxt = "At_Nyn_Ly101p0_V110",	//TODO
-				},
+				ShaderStage = _options.shaderStage,
+				SourceCode = sourceCodeData,
 				CompiledVariants = compiledVariantData,
 			},
 			ByteCodeDxbc = allByteCodeDxbc,
@@ -283,6 +272,74 @@ public static class FshaExporter
 		_outShaderStage = ShaderStages.None;
 		return false;
 	}
+
+	private static bool TryFindEntryPoints(string _filePath, FshaExportOptions _options)
+	{
+		if (_options is null)
+		{
+			return false;
+		}
+		if (_options.entryPoints is not null && _options.entryPoints.Count != 0)
+		{
+			return true;
+		}
+
+		// if no entry point names were provided at all, try using default names:
+		if (string.IsNullOrWhiteSpace(_options.entryPointBase) &&
+			!GraphicsConstants.defaultShaderStageEntryPoints.TryGetValue(_options.shaderStage, out _options.entryPointBase))
+		{
+			Console.WriteLine($"Error! Could not find default entry point base name for shader stage '{_options.shaderStage}'!");
+			return false;
+		}
+
+		// Read source code from file:
+		string sourceCode;
+		try
+		{
+			sourceCode = File.ReadAllText(_filePath);
+		}
+		catch (Exception ex)
+		{
+			Console.WriteLine($"Error! Failed to read HLSL source code! File path: '{_filePath}'\nException: {ex}");
+			return false;
+		}
+
+		// Try finding variant entry points within the source code:
+		StringBuilder entryPointBuilder = new(_options.entryPointBase.Length + 128);
+		_options.entryPoints = [];
+
+		foreach (MeshVertexDataFlags variantFlags in validVertexDataVariantFlags)
+		{
+			// Assemble variant entry point name:
+			entryPointBuilder.Append(_options.entryPointBase);
+			foreach (MeshVertexDataFlags optionalVertexFlag in allOptionalVertexFlags)
+			{
+				if (variantFlags.HasFlag(optionalVertexFlag) && GraphicsConstants.shaderVariantsForEntryPointSuffixes.TryGetValue(optionalVertexFlag, out string? vertexDataSuffix))
+				{
+					entryPointBuilder.Append('_').Append(vertexDataSuffix);
+				}
+			}
+
+			string entryPoint = entryPointBuilder.ToString();
+			entryPointBuilder.Clear();
+
+			// Check if this variant entrypoint function exists in source code:
+			if (sourceCode.Contains($" {entryPoint}("))
+			{
+				_options.entryPoints.Add(variantFlags, entryPoint);
+			}
+		}
+
+		if (_options.entryPoints.Count == 0)
+		{
+			Console.WriteLine($"Error! Cannot export FSHA, could not find entry point functions in HLSL source code! File path: '{_filePath}'");
+			_options.entryPoints = null;
+			return false;
+		}
+		return true;
+	}
+
+	private bool 
 
 	#endregion
 }
