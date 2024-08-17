@@ -12,7 +12,7 @@ using Veldrid;
 
 namespace FragEngine3.Graphics.Components
 {
-    public sealed class Light : Component, IOnNodeDestroyedListener, IOnComponentRemovedListener			//TODO: Consider splitting this into different components based on type.
+	public sealed class Light : Component, ILightSource, IOnNodeDestroyedListener, IOnComponentRemovedListener			//TODO: Consider splitting this into different components based on type.
 	{
 		#region Constructors
 
@@ -22,36 +22,31 @@ namespace FragEngine3.Graphics.Components
 		/// <param name="_node">The scene node which the component will be attached to.</param>
 		public Light(SceneNode _node) : base(_node)
 		{
-			core = node.scene.GraphicsStack?.Core ?? node.scene.engine.GraphicsSystem.graphicsCore;
+			GraphicsCore = node.scene.GraphicsStack?.Core ?? node.scene.engine.GraphicsSystem.graphicsCore;
 
 			node.scene.drawManager.RegisterLight(this);
 
-			lightInstance = new PointLightInstance(core);
+			lightInstance = new PointLightInstance(GraphicsCore);
 		}
 
 		#endregion
 		#region Fields
 
-		internal readonly GraphicsCore core;
-
 		private LightInstance lightInstance;
-
-		/// <summary>
-		/// Priority rating to indicate which light sources are more important. Higher priority lights will
-		/// be drawn first, lower priority light may be ignored as their impact on a mesh may be negligable.
-		/// </summary>
-		public int lightPriority = 1;
-		/// <summary>
-		/// Bit mask for all layers that can be affected by this light source.
-		/// </summary>
-		public uint layerMask = 0xFFu;
 
 		#endregion
 		#region Properties
 
-		/// <summary>
-		/// Gets or sets the emission shape of this light source.
-		/// </summary>
+		public bool IsVisible => !IsDisposed && node.IsEnabledInHierarchy();
+
+		public int LightPriority { get; set; } = 1;
+
+		public uint LayerMask
+		{
+			get => lightInstance.LayerMask;
+			set => lightInstance.LayerMask = value;
+		}
+
 		public LightType Type
 		{
 			get => lightInstance != null ? lightInstance.Type : LightType.Point;
@@ -65,9 +60,9 @@ namespace FragEngine3.Graphics.Components
 
 					lightInstance = value switch
 					{
-						LightType.Spot => new SpotLightInstance(core),
-						LightType.Directional => new DirectionalLightInstance(core),
-						_ => new PointLightInstance(core),
+						LightType.Spot => new SpotLightInstance(GraphicsCore),
+						LightType.Directional => new DirectionalLightInstance(GraphicsCore),
+						_ => new PointLightInstance(GraphicsCore),
 					};
 					if (data is not null)
 					{
@@ -85,9 +80,6 @@ namespace FragEngine3.Graphics.Components
 			get => lightInstance.LightIntensity;
 			set => lightInstance.LightIntensity = value;
 		}
-		/// <summary>
-		/// Gets the maximum range out to which this light source produces any noticeable brightness. 
-		/// </summary>
 		public float MaxLightRange => lightInstance.MaxLightRange;
 
 		/// <summary>
@@ -107,24 +99,12 @@ namespace FragEngine3.Graphics.Components
 			set { if (lightInstance is SpotLightInstance spotInstance) spotInstance.SpotAngleDegrees = value; }
 		}
 
-		/// <summary>
-		/// Gets or sets whether this light source should cast shadows.<para/>
-		/// NOTE: If true, before scene cameras are drawn, a shadow map will be rendered for this light source.
-		/// When changing this value to false, the shadow map and its framebuffer will be disposed. This flag
-		/// may not be changed during the engine's drawing stage.<para/>
-		/// LIMITATION: Point lights cannot casts shadows at this stage. Use spot or directional lights if shadows
-		/// are required.
-		/// </summary>
 		public bool CastShadows
 		{
 			get => lightInstance.CastShadows;
 			set => lightInstance.CastShadows = value;
 		}
 
-		/// <summary>
-		/// Gets or sets the number of shadow cascades to create and render for this light source.
-		/// Directional and spot lights only. Must be a value between 0 and 4, where 0 disables cascades for this light.
-		/// </summary>
 		public uint ShadowCascades
 		{
 			get => lightInstance.ShadowCascades;
@@ -133,13 +113,31 @@ namespace FragEngine3.Graphics.Components
 
 		/// <summary>
 		/// A bias for shadow map evaluation in the shader, which is implemented as a distance offset away from a mesh's surface.
-		/// Setting this value too low may cause stair-stepping artifacts in lighting calculations.
+		/// Setting this value too low may cause stair-stepping artifacts in lighting calculations, commonly referred to as "shadow acne".
 		/// </summary>
-		public float ShadowBias
+		public float ShadowNormalBias
 		{
-			get => lightInstance.ShadowBias;
-			set => lightInstance.ShadowBias = value;
+			get => lightInstance.ShadowNormalBias;
+			set => lightInstance.ShadowNormalBias = value;
 		}
+
+		/// <summary>
+		/// A bias for shadow map evaluation in shadow projection, which is implemented as a distance offset towards the light source.
+		/// Setting this value too high may cause "Peter-Panning" artifacts in lighting calculations, where objects appear detached from their shadow.
+		/// </summary>
+		public float ShadowDepthBias
+		{
+			get => lightInstance.ShadowDepthBias;
+			set => lightInstance.ShadowDepthBias = value;
+		}
+
+		public bool IsStaticLight
+		{
+			get => lightInstance.IsStaticLight;
+			set => lightInstance.IsStaticLight = value;
+		}
+
+		public bool IsStaticLightDirty => lightInstance.IsStaticLightDirty;
 
 		/// <summary>
 		/// Gets the world space position of the light source. Only relevant for point and spot lights.
@@ -149,6 +147,8 @@ namespace FragEngine3.Graphics.Components
 		/// Gets the world space diretion of light rays coming off this light source. Only relevant for spot and directional lights.
 		/// </summary>
 		public Vector3 Direction => Vector3.Transform(Vector3.UnitZ, node.WorldRotation);
+
+		public GraphicsCore GraphicsCore { get; private init; }
 
 		#endregion
 		#region Methods
@@ -174,8 +174,8 @@ namespace FragEngine3.Graphics.Components
 
 		public static int CompareLightsForSorting(Light _a, Light _b)
 		{
-			int weightA = _a.lightPriority + (_a.CastShadows ? 1000 : 0);
-			int weightB = _b.lightPriority + (_b.CastShadows ? 1000 : 0);
+			int weightA = _a.LightPriority + (_a.CastShadows ? 1000 : 0);
+			int weightB = _b.LightPriority + (_b.CastShadows ? 1000 : 0);
 			return weightB.CompareTo(weightA);
 		}
 
@@ -204,15 +204,12 @@ namespace FragEngine3.Graphics.Components
 		public bool BeginDrawShadowCascade(
 			in SceneContext _sceneCtx,
 			in CommandList _cmdList,
-			in LightDataBuffer _dummyLightDataBuffer,
 			Vector3 _shadingFocalPoint,
 			uint _cascadeIdx,
 			out CameraPassContext _outCameraPassCtx,
 			bool _rebuildResSetCamera = false,
 			bool _texShadowMapsHasChanged = false)
 		{
-			lightInstance.WorldPose = node.WorldTransformation;			//TODO: Redundant?
-
 			return lightInstance.BeginDrawShadowCascade(
 				in _sceneCtx,
 				in _cmdList,
@@ -230,7 +227,7 @@ namespace FragEngine3.Graphics.Components
 
 		public bool EndDrawShadowMap()
 		{
-			return !IsDisposed;
+			return !IsDisposed && lightInstance.EndDrawShadowMap();
 		}
 
 		/// <summary>
@@ -239,6 +236,8 @@ namespace FragEngine3.Graphics.Components
 		/// <param name="_camera">The camera whose pixels may or may not be illuminated by this light source.</param>
 		/// <returns>True if this instance's light could possible be seen by the camera, false otherwise.</returns>
 		public bool CheckVisibilityByCamera(in Camera _camera) => lightInstance.CheckVisibilityByCamera(_camera);
+
+		public bool CheckIsRendererInRange(in IPhysicalRenderer _renderer) => lightInstance.CheckIsRendererInRange(_renderer);
 
 		public override bool LoadFromData(in ComponentData _componentData, in Dictionary<int, ISceneElement> _idDataMap)
 		{
@@ -261,7 +260,7 @@ namespace FragEngine3.Graphics.Components
 			}
 
 			// Set values:
-			layerMask = data.LayerMask;
+			LayerMask = data.LayerMask;
 
 			if (!lightInstance.LoadFromData(in data))
 			{
@@ -284,7 +283,7 @@ namespace FragEngine3.Graphics.Components
 				return false;
 			}
 
-			data.LayerMask = layerMask;
+			data.LayerMask = LayerMask;
 
 			if (!Serializer.SerializeToJson(data, out string dataJson))
 			{

@@ -102,7 +102,7 @@ public sealed class ResourceFileHandle : IEquatable<ResourceFileHandle>
 	public string Key => resourceFilePath;
 
 	/// <summary>
-	/// Gets an invalid empty resource file handle.
+	/// Gets an invalid empty resource file handle. This should be used instead of null, to prevent null errors as much as possible.
 	/// </summary>
 	public static ResourceFileHandle None => none;
 

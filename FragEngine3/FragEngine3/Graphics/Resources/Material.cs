@@ -3,6 +3,7 @@ using FragEngine3.EngineCore;
 using FragEngine3.Graphics.Contexts;
 using FragEngine3.Graphics.Internal;
 using FragEngine3.Graphics.Resources.Data;
+using FragEngine3.Graphics.Resources.Data.MaterialTypes;
 using FragEngine3.Resources;
 using FragEngine3.Resources.Data;
 using FragEngine3.Utility.Serialization;
@@ -57,7 +58,7 @@ public class Material(GraphicsCore _core, ResourceHandle _handle) : Resource(_ha
 	#endregion
 	#region Fields
 
-	public GraphicsCore core = _core ?? throw new ArgumentNullException(nameof(_core), "Graphics core may not be null!");
+	public readonly GraphicsCore core = _core ?? throw new ArgumentNullException(nameof(_core), "Graphics core may not be null!");
 
 	private uint materialVersion = 1000;
 
@@ -70,7 +71,7 @@ public class Material(GraphicsCore _core, ResourceHandle _handle) : Resource(_ha
 	private VersionedMember<ShaderSetDescription>[]? shaderSetDescs = null;
 
 	private ResourceLayout? boundResourceLayout = null;
-	private MaterialData.BoundResourceKeys[]? boundResourceKeys = null;
+	private MaterialBoundResourceKeys[]? boundResourceKeys = null;
 	private VersionedMember<ResourceSet?> boundResourceSet = new(null, 0);
 
 	private VersionedMember<DepthStencilDesc> depthStencilDesc = new(DepthStencilDesc.Default, 0);
@@ -309,7 +310,7 @@ public class Material(GraphicsCore _core, ResourceHandle _handle) : Resource(_ha
 		return true;
 	}
 
-	private bool LoadBoundResource_Texture(in MaterialData.BoundResourceKeys _resourceKeys, out Texture _outTexture)
+	private bool LoadBoundResource_Texture(in MaterialBoundResourceKeys _resourceKeys, out Texture _outTexture)
 	{
 		if (string.IsNullOrEmpty(_resourceKeys.resourceKey) || !resourceManager.GetResource(_resourceKeys.resourceKey, out ResourceHandle handle))
 		{
@@ -344,7 +345,7 @@ public class Material(GraphicsCore _core, ResourceHandle _handle) : Resource(_ha
 		BindableResource[] boundResources = new BindableResource[boundResourceKeys.Length];
 		for (int i = 0; i < boundResourceKeys.Length; ++i)
 		{
-			MaterialData.BoundResourceKeys resourceKeys = boundResourceKeys[i];
+			MaterialBoundResourceKeys resourceKeys = boundResourceKeys[i];
 
 			switch (resourceKeys.resourceKind)
 			{
@@ -463,7 +464,7 @@ public class Material(GraphicsCore _core, ResourceHandle _handle) : Resource(_ha
 			if (dsd.enableCulling)
 			{
 				rasterizerState = RasterizerStateDescription.Default;
-				if (_cameraPassCtx.mirrorY)
+				if (_cameraPassCtx.MirrorY)
 				{
 					rasterizerState.FrontFace = FrontFace.CounterClockwise;
 				}
@@ -474,8 +475,8 @@ public class Material(GraphicsCore _core, ResourceHandle _handle) : Resource(_ha
 			}
 
 			ResourceLayout[] resourceLayouts = boundResourceLayout != null
-				? [ _sceneCtx.resLayoutCamera, _sceneCtx.resLayoutObject, boundResourceLayout ]
-				: [ _sceneCtx.resLayoutCamera, _sceneCtx.resLayoutObject ];
+				? [ _sceneCtx.ResLayoutCamera, _sceneCtx.ResLayoutObject, boundResourceLayout ]
+				: [ _sceneCtx.ResLayoutCamera, _sceneCtx.ResLayoutObject ];
 
 			GraphicsPipelineDescription pipelineDesc = new(
 				BlendStateDescription.SingleAlphaBlend,
@@ -484,14 +485,14 @@ public class Material(GraphicsCore _core, ResourceHandle _handle) : Resource(_ha
 				PrimitiveTopology.TriangleList,
 				shaderSetDesc.Value,
 				resourceLayouts,
-				_cameraPassCtx.outputDesc);
+				_cameraPassCtx.OutputDesc);
 
 			Pipeline pipeline = core.MainFactory.CreateGraphicsPipeline(ref pipelineDesc);
 			uint newPipelineVersion = materialVersion ^ _rendererVersion;
 
-			if (_cameraPassCtx.outputDesc.ColorAttachments != null && _cameraPassCtx.outputDesc.ColorAttachments.Length != 0)
+			if (_cameraPassCtx.OutputDesc.ColorAttachments != null && _cameraPassCtx.OutputDesc.ColorAttachments.Length != 0)
 			{
-				PixelFormat colorFormat = _cameraPassCtx.outputDesc.ColorAttachments[0].Format;
+				PixelFormat colorFormat = _cameraPassCtx.OutputDesc.ColorAttachments[0].Format;
 				pipeline.Name = $"{resourceKey}_{colorFormat}";
 			}
 			else
@@ -609,7 +610,7 @@ public class Material(GraphicsCore _core, ResourceHandle _handle) : Resource(_ha
 		ResourceLayout? boundResourceLayout = null;
 		if (data.GetBoundResourceLayoutDesc(
 			out ResourceLayoutDescription boundResourceLayoutDesc,
-			out MaterialData.BoundResourceKeys[]? boundResourceKeys,
+			out MaterialBoundResourceKeys[]? boundResourceKeys,
 			out bool useExternalBoundResources))
 		{
 			try
@@ -747,14 +748,14 @@ public class Material(GraphicsCore _core, ResourceHandle _handle) : Resource(_ha
 				EnableDepthWrite = dsd.enableDepthWrite,
 
 				EnableStencil = dsd.enableStencil,
-				StencilFront = new MaterialData.StencilBehaviourData()
+				StencilFront = new MaterialStencilBehaviourData()
 				{
 					Fail = dsd.stencilBehaviour.stencilFront.Fail,
 					Pass = dsd.stencilBehaviour.stencilFront.Pass,
 					DepthFail = dsd.stencilBehaviour.stencilFront.DepthFail,
 					ComparisonKind = dsd.stencilBehaviour.stencilFront.Comparison,
 				},
-				StencilBack = new MaterialData.StencilBehaviourData()
+				StencilBack = new MaterialStencilBehaviourData()
 				{
 					Fail = dsd.stencilBehaviour.stencilBack.Fail,
 					Pass = dsd.stencilBehaviour.stencilBack.Pass,
@@ -771,7 +772,7 @@ public class Material(GraphicsCore _core, ResourceHandle _handle) : Resource(_ha
 				ZSortingBias = rmd.zSortingBias,
 			},
 
-			Shaders = new MaterialData.ShaderData()
+			Shaders = new MaterialShaderData()
 			{
 				IsSurfaceMaterial = true,
 				Compute = string.Empty,
@@ -782,16 +783,13 @@ public class Material(GraphicsCore _core, ResourceHandle _handle) : Resource(_ha
 				Pixel = pixelShader.resourceKey,
 			},
 
-			Replacements = new MaterialData.ReplacementData()
+			Replacements = new MaterialReplacementData()
 			{
 				SimplifiedVersion = SimplifiedMaterialVersion?.resourceKey ?? string.Empty,
 				ShadowMap = ShadowMapMaterialVersion?.resourceKey ?? string.Empty,
 			},
 
-			Resources = new MaterialData.ResourceData()
-			{
-				// TODO
-			},
+			Resources = [],	// TODO
 		};
 		return _outData.IsValid();
 	}

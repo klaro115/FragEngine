@@ -35,8 +35,8 @@ public static class ShadowMapUtility
 		{
 			CameraOutput outputSettings = new CameraOutput()
 			{
-				resolutionX = LightConstants.shadowResolution,
-				resolutionY = LightConstants.shadowResolution,
+				resolutionX = LightConstants.SHADOW_RESOLUTION,
+				resolutionY = LightConstants.SHADOW_RESOLUTION,
 
 				colorFormat = _graphicsCore.DefaultColorTargetPixelFormat,
 				depthFormat = _graphicsCore.DefaultShadowMapDepthTargetFormat,

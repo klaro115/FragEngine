@@ -11,7 +11,7 @@ using Veldrid;
 
 namespace FragEngine3.Graphics.Components;
 
-public sealed class StaticMeshRenderer : Component, IRenderer
+public sealed class StaticMeshRenderer : Component, IPhysicalRenderer
 {
 	#region Constructors
 
@@ -63,6 +63,10 @@ public sealed class StaticMeshRenderer : Component, IRenderer
 		set => instance.LayerFlags = value;
 	}
 
+	public Vector3 VisualCenterPoint => instance.VisualCenterPoint;
+
+	public float BoundingRadius => instance.BoundingRadius;
+
 	#endregion
 	#region Methods
 
@@ -95,7 +99,7 @@ public sealed class StaticMeshRenderer : Component, IRenderer
 	/// <returns>True if the mesh was assigned, false otherwise.</returns>
 	public bool SetMesh(ResourceHandle? _meshHandle) => !IsDisposed && instance.SetMesh(_meshHandle);
 
-	public bool SetMaterial(string _resourceKey) => !IsDisposed && !instance.SetMaterial(_resourceKey);
+	public bool SetMaterial(string _resourceKey) => !IsDisposed && instance.SetMaterial(_resourceKey);
 
 	/// <summary>
 	/// Assigns a material for rendering the mesh.
@@ -114,7 +118,7 @@ public sealed class StaticMeshRenderer : Component, IRenderer
 	{
 		if (!IsVisible) return true;
 
-		if (instance.LastUpdatedForFrameIdx != _cameraPassCtx.frameIdx)
+		if (instance.LastUpdatedForFrameIdx != _cameraPassCtx.FrameIdx)
 		{
 			instance.SetWorldPose(node.WorldTransformation);
 		}
@@ -125,7 +129,7 @@ public sealed class StaticMeshRenderer : Component, IRenderer
 	{
 		if (!IsVisible) return true;
 
-		if (instance.LastUpdatedForFrameIdx != _cameraPassCtx.frameIdx)
+		if (instance.LastUpdatedForFrameIdx != _cameraPassCtx.FrameIdx)
 		{
 			instance.SetWorldPose(node.WorldTransformation);
 		}

@@ -2,13 +2,11 @@
 
 namespace FragEngine3.Graphics.Cameras;
 
-public struct CameraProjection
+/// <summary>
+/// Projection settings for a camera.
+/// </summary>
+public struct CameraProjection()
 {
-	#region Constructors
-
-	public CameraProjection() { }
-
-	#endregion
 	#region Fields
 
 	public CameraProjectionType projectionType = CameraProjectionType.Perspective;
@@ -28,11 +26,17 @@ public struct CameraProjection
 	#endregion
 	#region Properties
 
+	/// <summary>
+	/// Gets or sets the field of view in radians.
+	/// </summary>
 	public float FieldOfViewRadians
 	{
 		readonly get => fieldOfViewRad;
 		set => fieldOfViewRad = Math.Clamp(value, 0.001f * DEG2RAD, 179.9f * DEG2RAD);
 	}
+	/// <summary>
+	/// Gets or sets the field of view in degrees.
+	/// </summary>
 	public float FieldOfViewDegrees
 	{
 		readonly get => fieldOfViewRad * RAD2DEG;
@@ -45,7 +49,13 @@ public struct CameraProjection
 	private const float DEG2RAD = MathF.PI / 180.0f;
 	private const float RAD2DEG = 180.0f / MathF.PI;
 
+	/// <summary>
+	/// The default field of view angle, in degrees.
+	/// </summary>
 	public const float DEFAULT_FOV_DEG = 60.0f;
+	/// <summary>
+	/// The default field of view angle, in radians.
+	/// </summary>
 	public const float DEFAULT_FOV_RAD = DEFAULT_FOV_DEG * DEG2RAD;
 
 	#endregion

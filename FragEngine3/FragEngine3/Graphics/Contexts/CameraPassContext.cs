@@ -5,44 +5,32 @@ using Veldrid;
 
 namespace FragEngine3.Graphics.Contexts;
 
-public sealed class CameraPassContext(
-	// References:
-	CameraInstance _cameraInstance,
-	CommandList _cmdList,
-
-	// Camera resources:
-	Framebuffer _framebuffer,
-	ResourceSet _resSetCamera,
-	DeviceBuffer _cbCamera,
-	LightDataBuffer _lightDataBuffer,
-	ushort _passResourceVersion,
-
-	// Parameters:
-	uint _frameIdx,
-	uint _passIdx,
-	uint _lightCountShadowMapped,
-	in Matrix4x4 _mtxWorld2Clip)
+/// <summary>
+/// Context type containing resources and parameters for rendering a camera pass.
+/// These values will be passed to all renderers for which draw calls are issued during the camera pass.
+/// </summary>
+public sealed class CameraPassContext
 {
 	#region Fields
 
 	// References:
-	public readonly CameraInstance cameraInstance = _cameraInstance;
-	public readonly CommandList cmdList = _cmdList;
+	public CameraInstance CameraInstance { get; init; } = null!;
+	public CommandList CmdList { get; init; } = null!;
 
 	// Camera resources:
-	public readonly Framebuffer framebuffer = _framebuffer;
-	public readonly ResourceSet resSetCamera = _resSetCamera;
-	public readonly DeviceBuffer cbCamera = _cbCamera;
-	public readonly LightDataBuffer lightDataBuffer = _lightDataBuffer;
-	public readonly ushort cameraResourceVersion = _passResourceVersion;
+	public Framebuffer Framebuffer { get; init; } = null!;
+	public ResourceSet ResSetCamera { get; init; } = null!;
+	public DeviceBuffer CbCamera { get; init; } = null!;
+	public LightDataBuffer LightDataBuffer { get; init; } = null!;
+	public ushort CameraResourceVersion { get; init; }
 
 	// Parameters:
-	public readonly uint frameIdx = _frameIdx;
-	public readonly uint passIdx = _passIdx;
-	public readonly uint lightCountShadowMapped = Math.Min(_lightCountShadowMapped, _lightDataBuffer.Count);
-	public readonly Matrix4x4 mtxWorld2Clip = _mtxWorld2Clip;
-	public readonly OutputDescription outputDesc = _framebuffer.OutputDescription;
-	public readonly bool mirrorY = _cameraInstance.ProjectionSettings.mirrorY;
-
+	public uint FrameIdx { get; init; }
+	public uint PassIdx { get; init; }
+	public uint LightCountShadowMapped { get; init; }
+	public Matrix4x4 MtxWorld2Clip { get; init; }
+	public OutputDescription OutputDesc { get; init; }
+	public bool MirrorY { get; init; }
+	
 	#endregion
 }

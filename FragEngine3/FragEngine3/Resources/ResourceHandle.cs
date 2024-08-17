@@ -137,7 +137,7 @@ public sealed class ResourceHandle : IEquatable<ResourceHandle>
 	public int DependencyCount => dependencies is not null ? dependencies.Length : 0;
 
 	/// <summary>
-	/// Gets an invalid empty resource handle.
+	/// Gets an invalid empty resource handle. This should be used instead of null, to prevent null errors as much as possible.
 	/// </summary>
 	public static ResourceHandle None => none;
 

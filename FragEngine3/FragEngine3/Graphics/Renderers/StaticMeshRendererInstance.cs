@@ -11,7 +11,7 @@ using Veldrid;
 
 namespace FragEngine3.Graphics.Renderers;
 
-public sealed class StaticMeshRendererInstance : IRenderer
+public sealed class StaticMeshRendererInstance : IPhysicalRenderer
 {
 
 	#region Constructors
@@ -83,6 +83,9 @@ public sealed class StaticMeshRendererInstance : IRenderer
 	public int LastUpdatedForFrameIdx { get; private set; } = -1;
 	public RenderMode RenderMode => materialScene is not null ? materialScene.RenderMode : RenderMode.Opaque;
 	public uint LayerFlags { get; set; } = 1;
+
+	public Vector3 VisualCenterPoint => worldPose.position;
+	public float BoundingRadius => mesh is not null ? worldPose.scale.X * mesh.BoundingRadius : 0;
 
 	public Logger Logger => graphicsCore.graphicsSystem.engine.Logger ?? Logger.Instance!;
 
@@ -361,39 +364,39 @@ public sealed class StaticMeshRendererInstance : IRenderer
 		}
 
 		// Update CBObject on the first draw call of each new frame:
-		if (LastUpdatedForFrameIdx < _cameraPassCtx.frameIdx)
+		if (LastUpdatedForFrameIdx < _cameraPassCtx.FrameIdx)
 		{
-			LastUpdatedForFrameIdx = (int)_cameraPassCtx.frameIdx;
-			UpdateCBObject(_cameraPassCtx.cmdList, in _sceneCtx.resLayoutObject);
+			LastUpdatedForFrameIdx = (int)_cameraPassCtx.FrameIdx;
+			UpdateCBObject(_cameraPassCtx.CmdList, _sceneCtx.ResLayoutObject);
 		}
 
 		// Recreate pipeline if necessary:
-		uint expectedPipelineVersion = (uint)(_cameraPassCtx.cameraResourceVersion << 16) | _rendererVersion;
+		uint expectedPipelineVersion = (uint)(_cameraPassCtx.CameraResourceVersion << 16) | _rendererVersion;
 		if (_pipeline.Version != expectedPipelineVersion && !RecreatePipeline(_sceneCtx, _cameraPassCtx, _material, expectedPipelineVersion, ref _pipeline))
 		{
 			return false;
 		}
 
 		// Bind pipeline and resource sets:
-		_cameraPassCtx.cmdList.SetPipeline(_pipeline.Value);
-		_cameraPassCtx.cmdList.SetGraphicsResourceSet(0, _cameraPassCtx.resSetCamera);
-		_cameraPassCtx.cmdList.SetGraphicsResourceSet(1, resSetObject);
+		_cameraPassCtx.CmdList.SetPipeline(_pipeline.Value);
+		_cameraPassCtx.CmdList.SetGraphicsResourceSet(0, _cameraPassCtx.ResSetCamera);
+		_cameraPassCtx.CmdList.SetGraphicsResourceSet(1, resSetObject);
 
 		ResourceSet? boundResourceSet = overrideBoundResourceSet ?? _material.BoundResourceSet;
 		if (boundResourceSet != null && _material.BoundResourceLayout != null)
 		{
-			_cameraPassCtx.cmdList.SetGraphicsResourceSet(2, boundResourceSet);
+			_cameraPassCtx.CmdList.SetGraphicsResourceSet(2, boundResourceSet);
 		}
 
 		// Bind geometry buffers:
 		for (uint i = 0; i < bufVertices.Length; i++)
 		{
-			_cameraPassCtx.cmdList.SetVertexBuffer(i, bufVertices[i]);
+			_cameraPassCtx.CmdList.SetVertexBuffer(i, bufVertices[i]);
 		}
-		_cameraPassCtx.cmdList.SetIndexBuffer(bufIndices, mesh.IndexFormat);
+		_cameraPassCtx.CmdList.SetIndexBuffer(bufIndices, mesh.IndexFormat);
 
 		// Issue draw call:
-		_cameraPassCtx.cmdList.DrawIndexed(mesh.IndexCount);
+		_cameraPassCtx.CmdList.DrawIndexed(mesh.IndexCount);
 
 		return success;
 	}
