@@ -31,12 +31,12 @@ The format consists of multiple sections, some of which are designed to be human
 | File Header   | 57 bytes | Fixed-length ASCII code | Format identifier, version, and sections map.     | yes      |
 | Extra Headers | ?        | Fixed-length ASCII code | Additional headers, reserved for future versions. | ?        |
 | Description   | variable | JSON (UTF-8)            | Description of file content and shader type.      | yes      |
-| Source Code   | variable | HLSL (UTF-8)            | Full original shader code, typically in HLSL.     | no       |
+| Source Code   | variable | HLSL, GLSL, MSL (UTF-8) | Full original shader code, typically in HLSL.     | no       |
 | Compiled Data | variable | IL byte code            | Multiple blocks of compiled shader data.          | yes      |
 
 The file header contains a file format version number. For future versions of the format, it is possible that additional headers or sections may be added to the format's structure. These may be mapped directly within the extra headers section, and have their data located in new sections after the compiled data section. All minor versions within a same major version should remain interoperable and garantee at least basic functionality.
 
-While there is nothing stopping anyone from packing all sections of the format as tightly as possible, the implementation for the Fragment engine uses the ASCII string `"########\r\n"` to separate them. While this adds around 30 bytes to average file size, it makes the files ever so slightly more human-readable.
+While there is nothing stopping anyone from packing all sections of the format as tightly as possible, the implementation for the Fragment engine uses the ASCII string `"########\r\n"` to separate them. While this adds around 50 bytes to average file size, it makes the files ever so slightly more human-readable.
 
 
 
@@ -87,16 +87,26 @@ This optional member of the JSON-encoded description provides details about the 
 | EntryPoints                | `VariantEntryPoint[]?` | [Optional] Array of all variants' entry points and vertex data flags. |
 | SupportedFeaturesTxt       | `string`               | Descriptor string of all supported ShaderGen features.<sup>1</sup>    |
 | MaximumCompiledFeaturesTxt | `string`               | Descriptor of most feature-complete compiled variant.<sup>1</sup>     |
+| SourceCodeBlocks           | `SourceCodeBlock[]`    | Array of all source code blocks, each in a different language.        |
 
 <sup>1</sup>_Descriptor strings for denoting supported and maximum feature sets are encoded in the ShaderGen format. See the section on `ShaderGenConfig` in [Lighting&Shading Guide](../Graphics/Lighting&Shading%20Guide.md) for more details about these strings' format._
 
 #### VariantEntryPoint Class
-This is a nested class within `ShaderDescriptionSourceCodeData`, which describes an specfic variant's entry point function. Each entry of this type is a possible variant that can be compiled at run-time from source code, should the need arise.
+This is a nested class within `ShaderDescriptionSourceCodeData`, which describes a specfic variant's entry point function. Each entry of this type is a possible variant that can be compiled at run-time from source code, should the need arise.
 
 | Property     | Type                  | Description                                                           |
 | ------------ | --------------------- | --------------------------------------------------------------------- |
 | VariantFlags | `MeshVertexDataFlags` | Bit mask of all vertex data flags that apply to this variant.         |
 | EntryPoint   | `string`              | Name of the entry point function of this variant.                     |
+
+#### SourceCodeBlock Class
+This is a nested class within `ShaderDescriptionSourceCodeData`, which describes one or more source code blocks that are bundled in the file. Each block contains the same or equivalent shader programl in a different shader language. By default, HLSL (Direct3D shading language) and MSL (Metal shading language) source code would be listed and bundled. Dependinhg on the language, the described source code block will be encoded in either UTF-8 or ASCII.
+
+| Property     | Type                  | Description                                                           |
+| ------------ | --------------------- | --------------------------------------------------------------------- |
+| Language     | `ShaderGenLanguage`   | Enum value indicating the shading language of this source code block. |
+| ByteOffset   | `uint`                | Offset of source code block from start of source code data section.   |
+| ByteSize     | `uint`                | Size of source code data block, in bytes.                             |
 
 #### ShaderDescriptionVariantData Class
 
@@ -123,9 +133,11 @@ _Source code:_ [CompiledShaderDataType](../../FragEngine3/FragEngine3/Graphics/R
 
 
 ### 3. Source Code
-The source code section is an optional data section which contains the HLSL source code that was used to compile the bundled shader variants. Source code must encoded as ASCII or UTF-8 plaintext.
+The source code section is an optional data section which contains the source code that was used to compile the bundled shader variants. Source code must encoded as ASCII or UTF-8 plaintext.
 
 This section should only be present and contain code if the `Source code offset` and `Source code size` properties in the file header are non-zero, and if entry points and supported features were fully documented in the JSON description's `SourceCode` field.
+
+The description section also contains byte sizes and offsets of the different blocks contained within this section. Each block contains the same or equivalent shader code logic, though each in a different shader language. This way, if source code needs to be recompiled at run-time, the shader importer may choose to compile from whichever language enjoys the best support on the current platform.
 
 There are 2 reasons to include shader source code in your release build:
 - Variant compilation at run-time
@@ -133,5 +145,11 @@ There are 2 reasons to include shader source code in your release build:
 
 If you need to bundle source code for run-time compilation, but you do not wish to make the files publicly visible, consider using encrypted resource data files. Inside of an encrypted and compressed resource file, all assets contained therein should be safe from leaking unless users can gain access to the decryption key. See [Resource Guide](../Resources/Resource%20Guide.md) for details.
 
+Note that source code must be bundled as a single monolothic string. Any and all include logic - linking in additional source code files - is not supported at this time. When in doubt, consider copy-pasting your included/shared sourc files (ex.: "lighting.hlsl") before the start of a specific shader's source code (i.e.: prefix "lighting.hlsl" to "pixel_shader.hlsl").
+
 ### 4. Compiled Data
-TODO
+The compiled data section consists of a contiguous sequence of byte data blocks. Each block contains pre-compiled shader programs for a specific variant of a shader asset, and targeting a specific graphics API.
+
+The data in each compiled block may or may not be human-readable, seeing as the data is primarily in some portable intermediate language for faster on-the-fly transpiling to native machine code. When viewing an FSHA file in a common text editor, all contents from this section onwards will look like a garbled mess, and do not have any visible delimitations or markers to tell where one block ends and the next one starts. If the compiled data contains a string terminator value at some point, then the data thereafter may not show up at all, making it look like the file was cut short.
+
+The shader importer will automatically pick the right pre-compiled block based on the underlying shader variant, and targeting the right graphics backend. If none of the pre-compiled variants match the importer's needs, it may instead use bundled source code to compile variants on-demand and at run-time.
