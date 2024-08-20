@@ -532,6 +532,12 @@ public sealed class ResourceManager : IEngineSystem
 					_assignResourceCallback(texture);
 				}
 				break;
+			case ResourceType.Font:
+				if (success = FontImporter.ImportFont())
+				{
+					//TODO
+				}
+				break;
 			//...
 			default:
 				success = false;
