@@ -15,6 +15,7 @@ const string testShaderEntryPoint = "Main_Pixel";
 // Export serializable shader data in FSHA-compliant format:
 FshaExportOptions exportOptions = new()
 {
+	bundleOnlySourceIfCompilationFails = true,
 	shaderStage = testShaderStage,
 	entryPointBase = testShaderEntryPoint,
 	maxVertexVariantFlags = MeshVertexDataFlags.BasicSurfaceData | MeshVertexDataFlags.ExtendedSurfaceData,

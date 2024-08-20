@@ -1,58 +1,9 @@
 ﻿using FragEngine3.EngineCore;
-using FragEngine3.Graphics.Resources.ShaderGen;
 using FragEngine3.Utility.Serialization;
 using System.Text;
 using Veldrid;
 
 namespace FragEngine3.Graphics.Resources.Data.ShaderTypes;
-
-[Serializable]
-public sealed class ShaderDescriptionVariantData
-{
-	#region Properties
-
-	/// <summary>
-	/// The type of compiled shader data. Basically, what backend/runtime is was compiled for.
-	/// </summary>
-	public CompiledShaderDataType Type { get; init; }
-
-	/// <summary>
-	/// Vertex data flags of this variant.
-	/// </summary>
-	public MeshVertexDataFlags VariantFlags { get; init; } = 0;
-	/// <summary>
-	/// String-encoded description of variant features and flags. May be decoded to <see cref="ShaderGen.ShaderGenConfig"/>.
-	/// </summary>
-	public string VariantDescriptionTxt { get; init; } = string.Empty;
-	/// <summary>
-	/// Name of this variant's entrypoint function within the source code.
-	/// </summary>
-	public string EntryPoint { get; init; } = string.Empty;
-
-	/// <summary>
-	/// Starting position offset relative to beginning of compiled shader data section.
-	/// </summary>
-	public uint ByteOffset { get; set; }
-	/// <summary>
-	/// Size of the compiled data block, in bytes.
-	/// </summary>
-	public uint ByteSize { get; init; }
-
-	#endregion
-	#region Methods
-
-	public bool IsValid()
-	{
-		bool result =
-			Type != CompiledShaderDataType.Other &&
-			VariantFlags != 0 &&
-			ByteSize != 0 &&
-			!string.IsNullOrEmpty(VariantDescriptionTxt);
-		return result;
-	}
-
-	#endregion
-}
 
 [Serializable]
 public sealed class ShaderDescriptionSourceCodeData
@@ -69,7 +20,7 @@ public sealed class ShaderDescriptionSourceCodeData
 	[Serializable]
 	public sealed class SourceCodeBlock
 	{
-		public ShaderGenLanguage Language { get; init; } = 0;
+		public ShaderLanguage Language { get; init; } = 0;
 		public uint ByteOffset { get; set; } = 0;
 		public uint ByteSize { get; init; } = 0;
 	}

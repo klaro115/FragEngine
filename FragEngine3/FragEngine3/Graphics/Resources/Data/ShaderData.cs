@@ -29,7 +29,7 @@ public sealed class ShaderData
 
 	// SOURCE CODE:
 
-	public Dictionary<ShaderGenLanguage, byte[]>? SourceCode = null;
+	public Dictionary<ShaderLanguage, byte[]>? SourceCode = null;
 
 	// COMPILED BYTE CODE:
 
@@ -87,7 +87,7 @@ public sealed class ShaderData
 		//... (reserved for additional headers)
 
 		// Try reading source code data, if available:
-		Dictionary<ShaderGenLanguage, byte[]>? sourceCodeUtf8Blocks = null;
+		Dictionary<ShaderLanguage, byte[]>? sourceCodeUtf8Blocks = null;
 		if (!fileHeader.sourceCode.IsEmpty() && description.SourceCode?.SourceCodeBlocks is not null)
 		{
 			long sourceCodeStartPosition = fileStartPosition + fileHeader.sourceCode.byteOffset;

@@ -29,20 +29,20 @@ public static class ShaderGenerator
 		if (string.IsNullOrEmpty(templateCodePS))
 		{
 			// Identify the shader language of choice for current platform setup:
-			ShaderGenLanguage language;
+			ShaderLanguage language;
 			if (_platformFlags.HasFlag(EnginePlatformFlag.GraphicsAPI_D3D))
-				language = ShaderGenLanguage.HLSL;
+				language = ShaderLanguage.HLSL;
 			else if (_platformFlags.HasFlag(EnginePlatformFlag.GraphicsAPI_Metal))
-				language = ShaderGenLanguage.Metal;
+				language = ShaderLanguage.Metal;
 			else
-				language = ShaderGenLanguage.GLSL;
+				language = ShaderLanguage.GLSL;
 
 			// Determine name and extension for template shader code file:
 			string templateFileName = language switch
 			{
-				ShaderGenLanguage.HLSL => $"{ShaderGenConstants.MODULAR_SURFACE_SHADER_PS_NAME_BASE}.hlsl",
-				ShaderGenLanguage.Metal => $"{ShaderGenConstants.MODULAR_SURFACE_SHADER_PS_NAME_BASE}.metal",
-				ShaderGenLanguage.GLSL => $"{ShaderGenConstants.MODULAR_SURFACE_SHADER_PS_NAME_BASE}.glsl",
+				ShaderLanguage.HLSL => $"{ShaderGenConstants.MODULAR_SURFACE_SHADER_PS_NAME_BASE}.hlsl",
+				ShaderLanguage.Metal => $"{ShaderGenConstants.MODULAR_SURFACE_SHADER_PS_NAME_BASE}.metal",
+				ShaderLanguage.GLSL => $"{ShaderGenConstants.MODULAR_SURFACE_SHADER_PS_NAME_BASE}.glsl",
 				_ => string.Empty,
 			};
 			if (string.IsNullOrEmpty(templateFileName))

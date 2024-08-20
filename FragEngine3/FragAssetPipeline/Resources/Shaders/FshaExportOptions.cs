@@ -1,6 +1,5 @@
 ﻿using FragEngine3.Graphics.Resources;
 using FragEngine3.Graphics.Resources.Data.ShaderTypes;
-using FragEngine3.Graphics.Resources.ShaderGen;
 using Veldrid;
 
 namespace FragAssetPipeline.Resources.Shaders;
@@ -11,20 +10,29 @@ namespace FragAssetPipeline.Resources.Shaders;
 public sealed class FshaExportOptions
 {
 	/// <summary>
-	/// Flags for each shader type you want to compile for. This specifies for which
-	/// platforms and graphics APIs pre-compiled shader variants should be built.<para/>
-	/// If no flags are provided, only	<see cref="CompiledShaderDataType.DXBC"/> will
+	/// Flags for each type of compiled data you want to generate. This specifies
+	/// for which platforms and graphics APIs pre-compiled shader variants should
+	/// be built.<para/>
+	/// If no flags are provided, only <see cref="CompiledShaderDataType.DXBC"/> will
 	/// be targeted by default if D3D is supported on the compiling device. If DXBC is
 	/// not supported, no variants shall be pre-compiled.
 	/// </summary>
-	public CompiledShaderDataType shaderTypeFlags = CompiledShaderDataType.ALL;
+	public CompiledShaderDataType compiledDataTypeFlags = CompiledShaderDataType.ALL;
 
 	/// <summary>
 	/// Flags for all language for which the original source code shall be bundled.
 	/// If no flags are set, no source code will be included. Any flags for which
 	/// no source code is available will be skipped.
 	/// </summary>
-	public ShaderGenLanguage bundledSourceCodeLanguages = ShaderGenLanguage.ALL;
+	public ShaderLanguage bundledSourceCodeLanguages = ShaderLanguage.ALL;
+
+	/// <summary>
+	/// Whether to only bundle source code if no variants could be compiled. If
+	/// true, the exporter will still generate an FSHA file, but it will contain
+	/// no pre-compiled variants. Export will fail if no source code was set to
+	/// be bundled.
+	/// </summary>
+	public bool bundleOnlySourceIfCompilationFails = false;
 
 	/// <summary>
 	/// Which shader stage we're compiling. Only one stage flag can be active for
@@ -37,7 +45,9 @@ public sealed class FshaExportOptions
 	/// entry points that use flags that are not raised on this option will be
 	/// skipped during compilation.<para/>
 	/// Example: If only basic and extended vertex data flags are raised, any
-	/// variants using blend shapes or bone animation will not be pre-compiled.
+	/// variants using blend shapes or bone animation will not be pre-compiled.<para/>
+	/// Note: The flag '<see cref="MeshVertexDataFlags.BasicSurfaceData"/>' needs
+	/// to be raised in order for any variants to be pre-compiled.
 	/// </summary>
 	public MeshVertexDataFlags maxVertexVariantFlags = MeshVertexDataFlags.BasicSurfaceData;
 

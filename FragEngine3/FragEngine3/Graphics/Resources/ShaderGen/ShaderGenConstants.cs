@@ -1,4 +1,5 @@
 ﻿using System.Collections.Frozen;
+using FragEngine3.Graphics.Resources.Data.ShaderTypes;
 
 namespace FragEngine3.Graphics.Resources.ShaderGen;
 
@@ -6,11 +7,11 @@ public static class ShaderGenConstants
 {
 	#region Fields
 
-	public static readonly FrozenDictionary<ShaderGenLanguage, string> shaderLanguageFileExtensions = new Dictionary<ShaderGenLanguage, string>()
+	public static readonly FrozenDictionary<ShaderLanguage, string> shaderLanguageFileExtensions = new Dictionary<ShaderLanguage, string>()
 	{
-		[ShaderGenLanguage.HLSL] = ".hlsl",
-		[ShaderGenLanguage.GLSL] = ".glsl",
-		[ShaderGenLanguage.Metal] = ".metal",
+		[ShaderLanguage.HLSL] = ".hlsl",
+		[ShaderLanguage.GLSL] = ".glsl",
+		[ShaderLanguage.Metal] = ".metal",
 	}.ToFrozenDictionary();
 
 	#endregion

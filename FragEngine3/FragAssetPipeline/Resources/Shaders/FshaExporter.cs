@@ -75,14 +75,14 @@ public static class FshaExporter
 
 		// Extract source code language flags:
 		bool isSourceCodeIncluded = _options.bundledSourceCodeLanguages != 0;
-		List<ShaderGenLanguage> sourceCodeLanguages = new(3);
+		List<ShaderLanguage> sourceCodeLanguages = new(3);
 
 		if (isSourceCodeIncluded)
 		{
-			const int languageFlagsMaxBits = sizeof(ShaderGenLanguage) * 8;
+			const int languageFlagsMaxBits = sizeof(ShaderLanguage) * 8;
 			for (int i = 0; i < languageFlagsMaxBits; ++i)
 			{
-				ShaderGenLanguage languageFlag = (ShaderGenLanguage)(1 << i);
+				ShaderLanguage languageFlag = (ShaderLanguage)(1 << i);
 				if (_options.bundledSourceCodeLanguages.HasFlag(languageFlag))
 				{
 					sourceCodeLanguages.Add(languageFlag);
@@ -93,23 +93,25 @@ public static class FshaExporter
 		// Try compiling all variants from the provided entry points:
 		List<CompiledVariant> compiledVariants = new(_options.entryPoints!.Count);
 		ushort variantCount = 0;
-		uint currentByteOffset = 0;
+		uint currentByteOffsetDxbc = 0;
+		uint currentByteOffsetDxil = 0;
+		uint currentByteOffsetSpirv = 0;
 
 		// Group compiled and bundled variants by shader data type:
 		bool success = true;
-		if (_options.shaderTypeFlags.HasFlag(CompiledShaderDataType.DXBC))
+		if (_options.compiledDataTypeFlags.HasFlag(CompiledShaderDataType.DXBC))
 		{
-			success &= CompileVariants_DXBC(_filePath, _options, compiledVariants, ref currentByteOffset, ref variantCount);
+			success &= CompileVariants_DXBC(_filePath, _options, compiledVariants, ref currentByteOffsetDxbc, ref variantCount);
 		}
-		if (_options.shaderTypeFlags.HasFlag(CompiledShaderDataType.DXIL))
+		if (_options.compiledDataTypeFlags.HasFlag(CompiledShaderDataType.DXIL))
 		{
-			success &= CompileVariants_DXIL(_filePath, _options, compiledVariants, ref currentByteOffset, ref variantCount);
+			success &= CompileVariants_DXIL(_filePath, _options, compiledVariants, ref currentByteOffsetDxil, ref variantCount);
 		}
-		if (_options.shaderTypeFlags.HasFlag(CompiledShaderDataType.SPIRV))
+		if (_options.compiledDataTypeFlags.HasFlag(CompiledShaderDataType.SPIRV))
 		{
-			success &= CompileVariants_SPIRV(_filePath, _options, compiledVariants, ref currentByteOffset, ref variantCount);
+			success &= CompileVariants_SPIRV(_filePath, _options, compiledVariants, ref currentByteOffsetSpirv, ref variantCount);
 		}
-		if (_options.shaderTypeFlags.HasFlag(CompiledShaderDataType.MetalArchive))
+		if (_options.compiledDataTypeFlags.HasFlag(CompiledShaderDataType.MetalArchive))
 		{
 			//TODO: Add Metal shader library/archive compiler.
 		}
@@ -117,11 +119,10 @@ public static class FshaExporter
 		if (!success)
 		{
 			Console.WriteLine($"Warning: Compilation of one or more shader variants failed! File path: '{_filePath}'");
-			_outFshaShaderData = null;
-			return false;
 		}
 
-		if (compiledVariants.Count == 0)
+		// Return error if no variants were compiled, and if source-only export is disabled:
+		if (compiledVariants.Count == 0 && (!_options.bundleOnlySourceIfCompilationFails || !isSourceCodeIncluded))
 		{
 			Console.WriteLine($"Error! Failed to compile any FSHA shader variants! File path: '{_filePath}'");
 			_outFshaShaderData = null;
@@ -131,12 +132,16 @@ public static class FshaExporter
 		// Prepare variant data and source code for writing:
 		var compiledVariantData = new ShaderDescriptionVariantData[variantCount];
 		var entryPointData = new ShaderDescriptionSourceCodeData.VariantEntryPoint[variantCount];
-		var allByteCodeDxbc = new byte[currentByteOffset];
+
+		var allByteCodeDxbc = new byte[currentByteOffsetDxbc];
+		var allByteCodeDxil = new byte[currentByteOffsetDxil];
+		var allByteCodeSpirv = new byte[currentByteOffsetSpirv];
 
 		for (int i = 0; i < compiledVariants.Count; ++i)
 		{
 			CompiledVariant compiledVariant = compiledVariants[i];
 
+			// Assemble mappings and entry points for compiled variants:
 			compiledVariantData[i] = new()
 			{
 				Type = compiledVariant.shaderType,
@@ -151,15 +156,24 @@ public static class FshaExporter
 				VariantFlags = compiledVariant.vertexDataFlags,
 				EntryPoint = compiledVariant.entryPoint,
 			};
+
+			// Copy compiled byte data into the backend-specific byte buffer:
+			byte[] allByteCode = compiledVariant.shaderType switch
+			{
+				CompiledShaderDataType.DXBC => allByteCodeDxbc,
+				CompiledShaderDataType.DXIL => allByteCodeDxil,
+				CompiledShaderDataType.SPIRV => allByteCodeSpirv,
+				_ => [],
+			};
 			Array.Copy(
 				compiledVariant.compiledData, 0,
-				allByteCodeDxbc, compiledVariant.byteOffset,
+				allByteCode, compiledVariant.byteOffset,
 				compiledVariant.compiledData.Length);
 		}
 
 		// If source code should be included:
 		ShaderDescriptionSourceCodeData? sourceCodeData = null;
-		Dictionary<ShaderGenLanguage, byte[]>? sourceCodeUtf8Blocks = null;
+		Dictionary<ShaderLanguage, byte[]>? sourceCodeUtf8Blocks = null;
 		if (isSourceCodeIncluded)
 		{
 			// Try to determine entry point functions' base name: (generally the most basic variant)
@@ -178,7 +192,7 @@ public static class FshaExporter
 			sourceCodeUtf8Blocks = [];
 			List<ShaderDescriptionSourceCodeData.SourceCodeBlock> sourceCodeBlocks = [];
 			uint sourceCodeCurrentOffset = 0u;
-			foreach (ShaderGenLanguage language in sourceCodeLanguages)
+			foreach (ShaderLanguage language in sourceCodeLanguages)
 			{
 				// Check if a source file of the same name, but using different extension exists:
 				if (!ShaderGenConstants.shaderLanguageFileExtensions.TryGetValue(language, out string? languageExt)) continue;
@@ -227,7 +241,7 @@ public static class FshaExporter
 				shaderDataBlockCount = variantCount,
 				shaderData = new()
 				{
-					byteOffset = currentByteOffset,
+					byteOffset = currentByteOffset,	//TODO: this is probably nonsense.
 				}
 			},
 			Description = new ShaderDescriptionData()
