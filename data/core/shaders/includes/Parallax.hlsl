@@ -3,6 +3,12 @@
 
 #ifdef FEATURE_PARALLAX
 
+/****************** INCLUDES: ******************/
+//<INC>
+
+#include "./ConstantBuffers/CBCamera.hlsl"
+
+//<INC>
 /****************** RESOURCES: *****************/
 //<RES>
 
@@ -36,7 +42,7 @@ half2 WorldOffset2Pixel(
         ddy(_uv) * (half)dot(_worldOffset, ddyPos * invWorldPerPixelY);
 }
 
-half2 ApplyParallaxMap(const in float3 _worldPosition, const in float3 _surfaceNormal, const half2 _uv)
+half2 CalculateParallaxMap(const in float3 _worldPosition, const in float3 _surfaceNormal, const half2 _uv)
 {
     static const float MAX_DEPTH = 0.05;
 
@@ -94,13 +100,11 @@ half2 ApplyParallaxMap(const in float3 _worldPosition, const in float3 _surfaceN
 /***************** FUNCTIONS: ******************/
 //<FNC>
 
-float2 CalculateSurfaceUv(const in float2 _inputUv)
+void ApplyParallaxMap(inout float2 _uv, const in float3 _worldPosition, const in float3 _inputNormal)
 {
 #ifdef FEATURE_PARALLAX
     // Recalculate UV from parallax map:
-    return ApplyParallaxMap(inputBasic.worldPosition, inputBasic.normal, _inputUv);
-#else
-    return _inputUv;
+    _uv = CalculateParallaxMap(_worldPosition, _inputNormal, _uv);
 #endif //FEATURE_PARALLAX
 }
 

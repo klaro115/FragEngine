@@ -25,7 +25,7 @@ half3 UnpackNormalMap(const in half3 _texNormal)
     return half3(_texNormal.x * 2 - 1, _texNormal.z, _texNormal.y * 2 - 1); // NOTE: Texture normals are expected to be in OpenGL standard.
 }
 
-half3 ApplyNormalMap(const in half3 _worldNormal, const in half3 _worldTangent, const in half3 _worldBinormal, in half3 _texNormal)
+half3 CalculateNormalMap(const in half3 _worldNormal, const in half3 _worldTangent, const in half3 _worldBinormal, in half3 _texNormal)
 {
     _texNormal = UnpackNormalMap(_texNormal);
 
@@ -46,15 +46,12 @@ half3 ApplyNormalMap(const in half3 _worldNormal, const in half3 _worldTangent, 
 /***************** FUNCTIONS: ******************/
 //<FNC>
 
-half3 CalculateSurfaceNormal(const in float3 _inputNormal)
+void ApplyNormalMap(inout float3 _surfaceNormal, const in half3 _worldTangent, const in half3 _worldBinormal, const in float2 _uv)
 {
 #ifdef FEATURE_NORMALS
     // Calculate normals from normal map:
-    const half3 normal = TexNormal.Sample(SamplerMain, uv);
-    return ApplyNormalMap(_inputNormal, half3(0, 0, 1), half3(1, 0, 0), normal);
-#else
-	// Use surface normal from input as-is:
-    return _inputNormal;
+    const half3 texNormal = TexNormal.Sample(SamplerMain, _uv);
+    _surfaceNormal = CalculateNormalMap(_surfaceNormal, _worldTangent, _worldBinormal, texNormal);
 #endif //FEATURE_NORMALS
 }
 

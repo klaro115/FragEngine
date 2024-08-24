@@ -28,12 +28,10 @@ half3 CalculateAmbientLight(const in float3 _worldNormal)
 /***************** FUNCTIONS: ******************/
 //<FNC>
 
-half3 GetAmbientLightIntensity(const in float3 _worldNormal)
+void ApplyAmbientLightIntensity(inout half3 _lightIntensity, const in float3 _worldNormal)
 {
 #if defined(FEATURE_LIGHT) && defined(FEATURE_LIGHT_AMBIENT)
-	return CalculateAmbientLight(_worldNormal);
-#else
-	return half3(0, 0, 0);
+	_lightIntensity += CalculateAmbientLight(_worldNormal);
 #endif //FEATURE_LIGHT && FEATURE_LIGHT_AMBIENT
 }
 

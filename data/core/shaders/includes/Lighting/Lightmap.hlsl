@@ -1,7 +1,7 @@
 #ifndef __HAS_LIGHTMAP__
 #define __HAS_LIGHTMAP__
 
-#if defined(FEATURE_LIGHT) && defined(FEATURE_LIGHT_LIGHTMAP)
+#if defined(FEATURE_LIGHT) && defined(FEATURE_LIGHT_LIGHTMAPS)
 
 /****************** RESOURCES: *****************/
 //<RES>
@@ -30,7 +30,7 @@ half3 CalculateLightmaps(const in float2 _uv)
 
 void ApplyLightmaps(inout half3 _lightIntensity, const in float2 _uv)
 {
-#if defined(FEATURE_LIGHT) && defined(FEATURE_LIGHT_LIGHTMAP)
+#if defined(FEATURE_LIGHT) && defined(FEATURE_LIGHT_LIGHTMAPS)
 	_lightIntensity += CalculateLightmaps(_uv);
 #endif
 }
