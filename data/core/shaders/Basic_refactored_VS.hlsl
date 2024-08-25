@@ -1,7 +1,7 @@
-#pragma pack_matrix( column_major )
-
 /******************* DEFINES: ******************/
 //<DEF>
+
+#pragma pack_matrix( column_major )
 
 // Variants:
 #define VARIANT_EXTENDED                        // Whether to always create a shader variant using extended surface data

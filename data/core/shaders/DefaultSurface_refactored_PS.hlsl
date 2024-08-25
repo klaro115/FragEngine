@@ -1,7 +1,7 @@
-//#pragma pack_matrix( column_major )
-
 /******************* DEFINES: ******************/
 //<DEF>
+
+//#pragma pack_matrix( column_major )
 
 // Albedo:
 #define FEATURE_ALBEDO_TEXTURE 1                // Whether to initialize albedo color from main texture. If false, a color literal is used
