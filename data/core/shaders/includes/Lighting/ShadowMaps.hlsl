@@ -114,7 +114,7 @@ half CalculateShadowMapLightWeight(const in Light _light, const in float3 _world
 
 #if defined(FEATURE_LIGHT) && defined(FEATURE_LIGHT_SOURCES)
 
-half CalculateLightWeight(const in Light _light, const in float3 _worldPosition, const in float3 _surfaceNormal)
+half ApplyShadowMapLightWeight(const in Light _light, const in float3 _worldPosition, const in float3 _surfaceNormal)
 {
 #if defined(FEATURE_LIGHT) && defined(FEATURE_LIGHT_SHADOWMAPS)
 	return CalculateShadowMapLightWeight(_light, _worldPosition, _surfaceNormal);

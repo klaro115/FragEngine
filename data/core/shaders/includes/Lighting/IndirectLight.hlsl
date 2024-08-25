@@ -1,7 +1,7 @@
 #ifndef __HAS_INDIRECT_LIGHT__
 #define __HAS_INDIRECT_LIGHT__
 
-#if defined(FEATURE_LIGHT_INDIRECT) && FEATURE_LIGHT_INDIRECT > 1
+#if defined(FEATURE_LIGHT) && defined(FEATURE_LIGHT_SOURCES) && defined(FEATURE_LIGHT_SHADOWMAPS) && defined(FEATURE_LIGHT_INDIRECT) && FEATURE_LIGHT_INDIRECT > 1
 
 /****************** INCLUDES: ******************/
 //<INC>
@@ -12,7 +12,7 @@
 /****************** RESOURCES: *****************/
 //<RES>
 
-#if !defined(HAS_SHADOW_NORMAL_MAPS)
+#ifndef HAS_SHADOW_NORMAL_MAPS
 #define HAS_SHADOW_NORMAL_MAPS
     Texture2DArray<half3> TexShadowNormalMaps : register(ps, t2);
 #endif
@@ -69,7 +69,7 @@ half3 CalculateIndirectLightScatter(const in Light _light, const in float3 _worl
             const float distSqBounced = dot(offsetBounced, offsetBounced);
             const float intensityPostBounce = intensityPreBounce / distSqBounced;
 
-            lightBounceSum += dot(offsetBounced, _surfaceNormal) < 0 ? intensityPostBounce : 0;
+            lightBounceSum += dot(offsetBounced, _surfaceNormal) < 0 ? intensityPostBounce : 0; //TODO: _surfaceNormal is wrong! That's geometry normal, but here we need surface/shaded normal!
         }
     }
     lightBounceSum *= bounceAmount;
@@ -83,13 +83,13 @@ half3 CalculateIndirectLightScatter(const in Light _light, const in float3 _worl
 /***************** FUNCTIONS: ******************/
 //<FNC>
 
-#if defined(FEATURE_LIGHT) && defined(FEATURE_LIGHT_SOURCES)
+#if defined(FEATURE_LIGHT) && defined(FEATURE_LIGHT_SOURCES) && defined(FEATURE_LIGHT_SHADOWMAPS)
 
 void ApplyIndirectLighting(inout half3 _lightIntensity, const in Light _light, const in float3 _worldPosition, const in float3 _surfaceNormal)
 {
-#if defined(FEATURE_LIGHT) && defined(FEATURE_LIGHT_LIGHTMAP)
+#if defined(FEATURE_LIGHT_INDIRECT) && FEATURE_LIGHT_INDIRECT > 1
 	_lightIntensity += CalculateIndirectLightScatter(_light, _worldPosition, _surfaceNormal);
-#endif
+#endif //FEATURE_LIGHT_INDIRECT
 }
 
 #endif //FEATURE_LIGHT && FEATURE_LIGHT_SOURCES
