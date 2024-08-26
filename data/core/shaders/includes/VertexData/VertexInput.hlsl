@@ -28,7 +28,7 @@ struct VertexInput_BlendShapes
 #endif
 
 #ifdef VARIANT_ANIMATION
-sruct VertexInput_Animation
+struct VertexInput_BoneWeights
 {
 	uint4 indices : BLENDINDICES1;
 	float4 weights : BLENDWEIGHT1;
