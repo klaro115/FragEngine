@@ -5,6 +5,7 @@
 
 // Albedo:
 #define FEATURE_ALBEDO_TEXTURE 1                // Whether to initialize albedo color from main texture. If false, a color literal is used
+#define FEATURE_ALBEDO_UNSAMPLED                // Whether to omit using a sampler for reading from main texture. If defined, 'Texture.Load()' will be used.
 #define FEATURE_ALBEDO_COLOR half4(1, 1, 1, 1)  // Color literal from which albedo may be initialized
 
 // Normals:
@@ -41,24 +42,12 @@
 //<INC>
 
 #include "./includes/VertexData/VertexOutput.hlsl"
+#include "./includes/Albedo.hlsl"
 #include "./includes/Normals.hlsl"
 #include "./includes/Parallax.hlsl"
 #include "./includes/Lighting/Lighting.hlsl"
 
 //</INC>
-/****************** RESOURCES: *****************/
-//<RES>
-
-#if FEATURE_ALBEDO_TEXTURE == 1
-Texture2D<half4> TexMain : register(ps, t4);
-#endif //FEATURE_ALBEDO_TEXTURE == 1
-
-#if !defined(HAS_SAMPLER_MAIN) && FEATURE_ALBEDO_TEXTURE == 1
-#define HAS_SAMPLER_MAIN
-    SamplerState SamplerMain : register(s1);
-#endif //HAS_SAMPLER_MAIN
-
-//</RES>
 /******************* SHADERS: ******************/
 //<FNC>
 
@@ -68,12 +57,8 @@ half4 Main_Pixel(in VertexOutput_Basic inputBasic) : SV_Target0
 	float2 uv = inputBasic.uv;
 	ApplyParallaxMap(uv, inputBasic.worldPosition, inputBasic.normal);
 
-    #if FEATURE_ALBEDO_TEXTURE == 1
     // Sample base color from main texture:
-    half4 albedo = TexMain.Sample(SamplerMain, uv);
-    #else
-    half4 albedo = FEATURE_ALBEDO_COLOR;
-    #endif //FEATURE_ALBEDO_TEXTURE == 1
+    half4 albedo = GetAlbedoColor(uv);
 
     // Calculate normals from normal map:
 	half3 worldNormal = (half3)inputBasic.normal;
@@ -93,12 +78,8 @@ half4 Main_Pixel_Ext(in VertexOutput_Basic inputBasic, in VertexOutput_Extended 
 	float2 uv = inputBasic.uv;
 	ApplyParallaxMap(uv, inputBasic.worldPosition, inputBasic.normal);
 
-    #if FEATURE_ALBEDO_TEXTURE == 1
     // Sample base color from main texture:
-    half4 albedo = TexMain.Sample(SamplerMain, uv);
-    #else
-    half4 albedo = FEATURE_ALBEDO_COLOR;
-    #endif //FEATURE_ALBEDO_TEXTURE == 1
+    half4 albedo = GetAlbedoColor(uv);
 
     // Calculate normals from normal map:
 	half3 worldNormal = (half3)inputBasic.normal;
