@@ -136,6 +136,7 @@ public static class FshaExporter
 		var allByteCodeDxbc = new byte[currentByteOffsetDxbc];
 		var allByteCodeDxil = new byte[currentByteOffsetDxil];
 		var allByteCodeSpirv = new byte[currentByteOffsetSpirv];
+		uint totalShaderDataByteSize = currentByteOffsetDxbc + currentByteOffsetDxil + currentByteOffsetSpirv;
 
 		for (int i = 0; i < compiledVariants.Count; ++i)
 		{
@@ -241,7 +242,8 @@ public static class FshaExporter
 				shaderDataBlockCount = variantCount,
 				shaderData = new()
 				{
-					byteOffset = currentByteOffset,	//TODO: this is probably nonsense.
+					byteOffset = 0,							//TODO: Calculate actual offset!
+					byteSize = totalShaderDataByteSize,
 				}
 			},
 			Description = new ShaderDescriptionData()
