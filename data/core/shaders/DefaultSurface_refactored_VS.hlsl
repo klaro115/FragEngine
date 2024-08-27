@@ -17,6 +17,10 @@
 #include "./includes/ConstantBuffers/CBCamera.hlsl"
 #include "./includes/ConstantBuffers/CBObject.hlsl"
 
+#ifdef VARIANT_ANIMATED
+#include "./includes/BoneAnimation.hlsl"
+#endif
+
 //</INC>
 /******************* SHADERS: ******************/
 //<FNC>
