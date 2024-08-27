@@ -503,7 +503,7 @@ half2 ApplyParallaxMap(const in float3 _worldPosition, const in float3 _surfaceN
     return _uv - WorldOffset2Pixel(surfaceDir * depth, _worldPosition, _uv) * 100;
 #endif //FEATURE_PARALLAX_FULL
 }
-#endif
+#endif //FEATURE_PARALLAX
 
 /******************* SHADERS: ******************/
 
