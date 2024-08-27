@@ -2,6 +2,9 @@
 
 namespace FragEngine3;
 
+/// <summary>
+/// Extension methods for working with vector types and doing vector math.
+/// </summary>
 public static class VectorExt
 {
 	#region Constants
@@ -20,7 +23,7 @@ public static class VectorExt
 	/// <returns>An angle measurement in radians.</returns>
 	public static float Angle(Vector3 _u, Vector3 _v, bool _normalizeVectors = true)
 	{
-		// 
+		// Optionally normalize vectors before calculating angle:
 		if (_normalizeVectors)
 		{
 			_u = Vector3.Normalize(_u);
@@ -70,8 +73,8 @@ public static class VectorExt
 		{
 			return _to;
 		}
-		return _from + Math.Sign(diff) * _maxChange;
-        }
+		return _from + Math.Sign(diff) * _maxChange;    
+	}
 
 	public static Vector3 MoveTowards(Vector3 _from, Vector3 _to, float _maxChange)
 	{

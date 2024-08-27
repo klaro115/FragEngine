@@ -1,14 +1,18 @@
-﻿using FragEngine3.Scenes.Data;
+﻿namespace FragEngine3.Scenes;
 
-namespace FragEngine3.Scenes
+public interface ISceneElement : IDisposable
 {
-	public interface ISceneElement : IDisposable
-	{
-		#region Properties
+	#region Properties
 
-		bool IsDisposed { get; }
-		SceneElementType ElementType { get; }
+	/// <summary>
+	/// Gets whether this object has been disposed already.
+	/// </summary>
+	bool IsDisposed { get; }
 
-		#endregion
-	}
+	/// <summary>
+	/// Gets the general category of scene elements this object belongs to.
+	/// </summary>
+	SceneElementType ElementType { get; }
+
+	#endregion
 }

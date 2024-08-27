@@ -1,4 +1,6 @@
-﻿using System.Text.Json;
+﻿using System.IO.Compression;
+using System.Text;
+using System.Text.Json;
 using System.Text.Json.Serialization;
 using FragEngine3.EngineCore;
 using FragEngine3.Utility.Serialization.CustomSerializers;
@@ -18,11 +20,11 @@ public static class Serializer
 		{
 			new Matrix4x4JsonConverter(),
 			new PoseJsonConverter(),
+			new RgbaFloatJsonConverter(),
+			//...
 		},
 	};
 	private static JsonSerializerOptions? customOptions = null;
-
-	private static List<JsonConverter> customConverters = new();
 
 	#endregion
 	#region Properties
@@ -87,6 +89,31 @@ public static class Serializer
 		}
 	}
 
+	public static bool SerializeToJson<T>(T _data, out MemoryStream? _outUtf8Stream)
+	{
+		_outUtf8Stream = null;
+		if (_data == null)
+		{
+			Logger.Instance?.LogError("Cannot serialize null data to JSON!");
+			return false;
+		}
+
+		try
+		{
+			_outUtf8Stream = new(512);
+
+			JsonSerializer.Serialize(_outUtf8Stream, _data, Options);
+			return true;
+		}
+		catch (Exception ex)
+		{
+			Logger.Instance?.LogException($"Failed to serialize data '{_data}' to JSON!", ex);
+			_outUtf8Stream?.Dispose();
+			_outUtf8Stream = null;
+			return false;
+		}
+	}
+
 	public static bool SerializeJsonToFile<T>(T _data, string _filePath)
 	{
 		if (string.IsNullOrEmpty(_filePath))
@@ -107,6 +134,36 @@ public static class Serializer
 		catch (Exception ex)
 		{
 			Logger.Instance?.LogException($"Failed to write JSON to file at path '{_filePath}'!", ex);
+			return false;
+		}
+	}
+
+	public static bool SerializeJsonToCompressedFile<T>(T _data, string _filePath)
+	{
+		if (string.IsNullOrEmpty(_filePath))
+		{
+			Logger.Instance?.LogError("Cannot write serialized JSON to file at null or blank file path!");
+			return false;
+		}
+		if (!SerializeToJson(_data, out MemoryStream? jsonUtf8Stream))
+		{
+			return false;
+		}
+
+		try
+		{
+			jsonUtf8Stream!.Position = 0;
+
+			using FileStream fileStream = new(_filePath, FileMode.Create, FileAccess.Write);
+			using DeflateStream zipStream = new(fileStream, CompressionLevel.Optimal);
+
+			jsonUtf8Stream!.CopyTo(zipStream);
+
+			return true;
+		}
+		catch (Exception ex)
+		{
+			Logger.Instance?.LogException($"Failed to compress JSON and write result to file at path '{_filePath}'!", ex);
 			return false;
 		}
 	}
@@ -142,10 +199,52 @@ public static class Serializer
 			return false;
 		}
 
+		if (!File.Exists(_filePath))
+		{
+			Logger.Instance?.LogError($"Error! JSON file at path '{_filePath}' could not be found!");
+			_outData = default;
+			return false;
+		}
+
 		string jsonTxt;
 		try
 		{
 			jsonTxt = File.ReadAllText(_filePath);
+		}
+		catch (Exception ex)
+		{
+			Logger.Instance?.LogException($"Error! Failed to read JSON from file at path '{_filePath}'!", ex);
+			_outData = default;
+			return false;
+		}
+
+		return DeserializeFromJson(jsonTxt, out _outData);
+	}
+
+	public static bool DeserializeJsonFromCompressedFile<T>(string _filePath, out T? _outData)
+	{
+		if (string.IsNullOrEmpty(_filePath))
+		{
+			Logger.Instance?.LogError("Cannot deserialize JSON from null or blank file path!");
+			_outData = default;
+			return false;
+		}
+
+		if (!File.Exists(_filePath))
+		{
+			Logger.Instance?.LogError($"Error! JSON file at path '{_filePath}' could not be found!");
+			_outData = default;
+			return false;
+		}
+
+		string jsonTxt;
+		try
+		{
+			using FileStream fileStream = new(_filePath, FileMode.Open, FileAccess.Read);
+			using DeflateStream zipStream = new(fileStream, CompressionMode.Decompress);
+			using StreamReader reader = new(zipStream, Encoding.UTF8);
+
+			jsonTxt = reader.ReadToEnd();
 		}
 		catch (Exception ex)
 		{

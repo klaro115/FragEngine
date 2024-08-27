@@ -3,45 +3,34 @@ using FragEngine3.Graphics.Lighting;
 using System.Numerics;
 using Veldrid;
 
-namespace FragEngine3.Graphics.Contexts
+namespace FragEngine3.Graphics.Contexts;
+
+/// <summary>
+/// Context type containing resources and parameters for rendering a camera pass.
+/// These values will be passed to all renderers for which draw calls are issued during the camera pass.
+/// </summary>
+public sealed class CameraPassContext
 {
-	public sealed class CameraPassContext(
-		// References:
-		CameraInstance _cameraInstance,
-		CommandList _cmdList,
+	#region Fields
 
-		// Camera resources:
-		Framebuffer _framebuffer,
-		ResourceSet _resSetCamera,
-		DeviceBuffer _cbCamera,
-		LightDataBuffer _lightDataBuffer,
+	// References:
+	public CameraInstance CameraInstance { get; init; } = null!;
+	public CommandList CmdList { get; init; } = null!;
 
-		// Parameters:
-		uint _frameIdx,
-		uint _passIdx,
-		uint _lightCountShadowMapped,
-		in Matrix4x4 _mtxWorld2Clip)
-	{
-		#region Fields
+	// Camera resources:
+	public Framebuffer Framebuffer { get; init; } = null!;
+	public ResourceSet ResSetCamera { get; init; } = null!;
+	public DeviceBuffer CbCamera { get; init; } = null!;
+	public LightDataBuffer LightDataBuffer { get; init; } = null!;
+	public ushort CameraResourceVersion { get; init; }
 
-		// References:
-		public readonly CameraInstance cameraInstance = _cameraInstance;
-		public readonly CommandList cmdList = _cmdList;
-
-		// Camera resources:
-		public readonly Framebuffer framebuffer = _framebuffer;
-		public readonly ResourceSet resSetCamera = _resSetCamera;
-		public readonly DeviceBuffer cbCamera = _cbCamera;
-		public readonly LightDataBuffer lightDataBuffer = _lightDataBuffer;
-
-		// Parameters:
-		public readonly uint frameIdx = _frameIdx;
-		public readonly uint passIdx = _passIdx;
-		public readonly uint lightCountShadowMapped = Math.Min(_lightCountShadowMapped, _lightDataBuffer.Count);
-		public readonly Matrix4x4 mtxWorld2Clip = _mtxWorld2Clip;
-		public readonly OutputDescription outputDesc = _framebuffer.OutputDescription;
-		public readonly bool mirrorY = _cameraInstance.ProjectionSettings.mirrorY;
-
-		#endregion
-	}
+	// Parameters:
+	public uint FrameIdx { get; init; }
+	public uint PassIdx { get; init; }
+	public uint LightCountShadowMapped { get; init; }
+	public Matrix4x4 MtxWorld2Clip { get; init; }
+	public OutputDescription OutputDesc { get; init; }
+	public bool MirrorY { get; init; }
+	
+	#endregion
 }

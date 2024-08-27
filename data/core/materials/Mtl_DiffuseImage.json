@@ -1,0 +1,64 @@
+{
+    "Key": "Mtl_DiffuseImage",
+    "States":
+    {
+        "EnableDepthTest": true,
+        "EnableDepthWrite": true,
+        
+        "EnableStencil": false,
+        "StencilFront":
+        {
+            "Fail": 0,
+            "Pass": 0,
+            "DepthFail": 0,
+            "ComparisonKind": 3
+        },
+        "StencilBack":
+        {
+            "Fail": 0,
+            "Pass": 0,
+            "DepthFail": 0,
+            "ComparisonKind": 3
+        },
+
+        "EnableCulling": true,
+        "RenderMode": 1,
+        "ZSortingBias": 0.0
+    },
+    "Shaders":
+    {
+        "IsSurfaceMaterial": true,
+        "Compute": "",
+        "Vertex": "DefaultSurface_VS",
+        "Geometry": "",
+        "TesselationCtrl": "",
+        "TesselationEval": "",
+        "Pixel": "DefaultSurface_PS"
+    },
+    "Replacements":
+    {
+        "SimplifiedVersion": "",
+        "ShadowMap": "Mtl_DiffuseImage_Shadow"
+    },
+    "Resources":
+    [
+        {
+            "ResourceKey": "TexQoiTestcard_rgba",
+            "SlotName": "TexMain",
+            "SlotIndex": 4,
+            "ResourceKind": 3,
+            "ShaderStageFlags": 16,
+            "Description": null,
+            "IsBoundBySystem": false
+        },
+        {
+            "ResourceKey": "",
+            "SlotName": "SamplerMain",
+            "SlotIndex": 1,
+            "ResourceKind": 5,
+            "ShaderStageFlags": 16,
+            "Description": "WWW_7_N_W",
+            "IsBoundBySystem": false
+        }
+    ]
+}

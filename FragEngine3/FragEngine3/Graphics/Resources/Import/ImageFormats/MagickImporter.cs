@@ -5,6 +5,10 @@ using Veldrid;
 
 namespace FragEngine3.Graphics.Resources.Import.ImageFormats;
 
+/// <summary>
+/// Importer for the various image file formats.<para/>
+/// NOTE: This is used as a backup for any image formats not implemented directly be the engine.
+/// </summary>
 public static class MagickImporter
 {
 	#region Types
@@ -45,6 +49,11 @@ public static class MagickImporter
 	#endregion
 	#region Methods
 
+	/// <summary>
+	/// Checks whether a given file format is at all supported.
+	/// </summary>
+	/// <param name="_fileExtension">The file extension of the image format.</param>
+	/// <returns>True if the format is supported, false otherwise. This will also return true in case of partial support.</returns>
 	public static bool SupportsFormat(string _fileExtension)
 	{
 		if (string.IsNullOrEmpty(_fileExtension))
@@ -55,6 +64,11 @@ public static class MagickImporter
 		return supportedFormatExtensions.Any(o => string.Compare(o, _fileExtension, StringComparison.InvariantCultureIgnoreCase) == 0);
 	}
 
+	/// <summary>
+	/// Find and parse any additional processinng flags that need to be respected during import.
+	/// </summary>
+	/// <param name="_importFlags">A string containing the resource's import flags.</param>
+	/// <returns>Bit flags for all import flags that were detected.</returns>
 	public static ImportFlags ParseImportFlags(string? _importFlags)
 	{
 		if (string.IsNullOrEmpty(_importFlags)) return 0;

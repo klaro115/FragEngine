@@ -1,13 +1,35 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
+	<!-- Project Type: -->
+	
   <PropertyGroup>
-    <OutputType>Exe</OutputType>
+    <OutputType>Library</OutputType>
     <TargetFramework>net8.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <Configurations>Debug;Debug_MacOS;Release;Release_MacOS</Configurations>
+    <GenerateDocumentationFile>True</GenerateDocumentationFile>
   </PropertyGroup>
 
+	<!-- Version: -->
+	
+	<PropertyGroup>
+		<VersionPrefix>0.0.1</VersionPrefix>
+		<VersionSuffix>dev</VersionSuffix>
+	</PropertyGroup>
+	
+	<!-- Authors & Source: -->
+	
+	<PropertyGroup>
+    <Authors>KlaRo115</Authors>
+    <PackageProjectUrl></PackageProjectUrl>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
+    <RepositoryUrl>https://github.com/klaro115/FragEngine</RepositoryUrl>
+    <RepositoryType>git</RepositoryType>
+	</PropertyGroup>
+
+	<!-- Build Configurations: -->
+	
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <WarningLevel>4</WarningLevel>
@@ -24,7 +46,10 @@
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release_MacOS|AnyCPU'">
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
 		<DefineConstants>MACOS</DefineConstants>
+		<Optimize>True</Optimize>
   </PropertyGroup>
+	
+	<!-- Project Contents: -->
 	
   <ItemGroup>
     <None Remove="Graphics\" />
@@ -48,7 +73,16 @@
     <Folder Include="Utility\Unicode\" />
   </ItemGroup>
   <ItemGroup>
-    <PackageReference Include="Magick.NET-Q16-AnyCPU" Version="13.5.0" />
+    <None Include="..\..\README.md">
+      <Pack>True</Pack>
+      <PackagePath>\</PackagePath>
+    </None>
+  </ItemGroup>
+	
+	<!-- Dependencies: -->
+	
+  <ItemGroup>
+    <PackageReference Include="Magick.NET-Q16-AnyCPU" Version="13.8.0" />
     <PackageReference Include="NativeLibraryLoader" Version="1.0.13" />
     <PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
     <PackageReference Include="Veldrid" Version="4.9.0" />

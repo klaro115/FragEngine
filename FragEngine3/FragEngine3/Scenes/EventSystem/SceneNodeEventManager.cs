@@ -1,5 +1,4 @@
-﻿
-namespace FragEngine3.Scenes.EventSystem
+﻿namespace FragEngine3.Scenes.EventSystem
 {
 	public sealed class SceneNodeEventManager
 	{
@@ -16,7 +15,7 @@ namespace FragEngine3.Scenes.EventSystem
 
 		public readonly SceneNode node;
 
-		public readonly Dictionary<SceneEventType, List<ComponentEventListener>> eventListenerMap = [];
+		public readonly Dictionary<SceneEventType, List<ISceneEventListener>> eventListenerMap = [];
 
 		#endregion
 		#region Properties
@@ -35,7 +34,10 @@ namespace FragEngine3.Scenes.EventSystem
 
 		public void Destroy()
 		{
-			//...
+			eventListenerMap.Clear();
+
+			EventTypeCount = 0;
+			TotalListenerCount = 0;
 		}
 
 		/// <summary>
@@ -61,18 +63,18 @@ namespace FragEngine3.Scenes.EventSystem
 			for (int i = 0; i < node.ComponentCount; i++)
 			{
 				Component? component = node.GetComponent(i);
-				if (component != null && !component.IsDisposed)
+				if (component is ISceneEventListener eventListener && !eventListener.IsDisposed)
 				{
 					// Register listeners for all events, mapped by event type:
-					SceneEventType[] eventTypes = component.GetSceneEventList();
-					foreach (SceneEventType eventType in eventTypes)
+					IEnumerator<SceneEventType> e = component.EnumerateEventsListenedTo();
+					while (e.MoveNext())
 					{
-						if (!eventListenerMap.TryGetValue(eventType, out List<ComponentEventListener>? listeners))
+						if (!eventListenerMap.TryGetValue(e.Current, out List<ISceneEventListener>? listeners))
 						{
 							listeners = [];
-							eventListenerMap.Add(eventType, listeners);
+							eventListenerMap.Add(e.Current, listeners);
 						}
-						listeners.Add(new(component, component.ReceiveSceneEvent));
+						listeners.Add(eventListener);
 						TotalListenerCount++;
 					}
 				}
@@ -118,7 +120,7 @@ namespace FragEngine3.Scenes.EventSystem
 
 			foreach (var kvp in eventListenerMap)
 			{
-				removed += kvp.Value.RemoveAll(o => o.target.IsDisposed || o.target == _component);
+				removed += kvp.Value.RemoveAll(o => o.IsDisposed || o == _component);
 				TotalListenerCount += kvp.Value.Count;
 				if (kvp.Value.Count != 0)
 				{
@@ -137,7 +139,7 @@ namespace FragEngine3.Scenes.EventSystem
 
 		public bool AddListenersFromComponent(Component _component)
 		{
-			if (_component == null || _component.IsDisposed)
+			if (_component is not ISceneEventListener eventListener || _component.IsDisposed)
 			{
 				node.Logger.LogError("Cannot add listeners of null or disposed component!");
 				return false;
@@ -146,20 +148,20 @@ namespace FragEngine3.Scenes.EventSystem
 			bool added = false;
 
 			// Register listeners for all events, mapped by event type:
-			SceneEventType[] eventTypes = _component.GetSceneEventList();
-			foreach (SceneEventType eventType in eventTypes)
+			IEnumerator<SceneEventType> e = _component.EnumerateEventsListenedTo();
+			while (e.MoveNext())
 			{
-				if (!eventListenerMap.TryGetValue(eventType, out List<ComponentEventListener>? listeners))
+				if (!eventListenerMap.TryGetValue(e.Current, out List<ISceneEventListener>? listeners))
 				{
 					listeners = [];
-					eventListenerMap.Add(eventType, listeners);
+					eventListenerMap.Add(e.Current, listeners);
 				}
-				else if (listeners.Any(o => o.target == _component))
+				else if (listeners.Contains(eventListener))
 				{
 					continue;
 				}
 
-				listeners.Add(new(_component, _component.ReceiveSceneEvent));
+				listeners.Add(eventListener);
 				if (listeners.Count == 1)
 				{
 					EventTypeCount++;
@@ -178,12 +180,40 @@ namespace FragEngine3.Scenes.EventSystem
 		/// <param name="_eventData">Any additional data pertaining to or describing the event. Null if no data is needed or expected.</param>
 		public void SendEvent(SceneEventType _eventType, object? _eventData = null)
 		{
-			if (eventListenerMap.TryGetValue(_eventType, out List<ComponentEventListener>? listeners))
+			if (!eventListenerMap.TryGetValue(_eventType, out List<ISceneEventListener>? listeners)) return;
+
+			switch (_eventType)
 			{
-				foreach (ComponentEventListener listener in listeners)
-				{
-					if (listener.IsValid) listener.funcReceiver(_eventType, _eventData);
-				}
+				case SceneEventType.OnNodeDestroyed:
+					listeners.ForEach(o => (o as IOnNodeDestroyedListener)?.OnNodeDestroyed());
+					break;
+				case SceneEventType.OnSetNodeEnabled:
+					{
+						bool isEnabled = _eventData is bool value && value;
+						listeners.ForEach(o => (o as IOnNodeSetEnabledListener)?.OnNodeEnabled(isEnabled));
+					}
+					break;
+				case SceneEventType.OnParentChanged:
+					{
+						SceneNode newParent = (_eventData as SceneNode)!;
+						listeners.ForEach(o => (o as IOnNodeParentChangedListener)?.OnNodeParentChanged(newParent));
+					}
+					break;
+				case SceneEventType.OnComponentAdded:
+					{
+						Component newComponent = (_eventData as Component)!;
+						listeners.ForEach(o => (o as IOnComponentAddedListener)?.OnComponentAdded(newComponent));
+					}
+					break;
+				case SceneEventType.OnComponentRemoved:
+					{
+						Component removedComponent = (_eventData as Component)!;
+						listeners.ForEach(o => (o as IOnComponentRemovedListener)?.OnComponentRemoved(removedComponent));
+					}
+					break;
+				//...
+				default:
+					break;
 			}
 		}
 

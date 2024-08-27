@@ -1,5 +1,8 @@
 ﻿namespace FragEngine3.Utility;
 
+/// <summary>
+/// Extension methods for working with strings.
+/// </summary>
 public static class StringExt
 {
 	#region Methods

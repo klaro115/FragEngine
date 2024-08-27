@@ -1,75 +1,71 @@
-﻿using FragEngine3.Graphics.Components.ConstantBuffers;
+﻿using System.Numerics;
 using FragEngine3.Graphics.Components.Data;
 using FragEngine3.Graphics.Contexts;
-using FragEngine3.Graphics.Internal;
+using FragEngine3.Graphics.Renderers;
 using FragEngine3.Graphics.Resources;
-using FragEngine3.Graphics.Utility;
 using FragEngine3.Resources;
 using FragEngine3.Scenes;
 using FragEngine3.Scenes.Data;
 using FragEngine3.Utility.Serialization;
-using System.Numerics;
 using Veldrid;
 
 namespace FragEngine3.Graphics.Components;
 
-public sealed class StaticMeshRenderer(SceneNode _node) : Component(_node), IRenderer
+public sealed class StaticMeshRenderer : Component, IPhysicalRenderer
 {
+	#region Constructors
+
+	public StaticMeshRenderer(SceneNode _node) : base(_node)
+	{
+		graphicsCore = _node?.scene.engine.GraphicsSystem.graphicsCore ??  throw new ArgumentNullException(nameof(_node), "Node and graphics core may not be null!");
+
+		instance = new(graphicsCore, node.Name);
+		instance.OnResourcesChanged += OnInstanceResourcesChangedListener;
+	}
+
+	#endregion
+	#region Events
+
+	/// <summary>
+	/// Event that is triggered whenever the renderer's resources (mesh and materials) have been changed.
+	/// </summary>
+	public event Action<StaticMeshRenderer>? OnResourcesChanged = null;
+
+	#endregion
 	#region Fields
 
-	public readonly GraphicsCore core = _node.scene.engine.GraphicsSystem.graphicsCore ?? throw new NullReferenceException("Could not find graphics core for static mesh renderer!");
+	public readonly GraphicsCore graphicsCore;
 
-	private uint rendererVersion = 1;
-
-	private Material? material = null;
-	private Material? shadowMaterial = null;
-	private StaticMesh? mesh = null;
-	private float meshBoundingRadius = 0.0f;
-
-	private DeviceBuffer? cbObject = null;
-	private ResourceSet? resSetObject = null;
-	private CBObject cbObjectData = default;
-
-	private PipelineState? pipeline = null;
-	private PipelineState? shadowPipeline = null;
-
-	private ResourceSet? overrideBoundResourceSet = null;
+	private readonly StaticMeshRendererInstance instance;
 
 	#endregion
 	#region Properties
 
-	public bool IsVisible => !IsDisposed && node.IsEnabled && (MeshHandle != null || (Mesh != null && !Mesh.IsDisposed));
-	public bool DontDrawUnlessFullyLoaded { get; set; } = false;
+	public GraphicsCore GraphicsCore => graphicsCore;
 
-	public RenderMode RenderMode => Material != null ? Material.RenderMode : RenderMode.Opaque;
-	public uint LayerFlags { get; set; } = 1;
+	public ResourceHandle MeshHandle => instance.MeshHandle;
+	public ResourceHandle MaterialHandle => instance.MaterialHandle;
+	public ResourceHandle ShadowMaterialHandle => instance.ShadowMaterialHandle;
 
-	public GraphicsCore GraphicsCore => core;
-
-	/// <summary>
-	/// Gets a handle to the material resource that is used to draw this renderer's mesh. A material provides shaders, texture, and lighting instructions.
-	/// </summary>
-	public ResourceHandle? MaterialHandle { get; private set; } = null;
-	public Material? Material => material;
-	public Material? ShadowMaterial => shadowMaterial;
-
-	/// <summary>
-	/// Gets a handle to mesh resource that is drawn by this renderer. A mesh provides the surface geometry of a 3D model.
-	/// </summary>
-	public ResourceHandle? MeshHandle { get; private set; } = null;
-	public StaticMesh? Mesh
+	public bool AreResourcesAssigned => instance.AreResourcesAssigned;
+	public bool AreShadowResourcesAssigned => instance.AreShadowResourcesAssigned;
+	public bool IsVisible => !IsDisposed && instance.IsVisible && node.IsEnabled;
+	public bool DontDrawUnlessFullyLoaded
 	{
-		get => mesh;
-		private set => mesh = value;
+		get => instance.DontDrawUnlessFullyLoaded;
+		set => instance.DontDrawUnlessFullyLoaded = value;
 	}
-	/// <summary>
-	/// Gets the bounding sphere radius enclosing the renderer's mesh.
-	/// </summary>
-	public float BoundingRadius
+
+	public RenderMode RenderMode => instance.RenderMode;
+	public uint LayerFlags
 	{
-		get => meshBoundingRadius;
-		private set => meshBoundingRadius = value;
+		get => instance.LayerFlags;
+		set => instance.LayerFlags = value;
 	}
+
+	public Vector3 VisualCenterPoint => instance.VisualCenterPoint;
+
+	public float BoundingRadius => instance.BoundingRadius;
 
 	#endregion
 	#region Methods
@@ -78,310 +74,76 @@ public sealed class StaticMeshRenderer(SceneNode _node) : Component(_node), IRen
 	{
 		base.Dispose(_disposing);
 
-		cbObject?.Dispose();
-
-		pipeline?.Dispose();
-		shadowPipeline?.Dispose();
-
-		if (_disposing)
-		{
-			cbObject = null;
-
-			MeshHandle = null;
-			Mesh = null;
-			MaterialHandle = null;
-			material = null;
-			shadowMaterial = null;
-		}
+		instance.Dispose();
 	}
 
-	public bool SetMesh(string _resourceKey, bool _loadImmediatelyIfNotReady = false)
+	/// <summary>
+	/// Manually flag the renderer as dirty, forcing a rebuild of the pipeline and constant buffers before the next draw call.
+	/// </summary>
+	public void MarkDirty() => instance.MarkDirty();
+
+	private void OnInstanceResourcesChangedListener(StaticMeshRendererInstance instance)
 	{
-		if (string.IsNullOrEmpty(_resourceKey))
+		if (!IsDisposed)
 		{
-			Logger.LogError("Cannot assign mesh to static mesh renderer using null or blank resource key!");
-			return false;
+			OnResourcesChanged?.Invoke(this);
 		}
-
-		ResourceManager resourceManager = core.graphicsSystem.engine.ResourceManager;
-
-		return resourceManager.GetResource(_resourceKey, out ResourceHandle handle) && SetMesh(handle, _loadImmediatelyIfNotReady);
 	}
 
-	public bool SetMesh(ResourceHandle _meshHandle, bool _loadImmediatelyIfNotReady = false)
-	{
-		if (_meshHandle == null || !_meshHandle.IsValid)
-		{
-			Logger.LogError("Cannot assign null or disposed mesh handle to static mesh renderer!");
-			return false;
-		}
-		if (_meshHandle.resourceType != ResourceType.Model)
-		{
-			Logger.LogError($"Cannot assign resource handle of invalid type '{_meshHandle.resourceType}' as mesh to static mesh renderer!");
-			return false;
-		}
+	public bool SetMesh(string _resourceKey) => !IsDisposed && instance.SetMesh(_resourceKey);
 
-		// If the mesh is already loaded, assign it right away:
-		if (_meshHandle.GetResource(_loadImmediatelyIfNotReady) is StaticMesh mesh && !mesh.IsDisposed)
-		{
-			Mesh = mesh;
-			BoundingRadius = mesh.BoundingRadius;
-		}
-		else
-		{
-			Mesh = null;
-			BoundingRadius = 0.0f;
-		}
+	/// <summary>
+	/// Assigns a mesh that shall be drawn by this renderer.
+	/// </summary>
+	/// <param name="_meshHandle">A resource handle for the mesh. If null or invalid, the mesh will be unassigned.</param>
+	/// <returns>True if the mesh was assigned, false otherwise.</returns>
+	public bool SetMesh(ResourceHandle? _meshHandle) => !IsDisposed && instance.SetMesh(_meshHandle);
 
-		// Assign handle:
-		MeshHandle = _meshHandle;
-		rendererVersion++;
-		return true;
-	}
+	public bool SetMaterial(string _resourceKey) => !IsDisposed && instance.SetMaterial(_resourceKey);
 
-	public bool SetMesh(StaticMesh _mesh)
-	{
-		if (_mesh == null || _mesh.IsDisposed)
-		{
-			Logger.LogError("Cannot assign null or disposed mesh to static mesh renderer!");
-			return false;
-		}
+	/// <summary>
+	/// Assigns a material for rendering the mesh.
+	/// </summary>
+	/// <param name="_materialHandle">A resource handle for the material. If null or invalid, the material will be unassigned.</param>
+	/// <param name="_overrideShadowMaterial">An override material for rendering shadow maps. If non-null, this material replaces any
+	/// shadow material provided by the main material.</param>
+	/// <returns>True if the material was assigned, false otherwise.</returns>
+	public bool SetMaterial(ResourceHandle? _materialHandle, ResourceHandle? _overrideShadowMaterial = null) => !IsDisposed && instance.SetMaterial(_materialHandle, _overrideShadowMaterial);
 
-		// Check if there is a resource handle to go with the given mesh:
-		MeshHandle = null;
-		if (!string.IsNullOrEmpty(_mesh.resourceKey))
-		{
-			ResourceManager resourceManager = core.graphicsSystem.engine.ResourceManager;
-			if (resourceManager.GetResource(_mesh.resourceKey, out ResourceHandle handle) && handle.resourceType == ResourceType.Model)
-			{
-				MeshHandle = handle;
-			}
-		}
+	public bool SetOverrideBoundResourceSet(ResourceSet? _newOverrideResourceSet) => !IsDisposed && instance.SetOverrideBoundResourceSet(_newOverrideResourceSet);
 
-		// Assign mesh and update bounds:
-		Mesh = _mesh;
-		BoundingRadius = Mesh.BoundingRadius;
-		rendererVersion++;
-		return true;
-	}
-
-	public bool SetMaterial(string _resourceKey, bool _loadImmediatelyIfNotReady = false)
-	{
-		if (string.IsNullOrEmpty(_resourceKey))
-		{
-			Logger.LogError("Cannot assign material to static mesh renderer using null or blank resource key!");
-			return false;
-		}
-
-		ResourceManager resourceManager = core.graphicsSystem.engine.ResourceManager;
-
-		return resourceManager.GetResource(_resourceKey, out ResourceHandle handle) && SetMaterial(handle, _loadImmediatelyIfNotReady);
-	}
-
-	public bool SetMaterial(ResourceHandle _materialHandle, bool _loadImmediatelyIfNotReady = false)
-	{
-		if (_materialHandle == null || !_materialHandle.IsValid)
-		{
-			Logger.LogError("Cannot assign null or disposed material handle to static mesh renderer!");
-			return false;
-		}
-		if (_materialHandle.resourceType != ResourceType.Material)
-		{
-			Logger.LogError($"Cannot assign resource handle of invalid type '{_materialHandle.resourceType}' as material to static mesh renderer!");
-			return false;
-		}
-
-		// If the material is already loaded, assign it right away:
-		if (_materialHandle.GetResource(_loadImmediatelyIfNotReady) is Material newMaterial && !newMaterial.IsDisposed)
-		{
-			material = newMaterial;
-		}
-		else
-		{
-			material = null;
-		}
-
-		// Assign handle:
-		MaterialHandle = _materialHandle;
-		rendererVersion++;
-		return true;
-	}
-
-	public bool SetMaterial(Material _material)
-	{
-		if (_material == null || _material.IsDisposed)
-		{
-			Logger.LogError("Cannot assign null or disposed material to static mesh renderer!");
-			return false;
-		}
-
-		// Check if there is a resource handle to go with the given material:
-		MaterialHandle = null;
-		if (!string.IsNullOrEmpty(_material.resourceKey))
-		{
-			ResourceManager resourceManager = core.graphicsSystem.engine.ResourceManager;
-			if (resourceManager.GetResource(_material.resourceKey, out ResourceHandle handle) && handle.resourceType == ResourceType.Material)
-			{
-				MaterialHandle = handle;
-			}
-		}
-
-		// Assign material:
-		material = _material;
-		rendererVersion++;
-		return true;
-	}
-
-	public bool SetOverrideBoundResourceSet(ResourceSet? _newOverrideResourceSet)
-	{
-		if (IsDisposed)
-		{
-			Logger.LogError("Cannot set override resource set on disposed static mesh renderer!");
-			return false;
-		}
-
-		if (_newOverrideResourceSet == null || _newOverrideResourceSet.IsDisposed)
-		{
-			overrideBoundResourceSet = null;
-		}
-		else
-		{
-			overrideBoundResourceSet = _newOverrideResourceSet;
-		}
-		return true;
-	}
-
-	public float GetZSortingDepth(Vector3 _viewportPosition, Vector3 _cameraDirection)
-	{
-		float zSortingBias = Material != null ? Material.ZSortingBias : 0.0f;
-		Vector3 posNode = node.WorldPosition;
-		Vector3 posFront = posNode - _viewportPosition * (BoundingRadius - zSortingBias);
-
-		return Vector3.DistanceSquared(posFront, _viewportPosition);
-	}
+	public float GetZSortingDepth(Vector3 _viewportPosition, Vector3 _cameraDirection) => instance.GetZSortingDepth(_viewportPosition, _cameraDirection);
 
 	public bool Draw(SceneContext _sceneCtx, CameraPassContext _cameraPassCtx)
 	{
-		// Ensure main material is loaded:
-		if (!ResourceLoadUtility.EnsureResourceIsLoaded(MaterialHandle, ref material, DontDrawUnlessFullyLoaded, out bool materialIsReady))
+		if (!IsVisible) return true;
+
+		if (instance.LastUpdatedForFrameIdx != _cameraPassCtx.FrameIdx)
 		{
-			return false;
+			instance.SetWorldPose(node.WorldTransformation);
 		}
-		if (!materialIsReady) return true;
 
-		// Draw material if it's fully loaded, quietly quit otherwise:
-		return material == null || Draw(_sceneCtx, _cameraPassCtx, Material!, ref pipeline);
+		return instance.Draw(_sceneCtx, _cameraPassCtx);
 	}
-
 	public bool DrawShadowMap(SceneContext _sceneCtx, CameraPassContext _cameraPassCtx)
 	{
-		// Ensure main material is loaded:
-		if (!ResourceLoadUtility.EnsureResourceIsLoaded(MaterialHandle, ref material, DontDrawUnlessFullyLoaded, out bool materialIsReady))
-		{
-			return false;
-		}
-		if (!materialIsReady) return true;
+		if (!IsVisible) return true;
 
-		// Ensure shadow material is assigned and loaded:
-		if (!Material!.HasShadowMapMaterialVersion)
+		if (instance.LastUpdatedForFrameIdx != _cameraPassCtx.FrameIdx)
 		{
-			return true;
-		}
-		if (!ResourceLoadUtility.EnsureResourceIsLoaded(Material.ShadowMapMaterialVersion, ref shadowMaterial, DontDrawUnlessFullyLoaded, out materialIsReady))
-		{
-			return false;
+			instance.SetWorldPose(node.WorldTransformation);
 		}
 
-		// Draw shadow material if it's fully loaded, quietly quit otherwise:
-		return !materialIsReady || Draw(_sceneCtx, _cameraPassCtx, shadowMaterial!, ref shadowPipeline);
-	}
-
-	private bool Draw(
-		in SceneContext _sceneCtx,
-		in CameraPassContext _cameraPassCtx,
-		Material _currentMaterial,
-		ref PipelineState? _currentPipeline)
-	{
-		// Check mesh and load it now if necessary:
-		if (!ResourceLoadUtility.EnsureMeshIsLoaded(MeshHandle, ref mesh, ref meshBoundingRadius, DontDrawUnlessFullyLoaded, out bool meshIsReady))
-		{
-			return false;
-		}
-		if (!meshIsReady) return true;
-
-		// Fetch geometry buffers:
-		if (!Mesh!.GetGeometryBuffers(out DeviceBuffer[] vertexBuffers, out DeviceBuffer indexBuffer, out MeshVertexDataFlags vertexDataFlags))
-		{
-			Logger.LogError($"Failed to retrieve geometry buffers for static mesh '{Mesh}'!");
-			return false;
-		}
-
-		// Update (or recreate) pipeline for rendering this material and geometry combo:
-		if (!_currentMaterial.IsPipelineUpToDate(in _currentPipeline, rendererVersion))
-		{
-			_currentPipeline?.Dispose();
-
-			if (!_currentMaterial.CreatePipeline(_sceneCtx, _cameraPassCtx, rendererVersion, vertexDataFlags, out _currentPipeline))
-			{
-				Logger.LogError($"Failed to retrieve pipeline description for material '{_currentMaterial}'!");
-				return false;
-			}
-		}
-		uint vertexBufferCount = Math.Min((uint)vertexBuffers.Length, _currentPipeline!.vertexBufferCount);
-
-		// Update or (re)create the constant buffer containing object data:
-		if (!MeshRendererUtility.UpdateConstantBuffer_CBObject(
-			in core,
-			in _cameraPassCtx.cmdList,
-			in node,
-			BoundingRadius,
-			ref cbObjectData,
-			ref cbObject,
-			out bool cbObjectChanged))
-		{
-			return false;
-		}
-
-		// Ensure the default resource set is assigned:
-		if (!MeshRendererUtility.UpdateObjectResourceSet(
-			in core,
-			in _sceneCtx.resLayoutObject,
-			in cbObject!,
-			node.Name,
-			ref resSetObject,
-			cbObjectChanged))
-		{
-			return false;
-		}
-
-		// Throw pipeline and geometry buffers at the command list:
-		_cameraPassCtx.cmdList.SetPipeline(_currentPipeline.pipeline);
-		_cameraPassCtx.cmdList.SetGraphicsResourceSet(0, _cameraPassCtx.resSetCamera);
-		_cameraPassCtx.cmdList.SetGraphicsResourceSet(1, resSetObject);
-
-		ResourceSet? boundResourceSet = overrideBoundResourceSet ?? _currentMaterial.BoundResourceSet;
-		if (boundResourceSet != null && _currentMaterial.BoundResourceLayout != null)
-		{
-			_cameraPassCtx.cmdList.SetGraphicsResourceSet(2, boundResourceSet);
-		}
-
-		//Console.WriteLine($"Test: Drawing mesh '{Mesh.resourceKey}' using material '{_currentMaterial.resourceKey}'");		//TEST
-
-		for (uint i = 0; i < vertexBufferCount; ++i)
-		{
-			DeviceBuffer vertexBuffer = vertexBuffers[i];
-			_cameraPassCtx.cmdList.SetVertexBuffer(i, vertexBuffer);
-		}
-		_cameraPassCtx.cmdList.SetIndexBuffer(indexBuffer, Mesh.IndexFormat);
-
-		// Issue draw call:
-		_cameraPassCtx.cmdList.DrawIndexed(Mesh.IndexCount);
-
-		return true;
+		return instance.DrawShadowMap(_sceneCtx, _cameraPassCtx);
 	}
 
 	public override bool LoadFromData(in ComponentData _componentData, in Dictionary<int, ISceneElement> _idDataMap)
 	{
+		if (IsDisposed || instance.IsDisposed)
+		{
+			Logger.LogError("Cannot load data on disposed static mesh renderer!");
+			return false;
+		}
 		if (string.IsNullOrEmpty(_componentData.SerializedData))
 		{
 			Logger.LogError("Cannot load static mesh renderer from null or blank serialized data!");
@@ -395,27 +157,34 @@ public sealed class StaticMeshRenderer(SceneNode _node) : Component(_node), IRen
 			return false;
 		}
 
-		ResourceManager resourceManager = core.graphicsSystem.engine.ResourceManager;
+		ResourceManager resourceManager = graphicsCore.graphicsSystem.engine.ResourceManager;
 
 		// Reset all resource references:
-		MaterialHandle = null;
-		material = null;
-		MeshHandle = null;
-		Mesh = null;
+		instance.SetMesh(ResourceHandle.None);
+		instance.SetMaterial(ResourceHandle.None, ResourceHandle.None);
 
 		DontDrawUnlessFullyLoaded = data.DontDrawUnlessFullyLoaded;
 		LayerFlags = data.LayerFlags;
 
+		bool success = true;
+
 		// Load resource handles and queue up loading if they're not available yet:
 		if (!string.IsNullOrEmpty(data.Material))
 		{
+			ResourceHandle? handleShadows = null;
+
 			if (!resourceManager.GetResource(data.Material, out ResourceHandle handle) || handle.resourceType != ResourceType.Material)
 			{
 				Logger.LogError($"A material resource with the key '{data.Material}' could not be found!");
 				return false;
 			}
-			MaterialHandle = handle;
-			material = handle.GetResource(false, false) as Material;
+			if (!string.IsNullOrEmpty(data.ShadowMaterial) && !resourceManager.GetResource(data.ShadowMaterial, out handleShadows) && handleShadows.resourceType == ResourceType.Material)
+			{
+				Logger.LogError($"A shadow material resource with the key '{data.ShadowMaterial}' could not be found!");
+				return false;
+			}
+
+			success &= SetMaterial(handle, handleShadows);
 		}
 		if (!string.IsNullOrEmpty(data.Mesh))
 		{
@@ -424,18 +193,38 @@ public sealed class StaticMeshRenderer(SceneNode _node) : Component(_node), IRen
 				Logger.LogError($"A static mesh resource with the key '{data.Mesh}' could not be found!");
 				return false;
 			}
-			MeshHandle = handle;
-			Mesh = handle.GetResource(false) as StaticMesh;
+
+			success &= SetMesh(handle);
 		}
-		return true;
+		return success;
 	}
 
 	public override bool SaveToData(out ComponentData _componentData, in Dictionary<ISceneElement, int> _idDataMap)
 	{
+		// Gather resource keys:
+		string keyMesh = MeshHandle?.resourceKey ?? string.Empty;
+		string keyMaterialScene = MaterialHandle?.resourceKey ?? string.Empty;
+		string keyMaterialShadow = string.Empty;
+
+		if (ShadowMaterialHandle is not null && ShadowMaterialHandle.IsValid)
+		{
+			keyMaterialShadow = ShadowMaterialHandle.resourceKey;
+		}
+		else if (MaterialHandle is not null && MaterialHandle.IsValid)
+		{
+			Material? materialScene = MaterialHandle.GetResource<Material>(false, false);
+			if (materialScene is not null)
+			{
+				keyMaterialShadow = materialScene.resourceKey;
+			}
+		}
+
+		// Assemble serializable data:
 		StaticMeshRendererData data = new()
 		{
-			Mesh = MeshHandle?.resourceKey ?? Mesh?.resourceKey ?? string.Empty,
-			Material = MaterialHandle?.resourceKey ?? Material?.resourceKey ?? string.Empty,
+			Mesh = keyMesh,
+			Material = keyMaterialScene,
+			ShadowMaterial = keyMaterialShadow,
 
 			DontDrawUnlessFullyLoaded = DontDrawUnlessFullyLoaded,
 			LayerFlags = LayerFlags,
@@ -457,7 +246,7 @@ public sealed class StaticMeshRenderer(SceneNode _node) : Component(_node), IRen
 
 	public override string ToString()
 	{
-		return $"StaticMeshRenderer (Mesh: '{MeshHandle?.resourceKey ?? Mesh?.resourceKey ?? "NULL"}', Material: '{MaterialHandle?.resourceKey ?? Material?.resourceKey ?? "NULL"}')";
+		return $"StaticMeshRenderer, Node: {node.Name}, Mesh: '{MeshHandle.resourceKey}', Material: '{MaterialHandle.resourceKey}', Shadow: '{ShadowMaterialHandle?.resourceKey ?? "NULL"}', RenderMode: '{RenderMode}', IsVisible: {IsVisible}";
 	}
 
 	#endregion

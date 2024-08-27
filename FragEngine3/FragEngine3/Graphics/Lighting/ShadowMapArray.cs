@@ -4,10 +4,22 @@ using Veldrid;
 
 namespace FragEngine3.Graphics.Lighting;
 
+/// <summary>
+/// Management and container type for shadow maps and shadow projection matrix buffers.
+/// Ownership of the shadow map array texture (TexShadowMaps) and the matrix buffer (BufShadowMatrices) lies with this object.
+/// </summary>
 public sealed class ShadowMapArray : IDisposable
 {
 	#region Constructors
 
+	/// <summary>
+	/// Creates a new shadow map array.
+	/// </summary>
+	/// <param name="_core">The graphics core to use for GPU resource creation.</param>
+	/// <param name="_initialCount">The initial number of shadow maps to allocate; the number may increase on-demand at run-time.
+	/// One layer is required for each cascade of each shadow-castinglight source. Must be 1 or higher.</param>
+	/// <exception cref="ArgumentNullException">Thrown if graphics core is null.</exception>
+	/// <exception cref="Exception">Thrown if initial resource creation has failed.</exception>
 	public ShadowMapArray(GraphicsCore _core, uint _initialCount = 1)
 	{
 		core = _core ?? throw new ArgumentNullException(nameof(_core), "Graphics core may not be null!");
@@ -16,9 +28,14 @@ public sealed class ShadowMapArray : IDisposable
 
 		shadowMatrixBuffer = new Matrix4x4[MatrixCapacity];
 
-		ResizeTextureArrays();
-		ResizeShadowMatrixBuffers();
-		CreateShadowMapSampler();
+		bool success = true;
+		success &= ResizeTextureArrays();
+		success &= ResizeShadowMatrixBuffers();
+		success &= CreateShadowMapSampler();
+		if (!success)
+		{
+			throw new Exception("Creation of resources for shadow map array has failed!");
+		}
 	}
 
 	~ShadowMapArray()
@@ -29,6 +46,9 @@ public sealed class ShadowMapArray : IDisposable
 	#endregion
 	#region Events
 
+	/// <summary>
+	/// Event that is triggered when the shadow map array has recreated or resized its shadow map texture array.
+	/// </summary>
 	public event Action? OnRecreatedShadowMapsEvent = null;
 
 	#endregion
@@ -50,8 +70,18 @@ public sealed class ShadowMapArray : IDisposable
 	public DeviceBuffer BufShadowMatrices { get; private set; } = null!;
 	public Sampler SamplerShadowMaps { get; private set; } = null!;
 
+	/// <summary>
+	/// Gets the number of shadow maps that are currently in use.
+	/// </summary>
 	public uint Count {  get; private set; } = 0;
+	/// <summary>
+	/// Gets the total number of shadow maps that are currently allocated.
+	/// </summary>
 	public uint Capacity { get; private set; } = 0;
+	/// <summary>
+	/// Gets the total number of shadow projection matrices that are currently allocated.
+	/// There are always 2 matrices for each shadow map.
+	/// </summary>
 	public uint MatrixCapacity => Capacity * 2;
 
 	private Logger Logger => core.graphicsSystem.engine.Logger;
@@ -120,6 +150,12 @@ public sealed class ShadowMapArray : IDisposable
 		return true;
 	}
 
+	/// <summary>
+	/// Retrieves the framebuffer for rendering a shadow map cascade straight to a layer in the shadow map texture array.
+	/// </summary>
+	/// <param name="_shadowMapArrayIdx">Index of the shadow map for which we need a framebuffer.</param>
+	/// <param name="_outFramebuffer">Outputs the requested layer's framebuffer, or null on failure.</param>
+	/// <returns>True if a framebuffer could be retrieved, false otherwise.</returns>
 	public bool GetFramebuffer(uint _shadowMapArrayIdx, out Framebuffer _outFramebuffer)
 	{
 		if (IsDisposed)
@@ -128,7 +164,7 @@ public sealed class ShadowMapArray : IDisposable
 			return false;
 		}
 		
-		if (_shadowMapArrayIdx >= Capacity)		//Note: 'Count' would be more correct here, but 'Capacity' is safer against creashes and aborts.
+		if (_shadowMapArrayIdx >= Capacity)		//Note: 'Count' would be more correct here, but 'Capacity' is safer against crashes and aborts.
 		{
 			Logger.LogError($"Shadow map index {_shadowMapArrayIdx} is out of range! Make sure you call 'Prepare()' with the right number of array elements!");
 			_outFramebuffer = null!;
@@ -139,6 +175,13 @@ public sealed class ShadowMapArray : IDisposable
 		return true;
 	}
 
+	/// <summary>
+	/// Sets the projection matrix for a specific shadow map.
+	/// </summary>
+	/// <param name="_shadowMapArrayIdx">Index of the shadow map whose matrix is being set.</param>
+	/// <param name="_mtxWorld2Clip">Shadow map projection matrix, transforming from world space to the shadow camera's clip space.
+	/// An accompanying inverse matrix is calculated and assigned as well.</param>
+	/// <returns>True if the inex was valid and the matrix set, false otherwise.</returns>
 	public bool SetShadowProjectionMatrices(uint _shadowMapArrayIdx, in Matrix4x4 _mtxWorld2Clip)
 	{
 		if (_shadowMapArrayIdx >= Capacity)
@@ -147,13 +190,20 @@ public sealed class ShadowMapArray : IDisposable
 		}
 
 		shadowMatrixBuffer[2 * _shadowMapArrayIdx + 0] = _mtxWorld2Clip;
-		if (Matrix4x4.Invert(_mtxWorld2Clip, out shadowMatrixBuffer[2 * _shadowMapArrayIdx + 1]))
+		if (!Matrix4x4.Invert(_mtxWorld2Clip, out shadowMatrixBuffer[2 * _shadowMapArrayIdx + 1]))
 		{
 			shadowMatrixBuffer[2 * _shadowMapArrayIdx + 1] = Matrix4x4.Identity;
 		}
 		return true;
 	}
 
+	/// <summary>
+	/// Sets the projection matrix for a specific shadow map.
+	/// </summary>
+	/// <param name="_shadowMapArrayIdx">Index of the shadow map whose matrix is being set.</param>
+	/// <param name="_mtxWorld2Clip">Shadow map projection matrix, transforming from world space to the shadow camera's clip space.</param>
+	/// <param name="_maxClip2World">Inverse shadow map projection matrix, transforming from the shadow camera's clip space to world space.</param>
+	/// <returns>True if the inex was valid and the matrices set, false otherwise.</returns>
 	public bool SetShadowProjectionMatrices(uint _shadowMapArrayIdx, in Matrix4x4 _mtxWorld2Clip, in Matrix4x4 _maxClip2World)
 	{
 		if (_shadowMapArrayIdx >= Capacity)
@@ -166,6 +216,11 @@ public sealed class ShadowMapArray : IDisposable
 		return true;
 	}
 
+	/// <summary>
+	/// Finalizes and uploads shadow map projection matrices to GPU buffer for upcoming rendering passes.
+	/// </summary>
+	/// <param name="_cmdList">A command list through which the matrix data should be uploaded to GPU memory. If null, upload is done via the graphics device.</param>
+	/// <returns>True if data was successfully sent to GPU buffer, false otherwise.</returns>
 	public bool FinalizeProjectionMatrices(CommandList? _cmdList = null)
 	{
 		if (IsDisposed)
@@ -178,7 +233,7 @@ public sealed class ShadowMapArray : IDisposable
 		try
 		{
 			Span<Matrix4x4> span = shadowMatrixBuffer.AsSpan(0, 2 * (int)Count);
-			if (_cmdList != null)
+			if (_cmdList is not null)
 			{
 				_cmdList.UpdateBuffer(BufShadowMatrices, 0, span);
 			}
@@ -202,7 +257,7 @@ public sealed class ShadowMapArray : IDisposable
 
 		DisposeTextureArrays();
 
-		const uint resolution = LightConstants.shadowResolution;
+		const uint resolution = LightConstants.SHADOW_RESOLUTION;
 		const PixelFormat normalFormat = PixelFormat.R8_G8_B8_A8_UNorm;
 		PixelFormat depthFormat = core.DefaultShadowMapDepthTargetFormat;
 
@@ -319,8 +374,8 @@ public sealed class ShadowMapArray : IDisposable
 	private bool CreateShadowMapSampler()
 	{
 		SamplerDescription samplerDesc = new(
-			SamplerAddressMode.Clamp,
-			SamplerAddressMode.Clamp,
+			SamplerAddressMode.Border,
+			SamplerAddressMode.Border,
 			SamplerAddressMode.Clamp,
 			SamplerFilter.MinLinear_MagLinear_MipPoint,
 			null,

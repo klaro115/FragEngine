@@ -21,7 +21,7 @@ namespace FragEngine3.Graphics.Cameras
 			_outCbSceneChanged = false;
 
 			// Ensure the buffer is allocated:
-			if (_cbScene == null || _cbScene.IsDisposed)
+			if (_cbScene is null || _cbScene.IsDisposed)
 			{
 				_outCbSceneChanged = true;
 
@@ -40,16 +40,12 @@ namespace FragEngine3.Graphics.Cameras
 				}
 			}
 
-			Vector3 ambientLightLow = _sceneSettings.AmbientLightIntensityLow;
-			Vector3 ambientLightMid = _sceneSettings.AmbientLightIntensityMid;
-			Vector3 ambientLightHigh = _sceneSettings.AmbientLightIntensityHigh;
-
 			_cbSceneData = new()
 			{
 				// Scene lighting:
-				ambientLightLow = new RgbaFloat(new(ambientLightLow, 0)),
-				ambientLightMid = new RgbaFloat(new(ambientLightMid, 0)),
-				ambientLightHigh = new RgbaFloat(new(ambientLightHigh, 0)),
+				ambientLightLow = _sceneSettings.AmbientLightIntensityLow,
+				ambientLightMid = _sceneSettings.AmbientLightIntensityMid,
+				ambientLightHigh = _sceneSettings.AmbientLightIntensityHigh,
 				shadowFadeStart = 0.9f,
 			};
 
@@ -72,7 +68,7 @@ namespace FragEngine3.Graphics.Cameras
 		{
 			// Ensure the buffer is allocated:
 			_outCbCameraChanged = false;
-			if (_cbCamera == null || _cbCamera.IsDisposed)
+			if (_cbCamera is null || _cbCamera.IsDisposed)
 			{
 				_outCbCameraChanged = true;
 
@@ -148,21 +144,21 @@ namespace FragEngine3.Graphics.Cameras
 		{
 			_outRecreatedResSetObject = false;
 
-			if (_forceRecreate || _resSetCamera == null || _resSetCamera.IsDisposed)
+			if (_forceRecreate || _resSetCamera is null || _resSetCamera.IsDisposed)
 			{
 				_resSetCamera?.Dispose();
 
 				try
 				{
 					ResourceSetDescription resSetDesc = new(
-						_sceneCtx.resLayoutCamera,
-						_sceneCtx.cbScene,
+						_sceneCtx.ResLayoutCamera,
+						_sceneCtx.CbScene,
 						_cbCamera,
 						_lightDataBuffer.BufLights,
-						_sceneCtx.shadowMapArray.TexDepthMapArray,
-						_sceneCtx.shadowMapArray.TexNormalMapArray,
-						_sceneCtx.shadowMapArray.BufShadowMatrices,
-						_sceneCtx.shadowMapArray.SamplerShadowMaps);
+						_sceneCtx.ShadowMapArray.TexDepthMapArray,
+						_sceneCtx.ShadowMapArray.TexNormalMapArray,
+						_sceneCtx.ShadowMapArray.BufShadowMatrices,
+						_sceneCtx.ShadowMapArray.SamplerShadowMaps);
 
 					_resSetCamera = _graphicsCore.MainFactory.CreateResourceSet(ref resSetDesc);
 					_resSetCamera.Name = $"ResSetCamera";

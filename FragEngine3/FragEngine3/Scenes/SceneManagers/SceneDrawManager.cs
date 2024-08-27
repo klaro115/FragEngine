@@ -2,164 +2,197 @@
 using FragEngine3.Graphics.Components;
 using FragEngine3.Graphics.Stack;
 
-namespace FragEngine3.Scenes.SceneManagers
+namespace FragEngine3.Scenes.SceneManagers;
+
+/// <summary>
+/// Module of a <see cref="Scene"/> that manages registration of drawable scene elements, cameras, and light sources.
+/// This type also handles the scene's highest-level rendering logic via the scene's graphics stack (see '<see cref="Scene.GraphicsStack"/>').
+/// </summary>
+/// <param name="_scene">The scene this manager instance is attached to.</param>
+internal sealed class SceneDrawManager(Scene _scene) : IDisposable
 {
-    /// <summary>
-    /// Module of a <see cref="Scene"/> that manages registration of drawable scene elements, cameras, and light sources.
-    /// This type also handles the scene's highest-level rendering logic via the scene's graphics stack (see '<see cref="Scene.GraphicsStack"/>').
-    /// </summary>
-    /// <param name="_scene">The scene this manager instance is attached to.</param>
-    internal sealed class SceneDrawManager(Scene _scene) : IDisposable
-    {
-        #region Fields
+	#region Fields
 
-        public readonly Scene scene = _scene ?? throw new ArgumentNullException(nameof(_scene), "Scene may not be null!");
+	public readonly Scene scene = _scene ?? throw new ArgumentNullException(nameof(_scene), "Scene may not be null!");
 
-        private readonly List<IRenderer> renderers = [];
+	private readonly List<IRenderer> renderers = [];        //TODO [later]: Split into multiple renderer groups that may populate command lists in parallel, each in their own thread.
 
-        private readonly List<Camera> cameras = new(4);
-        private readonly List<Light> lights = new(64);
+	private readonly List<Camera> cameras = new(4);
+	private readonly List<ILightSource> lights = new(64);
 
-        #endregion
-        #region Properties
+	private readonly object lockObj = new();
 
-        public int DrawListenerCount => renderers.Count;
+	#endregion
+	#region Properties
 
-        #endregion
-        #region Methods
+	public int DrawListenerCount => renderers.Count;
 
-        public void Dispose()
-        {
-            GC.SuppressFinalize(this);
-            Dispose(true);
-        }
-        private void Dispose(bool _disposing)
-        {
-            if (_disposing)
-            {
-                Clear();
-            }
-        }
+	#endregion
+	#region Methods
 
-        public void Clear()
-        {
-            renderers.Clear();
+	public void Dispose()
+	{
+		GC.SuppressFinalize(this);
+		Dispose(true);
+	}
+	private void Dispose(bool _disposing)
+	{
+		if (_disposing)
+		{
+			Clear();
+		}
+	}
 
-            cameras.Clear();
-            lights.Clear();
-        }
+	public void Clear()
+	{
+		lock (lockObj)
+		{
+			renderers.Clear();
 
-        public bool RunDrawStage()
-        {
-            // No renderers in scene? Skip any further processing and return:
-            if (DrawListenerCount == 0)
-            {
-                return true;
-            }
+			cameras.Clear();
+			lights.Clear();
+		}
+	}
 
-            // Sort cameras and lights by priority. High-priority cameras will be drawn first, low-priority lights may be ignored:
-            cameras.Sort((a, b) => a.cameraPriority.CompareTo(b.cameraPriority));
-            lights.Sort((a, b) => a.lightPriority.CompareTo(b.lightPriority));
+	public bool RunDrawStage()
+	{
+		// No renderers in scene? Skip any further processing and return:
+		if (DrawListenerCount == 0)
+		{
+			return true;
+		}
 
-            // If null, create and initialize default forward+light graphics stack:
-            if (scene.GraphicsStack == null || scene.GraphicsStack.IsDisposed)
-            {
-                scene.Logger.LogWarning($"Graphics stack of scene '{scene.Name}' is unassigned, creating default stack instead...");
-                scene.GraphicsStack = new ForwardPlusLightsStack(scene.engine.GraphicsSystem.graphicsCore);
-            }
+		// Sort cameras and lights by priority. High-priority cameras will be drawn first, low-priority lights may be ignored:
+		lock(lockObj)
+		{
+			cameras.Sort((a, b) => a.cameraPriority.CompareTo(b.cameraPriority));
+			lights.Sort((a, b) => a.LightPriority.CompareTo(b.LightPriority));
+		}
 
-            // Ensure the graphics stack is initialized before use:
-            if (!scene.GraphicsStack.IsInitialized && !scene.GraphicsStack.Initialize(scene))
-            {
-                scene.Logger.LogError($"Failed to initialize graphics stack of scene '{scene.Name}'!");
-                return false;
-            }
+		// If null, create and initialize default forward+light graphics stack:
+		if (scene.GraphicsStack == null || scene.GraphicsStack.IsDisposed)
+		{
+			scene.Logger.LogWarning($"Graphics stack of scene '{scene.Name}' is unassigned, creating default stack instead...");
+			scene.GraphicsStack = new ForwardPlusLightsStack(scene.engine.GraphicsSystem.graphicsCore);
+		}
 
-            // Draw the scene and its nodes through the stack:
-            return scene.GraphicsStack.DrawStack(scene, renderers, cameras, lights);
-        }
+		// Ensure the graphics stack is initialized before use:
+		if (!scene.GraphicsStack.IsInitialized && !scene.GraphicsStack.Initialize(scene))
+		{
+			scene.Logger.LogError($"Failed to initialize graphics stack of scene '{scene.Name}'!");
+			return false;
+		}
 
-        public bool RegisterRenderer(IRenderer _newRenderer)
-        {
-            if (_newRenderer == null || _newRenderer.IsDisposed)
-            {
-                scene.Logger.LogError("Cannot register null or disposed renderer for drawing!");
-                return false;
-            }
+		// Draw the scene and its nodes through the stack:
+		return scene.GraphicsStack.DrawStack(scene, renderers, cameras, lights);
+	}
 
-            if (!renderers.Contains(_newRenderer))
-            {
-                renderers.Add(_newRenderer);
-            }
-            return true;
-        }
+	public void SortDrawablesByRenderMode()
+	{
+		lock (lockObj)
+		{
+			renderers.Sort((a, b) => ((int)b.RenderMode).CompareTo((int)a.RenderMode));
+		}
+	}
 
-        public bool UnregisterRenderer(IRenderer _oldRenderer)
-        {
-            if (_oldRenderer == null)
-            {
-                scene.Logger.LogError("Cannot unregister null renderer for drawing!");
-                return false;
-            }
+	public bool RegisterRenderer(IRenderer _newRenderer)
+	{
+		if (_newRenderer is null || _newRenderer.IsDisposed)
+		{
+			scene.Logger.LogError("Cannot register null or disposed renderer for drawing!");
+			return false;
+		}
 
-            renderers.Remove(_oldRenderer);
-            return true;
-        }
+		lock(lockObj)
+		{
+			if (!renderers.Contains(_newRenderer))
+			{
+				renderers.Add(_newRenderer);
+			}
+		}
+		return true;
+	}
 
-        public bool RegisterCamera(Camera _newCamera)
-        {
-            if (_newCamera == null || _newCamera.IsDisposed)
-            {
-                scene.Logger.LogError("Cannot register null or disposed camera in scene!");
-                return false;
-            }
+	public bool UnregisterRenderer(IRenderer _oldRenderer)
+	{
+		if (_oldRenderer is null)
+		{
+			scene.Logger.LogError("Cannot unregister null renderer for drawing!");
+			return false;
+		}
 
-            if (!cameras.Contains(_newCamera))
-            {
-                cameras.Add(_newCamera);
-            }
-            return true;
-        }
+		lock (lockObj)
+		{
+			renderers.Remove(_oldRenderer);
+		}
+		return true;
+	}
 
-        public bool UnregisterCamera(Camera _oldCamera)
-        {
-            if (_oldCamera == null)
-            {
-                scene.Logger.LogError("Cannot unregister null camera from scene!");
-                return false;
-            }
+	public bool RegisterCamera(Camera _newCamera)
+	{
+		if (_newCamera is null || _newCamera.IsDisposed)
+		{
+			scene.Logger.LogError("Cannot register null or disposed camera in scene!");
+			return false;
+		}
 
-            cameras.Remove(_oldCamera);
-            return true;
-        }
+		lock (lockObj)
+		{
+			if (!cameras.Contains(_newCamera))
+			{
+				cameras.Add(_newCamera);
+			}
+		}
+		return true;
+	}
 
-        public bool RegisterLight(Light _newLight)
-        {
-            if (_newLight == null || _newLight.IsDisposed)
-            {
-                scene.Logger.LogError("Cannot register null or disposed light in scene!");
-                return false;
-            }
+	public bool UnregisterCamera(Camera _oldCamera)
+	{
+		if (_oldCamera is null)
+		{
+			scene.Logger.LogError("Cannot unregister null camera from scene!");
+			return false;
+		}
 
-            if (!lights.Contains(_newLight))
-            {
-                lights.Add(_newLight);
-            }
-            return true;
-        }
+		lock (lockObj)
+		{
+			cameras.Remove(_oldCamera);
+		}
+		return true;
+	}
 
-        public bool UnregisterLight(Light _oldLight)
-        {
-            if (_oldLight == null)
-            {
-                scene.Logger.LogError("Cannot unregister null light from scene!");
-                return false;
-            }
+	public bool RegisterLight(ILightSource _newLight)
+	{
+		if (_newLight is null || _newLight.IsDisposed)
+		{
+			scene.Logger.LogError("Cannot register null or disposed light in scene!");
+			return false;
+		}
 
-            lights.Remove(_oldLight);
-            return true;
-        }
+		lock (lockObj)
+		{
+			if (!lights.Contains(_newLight))
+			{
+				lights.Add(_newLight);
+			}
+		}
+		return true;
+	}
 
-        #endregion
-    }
+	public bool UnregisterLight(ILightSource _oldLight)
+	{
+		if (_oldLight is null)
+		{
+			scene.Logger.LogError("Cannot unregister null light from scene!");
+			return false;
+		}
+
+		lock (lockObj)
+		{
+			lights.Remove(_oldLight);
+		}
+		return true;
+	}
+
+	#endregion
 }

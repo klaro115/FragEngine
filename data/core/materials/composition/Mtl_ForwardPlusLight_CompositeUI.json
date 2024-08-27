@@ -1,0 +1,73 @@
+{
+    "Key": "Mtl_ForwardPlusLight_CompositeUI",
+    "States":
+    {
+        "EnableDepthTest": false,
+        "EnableDepthWrite": false,
+        
+        "EnableStencil": false,
+        "StencilFront":
+        {
+            "Fail": 0,
+            "Pass": 0,
+            "DepthFail": 0,
+            "ComparisonKind": 3
+        },
+        "StencilBack":
+        {
+            "Fail": 0,
+            "Pass": 0,
+            "DepthFail": 0,
+            "ComparisonKind": 3
+        },
+
+        "EnableCulling": false,
+        "RenderMode": 4,
+        "ZSortingBias": 0.0
+    },
+    "Shaders":
+    {
+        "IsSurfaceMaterial": true,
+        "Compute": "",
+        "Vertex": "Basic_VS",
+        "Geometry": "",
+        "TesselationCtrl": "",
+        "TesselationEval": "",
+        "Pixel": "ForwardPlusLight_CompositeUI_PS"
+    },
+    "Replacements":
+    {
+        "SimplifiedVersion": "",
+        "ShadowMap": ""
+    },
+    "Resources":
+    [
+        {
+            "ResourceKey": "",
+            "SlotName": "TexSceneColor",
+            "SlotIndex": 4,
+            "ResourceKind": 3,
+            "ShaderStageFlags": 16,
+            "Description": null,
+            "IsBoundBySystem": true
+        },
+        {
+            "ResourceKey": "",
+            "SlotName": "TexSceneDepth",
+            "SlotIndex": 5,
+            "ResourceKind": 3,
+            "ShaderStageFlags": 16,
+            "Description": null,
+            "IsBoundBySystem": true
+        },
+        {
+            "ResourceKey": "",
+            "SlotName": "TexUIColor",
+            "SlotIndex": 6,
+            "ResourceKind": 3,
+            "ShaderStageFlags": 16,
+            "Description": null,
+            "IsBoundBySystem": true
+        }
+    ]
+}

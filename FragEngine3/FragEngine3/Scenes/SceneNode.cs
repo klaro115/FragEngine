@@ -625,14 +625,14 @@ public sealed class SceneNode : ISceneElement
 		while (e.MoveNext())
 		{
 			component = e.Current.GetComponent<T>();
-			if (component != null)
+			if (component is not null)
 			{
 				_results.Add(component);
 			}
 		}
 
 		component = GetComponent<T>();
-		if (component != null)
+		if (component is not null)
 		{
 			_results.Add(component);
 		}
@@ -650,7 +650,7 @@ public sealed class SceneNode : ISceneElement
 		if (_enabledOnly && !isEnabled) return null;
 
 		T? component = GetComponent<T>();
-		if (component != null)
+		if (component is not null)
 		{
 			return component;
 		}
@@ -661,7 +661,7 @@ public sealed class SceneNode : ISceneElement
 			if (!_enabledOnly || child.IsEnabled)
 			{
 				component = child.GetComponentInChildren<T>(_enabledOnly);
-				if (component != null)
+				if (component is not null)
 				{
 					return component;
 				}
@@ -677,7 +677,7 @@ public sealed class SceneNode : ISceneElement
 	/// <returns></returns>
 	public bool HasComponent(Component _component)
 	{
-		return !IsDisposed && ComponentCount != 0 && components!.Contains(_component);
+		return ComponentCount != 0 && components!.Contains(_component);
 	}
 
 	/// <summary>
@@ -687,7 +687,7 @@ public sealed class SceneNode : ISceneElement
 	/// <returns>True if the component belonged to this node and was removed, false otherwise.</returns>
 	public bool RemoveComponent(Component _component)
 	{
-		if (_component == null)
+		if (_component is null)
 		{
 			Logger.LogError("Cannot remove null component from node!");
 			return false;
@@ -699,33 +699,35 @@ public sealed class SceneNode : ISceneElement
 		}
 
 		// Remove the component from this node:
-		bool removed = components != null && components.Remove(_component);
+		bool removed = components is not null && components.Remove(_component);
 		if (removed)
 		{
+			// Send removal event to all components:
+			eventManager?.SendEvent(SceneEventType.OnComponentRemoved, _component);
+
 			// Update renderer list:
 			if (_component is IRenderer renderer)
 			{
 				scene.drawManager.UnregisterRenderer(renderer);
 			}
 
-			// Update update stage lists:
-			if (_component is IUpdatableSceneElement updatable)
+			if (_component is ISceneEventListener eventListener)
 			{
-				scene.updateManager.UnregisterSceneElements(updatable);
-			}
-
-			// Update event manager:
-			if (eventManager != null)
-			{
-				eventManager.RemoveListenersFromComponent(_component);
-				if (eventManager.TotalListenerCount == 0)
+				// Update update stage lists:
+				if (_component is ISceneUpdateListener updateListener)
 				{
-					eventManager?.Destroy();
-					eventManager = null;
+					scene.updateManager.UnregisterSceneElements(updateListener);
 				}
-				else
+
+				// Update event manager:
+				if (eventManager is not null)
 				{
-					eventManager.SendEvent(SceneEventType.OnDestroyComponent, _component);
+					eventManager.RemoveListenersFromComponent(_component);
+					if (eventManager.TotalListenerCount == 0)
+					{
+						eventManager?.Destroy();
+						eventManager = null;
+					}
 				}
 			}
 
@@ -752,7 +754,7 @@ public sealed class SceneNode : ISceneElement
 			_outNewComponent = null;
 			return false;
 		}
-		if (!ComponentFactory.CreateComponent(this, out _outNewComponent, _params) || _outNewComponent == null)
+		if (!ComponentFactory.CreateComponent(this, out _outNewComponent, _params) || _outNewComponent is null)
 		{
 			Logger.LogError($"Failed to create new component on node '{Name}'!");
 			_outNewComponent?.Dispose();
@@ -760,7 +762,7 @@ public sealed class SceneNode : ISceneElement
 			return false;
 		}
 
-		if (components == null)
+		if (components is null)
 		{
 			components = [ _outNewComponent ];
 		}
@@ -773,7 +775,7 @@ public sealed class SceneNode : ISceneElement
 		RegisterComponentEvents(_outNewComponent);
 
 		// Notify other components that a new one was added, and initialize the new component:
-		eventManager?.SendEvent(SceneEventType.OnCreateComponent, _outNewComponent);
+		eventManager?.SendEvent(SceneEventType.OnComponentAdded, _outNewComponent);
 
 		return true;
 	}
@@ -787,7 +789,7 @@ public sealed class SceneNode : ISceneElement
 	public bool GetOrCreateComponent<T>(out T? _outComponent) where T : Component
 	{
 		_outComponent = GetComponent<T>();
-		if (_outComponent != null && !_outComponent.IsDisposed)
+		if (_outComponent is not null && !_outComponent.IsDisposed)
 		{
 			return true;
 		}
@@ -807,7 +809,7 @@ public sealed class SceneNode : ISceneElement
 			Logger.LogError("Cannot add new component on disposed node!");
 			return false;
 		}
-		if (_newComponent == null || _newComponent.IsDisposed)
+		if (_newComponent is null || _newComponent.IsDisposed)
 		{
 			Logger.LogError($"Cannot add null or disposed component to node '{Name}'!");
 			return false;
@@ -819,7 +821,7 @@ public sealed class SceneNode : ISceneElement
 		}
 
 		// Make sure components are initialized, then register component:
-		if (components == null)
+		if (components is null)
 		{
 			components = [ _newComponent ];
 		}
@@ -837,42 +839,44 @@ public sealed class SceneNode : ISceneElement
 		RegisterComponentEvents(_newComponent);
 
 		// Notify other components that a new one was added, and initialize the new component:
-		eventManager?.SendEvent(SceneEventType.OnCreateComponent, _newComponent);
+		eventManager?.SendEvent(SceneEventType.OnComponentAdded, _newComponent);
 
 		return true;
 	}
 
 	private bool RegisterComponentEvents(Component _component)
 	{
-		if (_component == null || _component.IsDisposed) return false;
+		if (_component is null || _component.IsDisposed) return false;
 
-		// Update update stage lists:
-		if (_component is IUpdatableSceneElement updatable)
-		{
-			scene.updateManager.RegisterSceneElement(updatable);
-		}
+		bool success = true;
 
 		// Update renderer list:
 		if (_component is IRenderer renderer)
 		{
-			scene.drawManager.RegisterRenderer(renderer);
+			success &= scene.drawManager.RegisterRenderer(renderer);
 		}
 
-		if (eventManager != null)
+		// Update update stage lists:
+		if (_component is ISceneEventListener eventListener)
 		{
-			// Update event manager's listeners:
-			return eventManager.AddListenersFromComponent(_component);
-		}
-		else
-		{
-			// Create an event manager for relaying events to components:
-			SceneEventType[] eventTypes = _component.GetSceneEventList();
-			if (eventTypes != null && eventTypes.Length != 0)
+			if (_component is ISceneUpdateListener updateListener)
 			{
+				success &= scene.updateManager.RegisterSceneElement(updateListener);
+			}
+
+			if (eventManager != null)
+			{
+				// Update event manager's listeners:
+				success &= eventManager.AddListenersFromComponent(_component);
+			}
+			else
+			{
+				// Create an event manager for relaying events to components:
 				eventManager = new(this);
 			}
-			return true;
 		}
+
+		return success;
 	}
 
 	/// <summary>

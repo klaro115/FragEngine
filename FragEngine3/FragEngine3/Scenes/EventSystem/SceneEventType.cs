@@ -1,5 +1,6 @@
 ﻿
 using FragEngine3.EngineCore;
+using System.Collections.Frozen;
 
 namespace FragEngine3.Scenes.EventSystem
 {
@@ -15,6 +16,13 @@ namespace FragEngine3.Scenes.EventSystem
 	public enum SceneEventType : int
     {
 		None                = 0,
+
+        // UPDATES:
+
+        EarlyUpdate,
+        MainUpdate,
+        LateUpdate,
+        FixedUpdate,
 
 		// SCENE EVENTS:
 
@@ -32,8 +40,8 @@ namespace FragEngine3.Scenes.EventSystem
 
         // COMPONENT EVENTS:
 
-        OnCreateComponent,  // New component was created or added to this node. data = new component (Component)
-        OnDestroyComponent, // Component was removed from this node. data = disposed component (Component)
+        OnComponentAdded,   // New component was created or added to this node. data = new component (Component)
+        OnComponentRemoved, // Component was removed from this node. data = disposed component (Component)
 
         //...
 
@@ -45,7 +53,29 @@ namespace FragEngine3.Scenes.EventSystem
     /// </summary>
     public static class SceneEventTypeExt
     {
-		#region Methods
+        #region Fields
+
+        private static readonly FrozenDictionary<SceneEventType, Type> eventListenerInterfaceTypes = new KeyValuePair<SceneEventType, Type>[]
+        {
+            // Updates:
+            new(SceneEventType.EarlyUpdate, typeof(IOnEarlyUpdateListener)),
+            new(SceneEventType.MainUpdate, typeof(IOnMainUpdateListener)),
+            new(SceneEventType.LateUpdate, typeof(IOnLateUpdateListener)),
+            new(SceneEventType.FixedUpdate, typeof(IOnFixedUpdateListener)),
+
+            // Node Events:
+            new(SceneEventType.OnNodeDestroyed, typeof(IOnNodeDestroyedListener)),
+            new(SceneEventType.OnSetNodeEnabled, typeof(IOnNodeSetEnabledListener)),
+            new(SceneEventType.OnParentChanged, typeof(IOnNodeParentChangedListener)),
+
+            // Component Events:
+            new(SceneEventType.OnComponentAdded, typeof(IOnComponentAddedListener)),
+            new(SceneEventType.OnComponentRemoved, typeof(IOnComponentRemovedListener)),
+            //...
+		}.ToFrozenDictionary();
+
+        #endregion
+        #region Methods
 
         /// <summary>
         /// Check whether the event type is a custom event type, i.e. one that was defined through use-side code.<para/>
@@ -86,6 +116,16 @@ namespace FragEngine3.Scenes.EventSystem
 
             _outEventType = SceneEventType.CUSTOM_EVENT + _idNumber;
             return true;
+        }
+
+        /// <summary>
+        /// Gets the type of a listener interface that corresponds to this event type.
+        /// </summary>
+        /// <param name="_eventType">This event type.</param>
+        /// <returns>The type of an interface whose methods are called when this event is triggered, or null, if the event does not have a specialized listener interface.</returns>
+        public static Type? GetListenerInterfaceType(this SceneEventType _eventType)
+        {
+            return eventListenerInterfaceTypes.TryGetValue(_eventType, out Type? type) ? type : null;
         }
 
 		#endregion

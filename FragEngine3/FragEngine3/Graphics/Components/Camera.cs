@@ -12,7 +12,7 @@ using Veldrid;
 
 namespace FragEngine3.Graphics.Components;
 
-public sealed class Camera : Component
+public sealed class Camera : Component, IOnNodeDestroyedListener, IOnComponentRemovedListener
 {
 	#region Constructors
 
@@ -36,6 +36,7 @@ public sealed class Camera : Component
 	// Render targets:
 	private readonly Dictionary<RenderMode, CameraTarget> targetDict = new(4);
 	private CameraTarget? overrideTarget = null;
+	private ushort resourceVersion = 0;
 
 	private readonly Stack<CameraPassResources> passResourcePool = new(4);
 	private readonly Stack<CameraPassResources> passResourcesInUse = new(4);
@@ -49,18 +50,7 @@ public sealed class Camera : Component
 	private static readonly object mainCameraLockObj = new();
 
 	#endregion
-	#region Constants
-
-	private static readonly SceneEventType[] sceneEventTypes =
-	[
-		SceneEventType.OnNodeDestroyed,
-		SceneEventType.OnDestroyComponent,
-	];
-
-	#endregion
 	#region Properties
-
-	public override SceneEventType[] GetSceneEventList() => sceneEventTypes;
 
 	public bool IsDrawing => !IsDisposed && instance.IsDrawing;
 	public bool HasOverrideFramebuffer => overrideTarget != null && !overrideTarget.IsDisposed;
@@ -198,10 +188,13 @@ public sealed class Camera : Component
 		}
 	}
 
-	public override void ReceiveSceneEvent(SceneEventType _eventType, object? _eventData)
+	public void OnNodeDestroyed()
 	{
-		if (_eventType == SceneEventType.OnNodeDestroyed ||
-			_eventType == SceneEventType.OnDestroyComponent)
+		node.scene.drawManager.UnregisterCamera(this);
+	}
+	public void OnComponentRemoved(Component removedComponent)
+	{
+		if (removedComponent == this)
 		{
 			node.scene.drawManager.UnregisterCamera(this);
 		}
@@ -320,6 +313,10 @@ public sealed class Camera : Component
 			return false;
 		}
 		_outRebuildResSetCamera |= recreatedLightDataBuffer;
+		if (_outRebuildResSetCamera)
+		{
+			resourceVersion++;
+		}
 
 		// Calculate camera transformation/movement since last frame:
 		{
@@ -454,19 +451,32 @@ public sealed class Camera : Component
 			_outCameraPassCtx = null!;
 			return false;
 		}
+		if (_rebuildResSetCamera)
+		{
+			resourceVersion++;
+		}
+
+		// Determine version number for this pass' resources:
+		ushort cameraResourceVersion = (ushort)(resourceVersion ^ _sceneCtx.SceneResourceVersion);
 
 		// Assemble context for rendering this pass:
-		_outCameraPassCtx = new(
-			instance,
-			_cmdList,
-			activeFramebuffer,
-			passResources.resSetCamera!,
-			passResources.cbCamera,
-			LightDataBuffer!,
-			FrameCounter,
-			PassCounter,
-			_shadowMappedLightCount,
-			in mtxWorld2Clip);
+		_outCameraPassCtx = new()
+		{
+			CameraInstance = instance,
+			CmdList = _cmdList,
+			Framebuffer = activeFramebuffer,
+			ResSetCamera = passResources.resSetCamera!,
+			CbCamera = passResources.cbCamera,
+			LightDataBuffer = LightDataBuffer!,
+			CameraResourceVersion = cameraResourceVersion,
+			FrameIdx = FrameCounter,
+			PassIdx = PassCounter,
+			LightCountShadowMapped = _shadowMappedLightCount,
+			MtxWorld2Clip = mtxWorld2Clip,
+			OutputDesc = activeFramebuffer.OutputDescription,
+			MirrorY = instance.ProjectionSettings.mirrorY,
+		};
+
 		return true;
 	}
 

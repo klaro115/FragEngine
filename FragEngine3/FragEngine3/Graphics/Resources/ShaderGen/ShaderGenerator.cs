@@ -1,4 +1,5 @@
 ﻿using FragEngine3.EngineCore;
+using FragEngine3.Graphics.Lighting;
 using FragEngine3.Resources;
 using FragEngine3.Utility;
 using System.Text;
@@ -77,7 +78,7 @@ public static class ShaderGenerator
 		}
 		
 		StringBuilder codeBuilder = new(templateCodePS);
-		int definesMaxEndIdx = Math.Min(1800, codeBuilder.Length);
+		int definesMaxEndIdx = Math.Min(2100, codeBuilder.Length);
 
 		// Drop all flags in config that are based on other feature flags that are disabled:
 		_config.PropagateFlagStatesToHierarchy();
@@ -142,15 +143,24 @@ public static class ShaderGenerator
 					$"#define FEATURE_LIGHT_MODEL {_config.lightingModel}",
 					definesMaxEndIdx);
 			}
-			Range indirectLineIndices = codeBuilder.GetFirstLineIndicesOf("#define FEATURE_LIGHT_INDIRECT");
-			if (indirectLineIndices.Start.Value >= 0)
-			{
-				codeBuilder.Remove(indirectLineIndices);
-				if (_config.indirectLightResolution > 1)
-				{
-					codeBuilder.Insert(indirectLineIndices.Start.Value, $"#define FEATURE_LIGHT_INDIRECT {_config.indirectLightResolution}\n");
-				}
-			}
+			ReplaceDefineValue(
+				codeBuilder,
+				"#define FEATURE_LIGHT_SHADOWMAPS_RES",
+				$"#define FEATURE_LIGHT_SHADOWMAPS_RES {LightConstants.SHADOW_RESOLUTION}",
+				_config.useShadowMaps);
+			
+			ReplaceDefineValue(
+				codeBuilder,
+				"#define FEATURE_LIGHT_SHADOWMAPS_AA",
+				$"#define FEATURE_LIGHT_SHADOWMAPS_AA {_config.shadowSamplingCount}",
+				_config.useShadowMaps && _config.shadowSamplingCount > 1);
+
+			ReplaceDefineValue(
+				codeBuilder,
+				"#define FEATURE_LIGHT_INDIRECT",
+				$"#define FEATURE_LIGHT_INDIRECT {_config.indirectLightResolution}",
+				_config.indirectLightResolution > 1);
+
 			if (!_config.applyLighting)
 			{
 				codeBuilder.RemoveAllLines("#define FEATURE_LIGHT");
@@ -175,6 +185,19 @@ public static class ShaderGenerator
 	private static void RemoveDefine(StringBuilder _builder, string _defineTxt, int _maxEndIdx)
 	{
 		_builder.Replace(_defineTxt, string.Empty, 0, _maxEndIdx);
+	}
+
+	private static void ReplaceDefineValue(StringBuilder _builder, string _baseDefineTxt, string _newDefineTxt, bool _insertNewValue)
+	{
+		Range defineLineIndices = _builder.GetFirstLineIndicesOf(_baseDefineTxt);
+		if (defineLineIndices.Start.Value >= 0)
+		{
+			_builder.Remove(defineLineIndices);
+			if (_insertNewValue)
+			{
+				_builder.Insert(defineLineIndices.Start.Value, _newDefineTxt);
+			}
+		}
 	}
 
 	#endregion

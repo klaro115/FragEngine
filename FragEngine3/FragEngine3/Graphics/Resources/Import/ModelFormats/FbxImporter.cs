@@ -5,6 +5,9 @@ using System.Numerics;
 
 namespace FragEngine3.Graphics.Resources.Import.ModelFormats;
 
+/// <summary>
+/// Importer for the FBX 3D file format.
+/// </summary>
 public static class FbxImporter
 {
 	#region Methods

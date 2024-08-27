@@ -1,14 +1,21 @@
-﻿using FragEngine3.Scenes.Utility;
+﻿namespace FragEngine3.Scenes.Data;
 
-namespace FragEngine3.Scenes.Data
+/// <summary>
+/// Common interface for serializable data types, shared across all scene element types.
+/// </summary>
+public interface ISceneElementData
 {
-	public interface ISceneElementData
-	{
-		#region Properties
+	#region Properties
 
-		int ID { get; }
-		SceneElementType ElementType { get; }
+	/// <summary>
+	/// Scene element ID of the object represented by this data.
+	/// </summary>
+	int ID { get; }
 
-		#endregion
-	}
+	/// <summary>
+	/// The type of scene element this data represents.
+	/// </summary>
+	SceneElementType ElementType { get; }
+
+	#endregion
 }

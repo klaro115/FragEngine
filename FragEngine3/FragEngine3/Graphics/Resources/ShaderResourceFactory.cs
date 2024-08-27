@@ -174,7 +174,7 @@ public static class ShaderResourceFactory
 		}
 
 		// Try reading raw byte data from file:
-		if (!fileHandle.TryReadResourceBytes(_graphicsCore.graphicsSystem, _handle, out byte[] bytes, out int byteCount))
+		if (!fileHandle.TryReadResourceBytes(_handle, out byte[] bytes, out int byteCount))
 		{
 			logger.LogError($"Failed to read shader code for resource '{_handle}'!");
 			_outShaderRes = null;

@@ -149,7 +149,14 @@ public sealed class Scene : IDisposable
 	}
 	private void Dispose(bool _disposing)
 	{
+		bool wasDisposed = IsDisposed;
 		IsDisposed = true;
+
+		// Broadcast expiration event to all remaining scene objects:
+		if (!wasDisposed)
+		{
+			BroadcastEvent(SceneEventType.OnSceneUnloaded, this, false);
+		}
 
 		if (graphicsStack != null)
 		{

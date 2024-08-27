@@ -5,6 +5,9 @@ using System.Text.Json.Serialization;
 
 namespace FragEngine3.Utility.Serialization.CustomSerializers;
 
+/// <summary>
+/// A custom converter for nicely formatting transformations of type '<see cref="Pose"/>' for JSON serialization.
+/// </summary>
 public sealed class PoseJsonConverter : JsonConverter<Pose>
 {
 	#region Methods

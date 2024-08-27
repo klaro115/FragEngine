@@ -6,7 +6,7 @@ public static class LightConstants
 {
 	#region Constants
 
-	public const uint shadowResolution = 1024;
+	public const uint SHADOW_RESOLUTION = 1024;
 	public const float directionalLightSize = 10;       //TEMP
 
 	public const float MIN_LIGHT_INTENSITY = 0.001f;
