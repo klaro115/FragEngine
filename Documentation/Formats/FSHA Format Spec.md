@@ -12,6 +12,7 @@ _Format version: 1.0_
     - [ShaderDescriptionVariantData Class](#shaderdescriptionvariantdata-class)
     - [ShaderLanguage Enum](#shaderlanguage-enum)
     - [CompiledShaderDataType Enum](#compiledshaderdatatype-enum)
+    - [MeshVertexDataFlags Enum](#meshvertexdataflags-enum)
   - [3. Source Code](#3-source-code)
   - [4. Compiled Data](#4-compiled-data)
 
@@ -142,6 +143,16 @@ _Source code:_ [CompiledShaderDataType](../../FragEngine3/FragEngine3/Graphics/R
 |    4 | SPIR-V | Vulkan's portable intermediate shader code.                                                           |
 |    8 | Metal  | Metal shader archive. This is a compiled MSL shader library.                                          |
 |  128 | Other  | Unknown or unsupported compiled shader format. Variants of this type are skipped on import.           |
+
+#### MeshVertexDataFlags Enum
+_Source code:_ [MeshVertexDataFlags](../../FragEngine3/FragEngine3/Graphics/Resources/VertexDataTypes.cs)<br>
+
+| Flag | Name                | Description                                                                    |
+| ---- | ------------------- | ------------------------------------------------------------------------------ |
+|    1 | BasicSurfaceData    | Basic vertex data, includes position, normals, and texture coordinates.        |
+|    2 | ExtendedSurfaceData | Extended vertex data, includes tangents and secondary texture coordinates.     |
+|    4 | BlendShapes         | Blend shape vertex data, includes indices and weights for each vertex.         |
+|    8 | Animations          | Bone animation vertex data, includes bone indices and weights for each vertex. |
 
 <br>
 
