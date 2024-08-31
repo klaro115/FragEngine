@@ -138,6 +138,8 @@ public static class FshaExporter
 		// If source code should be included:
 		ShaderDescriptionSourceCodeData? sourceCodeData = null;
 		Dictionary<ShaderLanguage, byte[]>? sourceCodeUtf8Blocks = null;
+		uint sourceCodeTotalByteSize = 0u;
+
 		if (isSourceCodeIncluded)
 		{
 			// Try to determine entry point functions' base name: (generally the most basic variant)
@@ -188,6 +190,7 @@ public static class FshaExporter
 				MaximumCompiledFeaturesTxt = "At_Nyn_Ly101p0_V110", //TODO
 				SourceCodeBlocks = sourceCodeBlocks.ToArray(),
 			};
+			sourceCodeTotalByteSize = sourceCodeCurrentOffset;
 		}
 
 		// Assemble shader data:
@@ -202,6 +205,10 @@ public static class FshaExporter
 					minor = 0
 				},
 				fileHeaderSize = ShaderDataFileHeader.minFileHeaderSize,
+				sourceCode = new()
+				{
+					byteSize = sourceCodeTotalByteSize,
+				},
 				shaderDataBlockCount = (ushort)outputDetails.variantCount,
 				shaderData = new()
 				{

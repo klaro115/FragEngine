@@ -1,6 +1,5 @@
 ﻿using FragEngine3.EngineCore;
 using FragEngine3.Graphics.Resources.Data.ShaderTypes;
-using FragEngine3.Graphics.Resources.ShaderGen;
 using FragEngine3.Resources.Data;
 using FragEngine3.Utility;
 using System.Text;
@@ -224,13 +223,6 @@ public sealed class ShaderData
 			{
 				uint blockSize = (uint)kvp.Value.Length + SECTION_SPACER_SIZE;
 				sourceCodeSize += blockSize;
-
-				var blockData = Description.SourceCode?.SourceCodeBlocks.FirstOrDefault(o => o.Language == kvp.Key);
-				if (blockData is not null)
-				{
-					blockData.ByteOffset = sourceCodeOffset;
-				}
-				sourceCodeOffset += blockSize;
 			}
 		}
 		uint shaderDataOffset = sourceCodeOffset + sourceCodeSize + SECTION_SPACER_SIZE;
