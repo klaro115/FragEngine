@@ -8,7 +8,9 @@ _Format version: 1.0_
   - [2. Description](#2-description)
     - [ShaderDescriptionSourceCodeData Class](#shaderdescriptionsourcecodedata-class)
     - [VariantEntryPoint Class](#variantentrypoint-class)
+    - [SourceCodeBlock Class](#sourcecodeblock-class)
     - [ShaderDescriptionVariantData Class](#shaderdescriptionvariantdata-class)
+    - [ShaderLanguage Enum](#shaderlanguage-enum)
     - [CompiledShaderDataType Enum](#compiledshaderdatatype-enum)
   - [3. Source Code](#3-source-code)
   - [4. Compiled Data](#4-compiled-data)
@@ -28,7 +30,7 @@ The format consists of multiple sections, some of which are designed to be human
 
 | Section Name  | Size     | Data Format             | Description                                       | Required |
 | ------------- | -------- | ----------------------- | ------------------------------------------------- | -------- |
-| File Header   | 57 bytes | Fixed-length ASCII code | Format identifier, version, and sections map.     | yes      |
+| File Header   | 55 bytes | Fixed-length ASCII code | Format identifier, version, and sections map.     | yes      |
 | Extra Headers | ?        | Fixed-length ASCII code | Additional headers, reserved for future versions. | ?        |
 | Description   | variable | JSON (UTF-8)            | Description of file content and shader type.      | yes      |
 | Source Code   | variable | HLSL, GLSL, MSL (UTF-8) | Full original shader code, typically in HLSL.     | no       |
@@ -54,19 +56,19 @@ Header example: `FSHA_10_0039_0039_0275_02AE_0617_0000_000008C5_000008C4`
 | ---- | ----------------------- | ------ | ------------- | ------------------------------------------------------------------- |
 | 0    | Magic numbers           | 4      | ASCII letters | Magic number string, must be `FSHA`. Serves as format identifier.   |
 | 1    | Format version          | 2      | 2x UInt4      | Format version number; 1st digit is major version, 2nd is minor.    |
-| 2    | Header size             | 4      | UInt16        | Total byte size of file header and extra headers. (Default: `0039`) |
+| 2    | Header size             | 4      | UInt16        | Total byte size of file header and extra headers. (Default: `0037`) |
 | 3    | JSON description offset | 4      | UInt16        | Offset of JSON description section from file start, in bytes.       |
 | 4    | JSON description size   | 4      | UInt16        | Size of JSON description section, in bytes.                         |
 | 5    | Source code offset      | 4      | UInt16        | Offset of HLSL source code section, in bytes. `0` if not included.  |
 | 6    | Source code size        | 4      | UInt16        | Size of HLSL source code section, in bytes. `0` if not included.    |
-| 7    | Compiled block count    | 4      | UInt16        | Number of compiled shader data blocks.                              |
+| 7    | Compiled block count    | 2      | UInt8         | Number of compiled shader data blocks.                              |
 | 8    | Compiled data offset    | 8      | UInt32        | Offset of compiled shader data section from file start, in bytes.   |
 | 9    | Compiled data size      | 8      | UInt32        | Size of compiled shader data section from file start, in bytes.     |
 
 
 
 ### 2. Description
-_Source code:_ [ShaderDescriptionData, ...](../../FragEngine3/FragEngine3/Graphics/Resources/Data/ShaderTypes/ShaderDescriptionData.cs)<br>
+_Source code:_ [ShaderDescriptionData](../../FragEngine3/FragEngine3/Graphics/Resources/Data/ShaderTypes/ShaderDescriptionData.cs)<br>
 The shader description block is made up of a JSON-serialized representation of the class `ShaderDescriptionData`. The JSON string is written in UTF-8 encoding, and should therefore be human-readable in a normal text editor, and follows immediately after the file header (and any extra headers).
 
 The JSON string does not necessarily start immediately after the header ends; refer to the `JSON description offset` in the file header to determine the actual starting point of the string. Also, you should not rely on null-terminators to locate the end of the JSON section, and instead only expect valid JSON out to the `JSON description size` in the file header.
@@ -79,6 +81,7 @@ The JSON string does not necessarily start immediately after the header ends; re
 
 
 #### ShaderDescriptionSourceCodeData Class
+_Source code:_ [ShaderDescriptionSourceCodeData, ...](../../FragEngine3/FragEngine3/Graphics/Resources/Data/ShaderTypes/ShaderDescriptionSourceCodeData.cs)<br>
 This optional member of the JSON-encoded description provides details about the source code. Most importantly, the names of entry point functions for each variant is listed, or a name base from which those variant names may be derived.
 
 | Property                   | Type                   | Description                                                           |
@@ -104,11 +107,12 @@ This is a nested class within `ShaderDescriptionSourceCodeData`, which describes
 
 | Property     | Type                  | Description                                                           |
 | ------------ | --------------------- | --------------------------------------------------------------------- |
-| Language     | `ShaderGenLanguage`   | Enum value indicating the shading language of this source code block. |
+| Language     | `ShaderLanguage`      | Enum value indicating the shading language of this source code block. |
 | ByteOffset   | `uint`                | Offset of source code block from start of source code data section.   |
 | ByteSize     | `uint`                | Size of source code data block, in bytes.                             |
 
 #### ShaderDescriptionVariantData Class
+_Source code:_ [ShaderDescriptionVariantData](../../FragEngine3/FragEngine3/Graphics/Resources/Data/ShaderTypes/ShaderDescriptionVariantData.cs)<br>
 
 | Property              | Type                     | Description                                                        |
 | --------------------- | ------------------------ | ------------------------------------------------------------------ |
@@ -119,6 +123,15 @@ This is a nested class within `ShaderDescriptionSourceCodeData`, which describes
 | ByteOffset            | `uint`                   | Offset of variant data block from start of compiled data section.  |
 | ByteSize              | `uint`                   | Size of variant data block, in bytes.                              |
 
+#### ShaderLanguage Enum
+_Source code:_ [ShaderLanguage](../../FragEngine3/FragEngine3/Graphics/Resources/Data/ShaderTypes/ShaderDataEnums.cs)
+
+| Flag | Name   | Description                                                                                           |
+| ---- | ------ | ----------------------------------------------------------------------------------------------------- |
+|    1 | HLSL   | Microsoft's _Direct3D_ shader language. HLSL stands for **H**igh **L**evel **S**hader **L**anguage.   |
+|    2 | Metal  | Apple's _Metal_ shader language, which is only supported on _MacOS_ and _iOS_ platforms.              |
+|    4 | GLSL   | OpenGL shader language, supported by _OpenGL_ and _Vulkan_ graphics APIs.                             |
+
 #### CompiledShaderDataType Enum
 _Source code:_ [CompiledShaderDataType](../../FragEngine3/FragEngine3/Graphics/Resources/Data/ShaderTypes/ShaderDataEnums.cs)
 
@@ -127,6 +140,7 @@ _Source code:_ [CompiledShaderDataType](../../FragEngine3/FragEngine3/Graphics/R
 |    1 | DXBC   | Old-style Direct3D shader byte code. This format is equivalent to the output of `D3dCompiler.h`.      |
 |    2 | DXIL   | Dx12-style Direct3D intermediate language, produced by the DXC (**D**irect**X** Shader **C**ompiler). |
 |    4 | SPIR-V | Vulkan's portable intermediate shader code.                                                           |
+|    8 | Metal  | Metal shader archive. This is a compiled MSL shader library.                                          |
 |  128 | Other  | Unknown or unsupported compiled shader format. Variants of this type are skipped on import.           |
 
 <br>

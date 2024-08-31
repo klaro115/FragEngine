@@ -4,6 +4,16 @@ internal static class ShaderDataReadWriteHelper
 {
 	#region Methods
 
+	public static byte ReadUInt8(BinaryReader _reader, byte[] _buffer)
+	{
+		_reader.Read(_buffer, 0, 2);    // 2x uppercase hex characters (0-9, A-F)
+		_reader.ReadByte();             // trailing underscore ('_') or line break ('\n').
+		uint value =
+			(HexCharToValue(_buffer[0]) << 4) |
+			(HexCharToValue(_buffer[1]) << 0);
+		return (byte)(value & 0xFF);
+	}
+
 	public static ushort ReadUInt16(BinaryReader _reader, byte[] _buffer)
 	{
 		_reader.Read(_buffer, 0, 4);    // 4x uppercase hex characters (0-9, A-F)
@@ -30,6 +40,14 @@ internal static class ShaderDataReadWriteHelper
 			(HexCharToValue(_buffer[6]) << 4) |
 			(HexCharToValue(_buffer[7]) << 0);
 		return (ushort)(value & 0xFFFF);
+	}
+
+	public static void WriteUInt8(BinaryWriter _writer, byte _value)
+	{
+		byte hex0 = ValueToHexChar((uint)(_value >> 4));
+		byte hex1 = ValueToHexChar((uint)(_value >> 0));
+		_writer.Write(hex0);
+		_writer.Write(hex1);
 	}
 
 	public static void WriteUInt16(BinaryWriter _writer, ushort _value)

@@ -16,14 +16,14 @@ public struct ShaderDataFileHeader()
 	public ushort fileHeaderSize = minFileHeaderSize;	// Total byte size of this file header. Default: "001C" (16-bit format)
 	public ShaderDataOffsetAndSize jsonDescription;		// JSON-encoded shader description. (16-bit format)
 	public ShaderDataOffsetAndSize sourceCode;			// Optional shader source code, generally in HLSL, encoded as UTF-8 or ASCII. (16-bit format)
-	public ushort shaderDataBlockCount;					// Number of shader variant blocks in shader data. (16-bit format)
+	public byte shaderDataBlockCount;					// Number of shader variant blocks in shader data. (16-bit format)
 	public ShaderDataOffsetAndSize shaderData;			// Shader data, arranged as contiguous blocks of compiled variants. (32-bit format)
 	//...
 
 	#endregion
 	#region Constants
 
-	public const int minFileHeaderSize = 57;	// 0x39
+	public const int minFileHeaderSize = 55;	// 0x37
 
 	#endregion
 	#region Methods
@@ -44,7 +44,7 @@ public struct ShaderDataFileHeader()
 		byte[] buffer = new byte[8];
 		_outFileHeader = new();
 
-		// Expected format: "FSHA_10_0039_0043_065E_06AB_7CBB_0004_00008370_00003F20\n"
+		// Expected format: "FSHA_10_0039_0043_065E_06AB_7CBB_04_00008370_00003F20\n"
 
 		try
 		{
@@ -73,7 +73,7 @@ public struct ShaderDataFileHeader()
 			_outFileHeader.fileHeaderSize = ShaderDataReadWriteHelper.ReadUInt16(_reader, buffer);
 			_outFileHeader.jsonDescription = ShaderDataOffsetAndSize.Read16(_reader, buffer);
 			_outFileHeader.sourceCode = ShaderDataOffsetAndSize.Read16(_reader, buffer);
-			_outFileHeader.shaderDataBlockCount = ShaderDataReadWriteHelper.ReadUInt16(_reader, buffer);
+			_outFileHeader.shaderDataBlockCount = ShaderDataReadWriteHelper.ReadUInt8(_reader, buffer);
 			_outFileHeader.shaderData = ShaderDataOffsetAndSize.Read32(_reader, buffer);
 
 			return true;
@@ -116,7 +116,7 @@ public struct ShaderDataFileHeader()
 			_writer.Write((byte)'_');
 			sourceCode.Write16(_writer);
 			_writer.Write((byte)'_');
-			ShaderDataReadWriteHelper.WriteUInt16(_writer, shaderDataBlockCount);
+			ShaderDataReadWriteHelper.WriteUInt8(_writer, shaderDataBlockCount);
 			_writer.Write((byte)'_');
 			shaderData.Write32(_writer);
 			_writer.Write((byte)'\r');
