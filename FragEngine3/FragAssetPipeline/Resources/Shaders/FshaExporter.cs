@@ -9,16 +9,22 @@ using Veldrid;
 
 namespace FragAssetPipeline.Resources.Shaders;
 
+/// <summary>
+/// Exporter for the FSHA shader asset format.
+/// </summary>
 public static class FshaExporter
 {
 	#region Fields
 
+	// Array of all optional vertex data flags:
 	private static readonly MeshVertexDataFlags[] allOptionalVertexFlags =
 	[
 		MeshVertexDataFlags.ExtendedSurfaceData,
 		MeshVertexDataFlags.BlendShapes,
 		MeshVertexDataFlags.Animations
 	];
+
+	// Array of all valid permutations of vertex data flags for surface shaders:
 	private static readonly MeshVertexDataFlags[] validVertexDataVariantFlags =
 	[
 		MeshVertexDataFlags.BasicSurfaceData,
@@ -149,9 +155,14 @@ public static class FshaExporter
 			{
 				entryPointBase = baseVariant.entryPoint;
 			}
-			else
+			else if (compiledVariants is not null && compiledVariants.Count != 0)
 			{
 				entryPointBase = compiledVariants[0].entryPoint;
+			}
+			else
+			{
+				entryPointBase = string.Empty;
+				FshaExportUtility.GetDefaultEntryPoint(ref entryPointBase!, _options.shaderStage);
 			}
 
 			// Read source code from files:

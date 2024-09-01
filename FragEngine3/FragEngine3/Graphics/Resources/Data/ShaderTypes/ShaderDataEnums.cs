@@ -1,13 +1,34 @@
 ﻿namespace FragEngine3.Graphics.Resources.Data.ShaderTypes;
 
+/// <summary>
+/// Enumeration of the different types of compiled shader data, i.e. what API or
+/// backend a shader program is compiled for.
+/// </summary>
 [Flags]
 public enum CompiledShaderDataType : byte
 {
+	/// <summary>
+	/// Old-style Direct3D shader byte code. This format is equivalent to the
+	/// output of 'D3dCompiler.h'.
+	/// </summary>
 	DXBC			= 1,
+	/// <summary>
+	/// Dx12-style Direct3D intermediate language, produced by the DXC.
+	/// </summary>
 	DXIL			= 2,
+	/// <summary>
+	/// Vulkan's portable intermediate shader code.
+	/// </summary>
 	SPIRV			= 4,
+	/// <summary>
+	/// Metal shader archive. This is a compiled MSL shader library.
+	/// </summary>
 	MetalArchive	= 8,
 
+	/// <summary>
+	/// Unknown or unsupported compiled shader format. Variants of this type are
+	/// skipped on import.
+	/// </summary>
 	Other			= 128,
 
 	ALL				= DXBC | DXIL | SPIRV | MetalArchive

@@ -152,8 +152,10 @@ public struct ShaderGenConfig
 	/// </summary>
 	/// <param name="_a">The first config.</param>
 	/// <param name="_b">The second config.</param>
+	/// <param name="_propagateAfterMax">Whether to call '<see cref="PropagateFlagStatesToHierarchy"/>'
+	/// on the result of the max operation.</param>
 	/// <returns>A new standard shader configuration with the highest feature set combination.</returns>
-	public static ShaderGenConfig Max(ShaderGenConfig _a, ShaderGenConfig _b)
+	public static ShaderGenConfig Max(ShaderGenConfig _a, ShaderGenConfig _b, bool _propagateAfterMax = true)
 	{
 		bool useParallaxMap = _a.useParallaxMap || _b.useParallaxMap;
 		bool applyLighting = _a.applyLighting || _b.applyLighting;
@@ -191,8 +193,38 @@ public struct ShaderGenConfig
 			alwaysCreateAnimatedVariant = _a.alwaysCreateAnimatedVariant || _b.alwaysCreateAnimatedVariant,
 		};
 
-		max.PropagateFlagStatesToHierarchy();
+		if (_propagateAfterMax)
+		{
+			max.PropagateFlagStatesToHierarchy();
+		}
 		return max;
+	}
+
+	/// <summary>
+	/// Update variants creation flags to match a given set of vertex data flags.
+	/// </summary>
+	/// <param name="_vertexDataFlags">Flags of the vertex data that may be used by the
+	/// shader's variants.</param>
+	public void SetVariantFlagsFromMeshVertexData(MeshVertexDataFlags _vertexDataFlags)
+	{
+		alwaysCreateExtendedVariant = _vertexDataFlags.HasFlag(MeshVertexDataFlags.ExtendedSurfaceData);
+		alwaysCreateBlendShapeVariant = _vertexDataFlags.HasFlag(MeshVertexDataFlags.BlendShapes);
+		alwaysCreateAnimatedVariant = _vertexDataFlags.HasFlag(MeshVertexDataFlags.Animations);
+	}
+
+	/// <summary>
+	/// Get vertex data flags corresponding to all variant creation flags.
+	/// </summary>
+	/// <returns>A set of vertex data flags.</returns>
+	public readonly MeshVertexDataFlags GetVertexDataForVariantFlags()
+	{
+		MeshVertexDataFlags flags = MeshVertexDataFlags.BasicSurfaceData;
+
+		if (alwaysCreateExtendedVariant) flags |= MeshVertexDataFlags.ExtendedSurfaceData;
+		if (alwaysCreateBlendShapeVariant) flags |= MeshVertexDataFlags.BlendShapes;
+		if (alwaysCreateAnimatedVariant) flags |= MeshVertexDataFlags.Animations;
+
+		return flags;
 	}
 
 	/// <summary>
@@ -382,6 +414,8 @@ public struct ShaderGenConfig
 			return true;
 		}
 	}
+
+
 
 	#endregion
 }

@@ -3,6 +3,9 @@ using FragEngine3.Graphics.Resources.Data.ShaderTypes;
 
 namespace FragAssetPipeline.Resources.Shaders.FSHA;
 
+/// <summary>
+/// Helper class for compiling shader variants for FSHA format export.
+/// </summary>
 internal static class FshaVariantExport
 {
 	#region Types

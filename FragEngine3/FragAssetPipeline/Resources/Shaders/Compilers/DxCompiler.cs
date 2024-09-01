@@ -1,5 +1,5 @@
-﻿using FragEngine3.Graphics;
-using System.Text;
+﻿using System.Text;
+using FragAssetPipeline.Resources.Shaders.FSHA;
 using Veldrid;
 using Vortice.Dxc;
 
@@ -83,7 +83,7 @@ public static class DxCompiler
 		}
 
 		// Paramneter value and fallbacks:
-		if (_shaderStage == ShaderStages.None && !TryGetShaderStageFromFileName(_hlslFilePath, out _shaderStage))
+		if (_shaderStage == ShaderStages.None && !FshaExportUtility.GetShaderStageFromFileNameSuffix(_hlslFilePath, out _shaderStage))
 		{
 			Console.WriteLine($"Error! Could not determine shader stage of HLSL shader! File path: '{_hlslFilePath}'");
 			return DxcResult.Failure;
@@ -98,7 +98,7 @@ public static class DxCompiler
 			}
 			_hlslFilePath = hlslFileAbsPath;
 		}
-		if (!GetEntryPointParameter(ref _entryPoint, _shaderStage) || _entryPoint is null)
+		if (!FshaExportUtility.GetDefaultEntryPoint(ref _entryPoint, _shaderStage) || _entryPoint is null)
 		{
 			Console.WriteLine($"Error! Could not find entry point parameter for shader stage '{_shaderStage}'!");
 			return DxcResult.Failure;
@@ -148,37 +148,6 @@ public static class DxCompiler
 			Console.WriteLine($"Error! Failed to compile HLSL shader to DXBC!\nFile path: '{_hlslFilePath}'\nException: {ex}");
 			return DxcResult.Failure;
 		}
-	}
-
-	private static bool TryGetShaderStageFromFileName(string _hlslFilePath, out ShaderStages _outShaderStage)
-	{
-		string fileName = Path.GetFileNameWithoutExtension(_hlslFilePath);
-		if (string.IsNullOrEmpty(fileName))
-		{
-			_outShaderStage = ShaderStages.None;
-			return false;
-		}
-
-		foreach (var kvp in GraphicsConstants.shaderResourceSuffixes)
-		{
-			if (fileName.EndsWith(kvp.Value))
-			{
-				_outShaderStage = kvp.Key;
-				return true;
-			}
-		}
-		_outShaderStage = ShaderStages.None;
-		return false;
-	}
-
-	private static bool GetEntryPointParameter(ref string? _entryPoint, ShaderStages _shaderStage)
-	{
-		if (!string.IsNullOrEmpty(_entryPoint))
-		{
-			return true;
-		}
-
-		return GraphicsConstants.defaultShaderStageEntryPoints.TryGetValue(_shaderStage, out _entryPoint);
 	}
 
 	private static DxcShaderStage GetDxShaderStage(ShaderStages _shaderStage)
