@@ -3,7 +3,6 @@ using FragEngine3.Graphics.Resources.Data;
 using FragEngine3.Graphics.Resources.Data.ShaderTypes;
 using FragEngine3.Graphics.Resources.Import.ShaderFormats;
 using FragEngine3.Resources;
-using Veldrid;
 
 namespace FragEngine3.Graphics.Resources.Import;
 
@@ -135,49 +134,101 @@ public static class ShaderImporter
 		EnginePlatformFlag platformFlags = _handle.resourceManager.engine.PlatformSystem.PlatformFlags;
 		CompiledShaderDataType compiledDataType = ShaderDataUtility.GetCompiledDataTypeFlagsForPlatform(platformFlags);
 
-		int maxVariantIndex = -1;
-		MeshVertexDataFlags precompiledVertexFlags = 0;
-		MeshVertexDataFlags ignoredVariantFlags = ~(_shaderData.Description.RequiredVariants | MeshVertexDataFlags.BasicSurfaceData);
-
 		Dictionary<MeshVertexDataFlags, byte[]> variantBytesDict = [];
 
 		// Prepare lookup array for all supported variants:
-		byte[]? byteCode = _shaderData.GetByteCodeOfType(compiledDataType);
-
-		if (byteCode is not null && _shaderData.Description.CompiledVariants.Length != 0)
-		{
-			foreach (ShaderDescriptionVariantData compiledVariant in _shaderData.Description.CompiledVariants)
-			{
-				// Skip unsupported types and unnecessary variants:
-				if (compiledVariant.Type != compiledDataType) continue;
-				if ((compiledVariant.VariantFlags & ignoredVariantFlags) != 0) continue;
-
-				// Update variant flags:
-				precompiledVertexFlags |= compiledVariant.VariantFlags;
-				maxVariantIndex = Math.Max(maxVariantIndex, (int)compiledVariant.VariantFlags.GetVariantIndex());
-
-				// Gather variants' pre-compiled byte data:
-				byte[] variantBytes = new byte[compiledVariant.ByteSize];
-				Array.Copy(byteCode, compiledVariant.ByteOffset, variantBytes, 0, variantBytes.Length);
-				variantBytesDict.Add(compiledVariant.VariantFlags, variantBytes);
-			}
-		}
+		bool hasPrecompiledVariants = GatherPrecompiledVariants(
+			_shaderData,
+			variantBytesDict,
+			compiledDataType,
+			out MeshVertexDataFlags precompiledVertexFlags,
+			out int precompiledMaxVariantIndex);
 
 		// Compile remaining required variants from source code, if available:
-		if (_shaderData.SourceCode is not null && _shaderData.Description.SourceCode is not null)
-		{
-			// Fetch source code for current platform and graphics API:
-			ShaderLanguage sourceCodeLanguage = ShaderDataUtility.GetShaderLanguageForPlatform(platformFlags);
-			byte[]? sourceCodeBytes = _shaderData.SourceCode?.GetValueOrDefault(sourceCodeLanguage);
+		bool hasSourceCodeVariants = CompileMissingVariantsFromSourceCode(
+			_shaderData,
+			platformFlags,
+			out MeshVertexDataFlags sourceCodeVertexFlags,
+			out int sourceCodeMaxVariantIndex);
 
+		MeshVertexDataFlags allVariantVertexFlags = precompiledVertexFlags | sourceCodeVertexFlags;
+		int maxVariantIndex = Math.Max(precompiledMaxVariantIndex, sourceCodeMaxVariantIndex);
 
-		}
-
-		//ShaderDescription shaderDesc = 
-
-		//TODO [critical]: Compile program or extract pre-compiled variants from shader data, then create a shader resource around that. Basically rewrite shader factory.
+		// TODO [critical]: Asssemble ShaderResource instance from gathered data. Basically rewrite ShaderResource, cache source code,
+		// then change this to compile source code on-demand. Keep on-demand compilation like before, but also use pre-compiled variants.
 
 		_outShaderRes = null;   //TEMP
+		return true;
+	}
+
+	private static bool GatherPrecompiledVariants(
+		ShaderData _shaderData,
+		Dictionary<MeshVertexDataFlags, byte[]> _variantBytesDict,
+		CompiledShaderDataType _compiledDataType,
+		out MeshVertexDataFlags _outPrecompiledVertexFlags,
+		out int _outMaxVariantIndex)
+	{
+		_outPrecompiledVertexFlags = 0;
+		_outMaxVariantIndex = -1;
+
+		if (_shaderData.Description.CompiledVariants is null ||
+			_shaderData.Description.CompiledVariants.Length == 0)
+		{
+			return false;
+		}
+
+		byte[]? byteCode = _shaderData.GetByteCodeOfType(_compiledDataType);
+		if (byteCode is null)
+		{
+			return false;
+		}
+
+		MeshVertexDataFlags ignoredVariantFlags = ~(_shaderData.Description.RequiredVariants | MeshVertexDataFlags.BasicSurfaceData);
+
+		foreach (ShaderDescriptionVariantData compiledVariant in _shaderData.Description.CompiledVariants)
+		{
+			// Skip unsupported types and unnecessary variants:
+			if (compiledVariant.Type != _compiledDataType) continue;
+			if ((compiledVariant.VariantFlags & ignoredVariantFlags) != 0) continue;
+
+			// Update variant flags:
+			_outPrecompiledVertexFlags |= compiledVariant.VariantFlags;
+			_outMaxVariantIndex = Math.Max(_outMaxVariantIndex, (int)compiledVariant.VariantFlags.GetVariantIndex());
+
+			// Gather variants' pre-compiled byte data:
+			byte[] variantBytes = new byte[compiledVariant.ByteSize];
+			Array.Copy(byteCode, compiledVariant.ByteOffset, variantBytes, 0, variantBytes.Length);
+			_variantBytesDict.Add(compiledVariant.VariantFlags, variantBytes);
+		}
+		
+		return true;
+	}
+
+	private static bool CompileMissingVariantsFromSourceCode(
+		ShaderData _shaderData,
+		EnginePlatformFlag _platformFlags,
+		out MeshVertexDataFlags _outPrecompiledVertexFlags,
+		out int _outMaxVariantIndex)
+	{
+		_outPrecompiledVertexFlags = 0;
+		_outMaxVariantIndex = -1;
+
+		if (_shaderData.SourceCode is null ||
+			_shaderData.Description.SourceCode is null ||
+			_shaderData.Description.SourceCode.SourceCodeBlocks is null ||
+			_shaderData.Description.SourceCode.SourceCodeBlocks.Length == 0)
+		{
+			return false;
+		}
+
+		MeshVertexDataFlags ignoredVariantFlags = ~(_shaderData.Description.RequiredVariants | MeshVertexDataFlags.BasicSurfaceData);
+
+		// Fetch source code for current platform and graphics API:
+		ShaderLanguage sourceCodeLanguage = ShaderDataUtility.GetShaderLanguageForPlatform(_platformFlags);
+		byte[]? sourceCodeBytes = _shaderData.SourceCode?.GetValueOrDefault(sourceCodeLanguage);
+
+		//TODO: Compile variants from source code.
+
 		return true;
 	}
 
