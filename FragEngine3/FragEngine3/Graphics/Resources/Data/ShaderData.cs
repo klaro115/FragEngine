@@ -35,6 +35,7 @@ public sealed class ShaderData
 	public byte[]? ByteCodeDxbc { get; init; } = null;
 	public byte[]? ByteCodeDxil { get; init; } = null;
 	public byte[]? ByteCodeSpirv { get; init; } = null;
+	public byte[]? ByteCodeMetal { get; init; } = null;
 	//...
 
 	#endregion
@@ -52,6 +53,18 @@ public sealed class ShaderData
 			return !FileHeader.sourceCode.IsEmpty();
 		}
 		return true;
+	}
+
+	public byte[]? GetByteCodeOfType(CompiledShaderDataType _dataType)
+	{
+		return _dataType switch
+		{
+			CompiledShaderDataType.DXBC => ByteCodeDxbc,
+			CompiledShaderDataType.DXIL => ByteCodeDxil,
+			CompiledShaderDataType.SPIRV => ByteCodeSpirv,
+			CompiledShaderDataType.MetalArchive => ByteCodeMetal,
+			_ => null,
+		};
 	}
 
 	public static bool Read(BinaryReader _reader, out ShaderData? _outData, CompiledShaderDataType _typeFlags = CompiledShaderDataType.ALL)

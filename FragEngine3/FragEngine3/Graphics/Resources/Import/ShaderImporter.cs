@@ -1,7 +1,9 @@
 ﻿using FragEngine3.EngineCore;
 using FragEngine3.Graphics.Resources.Data;
 using FragEngine3.Graphics.Resources.Data.ShaderTypes;
+using FragEngine3.Graphics.Resources.Import.ShaderFormats;
 using FragEngine3.Resources;
+using Veldrid;
 
 namespace FragEngine3.Graphics.Resources.Import;
 
@@ -66,7 +68,7 @@ public static class ShaderImporter
 			{
 				// A) FSHA shader asset file format:
 				case ".fsha":
-					if (!ImportShaderDataFromFSHA(stream, _handle, fileHandle, out _outShaderData))
+					if (!ShaderFshaImporter.ImportShaderData(stream, _handle, fileHandle, out _outShaderData))
 					{
 						_outShaderData = null;
 						return false;
@@ -76,7 +78,7 @@ public static class ShaderImporter
 				case ".hlsl":
 				case ".glsl":
 				case ".metal":
-					if (!ImportShaderDataFromSourceCode(stream, _handle, formatExt, out _outShaderData))
+					if (!ShaderSourceCodeImporter.ImportShaderData(stream, _handle, formatExt, out _outShaderData))
 					{
 						_outShaderData = null;
 						return false;
@@ -84,7 +86,7 @@ public static class ShaderImporter
 					break;
 				// C) Compressed or batched resource data file:
 				default:
-					if (!ImportShaderDataFromUnknownFileType(stream, _handle, fileHandle, out _outShaderData))
+					if (!ShaderBackupImporter.ImportShaderData(stream, _handle, fileHandle, out _outShaderData))
 					{
 						_outShaderData = null;
 						return false;
@@ -105,7 +107,6 @@ public static class ShaderImporter
 
 		//TODO [later]: Apply import flags, if applicable.
 
-		_outShaderData = null; //TEMP
 		return true;
 	}
 
@@ -131,74 +132,53 @@ public static class ShaderImporter
 			return false;
 		}
 
+		EnginePlatformFlag platformFlags = _handle.resourceManager.engine.PlatformSystem.PlatformFlags;
+		CompiledShaderDataType compiledDataType = ShaderDataUtility.GetCompiledDataTypeFlagsForPlatform(platformFlags);
+
+		int maxVariantIndex = -1;
+		MeshVertexDataFlags precompiledVertexFlags = 0;
+		MeshVertexDataFlags ignoredVariantFlags = ~(_shaderData.Description.RequiredVariants | MeshVertexDataFlags.BasicSurfaceData);
+
+		Dictionary<MeshVertexDataFlags, byte[]> variantBytesDict = [];
+
+		// Prepare lookup array for all supported variants:
+		byte[]? byteCode = _shaderData.GetByteCodeOfType(compiledDataType);
+
+		if (byteCode is not null && _shaderData.Description.CompiledVariants.Length != 0)
+		{
+			foreach (ShaderDescriptionVariantData compiledVariant in _shaderData.Description.CompiledVariants)
+			{
+				// Skip unsupported types and unnecessary variants:
+				if (compiledVariant.Type != compiledDataType) continue;
+				if ((compiledVariant.VariantFlags & ignoredVariantFlags) != 0) continue;
+
+				// Update variant flags:
+				precompiledVertexFlags |= compiledVariant.VariantFlags;
+				maxVariantIndex = Math.Max(maxVariantIndex, (int)compiledVariant.VariantFlags.GetVariantIndex());
+
+				// Gather variants' pre-compiled byte data:
+				byte[] variantBytes = new byte[compiledVariant.ByteSize];
+				Array.Copy(byteCode, compiledVariant.ByteOffset, variantBytes, 0, variantBytes.Length);
+				variantBytesDict.Add(compiledVariant.VariantFlags, variantBytes);
+			}
+		}
+
+		// Compile remaining required variants from source code, if available:
+		if (_shaderData.SourceCode is not null && _shaderData.Description.SourceCode is not null)
+		{
+			// Fetch source code for current platform and graphics API:
+			ShaderLanguage sourceCodeLanguage = ShaderDataUtility.GetShaderLanguageForPlatform(platformFlags);
+			byte[]? sourceCodeBytes = _shaderData.SourceCode?.GetValueOrDefault(sourceCodeLanguage);
+
+
+		}
+
+		//ShaderDescription shaderDesc = 
+
 		//TODO [critical]: Compile program or extract pre-compiled variants from shader data, then create a shader resource around that. Basically rewrite shader factory.
 
 		_outShaderRes = null;   //TEMP
 		return true;
-	}
-
-	private static bool ImportShaderDataFromFSHA(Stream _stream, ResourceHandle _resHandle, ResourceFileHandle _fileHandle, out ShaderData? _outShaderData)
-	{
-		const EnginePlatformFlag vulkanPlatforms = EnginePlatformFlag.OS_Windows | EnginePlatformFlag.OS_Linux | EnginePlatformFlag.OS_FreeBSD;
-		const EnginePlatformFlag d3dFlags = EnginePlatformFlag.OS_Windows | EnginePlatformFlag.GraphicsAPI_D3D;
-		const EnginePlatformFlag metalFlags = EnginePlatformFlag.OS_MacOS | EnginePlatformFlag.GraphicsAPI_Metal;
-
-		// Determine for which platform and graphics API we'll be compiling:
-		EnginePlatformFlag platformFlags = _resHandle.resourceManager.engine.PlatformSystem.PlatformFlags;
-		CompiledShaderDataType typeFlags = 0;
-
-		if ((platformFlags & vulkanPlatforms) != 0 && platformFlags.HasFlag(EnginePlatformFlag.GraphicsAPI_Vulkan))
-		{
-			typeFlags |= CompiledShaderDataType.SPIRV;
-		}
-		else if (platformFlags.HasFlag(d3dFlags))
-		{
-			typeFlags |= CompiledShaderDataType.DXBC | CompiledShaderDataType.DXIL;
-		}
-		else if (platformFlags.HasFlag(metalFlags))
-		{
-			typeFlags |= CompiledShaderDataType.MetalArchive;
-		}
-
-		// Read the relevant shader data from stream:
-		using BinaryReader reader = new(_stream);
-
-		return ShaderData.Read(reader, out _outShaderData, typeFlags);
-	}
-
-	private static bool ImportShaderDataFromSourceCode(Stream _stream, ResourceHandle _resHandle, string _fileExtension, out ShaderData? _outShaderData)
-	{
-		//TODO [important]: Wrap source code in ShaderData descriptor, while assuming all standard entry points and such. Use import flags for feature defines.
-
-		throw new NotImplementedException("Shader import from source code file is not supported at this time.");
-	}
-
-	private static bool ImportShaderDataFromUnknownFileType(Stream _stream, ResourceHandle _resHandle, ResourceFileHandle _fileHandle, out ShaderData? _outShaderData)
-	{
-		Logger logger = _resHandle.resourceManager.engine.Logger ?? Logger.Instance!;
-
-		// Check magic numbers to see if it's an FSHA asset:
-		byte[] fourCCBuffer = new byte[4];
-		int bytesRead = _stream.Read(fourCCBuffer, 0, 4);
-
-		if (bytesRead < 4)
-		{
-			logger?.LogError($"Cannot import shader data from stream that is empty or EOF! Resource handle: '{_resHandle}'!");
-			_outShaderData = null;
-			return false;
-		}
-		if (fourCCBuffer[0] == 'F' && fourCCBuffer[1] == 'S' && fourCCBuffer[2] == 'H' && fourCCBuffer[3] == 'A')
-		{
-			_stream.Position -= bytesRead;
-			return ImportShaderDataFromFSHA(_stream, _resHandle, _fileHandle, out _outShaderData);
-		}
-
-		//TODO 1 [later]: Check for other markers that might help to identify the shader.
-		//TODO 2 [later]: If no markers found, assume platform/API-specific source code file and parse that way.
-
-		logger?.LogError($"Cannot import shader data for unsupported resource format! Resource handle: '{_resHandle}'!");
-		_outShaderData = null;
-		return false;
 	}
 
 #endregion

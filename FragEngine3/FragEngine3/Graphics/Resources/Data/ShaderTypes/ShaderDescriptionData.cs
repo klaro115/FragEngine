@@ -24,6 +24,12 @@ public sealed class ShaderDescriptionData
 	/// Which stage of the shader pipeline this file's shader programs belong to.
 	/// </summary>
 	public ShaderStages ShaderStage { get; init; } = ShaderStages.None;
+	/// <summary>
+	/// Which vertex data variants should be compiled and prepared for run-time use, assuming they are defined.
+	/// If a variant does not exist in either source code or pre-compiled variants, it will be skipped during import.
+	/// Similarly, if a variant has flags other than these, it will be skipped during import.
+	/// </summary>
+	public MeshVertexDataFlags RequiredVariants { get; init; } = MeshVertexDataFlags.ALL;
 
 	/// <summary>
 	/// Optional description of source code data bundled within this file.
