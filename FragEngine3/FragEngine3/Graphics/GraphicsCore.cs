@@ -2,6 +2,7 @@
 using FragEngine3.EngineCore.Config;
 using FragEngine3.Graphics.Internal;
 using FragEngine3.Graphics.Resources;
+using FragEngine3.Graphics.Resources.Data.ShaderTypes;
 using Veldrid;
 using Veldrid.Sdl2;
 
@@ -57,6 +58,8 @@ public abstract class GraphicsCore : IDisposable
 
 	public abstract EnginePlatformFlag ApiPlatformFlag { get; }
 	public abstract bool DefaultMirrorY { get; }
+	public abstract ShaderLanguage DefaultShaderLanguage { get; }
+	public abstract CompiledShaderDataType CompiledShaderDataType { get; }
 
 	protected Logger Logger => graphicsSystem.engine.Logger ?? Logger.Instance!;
 

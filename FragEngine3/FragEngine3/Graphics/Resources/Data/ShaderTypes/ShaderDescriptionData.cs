@@ -51,8 +51,7 @@ public sealed class ShaderDescriptionData
 			ShaderStage != ShaderStages.None &&
 			(SourceCode is null || SourceCode.IsValid()) &&
 			CompiledVariants is not null &&
-			CompiledVariants.Length != 0 &&
-			CompiledVariants[0].IsValid();
+			(CompiledVariants.Length == 0 || CompiledVariants[0].IsValid());
 		return isValid;
 	}
 
@@ -98,6 +97,40 @@ public sealed class ShaderDescriptionData
 
 		_outVariantData = null!;
 		return false;
+	}
+
+	/// <summary>
+	/// Gathers the vertex data flags of all shader variants defined in this shader's data.
+	/// </summary>
+	/// <param name="_type">The compiled data type used by the current platform and graphics API.</param>
+	/// <returns></returns>
+	public HashSet<MeshVertexDataFlags> GetAllVariantsFlags(CompiledShaderDataType _type)
+	{
+		int maxVariantCount = CompiledVariants.Length;
+		bool hasSourceCode = SourceCode?.EntryPoints is not null;
+		if (hasSourceCode)
+		{
+			maxVariantCount += SourceCode!.EntryPoints!.Length;
+		}
+
+		HashSet<MeshVertexDataFlags> variantFlags = new(maxVariantCount);
+		
+		foreach (var compiledVariant in CompiledVariants)
+		{
+			if ((compiledVariant.Type & _type) != 0)
+			{
+				variantFlags.Add(compiledVariant.VariantFlags);
+			}
+		}
+		if (hasSourceCode)
+		{
+			foreach (var entryPoint in SourceCode!.EntryPoints!)
+			{
+				variantFlags.Add(entryPoint.VariantFlags);
+			}
+		}
+
+		return variantFlags;
 	}
 
 	public static bool Read(BinaryReader _reader, uint _jsonByteLength, out ShaderDescriptionData _outDesc)

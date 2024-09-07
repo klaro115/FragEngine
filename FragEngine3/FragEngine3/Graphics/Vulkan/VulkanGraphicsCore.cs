@@ -6,6 +6,7 @@ using System.Diagnostics;
 using Veldrid.Sdl2;
 using Veldrid.StartupUtilities;
 using Veldrid;
+using FragEngine3.Graphics.Resources.Data.ShaderTypes;
 
 namespace FragEngine3.Graphics.Vulkan;
 
@@ -22,8 +23,9 @@ public sealed class VulkanGraphicsCore(GraphicsSystem _graphicsSystem, EngineCon
 	#region Properties
 
 	public override EnginePlatformFlag ApiPlatformFlag => EnginePlatformFlag.GraphicsAPI_Vulkan;
-
 	public override bool DefaultMirrorY => false;
+	public override ShaderLanguage DefaultShaderLanguage => ShaderLanguage.HLSL;
+	public override CompiledShaderDataType CompiledShaderDataType => CompiledShaderDataType.SPIRV;
 
 	#endregion
 	#region Methods

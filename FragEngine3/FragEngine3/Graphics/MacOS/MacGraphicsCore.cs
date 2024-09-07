@@ -2,6 +2,7 @@
 using FragEngine3.EngineCore.Config;
 using FragEngine3.Graphics.Config;
 using FragEngine3.Graphics.Internal;
+using FragEngine3.Graphics.Resources.Data.ShaderTypes;
 using System.Diagnostics;
 using Veldrid;
 using Veldrid.MetalBindings;
@@ -22,6 +23,8 @@ internal sealed class MacGraphicsCore(GraphicsSystem _graphicsSystem, EngineConf
 
 	public override EnginePlatformFlag ApiPlatformFlag => EnginePlatformFlag.GraphicsAPI_Metal;
 	public override bool DefaultMirrorY => true;
+	public override ShaderLanguage DefaultShaderLanguage => ShaderLanguage.Metal;
+	public override CompiledShaderDataType CompiledShaderDataType => CompiledShaderDataType.MetalArchive;
 
 	#endregion
 	#region Methods

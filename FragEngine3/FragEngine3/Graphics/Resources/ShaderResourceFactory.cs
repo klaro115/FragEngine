@@ -324,9 +324,11 @@ public static class ShaderResourceFactory
 		}
 
 		// Try compiling shader:
-		Shader?[] shaderVariants = new Shader[maxVariantIndex + 1];
+		int maxVariantCount = maxVariantIndex + 1;
+		Dictionary<MeshVertexDataFlags, Shader> shaderVariants = new(maxVariantCount);
+		//Shader?[] shaderVariants = new Shader[maxVariantCount];
 		int shadersCompiledCount = 0;
-		for (uint i = 0; i < shaderVariants.Length; ++i)
+		for (uint i = 0; i < maxVariantCount; ++i)
 		{
 			MeshVertexDataFlags variantFlags = MeshVertexDataFlagsExt.GetFlagsFromVariantIndex(i);
 			if (variantEntryPoints.TryGetValue(variantFlags, out string? variantEntryPoint))
@@ -347,7 +349,8 @@ public static class ShaderResourceFactory
 					continue;
 				}
 
-				shaderVariants[i] = shader;
+				shaderVariants.Add(variantFlags, shader);
+				//shaderVariants[i] = shader;
 				shadersCompiledCount++;
 			}
 		}
@@ -359,7 +362,8 @@ public static class ShaderResourceFactory
 		}
 
 		// Output finished shader resource:
-		_outShaderRes = new(_resourceKey, _graphicsCore, shaderVariants, _stage);
+		_outShaderRes = new(_resourceKey, _graphicsCore, shaderVariants, null, _stage);
+		//_outShaderRes = new(_resourceKey, _graphicsCore, shaderVariants, _stage);
 
 		return _outShaderRes.IsLoaded;
 	}

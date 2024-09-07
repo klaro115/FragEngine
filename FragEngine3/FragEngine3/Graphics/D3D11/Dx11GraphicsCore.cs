@@ -2,6 +2,7 @@
 using FragEngine3.EngineCore.Config;
 using FragEngine3.Graphics.Config;
 using FragEngine3.Graphics.Internal;
+using FragEngine3.Graphics.Resources.Data.ShaderTypes;
 using System.Diagnostics;
 using Veldrid;
 using Veldrid.Sdl2;
@@ -20,6 +21,8 @@ internal sealed class Dx11GraphicsCore(GraphicsSystem _graphicsSystem, EngineCon
 
     public override EnginePlatformFlag ApiPlatformFlag => EnginePlatformFlag.GraphicsAPI_D3D;
 	public override bool DefaultMirrorY => true;
+	public override ShaderLanguage DefaultShaderLanguage => ShaderLanguage.HLSL;
+	public override CompiledShaderDataType CompiledShaderDataType => CompiledShaderDataType.DXBC | CompiledShaderDataType.DXIL;
 
 	#endregion
 	#region Methods

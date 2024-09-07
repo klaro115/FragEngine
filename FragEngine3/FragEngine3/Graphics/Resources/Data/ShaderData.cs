@@ -50,7 +50,7 @@ public sealed class ShaderData
 		// Data must contain compiled byte code of any kind, or at least source code:
 		if (ByteCodeDxbc is null && ByteCodeDxil is null && ByteCodeSpirv is null)
 		{
-			return !FileHeader.sourceCode.IsEmpty();
+			return !FileHeader.sourceCode.IsEmpty() && SourceCode is not null && SourceCode.Count != 0;
 		}
 		return true;
 	}
