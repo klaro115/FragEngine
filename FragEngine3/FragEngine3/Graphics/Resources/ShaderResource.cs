@@ -1,6 +1,7 @@
 ﻿using FragEngine3.EngineCore;
 using FragEngine3.Graphics.Resources.Data;
 using FragEngine3.Graphics.Resources.Data.ShaderTypes;
+using FragEngine3.Graphics.Resources.Import.ShaderFormats;
 using FragEngine3.Graphics.Resources.ShaderGen;
 using FragEngine3.Resources;
 using Veldrid;
@@ -65,6 +66,13 @@ public sealed class ShaderResource : Resource
 			{
 				supportedVariantFlags |= config.GetVertexDataForVariantFlags();
 			}
+
+			// Remove all vertex data flags from source code, so we can just prepend them quickly later:
+			if (ShaderSourceCodeDefiner.SetVariantDefines(sourceCodeBytes, 0, true, out var sourceCodeBuffer))
+			{
+				sourceCodeBytes = new byte[sourceCodeBuffer!.Length];
+				sourceCodeBuffer!.Utf8ByteBuffer.CopyTo(sourceCodeBytes, 0);
+			}	
 		}
 
 		unsupportedVariantFlags = ~supportedVariantFlags;
@@ -98,6 +106,8 @@ public sealed class ShaderResource : Resource
 	public int VertexVariantCount => vertexVariants != null ? vertexVariants.Length : 0;
 	
 	public override ResourceType ResourceType => ResourceType.Shader;
+
+	private Logger? Logger => graphicsCore.graphicsSystem.engine.Logger ?? Logger.Instance;
 
 	#endregion
 	#region Methods
@@ -193,31 +203,78 @@ public sealed class ShaderResource : Resource
 	/// Try to compile a missing shader variant from source code.
 	/// </summary>
 	/// <param name="_variantFlags">Vertex data flags for the shader variant you wish to compile.</param>
-	/// <returns></returns>
+	/// <returns>True if the variant was compiled successfully, false otherwise.</returns>
 	public bool CompileVariantFromSourceCode(MeshVertexDataFlags _variantFlags)
 	{
 		if (IsDisposed)
 		{
-			Logger.Instance?.LogError("Cannot compile shader variants from source for disposed shader resource!");
+			Logger?.LogError("Cannot compile shader variants from source for disposed shader resource!");
 			return false;
 		}
 		if (_variantFlags == 0 || (_variantFlags & unsupportedVariantFlags) != 0 || !canCompileFromSourceCode)
 		{
-			Logger.Instance?.LogError($"Cannot compile shader variants from source; missing source code, or invalid variant flags! Flags: '{_variantFlags}'");
+			Logger?.LogError($"Cannot compile shader variants from source; missing source code, or invalid variant flags! Flags: '{_variantFlags}'");
 			return false;
 		}
 
 		// If the variant has already been compiled, exit here and report success:
 		uint variantIdx = _variantFlags.GetVariantIndex();
+		if (variantIdx >= shaderVariants.Length)
+		{
+			return false;
+		}
 		Shader? shader = shaderVariants[variantIdx];
 		if (shader is not null && !shader.IsDisposed)
 		{
 			return true;
 		}
 
+		// Fetch the name of the variant's entry point function:
+		var entryPoint = sourceCodeData!.EntryPoints?.FirstOrDefault(o => o.VariantFlags == _variantFlags);
+		if (entryPoint is null)
+		{
+			Logger?.LogError($"Cannot compile shader variants from source; missing entry point function name! Flags: '{_variantFlags}'");
+			return false;
+		}
 
-		//TODO [later]: Compile variant on-demand right here.
+		// Set variant defines on source code:
+		if (!ShaderSourceCodeDefiner.SetVariantDefines(sourceCodeBytes!, _variantFlags, false, out var sourceCodeBuffer))
+		{
+			Logger?.LogError($"Cannot compile shader variants from source; failed to set '#define' macros fro vertex flags! Flags: '{_variantFlags}'");
+			return false;
+		}
 
+		// Trim source code buffer to size, if needed:
+		byte[] variantSourceCodeBytes;
+		if (sourceCodeBuffer!.Length == sourceCodeBuffer.Capacity)
+		{
+			variantSourceCodeBytes = sourceCodeBuffer.Utf8ByteBuffer;
+		}
+		else
+		{
+			variantSourceCodeBytes = new byte[sourceCodeBuffer.Length];
+			Array.Copy(sourceCodeBuffer.Utf8ByteBuffer, variantSourceCodeBytes, sourceCodeBuffer.Length);
+		}
+
+        try
+		{
+			// Compile variant from modified source code:
+			ShaderDescription shaderDesc = new(Stage, variantSourceCodeBytes, entryPoint.EntryPoint);
+
+			shader = graphicsCore.MainFactory.CreateShader(ref shaderDesc);
+
+			shaderVariants[variantIdx] = shader;
+			compiledVariantCount++;
+		}
+		catch (Exception ex)
+		{
+			Logger?.LogException($"Failed to compile shader variant '{_variantFlags}' for shader resource '{resourceKey}'!", ex);
+			return false;
+		}
+		finally
+		{
+			sourceCodeBuffer.ReleaseBuffer();
+		}
 
 		// Drop source code once all supported variants have been compiled:
 		if (compiledVariantCount >= totalVariantCount)
