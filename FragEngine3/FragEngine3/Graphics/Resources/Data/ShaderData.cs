@@ -61,6 +61,7 @@ public sealed class ShaderData
 		{
 			CompiledShaderDataType.DXBC => ByteCodeDxbc,
 			CompiledShaderDataType.DXIL => ByteCodeDxil,
+			CompiledShaderDataType.DXBC | CompiledShaderDataType.DXIL => ByteCodeDxbc ?? ByteCodeDxil,
 			CompiledShaderDataType.SPIRV => ByteCodeSpirv,
 			CompiledShaderDataType.MetalArchive => ByteCodeMetal,
 			_ => null,

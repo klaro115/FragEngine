@@ -3,6 +3,7 @@ using FragEngine3.Graphics.Resources.Data;
 using FragEngine3.Graphics.Resources.Data.ShaderTypes;
 using FragEngine3.Graphics.Resources.Import.ShaderFormats;
 using FragEngine3.Resources;
+using System.Text;
 using Veldrid;
 
 namespace FragEngine3.Graphics.Resources.Import;
@@ -149,6 +150,11 @@ public static class ShaderImporter
 		{
 			try
 			{
+				//TEST
+				string testPath = Path.Combine(_handle.resourceManager.fileGatherer.applicationPath, $"test/shader_{(int)kvp.Key}.txt");
+				File.WriteAllBytes(testPath, kvp.Value);
+				//TEST
+
 				ShaderDescription desc = new(stage, kvp.Value, string.Empty);
 				Shader variant = _graphicsCore.MainFactory.CreateShader(ref desc);
 
@@ -197,7 +203,7 @@ public static class ShaderImporter
 		foreach (ShaderDescriptionVariantData compiledVariant in _shaderData.Description.CompiledVariants)
 		{
 			// Skip unsupported types and unnecessary variants:
-			if (compiledVariant.Type != _compiledDataType) continue;
+			if (!_compiledDataType.HasFlag(compiledVariant.Type)) continue;
 			if ((compiledVariant.VariantFlags & ignoredVariantFlags) != 0) continue;
 
 			// Update variant flags:
