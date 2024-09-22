@@ -71,7 +71,7 @@ public sealed class ShaderResource : Resource
 			if (ShaderSourceCodeDefiner.SetVariantDefines(sourceCodeBytes, 0, true, out var sourceCodeBuffer))
 			{
 				sourceCodeBytes = new byte[sourceCodeBuffer!.Length];
-				sourceCodeBuffer!.Utf8ByteBuffer.CopyTo(sourceCodeBytes, 0);
+				Array.Copy(sourceCodeBuffer!.Utf8ByteBuffer, sourceCodeBytes, sourceCodeBuffer.Length);
 			}	
 		}
 

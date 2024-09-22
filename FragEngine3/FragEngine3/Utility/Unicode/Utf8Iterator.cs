@@ -329,6 +329,18 @@ public sealed class Utf8Iterator : IEnumerator<char>
 		return Position.Invalid;
 	}
 
+	/// <summary>
+	/// Advances the enumerator to the first UTF-8 character that is no longer part of the word under the current
+	/// position.
+	/// </summary>
+	/// <returns>The new enumeration position after the end of the current word.</returns>
+	public Position AdvanceToEndOfWord()
+	{
+		while ((char.IsLetterOrDigit(Current) || Current == '_') && MoveNext()) { }
+
+		return CurrentPosition;
+	}
+
 	public override string ToString()
 	{
 		return $"UTF-8 Iterator {CurrentPosition} (UTF-8 Length: {utf8Length})";

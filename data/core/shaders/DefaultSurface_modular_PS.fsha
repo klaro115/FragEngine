@@ -1,7 +1,8 @@
-FSHA_10_0037_0041_065E_06A9_7CBB_04_0000836E_00003F20
+FSHA_10_0037_0041_0679_06C4_7CBB_04_00008389_00003F20
 ########
 {
   "ShaderStage": 16,
+  "RequiredVariants": 15,
   "SourceCode": {
     "EntryPointNameBase": "Main_Pixel",
     "EntryPoints": [

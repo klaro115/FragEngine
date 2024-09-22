@@ -295,9 +295,50 @@ public sealed class ResourceFileHandle : IEquatable<ResourceFileHandle>
 		
 		PlatformSystem platformSystem = _engine.PlatformSystem;
 		ResourceType resourceType = resHandle.resourceType;
-		
+
+		switch (resourceType)
+		{
+			case ResourceType.Unknown:
+			case ResourceType.Ignored:
+				_outAdjustedPath = string.Empty;
+				return false;
+			case ResourceType.Shader:
+				{
+					// No extension? File format cannot be identified:
+					string? fileExtension = Path.GetExtension(dataFilePath)?.ToLowerInvariant();
+					if (string.IsNullOrEmpty(fileExtension))
+					{
+						Logger.Instance?.LogError($"Could not adjust file format extension for data file '{dataFilePath}' of shader resource '{Key}'!");
+						_outAdjustedPath = string.Empty;
+						return false;
+					}
+
+					// FSHA will handle platform-specific import automatically:
+					if (fileExtension == ".fsha")
+					{
+						_outAdjustedPath = dataFilePath;
+						return true;
+					}
+
+					// Swap extension to API-specific shading language:
+					EnginePlatformFlag graphicsFlag = platformSystem.PlatformFlags.GetGraphicsFlags();
+					string platformFileExtension = graphicsFlag switch
+					{
+						EnginePlatformFlag.GraphicsAPI_D3D => ".hlsl",
+						EnginePlatformFlag.GraphicsAPI_Vulkan => ".glsl",
+						EnginePlatformFlag.GraphicsAPI_Metal => ".metal",
+						_ => string.Empty,
+					};
+					_outAdjustedPath = Path.ChangeExtension(dataFilePath, platformFileExtension);
+					return true;
+				}
+			default:
+				_outAdjustedPath = dataFilePath;
+				return true;
+		}
+
 		// Adjust path to use the resource's most likely platform-specific extension:
-		return platformSystem.AdjustForPlatformSpecificFileExtension(resourceType, dataFilePath, out _outAdjustedPath);
+		//return platformSystem.AdjustForPlatformSpecificFileExtension(resourceType, dataFilePath, out _outAdjustedPath);
 	}
 
 	/// <summary>

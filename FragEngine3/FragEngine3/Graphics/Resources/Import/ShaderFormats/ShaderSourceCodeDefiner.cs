@@ -1,4 +1,6 @@
-﻿namespace FragEngine3.Graphics.Resources.Import.ShaderFormats;
+﻿using FragEngine3.Utility.Unicode;
+
+namespace FragEngine3.Graphics.Resources.Import.ShaderFormats;
 
 /// <summary>
 /// Helper class for setting or removing preprocessor '#define' macros in shader source code prior to compilation.
@@ -30,6 +32,11 @@ public static class ShaderSourceCodeDefiner
 
 	private static Stack<SourceCodeBuffer> bufferPool = [];
 	private static readonly object bufferPoolLockObj = new();
+
+	#endregion
+	#region Constants
+
+	private const string variantDefinePrefix = "#define VARIANT_";
 
 	#endregion
 	#region Methods
@@ -84,8 +91,27 @@ public static class ShaderSourceCodeDefiner
 		{
 			intermediateBuffer = GetBufferFromPool(_outResultBuffer.Capacity);
 
-			//TODO 1: Find each unneeded vertex variant '#define' in source code.
-			//TODO 2: Copy source code to intermediate buffer, while skipping lines we wish to remove.
+			Utf8Iterator e = new(_sourceCodeUtf8Bytes, _sourceCodeUtf8Bytes.Length);
+			Utf8Iterator.Position lastEndPos = new(0, 0, 0);
+			Utf8Iterator.Position curMatchPos;
+
+			// Find each unneeded vertex variant '#define' in source code:
+			while ((curMatchPos = e.FindNext(variantDefinePrefix)).IsValid)
+			{
+				// Copy source code to intermediate buffer, while skipping lines we wish to remove:
+				int copyByteSize = curMatchPos.utf8Position - lastEndPos.utf8Position;
+				Array.Copy(_sourceCodeUtf8Bytes, lastEndPos.utf8Position, intermediateBuffer.Utf8ByteBuffer, intermediateBuffer.Length, copyByteSize);
+				intermediateBuffer.Length += copyByteSize;
+
+				lastEndPos = e.AdvanceToEndOfWord();
+			}
+			if (lastEndPos.utf8Position < _sourceCodeUtf8Bytes.Length)
+			{
+				// Copy remaining source code:
+				int remainingByteSize = _sourceCodeUtf8Bytes.Length - lastEndPos.utf8Position;
+				Array.Copy(_sourceCodeUtf8Bytes, lastEndPos.utf8Position, intermediateBuffer.Utf8ByteBuffer, intermediateBuffer.Length, remainingByteSize);
+				intermediateBuffer.Length += remainingByteSize;
+			}
 
 			// Perform all subsequent steps on intermediate buffer instead of original source code:
 			_sourceCodeUtf8Bytes = intermediateBuffer.Utf8ByteBuffer;

@@ -10,6 +10,8 @@ public sealed class ShaderDescriptionSourceCodeData
 	{
 		public MeshVertexDataFlags VariantFlags { get; init; } = MeshVertexDataFlags.BasicSurfaceData;
 		public string EntryPoint { get; init; } = string.Empty;
+
+		public override string ToString() => $"Variant Flags: {VariantFlags}, Entry point function: '{EntryPoint ?? string.Empty}'";
 	}
 
 	[Serializable]
@@ -18,6 +20,8 @@ public sealed class ShaderDescriptionSourceCodeData
 		public ShaderLanguage Language { get; init; } = 0;
 		public uint ByteOffset { get; set; } = 0;
 		public uint ByteSize { get; init; } = 0;
+
+		public override string ToString() => $"Language: {Language}, Offset: {ByteOffset} bytes, Size: {ByteSize} bytes";
 	}
 
 	#endregion
