@@ -223,7 +223,7 @@ public static class FshaExporter
 				shaderDataBlockCount = (byte)outputDetails.variantCount,
 				shaderData = new()
 				{
-					byteOffset = 0,							//TODO: Calculate actual offset!
+					byteOffset = 0, // actual offset calculated later.
 					byteSize = outputDetails.totalByteSize,
 				}
 			},

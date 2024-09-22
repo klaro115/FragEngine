@@ -162,6 +162,8 @@ public sealed class ShaderData
 			return false;
 		}
 
+		long fileStartPosition = _writer.BaseStream.Position;
+
 		// Serialize description to JSON:
 		if (!Description.Write(out byte[] jsonUtf8Bytes))
 		{
@@ -184,6 +186,7 @@ public sealed class ShaderData
 		_writer.Write(SECTION_SPACER);
 
 		// Write description JSON:
+		_writer.JumpToPosition(fileStartPosition + FileHeader.jsonDescription.byteOffset, true);
 		if (!WriteByteData(_writer, jsonUtf8Bytes, jsonByteSize))
 		{
 			return false;
@@ -195,6 +198,7 @@ public sealed class ShaderData
 		// Write HLSL source code, if available:
 		if (hasSourceCode)
 		{
+			_writer.JumpToPosition(fileStartPosition + FileHeader.sourceCode.byteOffset, true);
 			foreach (var kvp in SourceCode!)
 			{
 				_writer.Write(kvp.Value);
@@ -205,6 +209,7 @@ public sealed class ShaderData
 		bool success = true;
 
 		// Write compiled shader data:
+		_writer.JumpToPosition(fileStartPosition + FileHeader.shaderData.byteOffset, true);
 		if (ByteCodeDxbc is not null && ByteCodeDxbc.Length != 0)
 		{
 			success &= WriteByteData(_writer, ByteCodeDxbc, ByteCodeDxbc.Length);
@@ -315,7 +320,7 @@ public sealed class ShaderData
 					bufferList.AddRange(byteBuffer);
 					remainingSize -= readBufferCapacity;
 				}
-				if (remainingSize != 0)
+				if (remainingSize > 0)
 				{
 					_reader.Read(byteBuffer, 0, remainingSize);
 					ReadOnlySpan<byte> span = new(byteBuffer, 0, remainingSize);

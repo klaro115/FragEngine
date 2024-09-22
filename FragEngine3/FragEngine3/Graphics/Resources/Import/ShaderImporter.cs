@@ -3,7 +3,6 @@ using FragEngine3.Graphics.Resources.Data;
 using FragEngine3.Graphics.Resources.Data.ShaderTypes;
 using FragEngine3.Graphics.Resources.Import.ShaderFormats;
 using FragEngine3.Resources;
-using System.Text;
 using Veldrid;
 
 namespace FragEngine3.Graphics.Resources.Import;
@@ -146,24 +145,22 @@ public static class ShaderImporter
 		ShaderStages stage = _shaderData.Description.ShaderStage;
 		Dictionary<MeshVertexDataFlags, Shader> variants = [];
 
-		foreach (var kvp in variantBytesDict)
+		if (hasPrecompiledVariants)
 		{
-			try
+			foreach (var kvp in variantBytesDict)
 			{
-				//TEST
-				string testPath = Path.Combine(_handle.resourceManager.fileGatherer.applicationPath, $"test/shader_{(int)kvp.Key}.txt");
-				File.WriteAllBytes(testPath, kvp.Value);
-				//TEST
+				try
+				{
+					ShaderDescription desc = new(stage, kvp.Value, string.Empty);
+					Shader variant = _graphicsCore.MainFactory.CreateShader(ref desc);
 
-				ShaderDescription desc = new(stage, kvp.Value, string.Empty);
-				Shader variant = _graphicsCore.MainFactory.CreateShader(ref desc);
-
-				variants.Add(kvp.Key, variant);
-			}
-			catch (Exception ex)
-			{
-				logger?.LogException($"Failed to load pre-compiled shader variant '{kvp.Key}' for shader resource '{_handle.resourceKey}'!", ex);
-				continue;
+					variants.Add(kvp.Key, variant);
+				}
+				catch (Exception ex)
+				{
+					logger?.LogException($"Failed to load pre-compiled shader variant '{kvp.Key}' for shader resource '{_handle.resourceKey}'!", ex);
+					continue;
+				}
 			}
 		}
 
@@ -178,7 +175,7 @@ public static class ShaderImporter
 
 	private static bool GatherPrecompiledVariants(
 		ShaderData _shaderData,
-		Dictionary<MeshVertexDataFlags, byte[]> _variantBytesDict,
+		Dictionary<MeshVertexDataFlags, byte[]> _dstVariantBytesDict,
 		CompiledShaderDataType _compiledDataType,
 		out MeshVertexDataFlags _outPrecompiledVertexFlags,
 		out int _outMaxVariantIndex)
@@ -213,7 +210,7 @@ public static class ShaderImporter
 			// Gather variants' pre-compiled byte data:
 			byte[] variantBytes = new byte[compiledVariant.ByteSize];
 			Array.Copy(byteCode, compiledVariant.ByteOffset, variantBytes, 0, variantBytes.Length);
-			_variantBytesDict.Add(compiledVariant.VariantFlags, variantBytes);
+			_dstVariantBytesDict.Add(compiledVariant.VariantFlags, variantBytes);
 		}
 		
 		return true;

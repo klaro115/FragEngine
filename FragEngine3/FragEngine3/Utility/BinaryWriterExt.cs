@@ -18,7 +18,7 @@ public static class BinaryWriterExt
 	/// <exception cref="NotSupportedException">Thrown if seeking is not supported by the stream, but target position lies before current write position.</exception>
 	public static void JumpToPosition(this BinaryWriter _writer, long _targetPosition, bool _fillWithZeroIfCantSeek = false)
 	{
-		if (_targetPosition < 0 || _targetPosition > _writer.BaseStream.Length)
+		if (_targetPosition < 0)
 		{
 			throw new ArgumentOutOfRangeException(nameof(_targetPosition), _targetPosition, "Jump target position for BinaryWriter was out of range.");
 		}
