@@ -42,6 +42,10 @@ public static class ShaderSourceCodeDefiner
 
 	private const string variantDefinePrefix = "#define VARIANT_";
 
+	private const string variantDefineExt = variantDefinePrefix + "EXTENDED";
+	private const string variantDefineBlend = variantDefinePrefix + "BLENDSHAPES";
+	private const string variantDefineAnim = variantDefinePrefix + "ANIMATED";
+
 	#endregion
 	#region Methods
 
@@ -122,18 +126,38 @@ public static class ShaderSourceCodeDefiner
 			sourceCodeLength = intermediateBuffer.Length;
 		}
 		
-		int sourceCodeOffset = 0;
-
-		//TODO: Insert variant defines first.
+		// Insert variant defines first:
+		if (_variantFlags.HasFlag(MeshVertexDataFlags.ExtendedSurfaceData))
+		{
+			WriteString(_outResultBuffer, variantDefineExt);
+		}
+		if (_variantFlags.HasFlag(MeshVertexDataFlags.BlendShapes))
+		{
+			WriteString(_outResultBuffer, variantDefineBlend);
+		}
+		if (_variantFlags.HasFlag(MeshVertexDataFlags.Animations))
+		{
+			WriteString(_outResultBuffer, variantDefineAnim);
+		}
 
 		// Copy source code to buffer as-is:
-		Array.Copy(_sourceCodeUtf8Bytes, 0, _outResultBuffer.Utf8ByteBuffer, sourceCodeOffset, sourceCodeLength);
+		Array.Copy(_sourceCodeUtf8Bytes, 0, _outResultBuffer.Utf8ByteBuffer, _outResultBuffer.Length, sourceCodeLength);
 		_outResultBuffer.Length += sourceCodeLength;
 
 		// Return optional intermediate buffer to pool:
 		intermediateBuffer?.ReleaseBuffer();
 
 		return true;
+
+		static void WriteString(SourceCodeBuffer _targetBuffer, string _txt)
+		{
+			int prevLength = _targetBuffer.Length;
+			for (int i = 0; i < _txt.Length; i++)
+			{
+				_targetBuffer.Utf8ByteBuffer[prevLength + i] = (byte)_txt[i];
+			}
+			_targetBuffer.Length += _txt.Length;
+		}
 	}
 
 	#endregion

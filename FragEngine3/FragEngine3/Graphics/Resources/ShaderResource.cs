@@ -188,7 +188,7 @@ public sealed class ShaderResource : Resource
 			_outShader = shaderVariants[variantIdx];
 
 			// If no compiled program is ready, but source code is available:
-			if (_outShader is null && canCompileFromSourceCode && (supportedVariantFlags & _variantFlags) == 0)
+			if (_outShader is null && canCompileFromSourceCode && (unsupportedVariantFlags & _variantFlags) == 0)
 			{
 				CompileVariantFromSourceCode(_variantFlags);
 				_outShader = shaderVariants[variantIdx];

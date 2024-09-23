@@ -124,8 +124,8 @@ public sealed class TestEmptyAppLogic : ApplicationLogic
 		if (SceneSpawner.CreateStaticMeshRenderer(scene, out StaticMeshRenderer cube))
 		{
 			cube.node.Name = "Cube";
-			cube.node.LocalPosition = new Vector3(2.5f, -0.5f, 2);
-			//cube.node.SetRotationFromYawPitchRoll(45, 45, 0, true, true);
+			cube.node.LocalPosition = new Vector3(0, -0.5f, 2);
+			cube.node.SetRotationFromYawPitchRoll(45, 45, 0, true, true);
 			cube.node.LocalScale = Vector3.One;
 
 			cube.SetMesh(cubeHandle);

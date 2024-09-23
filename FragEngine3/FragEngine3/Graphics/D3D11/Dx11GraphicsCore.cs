@@ -16,10 +16,10 @@ internal sealed class Dx11GraphicsCore(GraphicsSystem _graphicsSystem, EngineCon
 
 	private static readonly GraphicsCapabilities capabilities = new();
 
-    #endregion
-    #region Properties
+	#endregion
+	#region Properties
 
-    public override EnginePlatformFlag ApiPlatformFlag => EnginePlatformFlag.GraphicsAPI_D3D;
+	public override EnginePlatformFlag ApiPlatformFlag => EnginePlatformFlag.GraphicsAPI_D3D;
 	public override bool DefaultMirrorY => true;
 	public override ShaderLanguage DefaultShaderLanguage => ShaderLanguage.HLSL;
 	public override CompiledShaderDataType CompiledShaderDataType => CompiledShaderDataType.DXBC | CompiledShaderDataType.DXIL;
@@ -54,7 +54,7 @@ internal sealed class Dx11GraphicsCore(GraphicsSystem _graphicsSystem, EngineCon
 			Rectangle displayRect = new(0, 0, 1920, 1080);
 			unsafe
 			{
-				Sdl2Native.SDL_GetDisplayBounds(config.Graphics.DisplayIndex, &displayRect);
+				Sdl2Native.SDL_GetDisplayBounds(config.Graphics.DisplayIndex, &displayRect);	// not working.
 			}
 
 			int posX = 0;
