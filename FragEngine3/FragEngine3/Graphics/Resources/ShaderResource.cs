@@ -256,7 +256,7 @@ public sealed class ShaderResource : Resource
 			Array.Copy(sourceCodeBuffer.Utf8ByteBuffer, variantSourceCodeBytes, sourceCodeBuffer.Length);
 		}
 
-        try
+		try
 		{
 			// Compile variant from modified source code:
 			ShaderDescription shaderDesc = new(Stage, variantSourceCodeBytes, entryPoint.EntryPoint);

@@ -3,27 +3,59 @@
 namespace FragEngine3.Graphics.Resources.Import.ShaderFormats;
 
 /// <summary>
-/// Helper class for setting or removing preprocessor '#define' macros in shader source code prior to compilation.
+/// Utility class for setting or removing preprocessor '#define' macros in shader source code prior to compilation.
 /// </summary>
 public static class ShaderSourceCodeDefiner
 {
 	#region Types
 
+	/// <summary>
+	/// Buffer object containing the results of source code modifications. The byte size of this buffer's contents is given by
+	/// the <see cref="Length"/> property; any data beyond this size should be ignored.<para/>
+	/// OWNERSHIP: A reference to this object should only be retained until the contained shader code data has been extracted.
+	/// After usage, the buffer object must be released via <see cref="ReleaseBuffer"/>, to ensure that it is returned to the
+	/// pool for later re-use. The ownership of this objects remains with <see cref="ShaderSourceCodeDefiner"/>.
+	/// </summary>
+	/// <param name="_funcReturnBufferToPool">Function delegate which is called upon release of the buffer.</param>
+	/// <param name="_minBufferCapacity">The minimum capacity that must be allocated from the start, in bytes.</param>
 	public sealed class SourceCodeBuffer(Action<SourceCodeBuffer> _funcReturnBufferToPool, int _minBufferCapacity)
 	{
 		private readonly Action<SourceCodeBuffer> funcReturnBufferToPool = _funcReturnBufferToPool;
-		public byte[] Utf8ByteBuffer { get; private set; } = new byte[_minBufferCapacity];
 
+		/// <summary>
+		/// A byte buffer for storing the results of modifying shader source code. Contents are encoded as UTF-8 or ASCII.
+		/// </summary>
+		public byte[] Utf8ByteBuffer { get; private set; } = new byte[_minBufferCapacity];
+		/// <summary>
+		/// The current size of contents in the buffer, in bytes.
+		/// </summary>
 		public int Length = 0;
+		/// <summary>
+		/// The total current capacity of the buffer, in bytes. If this capacity is too small, the buffer size may be increased
+		/// by calling <see cref="Resize(int, bool)"/>.
+		/// </summary>
 		public int Capacity => Utf8ByteBuffer.Length;
 
+		/// <summary>
+		/// Changes the total capacity of the buffer.
+		/// </summary>
+		/// <param name="_minCapacity">The new minimum capacity that the buffer should be re-allocated to, in bytes. This value
+		/// cannot be less than the current value of <see cref="Length"/>.</param>
+		/// <param name="_copyExistingContents">Whether to retain existing buffer contents after resizing.</param>
 		public void Resize(int _minCapacity, bool _copyExistingContents = true)
 		{
 			_minCapacity = Math.Max(_minCapacity, Utf8ByteBuffer.Length);
 			byte[] prevBuffer = Utf8ByteBuffer;
 			Utf8ByteBuffer = new byte[_minCapacity];
-			prevBuffer.CopyTo(Utf8ByteBuffer, 0);
+			if (_copyExistingContents)
+			{
+				prevBuffer.CopyTo(Utf8ByteBuffer, 0);
+			}
 		}
+		/// <summary>
+		/// Releases the buffer and returns it to a pool for later re-use by its owner. This should be called immediately after
+		/// you've extracted all contents you need from <see cref="Utf8ByteBuffer"/>.
+		/// </summary>
 		public void ReleaseBuffer()
 		{
 			Length = 0;
@@ -34,7 +66,7 @@ public static class ShaderSourceCodeDefiner
 	#endregion
 	#region Fields
 
-	private static Stack<SourceCodeBuffer> bufferPool = [];
+	private static readonly Stack<SourceCodeBuffer> bufferPool = [];
 	private static readonly object bufferPoolLockObj = new();
 
 	#endregion
@@ -81,6 +113,16 @@ public static class ShaderSourceCodeDefiner
 		return buffer;
 	}
 
+	/// <summary>
+	/// Adds or removes pre-processor '#define' statements for shader variant flags.
+	/// </summary>
+	/// <param name="_sourceCodeUtf8Bytes">Byte array containing shader source code in UTF-8 or ASCII encoding. May not be null or empty.</param>
+	/// <param name="_variantFlags">Mesh vertex data flags that should be added for the desired shader variant.</param>
+	/// <param name="_removeExistingDefines">Whether to remove all existing variant defines before adding the requested new ones.
+	/// It is recommended to set this to true, unless you know that the source code has been sanitized of variant defines beforehand.</param>
+	/// <param name="_outResultBuffer">Outputs a buffer containing the resulting source code. After the contained data has been used,
+	/// this object must be released via '<see cref="SourceCodeBuffer.ReleaseBuffer"/>' to return it to the pool for later re-use.</param>
+	/// <returns>True if removing and adding variant defines succeeded, false otherwise.</returns>
 	public static bool SetVariantDefines(byte[] _sourceCodeUtf8Bytes, MeshVertexDataFlags _variantFlags, bool _removeExistingDefines, out SourceCodeBuffer? _outResultBuffer)
 	{
 		if (_sourceCodeUtf8Bytes is null || _sourceCodeUtf8Bytes.Length == 0)
@@ -127,17 +169,23 @@ public static class ShaderSourceCodeDefiner
 		}
 		
 		// Insert variant defines first:
-		if (_variantFlags.HasFlag(MeshVertexDataFlags.ExtendedSurfaceData))
+		if (_variantFlags > MeshVertexDataFlags.BasicSurfaceData)
 		{
-			WriteString(_outResultBuffer, variantDefineExt);
-		}
-		if (_variantFlags.HasFlag(MeshVertexDataFlags.BlendShapes))
-		{
-			WriteString(_outResultBuffer, variantDefineBlend);
-		}
-		if (_variantFlags.HasFlag(MeshVertexDataFlags.Animations))
-		{
-			WriteString(_outResultBuffer, variantDefineAnim);
+			if (_variantFlags.HasFlag(MeshVertexDataFlags.ExtendedSurfaceData))
+			{
+				WriteString(_outResultBuffer, variantDefineExt);
+				WriteString(_outResultBuffer, Environment.NewLine);
+			}
+			if (_variantFlags.HasFlag(MeshVertexDataFlags.BlendShapes))
+			{
+				WriteString(_outResultBuffer, variantDefineBlend);
+				WriteString(_outResultBuffer, Environment.NewLine);
+			}
+			if (_variantFlags.HasFlag(MeshVertexDataFlags.Animations))
+			{
+				WriteString(_outResultBuffer, variantDefineAnim);
+				WriteString(_outResultBuffer, Environment.NewLine);
+			}
 		}
 
 		// Copy source code to buffer as-is:
@@ -149,6 +197,8 @@ public static class ShaderSourceCodeDefiner
 
 		return true;
 
+
+		// Local helper function for writing a string to UTF-8 byte buffer:
 		static void WriteString(SourceCodeBuffer _targetBuffer, string _txt)
 		{
 			int prevLength = _targetBuffer.Length;

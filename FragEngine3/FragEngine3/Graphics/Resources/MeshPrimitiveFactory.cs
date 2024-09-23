@@ -5,6 +5,9 @@ using System.Numerics;
 
 namespace FragEngine3.Graphics.Resources;
 
+/// <summary>
+/// Utility class for constructing surface geometry for primitive shapes.
+/// </summary>
 public static class MeshPrimitiveFactory
 {
 	#region Fields
@@ -465,6 +468,14 @@ public static class MeshPrimitiveFactory
 		return _outMesh.SetGeometry(in _outMeshData);
 	}
 
+	/// <summary>
+	/// Creates surface geometry data for a cone.
+	/// </summary>
+	/// <param name="_radius">The radius of the disc at the base of the cone.</param>
+	/// <param name="_height">The height of the cone, from the center of its base to the tip</param>
+	/// <param name="_subdivisions">The number of vertices to place along the base edge of the cone. Must be 3 or more.<para/>
+	/// HINT: 32 subdivisions appear sufficiently round for most purposes, most people won't notice artifacts beyond that point.</param>
+	/// <param name="_useExtendedData">Whether to generate extended vertex data (tangents, secondary UVs) for this mesh.</param>
 	public static MeshSurfaceData CreateConeData(float _radius, float _height, uint _subdivisions, bool _useExtendedData)
 	{
 		// Geometry counts:
@@ -610,6 +621,11 @@ public static class MeshPrimitiveFactory
 		return _outMesh.SetGeometry(in _outMeshData);
 	}
 
+	/// <summary>
+	/// Creates surface geometry for an icosahedron, i.e. a 20-sided spheroid with triangular faces.
+	/// </summary>
+	/// <param name="_radius">The distance from the center of the icosahedron to any one of its corners.</param>
+	/// <param name="_useExtendedData">Whether to generate extended vertex data (tangents, secondary UVs) for this mesh.</param>
 	public static MeshSurfaceData CreateIcosahedronData(float _radius, bool _useExtendedData)
 	{
 		// Geometry counts:
@@ -758,6 +774,10 @@ public static class MeshPrimitiveFactory
 		return _outMesh.SetGeometry(in _outMeshData);
 	}
 
+	/// <summary>
+	/// Creates surface geometry for a square shape that is intended to be used as canvas for full-screen effects and overlays.
+	/// </summary>
+	/// <param name="_useExtendedData">Whether to generate extended vertex data (tangents, secondary UVs) for this mesh.</param>
 	public static MeshSurfaceData CreateFullscreenQuadData(bool _useExtendedData)
 	{
 		return new()

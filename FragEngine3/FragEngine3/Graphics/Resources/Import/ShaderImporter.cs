@@ -7,10 +7,21 @@ using Veldrid;
 
 namespace FragEngine3.Graphics.Resources.Import;
 
+/// <summary>
+/// Utility class for importing and creating shader resources.
+/// </summary>
 public static class ShaderImporter
 {
 	#region Methods
 
+	/// <summary>
+	/// Imports shader data from a resource file.
+	/// </summary>
+	/// <param name="_resourceManager">The engine's resource manager, through which we want to load the resource data file.</param>
+	/// <param name="_handle">A resource handle identifying the shader resource we wish to import.</param>
+	/// <param name="_outShaderData">Outputs a shader data instance describing the shader resource, and containing source code and
+	/// pre-compiled shader programs.</param>
+	/// <returns>True if shader data could be generated or read for the given resource handle, or false, if the import failed.</returns>
 	public static bool ImportShaderData(ResourceManager _resourceManager, ResourceHandle _handle, out ShaderData? _outShaderData)
 	{
 		// Check input parameters:
@@ -108,7 +119,16 @@ public static class ShaderImporter
 		return true;
 	}
 
-	public static bool CreateShader(ResourceHandle _handle, GraphicsCore _graphicsCore, ShaderData _shaderData, out ShaderResource? _outShaderRes)
+	/// <summary>
+	/// Creates a shader resource from shader data for a given resource handle.
+	/// </summary>
+	/// <param name="_resourceKey">The identifier key of the resource we're creating this shader for.</param>
+	/// <param name="_graphicsCore">The graphics core using which we want to upload and bind the resulting shader programs.</param>
+	/// <param name="_shaderData">A shader data object describing the shader resource, and providing source code or pre-compiled shader
+	/// programs for it.</param>
+	/// <param name="_outShaderRes">Outputs a new shader resource that is ready for use by the rendering pipeline.</param>
+	/// <returns>True if a shader resource could be created successfully, false if creating has failed.</returns>
+	public static bool CreateShader(string _resourceKey, GraphicsCore _graphicsCore, ShaderData _shaderData, out ShaderResource? _outShaderRes)
 	{
 		// Check input parameters:
 		if (_graphicsCore is null || _graphicsCore.IsDisposed)
@@ -119,9 +139,9 @@ public static class ShaderImporter
 		}
 		Logger? logger = _graphicsCore.graphicsSystem.engine.Logger ?? Logger.Instance;
 
-		if (_handle is null || !_handle.IsValid)
+		if (string.IsNullOrEmpty(_resourceKey))
 		{
-			logger?.LogError("Cannot create shader resource for null or invalid resource handle!");
+			logger?.LogError("Cannot create shader resource for null or empty resource key!");
 			_outShaderRes = null;
 			return false;
 		}
@@ -134,17 +154,16 @@ public static class ShaderImporter
 
 		Dictionary<MeshVertexDataFlags, byte[]> variantBytesDict = [];
 
-		// Prepare lookup array for all supported variants:
+		// Prepare lookup table for all supported variants:
 		bool hasPrecompiledVariants = GatherPrecompiledVariants(
 			_shaderData,
 			variantBytesDict,
-			_graphicsCore.CompiledShaderDataType,
-			out _,
-			out _);
+			_graphicsCore.CompiledShaderDataType);
 
 		ShaderStages stage = _shaderData.Description.ShaderStage;
 		Dictionary<MeshVertexDataFlags, Shader> variants = [];
 
+		// Compile or upload any pre-compiled shader programs immediately:
 		if (hasPrecompiledVariants)
 		{
 			foreach (var kvp in variantBytesDict)
@@ -158,31 +177,36 @@ public static class ShaderImporter
 				}
 				catch (Exception ex)
 				{
-					logger?.LogException($"Failed to load pre-compiled shader variant '{kvp.Key}' for shader resource '{_handle.resourceKey}'!", ex);
+					logger?.LogException($"Failed to load pre-compiled shader variant '{kvp.Key}' for shader resource '{_resourceKey}'!", ex);
 					continue;
 				}
 			}
 		}
 
-		_outShaderRes = new ShaderResource(
-			_handle.resourceKey,
-			_graphicsCore,
-			variants,
-			_shaderData,
-			stage);
-		return true;
+		// Try creating the shader resource:
+		try
+		{
+			_outShaderRes = new ShaderResource(
+				_resourceKey,
+				_graphicsCore,
+				variants,
+				_shaderData,
+				stage);
+			return true;
+		}
+		catch (Exception ex)
+		{
+			logger?.LogException($"Failed to create shader resource instance for resource key '{_resourceKey}'!", ex);
+			_outShaderRes = null;
+			return false;
+		}
 	}
 
 	private static bool GatherPrecompiledVariants(
 		ShaderData _shaderData,
 		Dictionary<MeshVertexDataFlags, byte[]> _dstVariantBytesDict,
-		CompiledShaderDataType _compiledDataType,
-		out MeshVertexDataFlags _outPrecompiledVertexFlags,
-		out int _outMaxVariantIndex)
+		CompiledShaderDataType _compiledDataType)
 	{
-		_outPrecompiledVertexFlags = 0;
-		_outMaxVariantIndex = -1;
-
 		if (_shaderData.Description.CompiledVariants is null ||
 			_shaderData.Description.CompiledVariants.Length == 0)
 		{
@@ -202,10 +226,6 @@ public static class ShaderImporter
 			// Skip unsupported types and unnecessary variants:
 			if (!_compiledDataType.HasFlag(compiledVariant.Type)) continue;
 			if ((compiledVariant.VariantFlags & ignoredVariantFlags) != 0) continue;
-
-			// Update variant flags:
-			_outPrecompiledVertexFlags |= compiledVariant.VariantFlags;
-			_outMaxVariantIndex = Math.Max(_outMaxVariantIndex, (int)compiledVariant.VariantFlags.GetVariantIndex());
 
 			// Gather variants' pre-compiled byte data:
 			byte[] variantBytes = new byte[compiledVariant.ByteSize];

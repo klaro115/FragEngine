@@ -10,6 +10,7 @@ namespace FragEngine3.Graphics.Resources;
 /// <summary>
 /// Factory class for importing and compiling GPU shader programs.
 /// </summary>
+[Obsolete("Replaced by proper resource importer. Some features were moved to ShaderResource for run-time and on-demand compilation.")]
 public static class ShaderResourceFactory
 {
 	#region Constants
