@@ -1,5 +1,5 @@
 ﻿using System.Collections.Frozen;
-using FragEngine3.Graphics.Components.ConstantBuffers;
+using FragEngine3.Graphics.ConstantBuffers;
 using FragEngine3.Graphics.Lighting;
 using FragEngine3.Graphics.Resources;
 using Veldrid;

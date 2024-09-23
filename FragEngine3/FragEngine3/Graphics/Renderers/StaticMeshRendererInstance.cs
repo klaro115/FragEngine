@@ -1,6 +1,6 @@
 ﻿using FragEngine3.Containers;
 using FragEngine3.EngineCore;
-using FragEngine3.Graphics.Components.ConstantBuffers;
+using FragEngine3.Graphics.ConstantBuffers;
 using FragEngine3.Graphics.Contexts;
 using FragEngine3.Graphics.Internal;
 using FragEngine3.Graphics.Resources;

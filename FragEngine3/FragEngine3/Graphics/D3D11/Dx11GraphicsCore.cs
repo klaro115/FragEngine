@@ -57,8 +57,8 @@ internal sealed class Dx11GraphicsCore(GraphicsSystem _graphicsSystem, EngineCon
 				Sdl2Native.SDL_GetDisplayBounds(config.Graphics.DisplayIndex, &displayRect);	// not working.
 			}
 
-			int posX = 0;
-			int posY = 0;
+			int posX = 40;
+			int posY = 40;
 			int width = Math.Min((int)settings.Resolution.X, displayRect.Width);
 			int height = Math.Min((int)settings.Resolution.Y, displayRect.Height);
 			if (config.Graphics.CenterWindowOnScreen)
