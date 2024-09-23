@@ -24,7 +24,11 @@ public static class ShaderSourceCodeDefiner
 			Utf8ByteBuffer = new byte[_minCapacity];
 			prevBuffer.CopyTo(Utf8ByteBuffer, 0);
 		}
-		public void ReleaseBuffer() => funcReturnBufferToPool(this);
+		public void ReleaseBuffer()
+		{
+			Length = 0;
+			funcReturnBufferToPool(this);
+		}
 	}
 
 	#endregion
