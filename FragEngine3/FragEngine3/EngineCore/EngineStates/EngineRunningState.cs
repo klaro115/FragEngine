@@ -20,7 +20,7 @@ internal sealed class EngineRunningState(Engine _engine, ApplicationLogic _appli
 		// If requested, log state change:
 		if (_verbose)
 		{
-			engine.Logger.LogStatus("### LOADING CONTENT...");
+			engine.Logger.LogStatus("### RUNNING...");
 		}
 
 		//...

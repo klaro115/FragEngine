@@ -100,7 +100,7 @@ internal sealed class EngineLoadingState(Engine _engine, ApplicationLogic _appli
 			timeManager.EndFrame(out TimeSpan threadSleepTime);
 			computeTimeSum += timeManager.LastFrameDuration;
 			frameTimeSum += timeManager.DeltaTime;
-			if (computeTimeSum.TotalMilliseconds > 25)
+			if (timeManager.LastFrameDuration.TotalMilliseconds > 25)
 			{
 				below40FpsFrameCount++;
 			}
