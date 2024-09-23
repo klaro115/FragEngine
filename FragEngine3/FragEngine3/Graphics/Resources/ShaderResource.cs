@@ -11,7 +11,8 @@ namespace FragEngine3.Graphics.Resources;
 /// <summary>
 /// A graphics resource representing all vertex variants of a same GPU shader program.<para/>
 /// IMPORT: Each shader resource depicts a single pipeline stage. Multiple stages may be defined in a same shader source file,
-/// but all variants of a stage must be contained within one contiguous file.<para/>
+/// but all variants of a stage must be contained within one contiguous file. If the shader resource was created with source
+/// code available, additional variants may be compiled at run-time and on-demand.<para/>
 /// LIFECYCLE: Disposing a shader resource will dispose all variant programs created from it. The shader resource holds no
 /// additional external resource dependencies and can always be disposed safely once all materials referencing it have been
 /// disposed.
@@ -101,10 +102,16 @@ public sealed class ShaderResource : Resource
 
 	public readonly GraphicsCore graphicsCore;
 
+	/// <summary>
+	/// Gets the pipeline stage that this shader's programs can be bound to.
+	/// </summary>
 	public ShaderStages Stage { get; private set; } = ShaderStages.None;
 
+	/// <summary>
+	/// Gets the number of supported vertex data variants.
+	/// </summary>
 	public int VertexVariantCount => vertexVariants != null ? vertexVariants.Length : 0;
-	
+
 	public override ResourceType ResourceType => ResourceType.Shader;
 
 	private Logger? Logger => graphicsCore.graphicsSystem.engine.Logger ?? Logger.Instance;

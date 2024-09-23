@@ -1,4 +1,4 @@
-﻿#if !MACOS && !MACCATALYST
+﻿#if !MACOS && !MACCATALYST &&!IOS
 using System.Numerics;
 using System.Runtime.InteropServices;
 using Veldrid;

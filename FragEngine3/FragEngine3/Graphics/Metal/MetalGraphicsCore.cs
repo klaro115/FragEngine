@@ -9,9 +9,9 @@ using Veldrid.MetalBindings;
 using Veldrid.Sdl2;
 using Veldrid.StartupUtilities;
 
-namespace FragEngine3.Graphics.MacOS;
+namespace FragEngine3.Graphics.Metal;
 
-internal sealed class MacGraphicsCore(GraphicsSystem _graphicsSystem, EngineConfig _config) : GraphicsCore(_graphicsSystem, _config)
+internal sealed class MetalGraphicsCore(GraphicsSystem _graphicsSystem, EngineConfig _config) : GraphicsCore(_graphicsSystem, _config)
 {
 	#region Fields
 

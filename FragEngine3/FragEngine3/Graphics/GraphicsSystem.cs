@@ -3,7 +3,7 @@ using FragEngine3.EngineCore;
 using FragEngine3.EngineCore.Config;
 using FragEngine3.Graphics.Config;
 using FragEngine3.Graphics.D3D11;
-using FragEngine3.Graphics.MacOS;
+using FragEngine3.Graphics.Metal;
 using FragEngine3.Graphics.Resources;
 using FragEngine3.Graphics.Vulkan;
 using FragEngine3.Resources;
@@ -208,7 +208,7 @@ public class GraphicsSystem : IEngineSystem
 		else if (RuntimeInformation.IsOSPlatform(OSPlatform.OSX))
 		{
 			// On MacOS, Metal is the only real option, unless we want to use something like MoltenVK:
-			newCore = new MacGraphicsCore(this, config);
+			newCore = new MetalGraphicsCore(this, config);
 		}
 		else if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
 		{
