@@ -61,7 +61,7 @@ public sealed class ShaderDescriptionData
 	/// <param name="_type">The type of compiled shader data we're looking for.</param>
 	/// <param name="_variantFlags">Vertex data flags of the shader variant we're looking for.</param>
 	/// <param name="_variantDescriptionTxt">A string-encoded description of the feature set we're looking for. If null, this is ignored. If provided, this is prioritized.
-	/// This description's format corresponds to the output of <see cref="ShaderGen.ShaderGenConfig.CreateDescriptionTxt"/>, and it is case-sensitive.</param>
+	/// This description's format corresponds to the output of <see cref="ShaderGen.ShaderConfig.CreateDescriptionTxt"/>, and it is case-sensitive.</param>
 	/// <param name="_outVariantData">Outputs description data for the most first fitting variant that is present in pre-compiled form.</param>
 	/// <returns>True if compiled data of the given type exists within this file, false otherwise.</returns>
 	public bool GetCompiledShaderVariantData(CompiledShaderDataType _type, MeshVertexDataFlags _variantFlags, string? _variantDescriptionTxt, out ShaderDescriptionVariantData _outVariantData)

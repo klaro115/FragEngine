@@ -197,8 +197,8 @@ public static class FshaExporter
 			{
 				EntryPointNameBase = entryPointBase,
 				EntryPoints = entryPointData,
-				SupportedFeaturesTxt = "At_Nyy_Ly111pF_V110",       //TODO
-				MaximumCompiledFeaturesTxt = "At_Nyn_Ly101p0_V110", //TODO
+				SupportedFeaturesTxt = "At_Nyy_Ly111p185_V110",       //TODO
+				MaximumCompiledFeaturesTxt = "At_Nyn_Ly101p100_V110", //TODO
 				SourceCodeBlocks = sourceCodeBlocks.ToArray(),
 			};
 			sourceCodeTotalByteSize = sourceCodeCurrentOffset;

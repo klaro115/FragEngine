@@ -1,4 +1,5 @@
-﻿using Veldrid;
+﻿using FragEngine3.Graphics.Lighting;
+using Veldrid;
 
 namespace FragEngine3.Graphics.Resources.ShaderGen;
 
@@ -7,10 +8,10 @@ namespace FragEngine3.Graphics.Resources.ShaderGen;
 /// a comprehensive list of feature flags and paramaters that will be set at
 /// compile-time, or using the shader pre-processor. Most of these flags may be
 /// set using #define macros.<para/>
-/// The config type may however also be used as a simple description of a shader's
+/// This config type may however also be used as a simple description of a shader's
 /// features that are compliant with the engine's standard shader system.
 /// </summary>
-public struct ShaderGenConfig
+public struct ShaderConfig
 {
 	#region Fields
 
@@ -43,7 +44,7 @@ public struct ShaderGenConfig
 	#endregion
 	#region Properties
 
-	public static ShaderGenConfig ConfigWhiteLit => new()
+	public static ShaderConfig ConfigWhiteLit => new()
 	{
 		albedoSource = ShaderGenAlbedoSource.Color,
 		albedoColor = RgbaFloat.White,
@@ -64,7 +65,7 @@ public struct ShaderGenConfig
 		indirectLightResolution = 0u,
 	};
 
-	public static ShaderGenConfig ConfigMainLit => new()
+	public static ShaderConfig ConfigMainLit => new()
 	{
 		albedoSource = ShaderGenAlbedoSource.SampleTexMain,
 		albedoColor = RgbaFloat.White,
@@ -85,7 +86,7 @@ public struct ShaderGenConfig
 		indirectLightResolution = 0u,
 	};
 
-	public static ShaderGenConfig ConfigMainNormalsLit => new()
+	public static ShaderConfig ConfigMainNormalsLit => new()
 	{
 		albedoSource = ShaderGenAlbedoSource.SampleTexMain,
 		albedoColor = RgbaFloat.White,
@@ -155,13 +156,13 @@ public struct ShaderGenConfig
 	/// <param name="_propagateAfterMax">Whether to call '<see cref="PropagateFlagStatesToHierarchy"/>'
 	/// on the result of the max operation.</param>
 	/// <returns>A new standard shader configuration with the highest feature set combination.</returns>
-	public static ShaderGenConfig Max(ShaderGenConfig _a, ShaderGenConfig _b, bool _propagateAfterMax = true)
+	public static ShaderConfig Max(ShaderConfig _a, ShaderConfig _b, bool _propagateAfterMax = true)
 	{
 		bool useParallaxMap = _a.useParallaxMap || _b.useParallaxMap;
 		bool applyLighting = _a.applyLighting || _b.applyLighting;
 		bool useLightSources = applyLighting && (_a.useLightSources || _b.useLightSources);
 
-		ShaderGenConfig max = new()
+		ShaderConfig max = new()
 		{
 			// Albedo:
 			albedoSource = (ShaderGenAlbedoSource)Math.Max((int)_a.albedoSource, (int)_b.albedoSource),
@@ -244,7 +245,7 @@ public struct ShaderGenConfig
 		char parallaxFull = BoolTo01(useParallaxMap && useParallaxMapFull);
 
 		// Lighting:
-		// Format: "Ly101p1"
+		// Format: "Ly101p145"
 		char lightingYN = BoolToYN(applyLighting);
 		char useAmbient = BoolTo01(applyLighting && useAmbientLight);
 		char useLgtMaps = BoolTo01(applyLighting && useLightMaps);
@@ -301,7 +302,7 @@ public struct ShaderGenConfig
 	/// <param name="_txt">The descriptive text, may not be null or blank.</param>
 	/// <param name="_outConfig">Outputs the parsed shader configuration.</param>
 	/// <returns>True if the string could be parsed successfully, false if parsing failed.</returns>
-	public static bool TryParseDescriptionTxt(string _txt, out ShaderGenConfig _outConfig)
+	public static bool TryParseDescriptionTxt(string _txt, out ShaderConfig _outConfig)
 	{
 		if (string.IsNullOrEmpty(_txt))
 		{
@@ -310,7 +311,7 @@ public struct ShaderGenConfig
 		}
 
 		bool success = true;
-		ShaderGenConfig config = new();
+		ShaderConfig config = new();
 
 		string[] parts = _txt.Split('_', StringSplitOptions.RemoveEmptyEntries);
 		foreach (string part in parts)
@@ -415,7 +416,102 @@ public struct ShaderGenConfig
 		}
 	}
 
+	/// <summary>
+	/// Creates a list of pre-processor '#define' strings that can be prepended to a shader's source code to enable
+	/// or control certain features.
+	/// </summary>
+	/// <param name="_includeVariantDefines">Whether to also include defines for vertex data variant flags.</param>
+	/// <returns>A list of code lines with '#define' statements that can be added to a shader's source code.</returns>
+	public List<string> GetFeatureDefineStrings(bool _includeVariantDefines)
+	{
+		const string featureDefinePrefix = "#define FEATURE_";
+		const string variantDefinePrefix = "#define VARIANT_";
 
+		List<string> defineStrings = [];
+
+		// Albedo:
+		if (albedoSource == ShaderGenAlbedoSource.Color)
+		{
+			string colorValueTxt = $"half4({albedoColor.R:0.###}, {albedoColor.G:0.###}, {albedoColor.B:0.###}, {albedoColor.A:0.###})";
+			defineStrings.Add(featureDefinePrefix + "ALBEDO_COLOR " + colorValueTxt);
+		}
+		else if (albedoSource == ShaderGenAlbedoSource.SampleTexMain)
+		{
+			defineStrings.Add(featureDefinePrefix + "ALBEDO_TEXTURE 1");
+		}
+
+		// Normals & Parallax:
+		if (useNormalMap)
+		{
+			defineStrings.Add(featureDefinePrefix + "NORMALS");
+		}
+		if (useParallaxMap)
+		{
+			defineStrings.Add(featureDefinePrefix + "PARALLAX");
+			if (useParallaxMapFull)
+			{
+				defineStrings.Add(featureDefinePrefix + "PARALLAX_FULL");
+			}
+		}
+
+		// Lighting:
+		if (applyLighting)
+		{
+			defineStrings.Add(featureDefinePrefix + "LIGHT");
+			if (useAmbientLight)
+			{
+				defineStrings.Add(featureDefinePrefix + "LIGHT_AMBIENT");
+			}
+			if (useLightMaps)
+			{
+				defineStrings.Add(featureDefinePrefix + "LIGHT_LIGHTMAPS");
+			}
+			// Light sources:
+			if (useLightSources)
+			{
+				string modelShort = lightingModel switch
+				{
+					ShaderGenLightingModel.Phong => "P",
+					ShaderGenLightingModel.BlinnPhong => "BP",
+					ShaderGenLightingModel.Beckmann => "B",
+					_ => string.Empty,
+				};
+				defineStrings.Add(featureDefinePrefix + "LIGHT_SOURCES");
+				defineStrings.Add(featureDefinePrefix + "LIGHT_MODEL " + modelShort);
+
+				// Shadow maps:
+				if (useShadowMaps)
+				{
+					defineStrings.Add(featureDefinePrefix + "LIGHT_SHADOWMAPS");
+					defineStrings.Add(featureDefinePrefix + $"LIGHT_SHADOWMAPS_RES {LightConstants.SHADOW_RESOLUTION}");
+					defineStrings.Add(featureDefinePrefix + "LIGHT_SHADOWMAPS_AA " + Math.Max(shadowSamplingCount, 1).ToString());
+					if (indirectLightResolution != 0)
+					{
+						defineStrings.Add(featureDefinePrefix + "LIGHT_INDIRECT " + indirectLightResolution.ToString());
+					}
+				}
+			}
+		}
+
+		// Vertex variant flags:
+		if (_includeVariantDefines)
+		{
+			if (alwaysCreateExtendedVariant)
+			{
+				defineStrings.Add(variantDefinePrefix + "EXTENDED");
+			}
+			if (alwaysCreateBlendShapeVariant)
+			{
+				defineStrings.Add(variantDefinePrefix + "BLENDSHAPES");
+			}
+			if (alwaysCreateAnimatedVariant)
+			{
+				defineStrings.Add(variantDefinePrefix + "ANIMATED");
+			}
+		}
+
+		return defineStrings;
+	}
 
 	#endregion
 }

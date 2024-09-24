@@ -40,7 +40,7 @@ public sealed class ShaderResource : Resource
 		vertexVariants = allVariantFlags.ToArray();
 		totalVariantCount = allVariantFlags.Count;
 
-		int maxVariantIndex = allVariantFlags.Max((f) => (int)f.GetVariantIndex());
+		int maxVariantIndex = allVariantFlags.Max((f) => (int)f.GetVariantIndex());				// TODO [important]: Move most of the code in here to ShaderImporter!
 		int maxLookupTableSize = maxVariantIndex + 1;
 
 		// Create shader variant lookup table:
@@ -63,7 +63,7 @@ public sealed class ShaderResource : Resource
 		{
 			canCompileFromSourceCode = true;
 			sourceCodeData = _shaderData.Description.SourceCode;
-			bool isConfigValid = ShaderGenConfig.TryParseDescriptionTxt(_shaderData.Description.SourceCode.SupportedFeaturesTxt, out ShaderGenConfig config);
+			bool isConfigValid = ShaderConfig.TryParseDescriptionTxt(_shaderData.Description.SourceCode.MaximumCompiledFeaturesTxt, out ShaderConfig config);
 			if (isConfigValid)
 			{
 				supportedVariantFlags |= config.GetVertexDataForVariantFlags();
@@ -76,7 +76,7 @@ public sealed class ShaderResource : Resource
 				Array.Copy(sourceCodeBuffer!.Utf8ByteBuffer, sourceCodeBytes, sourceCodeBuffer.Length);
 				sourceCodeBuffer.ReleaseBuffer();
 			}
-			if (isConfigValid && ShaderSourceCodeDefiner.RemoveAllFeatureDefines(sourceCodeBytes, out sourceCodeBuffer))
+			if (isConfigValid && ShaderSourceCodeDefiner.SetFeatureDefines(sourceCodeBytes, config.GetFeatureDefineStrings(false), true, out sourceCodeBuffer))
 			{
 				sourceCodeBytes = new byte[sourceCodeBuffer!.Length];
 				Array.Copy(sourceCodeBuffer!.Utf8ByteBuffer, sourceCodeBytes, sourceCodeBuffer.Length);

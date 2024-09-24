@@ -2,7 +2,7 @@
 
 /// <summary>
 /// Enumeration of different supported sources of albedo color.
-/// In a <see cref="ShaderGenConfig"/>, this pertains to the base albedo of the
+/// In a <see cref="ShaderConfig"/>, this pertains to the base albedo of the
 /// surface before any color and lighting changes are applied from optional features.
 /// </summary>
 public enum ShaderGenAlbedoSource
@@ -23,6 +23,8 @@ public enum ShaderGenAlbedoSource
 /// </summary>
 public enum ShaderGenLightingModel
 {
-	Phong			= 0,
+	Phong			= 0,	// 'P'
+	BlinnPhong,				// 'BP'
+	Beckmann,				// 'B'
 	//...
 }

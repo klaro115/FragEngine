@@ -19,12 +19,12 @@ public static class ShaderGenerator
 
 	public static bool CreatePixelShader(ResourceManager _resourceManager, EnginePlatformFlag _platformFlags, out byte[] _outShaderCode)
 	{
-		ShaderGenConfig config = ShaderGenConfig.ConfigWhiteLit;
+		ShaderConfig config = ShaderConfig.ConfigWhiteLit;
 
 		return CreatePixelShaderVariation(_resourceManager, config, _platformFlags, out _outShaderCode);
 	}
 
-	public static bool CreatePixelShaderVariation(ResourceManager _resourceManager, in ShaderGenConfig _config, EnginePlatformFlag _platformFlags, out byte[] _outShaderCode)
+	public static bool CreatePixelShaderVariation(ResourceManager _resourceManager, in ShaderConfig _config, EnginePlatformFlag _platformFlags, out byte[] _outShaderCode)
 	{
 		// Only load template code file once, cached code is used for all subsequent shader imports:
 		if (string.IsNullOrEmpty(templateCodePS))

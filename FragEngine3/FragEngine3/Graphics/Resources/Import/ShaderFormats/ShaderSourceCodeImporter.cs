@@ -62,7 +62,7 @@ internal static class ShaderSourceCodeImporter
 		}
 
 		// Create a vague estimate of a shader configuration description: (variant flags are most important)
-		ShaderGenConfig shaderConfig = ShaderGenConfig.ConfigWhiteLit;
+		ShaderConfig shaderConfig = ShaderConfig.ConfigWhiteLit;
 		shaderConfig.SetVariantFlagsFromMeshVertexData(allVariantFlags);
 		string descriptionText = shaderConfig.CreateDescriptionTxt();
 

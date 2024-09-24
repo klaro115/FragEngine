@@ -7,11 +7,11 @@ using Veldrid;
 
 Console.WriteLine("### BEGIN ###\n");
 
-//const string testShaderName = "DefaultSurface_modular_PS";
-const string testShaderName = "DefaultSurface_VS";
+const string testShaderName = "DefaultSurface_modular_PS";
+//const string testShaderName = "DefaultSurface_VS";
 string testShaderFilePath = Path.GetFullPath(Path.Combine(ResourceConstants.coreFolderRelativePath, $"shaders/{testShaderName}.hlsl"));
-const ShaderStages testShaderStage = ShaderStages.Vertex;
-const string testShaderEntryPoint = "Main_Vertex";
+const ShaderStages testShaderStage = ShaderStages.Fragment;
+const string testShaderEntryPoint = "Main_Pixel";
 
 // Export serializable shader data in FSHA-compliant format:
 FshaExportOptions exportOptions = new()

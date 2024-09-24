@@ -202,18 +202,18 @@ public static class ShaderResourceFactory
 	{
 		Logger logger = _graphicsCore.graphicsSystem.engine.Logger ?? Logger.Instance!;
 
-		ShaderGenConfig config;
+		ShaderConfig config;
 
 		if (_resourceKey.Length <= shaderGenPrefix.Length)
 		{
-			config = ShaderGenConfig.ConfigWhiteLit;
+			config = ShaderConfig.ConfigWhiteLit;
 		}
 		else
 		{
 			string configDescTxt = _resourceKey[shaderGenPrefix.Length..];
 
 			// Try to parse the configuration string describing the required shader features:
-			if (!ShaderGenConfig.TryParseDescriptionTxt(configDescTxt, out config))
+			if (!ShaderConfig.TryParseDescriptionTxt(configDescTxt, out config))
 			{
 				logger.LogError($"Failed to parse ShaderGen configuration description for resource '{_resourceKey}'!");
 				_outShaderRes = null;
