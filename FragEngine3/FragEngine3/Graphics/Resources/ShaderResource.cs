@@ -63,17 +63,25 @@ public sealed class ShaderResource : Resource
 		{
 			canCompileFromSourceCode = true;
 			sourceCodeData = _shaderData.Description.SourceCode;
-			if (ShaderGenConfig.TryParseDescriptionTxt(_shaderData.Description.SourceCode.SupportedFeaturesTxt, out ShaderGenConfig config))
+			bool isConfigValid = ShaderGenConfig.TryParseDescriptionTxt(_shaderData.Description.SourceCode.SupportedFeaturesTxt, out ShaderGenConfig config);
+			if (isConfigValid)
 			{
 				supportedVariantFlags |= config.GetVertexDataForVariantFlags();
 			}
 
-			// Remove all vertex data flags from source code, so we can just prepend them quickly later:
+			// Remove all vertex variants flags and feature defines from source code, so we can quickly prepend them later:
 			if (ShaderSourceCodeDefiner.SetVariantDefines(sourceCodeBytes, 0, true, out var sourceCodeBuffer))
 			{
 				sourceCodeBytes = new byte[sourceCodeBuffer!.Length];
 				Array.Copy(sourceCodeBuffer!.Utf8ByteBuffer, sourceCodeBytes, sourceCodeBuffer.Length);
-			}	
+				sourceCodeBuffer.ReleaseBuffer();
+			}
+			if (isConfigValid && ShaderSourceCodeDefiner.RemoveAllFeatureDefines(sourceCodeBytes, out sourceCodeBuffer))
+			{
+				sourceCodeBytes = new byte[sourceCodeBuffer!.Length];
+				Array.Copy(sourceCodeBuffer!.Utf8ByteBuffer, sourceCodeBytes, sourceCodeBuffer.Length);
+				sourceCodeBuffer.ReleaseBuffer();
+			}
 		}
 
 		unsupportedVariantFlags = ~supportedVariantFlags;
