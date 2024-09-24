@@ -8,6 +8,7 @@ using Veldrid;
 
 namespace FragEngine3.Graphics.Resources.ShaderGen;
 
+[Obsolete]
 public static class ShaderGenerator
 {
 	#region Fields
@@ -87,7 +88,7 @@ public static class ShaderGenerator
 		// Remove and update preprocessor defines of features that are not needed:
 		{
 			// Albedo:
-			if (_config.albedoSource != ShaderGenAlbedoSource.SampleTexMain)
+			if (_config.albedoSource != ShaderAlbedoSource.SampleTexMain)
 			{
 				ReplaceDefine(
 					codeBuilder,
@@ -95,7 +96,7 @@ public static class ShaderGenerator
 					"#define FEATURE_ALBEDO_TEXTURE 0",
 					definesMaxEndIdx);
 			}
-			if (_config.albedoSource == ShaderGenAlbedoSource.Color && _config.albedoColor != RgbaFloat.White)
+			if (_config.albedoSource == ShaderAlbedoSource.Color && _config.albedoColor != RgbaFloat.White)
 			{
 				ReplaceDefine(
 					codeBuilder,
@@ -136,7 +137,7 @@ public static class ShaderGenerator
 			{
 				RemoveDefine(codeBuilder, "#define FEATURE_LIGHT_SHADOWMAPS", definesMaxEndIdx);
 			}
-			if (_config.useLightSources && _config.lightingModel != ShaderGenLightingModel.Phong)
+			if (_config.useLightSources && _config.lightingModel != ShaderLightingModel.Phong)
 			{
 				ReplaceDefine(
 					codeBuilder,

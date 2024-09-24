@@ -3,7 +3,7 @@ using FragEngine3.Graphics;
 using FragEngine3.Graphics.Resources;
 using FragEngine3.Graphics.Resources.Data;
 using FragEngine3.Graphics.Resources.Data.ShaderTypes;
-using FragEngine3.Graphics.Resources.ShaderGen;
+using FragEngine3.Graphics.Resources.Import.ShaderFormats;
 using System.Text;
 using Veldrid;
 
@@ -172,7 +172,7 @@ public static class FshaExporter
 			foreach (ShaderLanguage language in sourceCodeLanguages)
 			{
 				// Check if a source file of the same name, but using different extension exists:
-				if (!ShaderGenConstants.shaderLanguageFileExtensions.TryGetValue(language, out string? languageExt)) continue;
+				if (!ShaderConstants.shaderLanguageFileExtensions.TryGetValue(language, out string? languageExt)) continue;
 
 				string sourceCodeFilePath = Path.ChangeExtension(_filePath, languageExt);
 				if (FshaExportUtility.CheckIfFileExists(sourceCodeFilePath))

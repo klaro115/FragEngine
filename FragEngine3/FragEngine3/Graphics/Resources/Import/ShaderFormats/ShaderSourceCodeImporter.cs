@@ -138,7 +138,7 @@ internal static class ShaderSourceCodeImporter
 
 	private static bool TryIdentifyShaderLanguage(string _fileExtension, out ShaderLanguage _outLanguage)
 	{
-		foreach (var kvp in ShaderGenConstants.shaderLanguageFileExtensions)
+		foreach (var kvp in ShaderConstants.shaderLanguageFileExtensions)
 		{
 			if (kvp.Value == _fileExtension)
 			{

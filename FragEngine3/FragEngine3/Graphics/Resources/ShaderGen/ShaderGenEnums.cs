@@ -5,7 +5,7 @@
 /// In a <see cref="ShaderConfig"/>, this pertains to the base albedo of the
 /// surface before any color and lighting changes are applied from optional features.
 /// </summary>
-public enum ShaderGenAlbedoSource
+public enum ShaderAlbedoSource
 {
 	/// <summary>
 	/// The base albedo is assigned from a single flat color.
@@ -21,7 +21,7 @@ public enum ShaderGenAlbedoSource
 /// Different main lighting models supported by standard shaders.
 /// Enum values are sorted in ascending order of the lighting models' relative complexity.
 /// </summary>
-public enum ShaderGenLightingModel
+public enum ShaderLightingModel
 {
 	Phong			= 0,	// 'P'
 	BlinnPhong,				// 'BP'

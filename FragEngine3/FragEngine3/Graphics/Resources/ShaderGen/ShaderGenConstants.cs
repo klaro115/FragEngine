@@ -3,6 +3,7 @@ using FragEngine3.Graphics.Resources.Data.ShaderTypes;
 
 namespace FragEngine3.Graphics.Resources.ShaderGen;
 
+[Obsolete]
 public static class ShaderGenConstants
 {
 	#region Fields
