@@ -1,7 +1,6 @@
 ﻿using FragEngine3.EngineCore;
 using FragEngine3.Graphics.Resources.Data;
 using FragEngine3.Graphics.Resources.Data.ShaderTypes;
-using FragEngine3.Graphics.Resources.ShaderGen;
 using FragEngine3.Resources;
 using FragEngine3.Utility.Unicode;
 using System.Text;

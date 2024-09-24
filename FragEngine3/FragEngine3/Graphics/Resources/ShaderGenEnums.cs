@@ -1,4 +1,4 @@
-﻿namespace FragEngine3.Graphics.Resources.ShaderGen;
+﻿namespace FragEngine3.Graphics.Resources;
 
 /// <summary>
 /// Enumeration of different supported sources of albedo color.

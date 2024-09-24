@@ -1,7 +1,7 @@
 ﻿using FragEngine3.Graphics.Lighting;
 using Veldrid;
 
-namespace FragEngine3.Graphics.Resources.ShaderGen;
+namespace FragEngine3.Graphics.Resources;
 
 /// <summary>
 /// Description structure for standard shader configurations. This type contains
@@ -16,28 +16,28 @@ public struct ShaderConfig
 	#region Fields
 
 	// Albedo:
-	public ShaderAlbedoSource albedoSource;			// Which value to initialize albedo/main color from. If source is texture, "TexMain" will be added.
-	public RgbaFloat albedoColor;						// If albedo source is color, initialize with this value. Implemented as inlined literal.
-	public string? samplerTexMain;						// If albedo source is TexMain, use a sampler with this name. "SamplerMain" is used if null or empty.
+	public ShaderAlbedoSource albedoSource;         // Which value to initialize albedo/main color from. If source is texture, "TexMain" will be added.
+	public RgbaFloat albedoColor;                       // If albedo source is color, initialize with this value. Implemented as inlined literal.
+	public string? samplerTexMain;                      // If albedo source is TexMain, use a sampler with this name. "SamplerMain" is used if null or empty.
 
 	// Normals:
 	public bool useNormalMap;                           // Whether to use normal maps, which will be used for all further shading. "TexNormal" is added.
-	public bool useParallaxMap;							// Whether to use height maps to offset UVs for additional simulated depth. "TexParallax" is added.
+	public bool useParallaxMap;                         // Whether to use height maps to offset UVs for additional simulated depth. "TexParallax" is added.
 	public bool useParallaxMapFull;                     // Whether to use full iteratively traced parallax with occlusion, instead of just simple UV offsetting.
-	public string? samplerTexNormal;					// For normal maps, use a sampler with this name. Main texture sampler (or "SamplerMain") is used if null or empty.
+	public string? samplerTexNormal;                    // For normal maps, use a sampler with this name. Main texture sampler (or "SamplerMain") is used if null or empty.
 
 	// Lighting:
-	public bool applyLighting;							// Whether to apply any lighting at all. Lighting calculations are added after albedo and normals.
+	public bool applyLighting;                          // Whether to apply any lighting at all. Lighting calculations are added after albedo and normals.
 	public bool useAmbientLight;                        // For lighting, whether to use ambient lighting from scene constant buffer as basic unlit lighting value. "CBScene" is added.
 	public bool useLightMaps;                           // For lighting, whether to use light maps to add additional static precalculated lighting.
-	public bool useLightSources;						// For lighting, whether to use light sources in the scene to light up surfaces. "BufLights" buffer and "Light" struct are added.
-	public ShaderLightingModel lightingModel;		// For lighting, which lighting model to use for light sources.
+	public bool useLightSources;                        // For lighting, whether to use light sources in the scene to light up surfaces. "BufLights" buffer and "Light" struct are added.
+	public ShaderLightingModel lightingModel;       // For lighting, which lighting model to use for light sources.
 	public bool useShadowMaps;                          // For lighting, whether to use shadow maps to mask out light coming from light sources.
-	public uint shadowSamplingCount;					// For shadow maps, how many depth samples are averaged to calculate depth per pixel.
-	public uint indirectLightResolution;				// For indirect lighting, how many samples per side of a grid to use for approximating nearby indirect light scattering.
+	public uint shadowSamplingCount;                    // For shadow maps, how many depth samples are averaged to calculate depth per pixel.
+	public uint indirectLightResolution;                // For indirect lighting, how many samples per side of a grid to use for approximating nearby indirect light scattering.
 
 	// Variants:
-	public bool alwaysCreateExtendedVariant;			// Whether to always also create an '_Ext' variant, even if no feature requires the additional geometry data.
+	public bool alwaysCreateExtendedVariant;            // Whether to always also create an '_Ext' variant, even if no feature requires the additional geometry data.
 	public bool alwaysCreateBlendShapeVariant;          // Whether to always also create '_Blend' variants, even if no feature requires the additional blending data. Unnecessary for pixel shaders.
 	public bool alwaysCreateAnimatedVariant;            // Whether to always also create '_Anim' variants, even if no feature requires the additional bone animation data. Unnecessary for pixel shaders.
 

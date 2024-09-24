@@ -15,7 +15,7 @@ public sealed class ShaderDescriptionVariantData
 	/// </summary>
 	public MeshVertexDataFlags VariantFlags { get; init; } = 0;
 	/// <summary>
-	/// String-encoded description of variant features and flags. May be decoded to <see cref="ShaderGen.ShaderConfig"/>.
+	/// String-encoded description of variant features and flags. May be decoded to <see cref="Resources.ShaderConfig"/>.
 	/// </summary>
 	public string VariantDescriptionTxt { get; init; } = string.Empty;
 	/// <summary>

@@ -104,6 +104,7 @@ public sealed class TestApplicationLogic : ApplicationLogic
 			{
 				ResolutionX = (uint)window.Width,
 				ResolutionY = (uint)window.Height,
+				//ColorFormat = PixelFormat.R10_G10_B10_A2_UNorm,
 				//ColorFormat = PixelFormat.R16_G16_B16_A16_UNorm,
 
 				ProjectionType = CameraProjectionType.Perspective,
@@ -114,7 +115,7 @@ public sealed class TestApplicationLogic : ApplicationLogic
 
 				ClearColor = true,
 				ClearDepth = true,
-				ClearColorValue = RgbaFloat.Black,
+				ClearColorValue = RgbaFloat.CornflowerBlue,
 				ClearDepthValue = 1.0f,
 			};
 			camera.IsMainCamera = true;
@@ -130,9 +131,10 @@ public sealed class TestApplicationLogic : ApplicationLogic
 			//light.node.SetRotationFromYawPitchRoll(0, -25, 0, true, true);
 			//light.node.SetEnabled(false);
 
-			light.LightIntensity = 0.5f;
+			light.LightIntensity = 0.8f;
 			light.CastShadows = true;
 			light.ShadowCascades = 2;
+			light.ShadowNormalBias = 0.02f;
 			light.ShadowDepthBias = 0.01f;
 		}
 		if (SceneSpawner.CreateLight(scene, LightType.Directional, out light))
