@@ -24,7 +24,7 @@ public sealed class VulkanGraphicsCore(GraphicsSystem _graphicsSystem, EngineCon
 
 	public override EnginePlatformFlag ApiPlatformFlag => EnginePlatformFlag.GraphicsAPI_Vulkan;
 	public override bool DefaultMirrorY => false;
-	public override ShaderLanguage DefaultShaderLanguage => ShaderLanguage.HLSL;
+	public override ShaderLanguage DefaultShaderLanguage => ShaderLanguage.SPIRV;
 	public override CompiledShaderDataType CompiledShaderDataType => CompiledShaderDataType.SPIRV;
 
 	#endregion

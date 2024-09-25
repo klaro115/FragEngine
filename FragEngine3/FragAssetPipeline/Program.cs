@@ -7,11 +7,14 @@ using Veldrid;
 
 Console.WriteLine("### BEGIN ###\n");
 
-const string testShaderName = "DefaultSurface_modular_PS";
-//const string testShaderName = "DefaultSurface_VS";
+//const string testShaderName = "DefaultSurface_modular_PS";
+//const string testShaderEntryPoint = "Main_Pixel";
+//const ShaderStages testShaderStage = ShaderStages.Fragment;
+const string testShaderName = "DefaultSurface_VS";
+const string testShaderEntryPoint = "Main_Vertex";
+const ShaderStages testShaderStage = ShaderStages.Vertex;
+
 string testShaderFilePath = Path.GetFullPath(Path.Combine(ResourceConstants.coreFolderRelativePath, $"shaders/{testShaderName}.hlsl"));
-const ShaderStages testShaderStage = ShaderStages.Fragment;
-const string testShaderEntryPoint = "Main_Pixel";
 
 // Export serializable shader data in FSHA-compliant format:
 FshaExportOptions exportOptions = new()
@@ -20,6 +23,7 @@ FshaExportOptions exportOptions = new()
 	shaderStage = testShaderStage,
 	entryPointBase = testShaderEntryPoint,
 	maxVertexVariantFlags = MeshVertexDataFlags.BasicSurfaceData | MeshVertexDataFlags.ExtendedSurfaceData,
+	compiledDataTypeFlags = CompiledShaderDataType.ALL,
 };
 
 bool success = FshaExporter.ExportShaderFromHlslFile(testShaderFilePath, exportOptions, out ShaderData? shaderData);
@@ -27,6 +31,17 @@ bool success = FshaExporter.ExportShaderFromHlslFile(testShaderFilePath, exportO
 Console.WriteLine($"Shader compilation: {(success ? "SUCCESS" : "FAILURE")}");
 
 string outputPath = Path.GetFullPath(Path.Combine(ResourceConstants.coreFolderRelativePath, $"shaders/{testShaderName}.fsha"));
+
+//TEST TEST TEST TEST
+byte[]? spirvCode = shaderData!.GetByteCodeOfType(CompiledShaderDataType.SPIRV);
+if (spirvCode is not null && shaderData.Description.GetCompiledShaderVariantData(CompiledShaderDataType.SPIRV, MeshVertexDataFlags.BasicSurfaceData, null, out var spirvVariantData))
+{
+	byte[] spirvVariantBytes = new byte[spirvVariantData.ByteSize];
+	Array.Copy(spirvCode, spirvVariantData.ByteOffset, spirvVariantBytes, 0, spirvVariantData.ByteSize);
+	string spirvOutputPath = Path.ChangeExtension(outputPath, ".spv");
+	File.WriteAllBytes(spirvOutputPath, spirvVariantBytes);
+}
+//TEST TEST TEST TEST
 
 // Write shader file:
 if (success && shaderData is not null)

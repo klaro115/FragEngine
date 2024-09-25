@@ -47,13 +47,23 @@ internal static class ShaderSourceCodeImporter
 
 		// Find entry points and variants in source code:
 		string entryPointNameBase = GraphicsConstants.defaultShaderStageEntryPoints[stage];
+		Dictionary<MeshVertexDataFlags, string> variantEntryPoints;
+		MeshVertexDataFlags allVariantFlags;
 
-		if (!TryFindEntryPoints(
+		if (language == ShaderLanguage.SPIRV)
+		{
+			variantEntryPoints = new()	//TEMP: We're currently just trying out the most important/basic one.
+			{
+				[MeshVertexDataFlags.BasicSurfaceData] = entryPointNameBase,
+			};
+			allVariantFlags = MeshVertexDataFlags.BasicSurfaceData;
+		}
+		else if (!TryFindEntryPoints(
 			sourceCodeBytes,
 			actualBytesCount,
 			entryPointNameBase,
-			out Dictionary<MeshVertexDataFlags, string> variantEntryPoints,
-			out MeshVertexDataFlags allVariantFlags))
+			out variantEntryPoints,
+			out allVariantFlags))
 		{
 			logger?.LogError($"Could not find any entry points for shader '{_resHandle.resourceKey}' ({stage})!");
 			_outShaderData = null;
@@ -61,7 +71,7 @@ internal static class ShaderSourceCodeImporter
 		}
 
 		// Create a vague estimate of a shader configuration description: (variant flags are most important)
-		ShaderConfig shaderConfig = ShaderConfig.ConfigWhiteLit;
+		ShaderConfig shaderConfig = ShaderConfig.ConfigMinimal;
 		shaderConfig.SetVariantFlagsFromMeshVertexData(allVariantFlags);
 		string descriptionText = shaderConfig.CreateDescriptionTxt();
 

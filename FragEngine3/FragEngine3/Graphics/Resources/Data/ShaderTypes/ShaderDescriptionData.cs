@@ -73,7 +73,7 @@ public sealed class ShaderDescriptionData
 		}
 
 		// Prioritize matching the exact ShaderGen variant description, if provided:
-		if (string.IsNullOrEmpty(_variantDescriptionTxt))
+		if (!string.IsNullOrEmpty(_variantDescriptionTxt))
 		{
 			foreach (ShaderDescriptionVariantData variant in CompiledVariants)
 			{

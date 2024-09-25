@@ -235,8 +235,8 @@ public static class FshaExporter
 			},
 			SourceCode = sourceCodeUtf8Blocks,
 			ByteCodeDxbc = allByteCodeDxbc,
-			ByteCodeDxil = null,
-			ByteCodeSpirv = null,
+			ByteCodeDxil = allByteCodeDxil,
+			ByteCodeSpirv = allByteCodeSpirv,
 		};
 
 		// Check validity and complete-ness before returning success:

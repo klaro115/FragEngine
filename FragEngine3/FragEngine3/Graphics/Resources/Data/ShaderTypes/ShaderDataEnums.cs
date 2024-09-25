@@ -45,23 +45,28 @@ public enum ShaderLanguage
 	/// Mircosoft's Direct3D shading language. This is the default language that
 	/// will be favored by the engine's systems.
 	/// </summary>
-	HLSL = 1,
+	HLSL	= 1,
 	/// <summary>
 	/// Apple's Metal shading language (MSL), which is only supported by MacOS and
 	/// iOS platforms running a Metal graphics backend.
 	/// </summary>
-	Metal = 2,
+	Metal	= 2,
 	/// <summary>
 	/// OpenGL shading language, which is supported by multiple graphics backends
 	/// to varying degrees, including but not limited to OpenGL, GLES, and Vulkan.
 	/// If HLSL source code is not available, this may be used to compile shaders
 	/// for Vulkan.
 	/// </summary>
-	GLSL = 4,
+	GLSL	= 4,
+	/// <summary>
+	/// SPIR-V is an intermediate byte code language for Vulkan shader programs.
+	/// This is technically compiled shader code, rather than a shader language.
+	/// </summary>
+	SPIRV	= 8,
 
 	/// <summary>
 	/// All shader language flags are raised. This value should only be used by
 	/// methods that actually expect flags rather than a singular language selection.
 	/// </summary>
-	ALL = HLSL | Metal | GLSL
+	ALL		= HLSL | Metal | GLSL | SPIRV
 }

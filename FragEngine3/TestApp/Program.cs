@@ -5,14 +5,14 @@ using TestApp.Application;
 Console.WriteLine("### Starting...\n");
 
 EngineConfig config = new();
-//config.Graphics.PreferNativeFramework = false;	// default to Vulkan
+config.Graphics.PreferNativeFramework = false;	// default to Vulkan
 config.Graphics.CenterWindowOnScreen = false;
 
 Engine? engine = null;
 try
 {
-	engine = new(new TestApplicationLogic(), config);
-	//engine = new(new TestEmptyAppLogic(), config);
+	//engine = new(new TestApplicationLogic(), config);
+	engine = new(new TestEmptyAppLogic(), config);
 	engine.Run();
 }
 catch (Exception ex)

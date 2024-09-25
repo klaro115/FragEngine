@@ -13,20 +13,37 @@ public static class ShaderSourceCodeDefiner
 	/// <summary>
 	/// Buffer object containing the results of source code modifications. The byte size of this buffer's contents is given by
 	/// the <see cref="Length"/> property; any data beyond this size should be ignored.<para/>
-	/// OWNERSHIP: A reference to this object should only be retained until the contained shader code data has been extracted.
-	/// After usage, the buffer object must be released via <see cref="ReleaseBuffer"/>, to ensure that it is returned to the
-	/// pool for later re-use. The ownership of this objects remains with <see cref="ShaderSourceCodeDefiner"/>.
 	/// </summary>
 	/// <param name="_funcReturnBufferToPool">Function delegate which is called upon release of the buffer.</param>
 	/// <param name="_minBufferCapacity">The minimum capacity that must be allocated from the start, in bytes.</param>
-	public sealed class SourceCodeBuffer(Action<SourceCodeBuffer> _funcReturnBufferToPool, int _minBufferCapacity)
+	public sealed class SourceCodeBuffer
 	{
-		private readonly Action<SourceCodeBuffer> funcReturnBufferToPool = _funcReturnBufferToPool;
+		internal SourceCodeBuffer(byte[] _externalUtf8ByteBuffer, int _initialContentByteSize)
+		{
+			funcReturnBufferToPool = (o) => { };
+			Utf8ByteBuffer = _externalUtf8ByteBuffer;
+			Length = Math.Clamp(_initialContentByteSize, 0, Utf8ByteBuffer.Length);
+		}
+		/// <summary>
+		/// Creates a new source code buffer object with a specific initial size.<para/>
+		/// OWNERSHIP: A reference to this object should only be retained until the contained shader code data has been extracted.
+		/// After usage, the buffer object must be released via <see cref="ReleaseBuffer"/>, to ensure that it is returned to the
+		/// pool for later re-use. The ownership of this objects remains with <see cref="ShaderSourceCodeDefiner"/>.
+		/// </summary>
+		/// <param name="_funcReturnBufferToPool">Function delegate which is called upon release of the buffer.</param>
+		/// <param name="_minBufferCapacity">The minimum capacity that must be allocated from the start, in bytes.</param>
+		internal SourceCodeBuffer(Action<SourceCodeBuffer> _funcReturnBufferToPool, int _minBufferCapacity)
+		{
+			funcReturnBufferToPool = _funcReturnBufferToPool;
+			Utf8ByteBuffer = new byte[_minBufferCapacity];
+		}
+
+		private readonly Action<SourceCodeBuffer> funcReturnBufferToPool;
 
 		/// <summary>
 		/// A byte buffer for storing the results of modifying shader source code. Contents are encoded as UTF-8 or ASCII.
 		/// </summary>
-		public byte[] Utf8ByteBuffer { get; private set; } = new byte[_minBufferCapacity];
+		public byte[] Utf8ByteBuffer { get; private set; }
 		/// <summary>
 		/// The current size of contents in the buffer, in bytes.
 		/// </summary>

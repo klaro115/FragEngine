@@ -43,6 +43,27 @@ public struct ShaderConfig
 
 	#endregion
 	#region Properties
+	
+	public static ShaderConfig ConfigMinimal => new()
+	{
+		albedoSource = ShaderAlbedoSource.Color,
+		albedoColor = RgbaFloat.White,
+		samplerTexMain = null,
+
+		useNormalMap = false,
+		useParallaxMap = false,
+		useParallaxMapFull = false,
+		samplerTexNormal = null,
+
+		applyLighting = false,
+		useAmbientLight = false,
+		useLightMaps = false,
+		useLightSources = false,
+		lightingModel = ShaderLightingModel.Phong,
+		useShadowMaps = false,
+		shadowSamplingCount = 0,
+		indirectLightResolution = 0u,
+	};
 
 	public static ShaderConfig ConfigWhiteLit => new()
 	{

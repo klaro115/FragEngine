@@ -72,6 +72,7 @@ public sealed class PlatformSystem : IEngineSystem
 			new FileExtMapping(OSPlatform.Windows, ".hlsl"),
 			new FileExtMapping(OSPlatform.OSX, ".metal"),
 			new FileExtMapping(OSPlatform.Linux, ".glsl"),
+			new FileExtMapping(OSPlatform.Linux, ".spv"),
 		],
 	};
 

@@ -12,6 +12,7 @@ public static class ShaderConstants
 		[ShaderLanguage.HLSL] = ".hlsl",
 		[ShaderLanguage.GLSL] = ".glsl",
 		[ShaderLanguage.Metal] = ".metal",
+		[ShaderLanguage.SPIRV] = ".spv",
 	}.ToFrozenDictionary();
 
 	#endregion

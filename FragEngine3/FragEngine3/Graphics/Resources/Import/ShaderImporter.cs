@@ -89,6 +89,7 @@ public static class ShaderImporter
 				case ".hlsl":
 				case ".glsl":
 				case ".metal":
+				case ".spv":
 					if (!ShaderSourceCodeImporter.ImportShaderData(stream, _handle, fileHandle, formatExt, out _outShaderData))
 					{
 						_outShaderData = null;
@@ -162,6 +163,7 @@ public static class ShaderImporter
 
 		ShaderStages stage = _shaderData.Description.ShaderStage;
 		Dictionary<MeshVertexDataFlags, Shader> variants = [];
+		MeshVertexDataFlags supportedVariantFlags = MeshVertexDataFlags.BasicSurfaceData;
 		uint maxVariantIndex = 0;
 
 		// Compile or upload any pre-compiled shader programs immediately:
@@ -178,6 +180,7 @@ public static class ShaderImporter
 
 					uint variantIndex = kvp.Key.GetVariantIndex();
 					maxVariantIndex = Math.Max(variantIndex, maxVariantIndex);
+					supportedVariantFlags |= kvp.Key;
 				}
 				catch (Exception ex)
 				{
@@ -187,20 +190,20 @@ public static class ShaderImporter
 			}
 		}
 
+		ShaderLanguage language = _graphicsCore.DefaultShaderLanguage;
 		byte[]? sanitizedSourceCodeBytes = null;
 
 		if (_shaderData.HasSourceCode())
 		{
-			ShaderConfig shaderConfig = ShaderConfig.ConfigWhiteLit;
-
-			if (ShaderConfig.TryParseDescriptionTxt(_shaderData.Description.SourceCode!.MaximumCompiledFeaturesTxt, out shaderConfig))
+			if (ShaderConfig.TryParseDescriptionTxt(_shaderData.Description.SourceCode!.MaximumCompiledFeaturesTxt, out ShaderConfig shaderConfig))
 			{
-				uint supportedVariantIndex = shaderConfig.GetVertexDataForVariantFlags().GetVariantIndex();
+				supportedVariantFlags |= shaderConfig.GetVertexDataForVariantFlags();
+				uint supportedVariantIndex = supportedVariantFlags.GetVariantIndex();
 				maxVariantIndex = Math.Max(supportedVariantIndex, maxVariantIndex);
 			}
 
 			// Remove all vertex variants flags and feature defines from source code, so we can quickly prepend them later:
-			if (_shaderData.SourceCode!.TryGetValue(_graphicsCore.DefaultShaderLanguage, out sanitizedSourceCodeBytes))
+			if (_shaderData.SourceCode!.TryGetValue(language, out sanitizedSourceCodeBytes) && language != ShaderLanguage.SPIRV)
 			{
 				if (ShaderSourceCodeDefiner.SetVariantDefines(sanitizedSourceCodeBytes!, 0, true, out var buffer))
 				{
@@ -230,7 +233,9 @@ public static class ShaderImporter
 			_resourceKey,
 			_graphicsCore,
 			stage,
+			supportedVariantFlags,
 			variantLookupTable,
+			language,
 			_shaderData.Description.SourceCode,
 			sanitizedSourceCodeBytes);
 		return true;

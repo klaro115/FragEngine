@@ -23,12 +23,18 @@ public sealed class ShaderResource : Resource
 		string _resourceKey,
 		GraphicsCore _graphicsCore,
 		ShaderStages _stage,
+		MeshVertexDataFlags _supportedVariantFlags,
 		Shader?[] _variants,
+		ShaderLanguage _sourceCodeLanguage,
 		ShaderDescriptionSourceCodeData? _sourceCodeData = null,
-		byte[]? _sanitizedSourceCodeBytes = null) : base(_resourceKey, _graphicsCore.graphicsSystem.engine)
+		byte[]? _sanitizedSourceCodeBytes = null)
+		: base(_resourceKey, _graphicsCore.graphicsSystem.engine)
 	{
 		graphicsCore = _graphicsCore ?? throw new ArgumentNullException(nameof(_graphicsCore), "Material's graphics core may not be null!");
 		Stage = _stage;
+
+		supportedVariantFlags = _supportedVariantFlags;
+		unsupportedVariantFlags = ~(supportedVariantFlags | MeshVertexDataFlags.BasicSurfaceData);
 		shaderVariants = _variants ?? throw new ArgumentNullException(nameof(_variants), "Shader variants array may not be null!");
 
 		compiledVariantCount = shaderVariants.Count(o => o is not null && !o.IsDisposed);
@@ -37,6 +43,7 @@ public sealed class ShaderResource : Resource
 		if (_sourceCodeData is not null && _sanitizedSourceCodeBytes is not null && compiledVariantCount < totalVariantCount)
 		{
 			canCompileFromSourceCode = true;
+			sourceCodeLanguage = _sourceCodeLanguage;
 			sourceCodeBytes = _sanitizedSourceCodeBytes;
 			sourceCodeData = _sourceCodeData;
 		}
@@ -51,12 +58,12 @@ public sealed class ShaderResource : Resource
 
 	private readonly MeshVertexDataFlags supportedVariantFlags = 0;
 	private readonly MeshVertexDataFlags unsupportedVariantFlags = 0;
-	private readonly MeshVertexDataFlags[] vertexVariants = [ MeshVertexDataFlags.BasicSurfaceData ];
 	private Shader?[] shaderVariants = [];      // array of variant shader programs, indexed via 'MeshVertexDataFlags.GetVariantIndex()'.
 
 	// Source code:
 
 	public readonly bool canCompileFromSourceCode = false;
+	private readonly ShaderLanguage sourceCodeLanguage = 0;
 	private byte[]? sourceCodeBytes = null;
 	ShaderDescriptionSourceCodeData? sourceCodeData = null;
 	private int compiledVariantCount = 0;
@@ -73,7 +80,7 @@ public sealed class ShaderResource : Resource
 	/// <summary>
 	/// Gets the number of supported vertex data variants.
 	/// </summary>
-	public int VertexVariantCount => vertexVariants != null ? vertexVariants.Length : 0;
+	public int VertexVariantCount => shaderVariants is not null ? shaderVariants.Length : 0;
 
 	public override ResourceType ResourceType => ResourceType.Shader;
 
@@ -112,35 +119,11 @@ public sealed class ShaderResource : Resource
 		{
 			return false;
 		}
-		if ((supportedVariantFlags & _variantFlags) != 0)
+		if ((unsupportedVariantFlags & _variantFlags) != 0)
 		{
 			return false;
 		}
-		for (int i = 0; i < vertexVariants.Length; ++i)
-		{
-			if (vertexVariants[i] == _variantFlags)
-			{
-				return true;
-			}
-		}
-		return false;
-	}
-
-	/// <summary>
-	/// Gets the vertex definition flags for a specific variant that is supported by this shader's programs.
-	/// </summary>
-	/// <param name="_variantIdx">Index of the variant in question. Must be between 0 and '<see cref="VertexVariantCount"/>'.</param>
-	/// <param name="_outVariantFlags">Outputs the mesh vertex definition flags for this variant.</param>
-	/// <returns>True if the variant index and flags were valid, false otherwise.</returns>
-	public bool GetVariantVertexDataFlags(int _variantIdx, out MeshVertexDataFlags _outVariantFlags)
-	{
-		if (_variantIdx >= 0 && _variantIdx < VertexVariantCount)
-		{
-			_outVariantFlags = vertexVariants[_variantIdx];
-			return _outVariantFlags.HasFlag(MeshVertexDataFlags.BasicSurfaceData);
-		}
-		_outVariantFlags = 0;
-		return false;
+		return true;
 	}
 
 	/// <summary>
@@ -207,7 +190,12 @@ public sealed class ShaderResource : Resource
 		}
 
 		// Set variant defines on source code:
-		if (!ShaderSourceCodeDefiner.SetVariantDefines(sourceCodeBytes!, _variantFlags, false, out var sourceCodeBuffer))
+		ShaderSourceCodeDefiner.SourceCodeBuffer? sourceCodeBuffer;
+		if (sourceCodeLanguage == ShaderLanguage.SPIRV)
+		{
+			sourceCodeBuffer = new(sourceCodeBytes!, sourceCodeBytes!.Length);
+		}
+		else if (!ShaderSourceCodeDefiner.SetVariantDefines(sourceCodeBytes!, _variantFlags, false, out sourceCodeBuffer))
 		{
 			Logger?.LogError($"Cannot compile shader variants from source; failed to set '#define' macros fro vertex flags! Flags: '{_variantFlags}'");
 			return false;

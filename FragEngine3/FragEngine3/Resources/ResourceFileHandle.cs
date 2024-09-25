@@ -325,7 +325,7 @@ public sealed class ResourceFileHandle : IEquatable<ResourceFileHandle>
 					string platformFileExtension = graphicsFlag switch
 					{
 						EnginePlatformFlag.GraphicsAPI_D3D => ".hlsl",
-						EnginePlatformFlag.GraphicsAPI_Vulkan => ".glsl",
+						EnginePlatformFlag.GraphicsAPI_Vulkan => ".spv",
 						EnginePlatformFlag.GraphicsAPI_Metal => ".metal",
 						_ => string.Empty,
 					};

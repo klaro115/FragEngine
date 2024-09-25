@@ -58,6 +58,7 @@ internal static class ResourceFileConstants
 			".incl",
 			".metal",
 			".shader",
+			".spv",
 		}.ToFrozenSet()),
 		new(ResourceType.Material, new string[]
 		{
