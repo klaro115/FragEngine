@@ -6,7 +6,7 @@ If you're looking to write your own surface shaders instead, have a look at the 
 
 - [Architecture](#architecture)
 - [Standard Shaders](#standard-shaders)
-  - [ShaderGen Flags](#shadergen-flags)
+  - [Shader Feature Flags](#shader-feature-flags)
 - [Light \& Shadow](#light--shadow)
 
 <br>
@@ -28,14 +28,16 @@ _Source code:_ [DefaultSurface_modular_PS](../../data/core/shaders/DefaultSurfac
 
 Most of the core rendering pipeline is demonstrated by the [standard shader](../../data/core/shaders/DefaultSurface_modular_PS.hlsl), which offers a decent amount of feature customization through preprocessor macros. You may specify feature flags and constant through a descriptive string, when assigning the modular variant of the standard shader through a material.
 
+**[DEPRECATED]**
 For example, the material [Mtl_DefaultSurface](../../data/core/materials/Mtl_DefaultSurface.json) provides the pixel shader as `"Pixel": "ShaderGen='At_Nyn0_Ly101p100'_PS"`. Usually, you'd list a resource key here, but the `ShaderGen='...'` format notifies the importer that the pixel shader should instead be a procedurally generated variant of the standard shader. This variant is created at load-time by the engine's [shader generator](../../FragEngine3/Graphics/Resources/ShaderGen/ShaderGenerator.cs) system (i.e. ShaderGen), according to the parameter flags following the equal sign. Note that the standard shader's shader code is only read from file once when ShaderGen is first used, and the full modular shader code is then cached for all subsequent calls.
 
 
-### ShaderGen Flags
-_Source code:_ [ShaderGenConfig](../../FragEngine3/Graphics/Resources/ShaderGen/ShaderGenConfig.cs), [ShaderGenerator](../../FragEngine3/Graphics/Resources/ShaderGen/ShaderGenerator.cs)
+### Shader Feature Flags
+_Source code:_ [ShaderConfig](../../FragEngine3/FragEngine3/Graphics/Resources/ShaderConfig.cs), [ShaderImporter](../../FragEngine3/FragEngine3/Graphics/Resources/Import/ShaderImporter.cs)
 
-The following provides a list of parameters and features that can be enabled through the ShaderGen string format. ShaderGen is supported in both vertex and pixel shaders and can be used by listing a feature string of the right format in the shader resource fields of a material's JSON. The shaders will automatically be loaded from the modular standard shaders, with features enabled or disabled according to the specification provided in the material.
+The following provides a list of parameters and features that can be enabled through the ShaderConfig string format. This is supported in both vertex and pixel shaders and can be used by listing a feature string of the right format in the shader resource fields of a material's JSON. The shaders will automatically be loaded from the modular standard shaders, with features enabled or disabled according to the specification provided in the material.
 
+**[DEPRECATED]**
 The feature string is of the following format:
 ```
 ShaderGen='At_Nyn0_Ly101p100'_PS

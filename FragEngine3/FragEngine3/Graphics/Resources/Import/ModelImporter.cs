@@ -51,7 +51,7 @@ public static class ModelImporter
 			}
 		}
 
-		Stream stream = null!;
+		Stream? stream = null;
 		try
 		{
 			// Open file stream:

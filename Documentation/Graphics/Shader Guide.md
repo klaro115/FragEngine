@@ -6,9 +6,22 @@ This guide provides a general overview of what vertex buffer data and which reso
 For more information about the engine's lighting system and standard shaders, have a look at the [Lighting & Shading Guide](./Lighting&Shading%20Guide.md).
 <br>
 
+- [Shader Formats](#shader-formats)
 - [Vertex Buffers](#vertex-buffers)
 - [System-bound Constants \& Lights](#system-bound-constants--lights)
 - [User-bound Resources](#user-bound-resources)
+
+<br>
+
+
+## Shader Formats
+Shader import and compilation is supported for HLSL (Direct3D) and MSL (Metal) shading languages. HLSL is intended as the primary development language for shaders, since it is comparibly less troublesome than some of the other languages, but also because the _Direct3D_ shader compiler supports compilation to SPIR-V. This makes HLSL the current go-to source code language for both _Direct3D_ and _Vulkan_ graphics APIs.
+
+The Fragment engine has its own dedicated file format for shader assets, called FSHA.
+This formats allows the bundling of pre-compiled shader programs and source code. All compiled variants and source code blobs are labelled for their respective APIs and feature sets, allowing for selection and compilaton of shader variants on-demand and at run-time.
+The full specification for the format can be found here: [FSHA Format Spec](../Formats/FSHA%20Format%20Spec.md)
+
+FSHA should be the standard shader asset format used by the final release build of your app. All other source code formats rely entirely on run-time compilation of shaders, whilst FSHA is platform-spanning and supports pre-compiled shaders.
 
 <br>
 
@@ -28,6 +41,7 @@ The engine's graphics device is created using Veldrid's `ResourceBindingModel.De
 |    2nd    | `VertexInput_Extended`    |  optional  | `ExtendedVertex`        |  buffer(1)    |
 |    3rd    | `VertexInput_BlendShapes` |  optional  | `IndexedWeightedVertex` |  buffer(2)    |
 |    4th    | `VertexInput_BoneWeights` |  optional  | `IndexedWeightedVertex` |  buffer(3)    |
+
 <br>
 
 

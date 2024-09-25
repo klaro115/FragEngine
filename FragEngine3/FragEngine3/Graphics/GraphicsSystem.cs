@@ -3,8 +3,9 @@ using FragEngine3.EngineCore;
 using FragEngine3.EngineCore.Config;
 using FragEngine3.Graphics.Config;
 using FragEngine3.Graphics.D3D11;
-using FragEngine3.Graphics.MacOS;
+using FragEngine3.Graphics.Metal;
 using FragEngine3.Graphics.Resources;
+using FragEngine3.Graphics.Vulkan;
 using FragEngine3.Resources;
 using FragEngine3.Utility.Serialization;
 using Veldrid;
@@ -92,11 +93,11 @@ public class GraphicsSystem : IEngineSystem
 	{
 		IsDisposed = true;
 
-		if (TexPlaceholderWhite != null && TexPlaceholderWhite.IsLoaded) TexPlaceholderWhite.Unload();
-		if (TexPlaceholderGray != null && TexPlaceholderGray.IsLoaded) TexPlaceholderGray.Unload();
-		if (TexPlaceholderBlack != null && TexPlaceholderBlack.IsLoaded) TexPlaceholderBlack.Unload();
-		if (TexPlaceholderTransparent != null && TexPlaceholderTransparent.IsLoaded) TexPlaceholderTransparent.Unload();
-		if (TexPlaceholderMagenta != null && TexPlaceholderMagenta.IsLoaded) TexPlaceholderMagenta.Unload();
+		if (TexPlaceholderWhite is not null && TexPlaceholderWhite.IsLoaded) TexPlaceholderWhite.Unload();
+		if (TexPlaceholderGray is not null && TexPlaceholderGray.IsLoaded) TexPlaceholderGray.Unload();
+		if (TexPlaceholderBlack is not null && TexPlaceholderBlack.IsLoaded) TexPlaceholderBlack.Unload();
+		if (TexPlaceholderTransparent is not null && TexPlaceholderTransparent.IsLoaded) TexPlaceholderTransparent.Unload();
+		if (TexPlaceholderMagenta is not null && TexPlaceholderMagenta.IsLoaded) TexPlaceholderMagenta.Unload();
 
 		if (_disposing)
 		{
@@ -133,7 +134,7 @@ public class GraphicsSystem : IEngineSystem
 			_outSettings = null;
 			return false;
 		}
-		if (engine.ResourceManager?.fileGatherer == null ||
+		if (engine.ResourceManager?.fileGatherer is null ||
 			engine.ResourceManager.IsDisposed)
 		{
 			Logger.LogError("Cannot determine settings path using null or disposed resource manager!");
@@ -170,7 +171,7 @@ public class GraphicsSystem : IEngineSystem
 			Logger.LogError("Cannot save settings of disposed graphics system!");
 			return false;
 		}
-		if (engine.ResourceManager?.fileGatherer == null ||
+		if (engine.ResourceManager?.fileGatherer is null ||
 			engine.ResourceManager.IsDisposed)
 		{
 			Logger.LogError("Cannot determine settings path using null or disposed resource manager!");
@@ -188,6 +189,8 @@ public class GraphicsSystem : IEngineSystem
 	{
 		if (IsDisposed) throw new ObjectDisposedException("Graphics system", "Cannot create core for disposed graphics system!");
 
+		Logger.LogMessage($"+ Creating graphics core for platform: '{engine.PlatformSystem.PlatformFlags}'");
+
 		GraphicsCore newCore;
 
 		if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
@@ -199,18 +202,18 @@ public class GraphicsSystem : IEngineSystem
 			}
 			else
 			{
-				throw new NotImplementedException("Windows Vulkan graphics have not been implemented!");
+				newCore = new VulkanGraphicsCore(this, config);
 			}
 		}
 		else if (RuntimeInformation.IsOSPlatform(OSPlatform.OSX))
 		{
 			// On MacOS, Metal is the only real option, unless we want to use something like MoltenVK:
-			newCore = new MacGraphicsCore(this, config);
+			newCore = new MetalGraphicsCore(this, config);
 		}
 		else if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
 		{
 			// On Linux, Vulkan is the only supported framework:
-			throw new NotImplementedException("Linux graphics support has not been implemented!");
+			newCore = new VulkanGraphicsCore(this, config);
 		}
 		else
 		{
@@ -219,7 +222,7 @@ public class GraphicsSystem : IEngineSystem
 
 		// Register core with this graphics system:
 		allGraphicsCores.Add(newCore);
-		allGraphicsCores.RemoveAll(o => o == null || o.IsDisposed);
+		allGraphicsCores.RemoveAll(o => o is null || o.IsDisposed);
 		return newCore;
 	}
 
@@ -293,7 +296,7 @@ public class GraphicsSystem : IEngineSystem
 			Logger.LogError("Cannot begin new frame on disposed graphics system!");
 			return false;
 		}
-		if (graphicsCore == null || !graphicsCore.IsInitialized)
+		if (graphicsCore is null || !graphicsCore.IsInitialized)
 		{
 			Logger.LogError("Cannot begin new frame with null or uninitialized graphics core!");
 			return false;
@@ -320,7 +323,7 @@ public class GraphicsSystem : IEngineSystem
 			Logger.LogError("Cannot end frame on disposed graphics system!");
 			return false;
 		}
-		if (graphicsCore == null || !graphicsCore.IsInitialized)
+		if (graphicsCore is null || !graphicsCore.IsInitialized)
 		{
 			Logger.LogError("Cannot end frame with null or uninitialized graphics core!");
 			return false;

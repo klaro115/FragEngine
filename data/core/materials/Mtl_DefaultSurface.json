@@ -33,7 +33,7 @@
         "Geometry": "",
         "TesselationCtrl": "",
         "TesselationEval": "",
-        "Pixel": "ShaderGen='At_Nyn0_Ly101p140'_PS"
+        "Pixel": "DefaultSurface_PS"
     },
     "Replacements":
     {

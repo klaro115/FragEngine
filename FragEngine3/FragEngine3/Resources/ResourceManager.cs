@@ -507,7 +507,8 @@ public sealed class ResourceManager : IEngineSystem
 		switch (_handle.resourceType)
 		{
 			case ResourceType.Shader:
-				if (success = ShaderResourceFactory.CreateShader(_handle, engine.GraphicsSystem.graphicsCore, out ShaderResource? shaderRes))
+				if ((success = ShaderImporter.ImportShaderData(this, _handle, out ShaderData? shaderData) && shaderData is not null) &&
+					(success = ShaderImporter.CreateShader(_handle.resourceKey, engine.GraphicsSystem.graphicsCore, shaderData!, out ShaderResource? shaderRes)))
 				{
 					_assignResourceCallback(shaderRes);
 				}

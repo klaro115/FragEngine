@@ -2,6 +2,7 @@
 using FragEngine3.EngineCore.Config;
 using FragEngine3.Graphics.Config;
 using FragEngine3.Graphics.Internal;
+using FragEngine3.Graphics.Resources.Data.ShaderTypes;
 using System.Diagnostics;
 using Veldrid;
 using Veldrid.Sdl2;
@@ -15,13 +16,13 @@ internal sealed class Dx11GraphicsCore(GraphicsSystem _graphicsSystem, EngineCon
 
 	private static readonly GraphicsCapabilities capabilities = new();
 
-        #endregion
-        #region Properties
+	#endregion
+	#region Properties
 
-        public override EnginePlatformFlag ApiPlatformFlag => EnginePlatformFlag.GraphicsAPI_D3D;
+	public override EnginePlatformFlag ApiPlatformFlag => EnginePlatformFlag.GraphicsAPI_D3D;
 	public override bool DefaultMirrorY => true;
-
-	private Logger Logger => graphicsSystem.engine.Logger ?? Logger.Instance!;
+	public override ShaderLanguage DefaultShaderLanguage => ShaderLanguage.HLSL;
+	public override CompiledShaderDataType CompiledShaderDataType => CompiledShaderDataType.DXBC | CompiledShaderDataType.DXIL;
 
 	#endregion
 	#region Methods
@@ -53,11 +54,11 @@ internal sealed class Dx11GraphicsCore(GraphicsSystem _graphicsSystem, EngineCon
 			Rectangle displayRect = new(0, 0, 1920, 1080);
 			unsafe
 			{
-				Sdl2Native.SDL_GetDisplayBounds(config.Graphics.DisplayIndex, &displayRect);
+				Sdl2Native.SDL_GetDisplayBounds(config.Graphics.DisplayIndex, &displayRect);	// not working.
 			}
 
-			int posX = 0;
-			int posY = 0;
+			int posX = 40;
+			int posY = 40;
 			int width = Math.Min((int)settings.Resolution.X, displayRect.Width);
 			int height = Math.Min((int)settings.Resolution.Y, displayRect.Height);
 			if (config.Graphics.CenterWindowOnScreen)

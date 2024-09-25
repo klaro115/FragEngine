@@ -41,6 +41,8 @@ public sealed class GraphicsConfig
 			WindowStyle = WindowStyle,
 			AllowWindowResize = AllowWindowResize,
 			AllowWindowClose = AllowWindowClose,
+			DisplayIndex = DisplayIndex,
+			CenterWindowOnScreen = CenterWindowOnScreen,
 			//...
 
 			// OUTPUT & SWAPCHAIN:

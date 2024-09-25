@@ -6,19 +6,20 @@ internal static class ResourceFileConstants
 {
 	#region Fields
 
-	private static readonly FrozenDictionary<ResourceType, HashSet<string>> resourceTypeExtensionDict = new KeyValuePair<ResourceType, HashSet<string>>[]
+	private static readonly FrozenDictionary<ResourceType, FrozenSet<string>> resourceTypeExtensionDict = new KeyValuePair<ResourceType, FrozenSet<string>>[]
 	{
-		new(ResourceType.Unknown, []),
-		new(ResourceType.Ignored,
-		[
+		new(ResourceType.Unknown, FrozenSet<string>.Empty),
+		new(ResourceType.Ignored, new string[]
+		{
 			ResourceConstants.FILE_EXT_METADATA,				// Resource descriptor/metadata file
 			ResourceConstants.FILE_EXT_BATCH_NORMAL_COMPRESSED,	// Resource package files, contiguously compressed
-			ResourceConstants.FILE_EXT_BATCH_BLOCK_COMPRESSED,	// Resource package files, block-compressed
-			//...
-		]),
-		new(ResourceType.Texture,
-		[
-			".bmp",
+			ResourceConstants.FILE_EXT_BATCH_BLOCK_COMPRESSED,  // Resource package files, block-compressed
+																//...
+		}.ToFrozenSet()),
+		new(ResourceType.Texture, new string[]
+		{
+			".bmp",		// custom importer
+			".dds",
 			".exr",
 			".gif",
 			".jpg",
@@ -29,12 +30,12 @@ internal static class ResourceFileConstants
 			".tga",
 			".tif",
 			".tiff",
-			".qoi",
+			".qoi",		// custom importer
 			".webp",
 			//...
-		]),
-		new(ResourceType.Video,
-		[
+		}.ToFrozenSet()),
+		new(ResourceType.Video, new string[]
+		{
 			".3gp",
 			".3g2",
 			".avi",
@@ -47,37 +48,38 @@ internal static class ResourceFileConstants
 			".webm",
 			".wmv",
 			//...
-		]),
-		new(ResourceType.Shader,
-		[
+		}.ToFrozenSet()),
+		new(ResourceType.Shader, new string[]
+		{
+			".fsha",	// custom file format
 			".fx",
 			".glsl",
 			".hlsl",
 			".incl",
 			".metal",
 			".shader",
-		]),
-		new(ResourceType.Material,
-		[
+		}.ToFrozenSet()),
+		new(ResourceType.Material, new string[]
+		{
 			".mtl",
-		]),
-		new(ResourceType.Animation, []),
-		new(ResourceType.Model,
-		[
+		}.ToFrozenSet()),
+		new(ResourceType.Animation, FrozenSet<string>.Empty),
+		new(ResourceType.Model, new string[]
+		{
 			".3ds",
 			".blend",
 			".dae",
-			".fbx",
+			".fbx",		// partial custom importer
 			".gltf",
 			".mb",
 			".ma",
-			".obj",
+			".obj",		// custom importer
 			".stl",
 			".x",
 			//...
-		]),
-		new(ResourceType.Audio,
-		[
+		}.ToFrozenSet()),
+		new(ResourceType.Audio, new string[]
+		{
 			".aif",
 			".m4a",
 			".mp3",
@@ -85,19 +87,19 @@ internal static class ResourceFileConstants
 			".wav",
 			".webm",
 			//...
-		]),
-		new(ResourceType.Prefab,
-		[
+		}.ToFrozenSet()),
+		new(ResourceType.Prefab, new string[]
+		{
 			".prefab",
-		]),
-		new(ResourceType.Font,
-		[
+		}.ToFrozenSet()),
+		new(ResourceType.Font, new string[]
+		{
 			"otf",
 			"ttf",
 			//...
-		]),
-		new(ResourceType.Data,
-		[
+		}.ToFrozenSet()),
+		new(ResourceType.Data, new string[]
+		{
 			".csv",
 			".json",
 			".md",
@@ -108,13 +110,13 @@ internal static class ResourceFileConstants
 			".xml",
 			".yml",
 			//...
-		]),
-		new(ResourceType.Scene,
-		[
+		}.ToFrozenSet()),
+		new(ResourceType.Scene, new string[]
+		{
 			".scene"
-		]),
-		new(ResourceType.Script,
-		[
+		}.ToFrozenSet()),
+		new(ResourceType.Script, new string[]
+		{
 			".cs",
 			".js",	// who in their right mind would use JS anyways?
 			".lua",
@@ -124,7 +126,7 @@ internal static class ResourceFileConstants
 			".ts",
 			".vb",
 			//...
-		]),
+		}.ToFrozenSet()),
 	}.ToFrozenDictionary();
 
 	#endregion

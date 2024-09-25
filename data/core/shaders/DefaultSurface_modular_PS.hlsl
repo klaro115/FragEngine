@@ -309,7 +309,7 @@ half3 CalculateIndirectLightScatter(const in Light _light, const in float3 _worl
             {  0.25 / FEATURE_LIGHT_SHADOWMAPS_RES, -0.2 / FEATURE_LIGHT_SHADOWMAPS_RES },
         };
     #else
-        #error "Shadow sampling count FEATURE_LIGHT_SHADOWMAPS_AA can only be 2 or 4"
+        #error "Shadow sampling count FEATURE_LIGHT_SHADOWMAPS_AA can only be 2, 4 or 8"
     #endif
 #endif
 

@@ -8,7 +8,7 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <Configurations>Debug;Debug_MacOS;Release;Release_MacOS</Configurations>
-    <GenerateDocumentationFile>True</GenerateDocumentationFile>
+    <GenerateDocumentationFile>False</GenerateDocumentationFile>
   </PropertyGroup>
 
 	<!-- Version: -->
@@ -68,7 +68,6 @@
   <ItemGroup>
     <Folder Include="Graphics\Config\" />
     <Folder Include="EngineCore\Config\" />
-    <Folder Include="Graphics\MacOS\" />
     <Folder Include="EngineCore\Logging\" />
     <Folder Include="Utility\Unicode\" />
   </ItemGroup>
@@ -82,7 +81,7 @@
 	<!-- Dependencies: -->
 	
   <ItemGroup>
-    <PackageReference Include="Magick.NET-Q16-AnyCPU" Version="13.8.0" />
+    <PackageReference Include="Magick.NET-Q16-AnyCPU" Version="14.0.0" />
     <PackageReference Include="NativeLibraryLoader" Version="1.0.13" />
     <PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
     <PackageReference Include="Veldrid" Version="4.9.0" />

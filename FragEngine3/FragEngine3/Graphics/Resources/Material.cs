@@ -658,11 +658,11 @@ public class Material(GraphicsCore _core, ResourceHandle _handle) : Resource(_ha
 		{
 			materialVersion = 1,
 
-			vertexShader = GetShaderResourceHandle(data.Shaders.Vertex) ?? ResourceHandle.None,
-			geometryShader = GetShaderResourceHandle(data.Shaders.Geometry),
-			tesselationShaderCtrl = GetShaderResourceHandle(data.Shaders.TesselationCtrl),
-			tesselationShaderEval = GetShaderResourceHandle(data.Shaders.TesselationEval),
-			pixelShader = GetShaderResourceHandle(data.Shaders.Pixel) ?? ResourceHandle.None,
+			vertexShader = GetResourceHandle(data.Shaders.Vertex) ?? ResourceHandle.None,
+			geometryShader = GetResourceHandle(data.Shaders.Geometry),
+			tesselationShaderCtrl = GetResourceHandle(data.Shaders.TesselationCtrl),
+			tesselationShaderEval = GetResourceHandle(data.Shaders.TesselationEval),
+			pixelShader = GetResourceHandle(data.Shaders.Pixel) ?? ResourceHandle.None,
 
 			depthStencilDesc = new(new()
 			{
@@ -696,32 +696,6 @@ public class Material(GraphicsCore _core, ResourceHandle _handle) : Resource(_ha
 			return !string.IsNullOrEmpty(_resourceKey) && _handle.resourceManager.GetResource(_resourceKey, out ResourceHandle handle)
 				? handle
 				: null;
-		}
-		ResourceHandle? GetShaderResourceHandle(string? _resourceKey)
-		{
-			// Try loading as a regular resource first:
-			ResourceHandle? handle = GetResourceHandle(_resourceKey);
-			if (handle is not null)
-			{
-				return handle;
-			}
-
-			// If the resource does not exist (yet), check if it's a procedurally created ShaderGen shader instead:
-			if (!string.IsNullOrEmpty(_resourceKey) &&
-				_resourceKey.StartsWith(ShaderGen.ShaderGenConstants.shaderGenPrefix, StringComparison.OrdinalIgnoreCase))
-			{
-				ResourceManager resourceManager = _graphicsCore.graphicsSystem.engine.ResourceManager;
-				handle = new(
-					resourceManager,
-					new ResourceHandleData()
-					{
-						ResourceKey = _resourceKey,
-						ResourceType = ResourceType.Shader,
-					},
-					ShaderGen.ShaderGenConstants.MODULAR_SURFACE_SHADER_PS_NAME_BASE);
-				resourceManager.AddResource(handle);
-			}
-			return handle;
 		}
 	}
 

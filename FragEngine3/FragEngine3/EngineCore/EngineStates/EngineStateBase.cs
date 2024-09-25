@@ -122,7 +122,7 @@ internal abstract class EngineStateBase(Engine _engine, ApplicationLogic _applic
 			timeManager.EndFrame(out TimeSpan threadSleepTime);
 			computeTimeSum += timeManager.LastFrameDuration;
 			frameTimeSum += timeManager.DeltaTime;
-			if (computeTimeSum.TotalMilliseconds > 25)
+			if (timeManager.LastFrameDuration.TotalMilliseconds > 25)
 			{
 				below40FpsFrameCount++;
 			}

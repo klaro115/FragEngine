@@ -1,4 +1,4 @@
-﻿using FragEngine3.Graphics.Components.ConstantBuffers;
+﻿using FragEngine3.Graphics.ConstantBuffers;
 using Veldrid;
 
 namespace FragEngine3.Graphics.Components.Internal;
