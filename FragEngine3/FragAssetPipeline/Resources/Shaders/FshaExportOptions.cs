@@ -66,5 +66,7 @@ public sealed class FshaExportOptions
 	/// </summary>
 	public Dictionary<MeshVertexDataFlags, string>? entryPoints = null;
 
+	public ShaderConfig supportedFeatures = ShaderConfig.ConfigMinimal;
+
 	//...
 }

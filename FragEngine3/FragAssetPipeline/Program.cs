@@ -1,66 +1,60 @@
-﻿using FragAssetPipeline.Resources;
+﻿using FragAssetPipeline;
 using FragAssetPipeline.Resources.Shaders;
 using FragEngine3.Graphics.Resources;
-using FragEngine3.Graphics.Resources.Data;
 using FragEngine3.Graphics.Resources.Data.ShaderTypes;
 using Veldrid;
 
 Console.WriteLine("### BEGIN ###\n");
 
-//const string testShaderName = "DefaultSurface_modular_PS";
-//const string testShaderEntryPoint = "Main_Pixel";
-//const ShaderStages testShaderStage = ShaderStages.Fragment;
-const string testShaderName = "DefaultSurface_VS";
-const string testShaderEntryPoint = "Main_Vertex";
-const ShaderStages testShaderStage = ShaderStages.Vertex;
+const MeshVertexDataFlags flagsBasic = MeshVertexDataFlags.BasicSurfaceData;
+const MeshVertexDataFlags flagsExt = MeshVertexDataFlags.BasicSurfaceData | MeshVertexDataFlags.ExtendedSurfaceData;
 
-string testShaderFilePath = Path.GetFullPath(Path.Combine(ResourceConstants.coreFolderRelativePath, $"shaders/{testShaderName}.hlsl"));
+ShaderDetails[] details =
+[
+	new("Basic_VS", "Main_Vertex", ShaderStages.Vertex, flagsExt),
+	new("DefaultSurface_VS", "Main_Vertex", ShaderStages.Vertex, flagsExt),
+	new("DefaultSurface_modular_PS", "Main_Pixel", ShaderStages.Fragment, flagsExt),
+	new("shadows/AlphaShadow_PS", "Main_Pixel", ShaderStages.Fragment, flagsExt),
+	new("shadows/DefaultShadow_PS", "Main_Pixel", ShaderStages.Fragment, flagsExt),
+	new("composition/ForwardPlusLight_CompositeScene_PS", "Main_Pixel", ShaderStages.Fragment, flagsBasic),
+	new("composition/ForwardPlusLight_CompositeUI_PS", "Main_Pixel", ShaderStages.Fragment, flagsBasic),
+];
 
-// Export serializable shader data in FSHA-compliant format:
-FshaExportOptions exportOptions = new()
+ShaderConfig config = new()
 {
-	bundleOnlySourceIfCompilationFails = true,
-	shaderStage = testShaderStage,
-	entryPointBase = testShaderEntryPoint,
-	maxVertexVariantFlags = MeshVertexDataFlags.BasicSurfaceData | MeshVertexDataFlags.ExtendedSurfaceData,
-	compiledDataTypeFlags = CompiledShaderDataType.ALL,
+	albedoSource = ShaderAlbedoSource.SampleTexMain,
+	albedoColor = RgbaFloat.White,
+	useNormalMap = true,
+	useParallaxMap = false,
+	useParallaxMapFull = false,
+	applyLighting = true,
+	useAmbientLight = true,
+	useLightSources = true,
+	lightingModel = ShaderLightingModel.Phong,
+	useShadowMaps = true,
+	shadowSamplingCount = 4,
+	alwaysCreateExtendedVariant = true,
 };
 
-bool success = FshaExporter.ExportShaderFromHlslFile(testShaderFilePath, exportOptions, out ShaderData? shaderData);
-
-Console.WriteLine($"Shader compilation: {(success ? "SUCCESS" : "FAILURE")}");
-
-string outputPath = Path.GetFullPath(Path.Combine(ResourceConstants.coreFolderRelativePath, $"shaders/{testShaderName}.fsha"));
-
-//TEST TEST TEST TEST
-byte[]? spirvCode = shaderData!.GetByteCodeOfType(CompiledShaderDataType.SPIRV);
-if (spirvCode is not null && shaderData.Description.GetCompiledShaderVariantData(CompiledShaderDataType.SPIRV, MeshVertexDataFlags.BasicSurfaceData, null, out var spirvVariantData))
+// Export serializable shader data in FSHA-compliant format:
+FshaExportOptions options = new()
 {
-	byte[] spirvVariantBytes = new byte[spirvVariantData.ByteSize];
-	Array.Copy(spirvCode, spirvVariantData.ByteOffset, spirvVariantBytes, 0, spirvVariantData.ByteSize);
-	string spirvOutputPath = Path.ChangeExtension(outputPath, ".spv");
-	File.WriteAllBytes(spirvOutputPath, spirvVariantBytes);
-}
-//TEST TEST TEST TEST
+	bundleOnlySourceIfCompilationFails = true,
+	shaderStage = ShaderStages.Vertex,
+	entryPointBase = "Main_Vertex",
+	maxVertexVariantFlags = MeshVertexDataFlags.BasicSurfaceData | MeshVertexDataFlags.ExtendedSurfaceData,
+	compiledDataTypeFlags = CompiledShaderDataType.ALL,
+	supportedFeatures = config,
+};
 
-// Write shader file:
-if (success && shaderData is not null)
+foreach (var detail in details)
 {
-	using FileStream stream = new(outputPath, FileMode.Create);
-	using BinaryWriter writer = new(stream);
+	options.shaderStage = detail.stage;
+	options.entryPointBase = detail.entryPointNameBase;
+	options.maxVertexVariantFlags = detail.maxVertexFlags;
+	options.entryPoints = null;
 
-	success &= shaderData.Write(writer, true);
-	stream.Close();
-}
-
-// Read shader file:
-if (success)
-{
-	using FileStream stream = new(outputPath, FileMode.Open, FileAccess.Read);
-	using BinaryReader reader = new(stream);
-
-	success &= ShaderData.Read(reader, out ShaderData? shaderData2, CompiledShaderDataType.ALL);
-	stream.Close();
+	ShaderProcess.CompileShaderToFSHA(detail.fileName, options);
 }
 
 Console.WriteLine("\n#### END ####");

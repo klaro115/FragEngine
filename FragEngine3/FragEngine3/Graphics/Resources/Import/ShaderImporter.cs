@@ -173,7 +173,7 @@ public static class ShaderImporter
 			{
 				try
 				{
-					ShaderDescription desc = new(stage, kvp.Value, string.Empty);
+					ShaderDescription desc = new(stage, kvp.Value, string.Empty);		//TODO [important]: Entry point must be valid for SPIR-V!
 					Shader variant = _graphicsCore.MainFactory.CreateShader(ref desc);
 
 					variants.Add(kvp.Key, variant);

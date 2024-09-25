@@ -120,14 +120,14 @@ public static class DxCompiler
 
 		try
 		{
-			using var results = DxcCompiler.Compile(dxStage, hlslCode, _entryPoint, compilerOptionsDXBC);
+			using var results = DxcCompiler.Compile(dxStage, hlslCode, _entryPoint, _options);
 
 			// Check for errors:
 			using var errorBlob = results.GetOutput(DxcOutKind.Errors);
 			if (errorBlob is not null && errorBlob.BufferSize > 0)
 			{
 				string errorTxt = Encoding.UTF8.GetString(errorBlob.AsSpan());
-				Console.WriteLine($"Error! Failed to compile HLSL shader code to DXBC!\nFile path: '{_hlslFilePath}'\nError output: '{errorTxt}'");
+				Console.WriteLine($"Error! Failed to compile HLSL shader variant!\nFile path: '{_hlslFilePath}'\nError output: '{errorTxt}'");
 				return DxcResult.Failure;
 			}
 
@@ -135,7 +135,7 @@ public static class DxCompiler
 			using var shaderBlob = results.GetOutput(DxcOutKind.Object);
 			if (shaderBlob is null || shaderBlob.BufferSize == 0)
 			{
-				Console.WriteLine($"Error! Failed to compile HLSL shader code to DXBC; output was empty!\nFile path: '{_hlslFilePath}'");
+				Console.WriteLine($"Error! Failed to compile HLSL shader variant; output was empty!\nFile path: '{_hlslFilePath}'");
 				return DxcResult.Failure;
 			}
 
@@ -145,7 +145,7 @@ public static class DxCompiler
 		}
 		catch (Exception ex)
 		{
-			Console.WriteLine($"Error! Failed to compile HLSL shader to DXBC!\nFile path: '{_hlslFilePath}'\nException: {ex}");
+			Console.WriteLine($"Error! Failed to compile HLSL shader variant!\nFile path: '{_hlslFilePath}'\nException: {ex}");
 			return DxcResult.Failure;
 		}
 	}

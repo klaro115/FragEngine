@@ -67,6 +67,13 @@ public static class FshaExporter
 			return false;
 		}
 
+		MeshVertexDataFlags supportedVariantFlags = 0;
+		MeshVertexDataFlags maxCompiledVariantFlags = 0;
+		foreach (var kvp in _options.entryPoints!)
+		{
+			supportedVariantFlags |= kvp.Key;
+		}
+
 		// Extract source code language flags:
 		bool isSourceCodeIncluded = _options.bundledSourceCodeLanguages != 0;
 		List<ShaderLanguage> sourceCodeLanguages = new(3);
@@ -98,7 +105,7 @@ public static class FshaExporter
 			_outFshaShaderData = null;
 			return false;
 		}
-
+		
 		// Prepare variant data and source code for writing:
 		var compiledVariantData = new ShaderDescriptionVariantData[outputDetails.variantCount];
 		var entryPointData = new ShaderDescriptionSourceCodeData.VariantEntryPoint[outputDetails.variantCount];
@@ -111,12 +118,16 @@ public static class FshaExporter
 		{
 			FshaCompiledVariant compiledVariant = compiledVariants[i];
 
+			// Create description string for this variant:
+			ShaderConfig variantConfig = _options.supportedFeatures;
+			variantConfig.SetVariantFlagsFromMeshVertexData(compiledVariant.vertexDataFlags);
+
 			// Assemble mappings and entry points for compiled variants:
 			compiledVariantData[i] = new()
 			{
 				Type = compiledVariant.shaderType,
 				VariantFlags = compiledVariant.vertexDataFlags,
-				VariantDescriptionTxt = "At_Nyn_Ly101p0_V100",      //TODO
+				VariantDescriptionTxt = variantConfig.CreateDescriptionTxt(),
 				EntryPoint = compiledVariant.entryPoint,
 				ByteOffset = compiledVariant.byteOffset,
 				ByteSize = (uint)compiledVariant.compiledData.Length,
@@ -126,6 +137,7 @@ public static class FshaExporter
 				VariantFlags = compiledVariant.vertexDataFlags,
 				EntryPoint = compiledVariant.entryPoint,
 			};
+			maxCompiledVariantFlags |= compiledVariant.vertexDataFlags;
 
 			// Copy compiled byte data into the backend-specific byte buffer:
 			byte[] allByteCode = compiledVariant.shaderType switch
@@ -192,13 +204,20 @@ public static class FshaExporter
 				}
 			}
 
+			// Create description strings for maximum compiled and maximum supported feature sets:
+			ShaderConfig maxCompiledConfig = _options.supportedFeatures;
+			maxCompiledConfig.SetVariantFlagsFromMeshVertexData(maxCompiledVariantFlags);
+
+			ShaderConfig supportedConfig = _options.supportedFeatures;
+			supportedConfig.SetVariantFlagsFromMeshVertexData(supportedVariantFlags);
+
 			// Assemble source code data:
 			sourceCodeData = new()
 			{
 				EntryPointNameBase = entryPointBase,
 				EntryPoints = entryPointData,
-				SupportedFeaturesTxt = "At_Nyy_Ly111p185_V110",       //TODO
-				MaximumCompiledFeaturesTxt = "At_Nyn_Ly101p100_V110", //TODO
+				SupportedFeaturesTxt = supportedConfig.CreateDescriptionTxt(),
+				MaximumCompiledFeaturesTxt = maxCompiledConfig.CreateDescriptionTxt(),
 				SourceCodeBlocks = sourceCodeBlocks.ToArray(),
 			};
 			sourceCodeTotalByteSize = sourceCodeCurrentOffset;

@@ -105,8 +105,8 @@ internal static class FshaVariantExport
 		List<FshaCompiledVariant> _compiledVariants,
 		OutputDetails _outputDetails)
 	{
-		Console.WriteLine($"Warning! DXIL compilation is not fully implemented yet! File path: '{_filePath}'");
-		return false;
+		Console.WriteLine("Warning! DXIL compilation is not fully implemented yet!");
+		return true;
 	}
 
 	public static bool CompileVariants_SPIRV(
