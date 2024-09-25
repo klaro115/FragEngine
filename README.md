@@ -38,6 +38,8 @@ The main dependency at this time is [Veldrid](https://veldrid.dev/), a cross-pla
 
 Beyond that, the [Magick.NET](https://github.com/dlemstra/Magick.NET) library was added for image file import. A small number of file formats will still see custom implementations for this project.
 
+For a full list of dependencies, see the [Dependency List](./Documentation/Dependency%20List.md).
+
 #### Thrid-Party Tools:
 This repository contains a folder with any third-party tools and softwares that may be used by the engine's development toolchain. See [About Tools](./Tools/AboutTools.md) for more details.
 
@@ -95,12 +97,7 @@ No support is planned for the foreseeable future. Android will have to wait unti
 
 ## Work In Progress
 
-- Asset importer/bundler toolchain
-    - Shader resource import/creation
-    - Shader toolchain
-    - FSHA shader resource format
-- Linux support: **[awaiting shader toolchain]**
-    - Vulkan graphics core
+- Linux support:
     - SPIR-V shader support
 
 #### On Hold
@@ -120,7 +117,7 @@ The following is a rough and very short-sighted roadmap of features that are goi
 
 - Refactor graphics architecture:
     - Add rendering groups for auto-parallelizing draw call creation
-    - Rework materials: **[blocked by shader assets]**
+    - Rework materials:
         - Standard shader constant buffer _(i.e. CBDefaultSurface)_
         - Support for user-supplied constant buffers
         - Split material type into standard/user variants
@@ -149,5 +146,3 @@ The following is a rough and very short-sighted roadmap of features that are goi
     - Webcams _(probably via WMF on Windows?)_
     - Gamepads
     - Touchscreens
-- Linux support: _(distant-ish future)_
-    - Vulkan/SPIR-V shaders
