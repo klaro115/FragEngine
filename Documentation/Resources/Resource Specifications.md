@@ -83,7 +83,7 @@ Platform flags are determined by the engine at launch, and exposed via the engin
 | ---- | -------------------- | ---------------------------------------------------------------------------------------- |
 |    0 | `None`               | No platform requirements.                                                                |
 |    1 | `OS_Windows`         | Microsoft _Windows_ operating system. The engine is targeting Windows 10 or newer.       |
-|    2 | `OS_MacOS`           | Apple's _MacOS_ operating system. The engine is targeting Metal-capable versions.        |
+|    2 | `OS_MacOS`           | Apple's _MacOS_ operating system. The engine is targeting Metal-capable OS versions.     |
 |    4 | `OS_Linux`           | Some Linux distro, must work with SDL2 and support Vulkan graphics API.                  |
 |    8 | `OS_FreeBSD`         | Some FreeBSD distro.                                                                     |
 |   16 | `OS_Other`           | Miscellaneous other OS type. Support for these is questionable.                          |

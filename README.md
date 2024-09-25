@@ -83,12 +83,12 @@ The platform is reliant on its proprietary Metal API, which is so poorly documen
 Support may be resumed in the future if express interest arises, and may possibly use MoltenVK, to bypass Apple's insufferable software ecosystem.
 
 #### Linux
-_Support: not implemented_ ❌<br>
-Linux support is planned but not currently implemented. A Vulkan backend and SPIR-V shaders are currently missing and may be added in the near future.
+_Support: partial_ 🛠️<br>
+Linux support is planned but not fully implemented. A Vulkan backend and SPIR-V shaders are work-in-progress, which should enable basic support for most Linux distros.
 
 #### Mobile (iOS/Android)
 _Support: not implemented_ ❌<br>
-No support is planned for the foreseeable future. Android will have to wait until a Vulkan graphics backend is fully implemented, while iOS support hinges entirely on a functional Metal backend.
+No support is planned for the foreseeable future. Android will have to wait until the Vulkan graphics backend is fully implemented, while iOS support hinges entirely on a functional Metal backend.
 
 <br>
 
@@ -96,9 +96,12 @@ No support is planned for the foreseeable future. Android will have to wait unti
 ## Work In Progress
 
 - Asset importer/bundler toolchain
+    - Shader resource import/creation
     - Shader toolchain
+    - FSHA shader resource format
 - Linux support: **[awaiting shader toolchain]**
     - Vulkan graphics core
+    - SPIR-V shader support
 
 #### On Hold
 
@@ -117,8 +120,6 @@ The following is a rough and very short-sighted roadmap of features that are goi
 
 - Refactor graphics architecture:
     - Add rendering groups for auto-parallelizing draw call creation
-    - Shader assets: **[awaiting asset pipeline tool]**
-        - Bundle shader description in asset file _(maybe JSON header?)_
     - Rework materials: **[blocked by shader assets]**
         - Standard shader constant buffer _(i.e. CBDefaultSurface)_
         - Support for user-supplied constant buffers

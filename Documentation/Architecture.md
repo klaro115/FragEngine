@@ -87,6 +87,7 @@ In order to respond to events within the scene, or originating from its hostg no
 **Cons:**
 - Not great for multithreaded processes.
 - Impractical for scene-spanning or application-wide logic.
+- Code execution order is not always obvious
 <br>
 
 

@@ -89,11 +89,11 @@ This optional member of the JSON-encoded description provides details about the 
 | -------------------------- | ---------------------- | --------------------------------------------------------------------- |
 | EntryPointNameBase         | `string`               | Name base of all entry point functions with the stage's source code.  |
 | EntryPoints                | `VariantEntryPoint[]?` | [Optional] Array of all variants' entry points and vertex data flags. |
-| SupportedFeaturesTxt       | `string`               | Descriptor string of all supported ShaderGen features.<sup>1</sup>    |
+| SupportedFeaturesTxt       | `string`               | Descriptor string of all supported shader features.<sup>1</sup>       |
 | MaximumCompiledFeaturesTxt | `string`               | Descriptor of most feature-complete compiled variant.<sup>1</sup>     |
 | SourceCodeBlocks           | `SourceCodeBlock[]`    | Array of all source code blocks, each in a different language.        |
 
-<sup>1</sup>_Descriptor strings for denoting supported and maximum feature sets are encoded in the ShaderGen format. See the section on `ShaderGenConfig` in [Lighting&Shading Guide](../Graphics/Lighting&Shading%20Guide.md) for more details about these strings' format._
+<sup>1</sup>_Descriptor strings for denoting supported and maximum feature sets are encoded in the ShaderConfig string format. See the section on `ShaderConfig` in [Lighting&Shading Guide](../Graphics/Lighting&Shading%20Guide.md) for more details about these strings' format._
 
 #### VariantEntryPoint Class
 This is a nested class within `ShaderDescriptionSourceCodeData`, which describes a specfic variant's entry point function. Each entry of this type is a possible variant that can be compiled at run-time from source code, should the need arise.
@@ -119,7 +119,7 @@ _Source code:_ [ShaderDescriptionVariantData](../../FragEngine3/FragEngine3/Grap
 | --------------------- | ------------------------ | ------------------------------------------------------------------ |
 | Type                  | `CompiledShaderDataType` | The type of compiled shader data, i.e. what API/backend.           |
 | VariantFlags          | `MeshVertexDataFlags`    | Bit mask of all vertex data flags that apply to this variant.      |
-| VariantDescriptionTxt | `string`                 | Descriptor string of the variant's ShaderGen features.<sup>1</sup> |
+| VariantDescriptionTxt | `string`                 | Descriptor string of the variant's shader features.<sup>1</sup>    |
 | EntryPoint            | `string`                 | Name of this variant's entrypoint function within the source code. |
 | ByteOffset            | `uint`                   | Offset of variant data block from start of compiled data section.  |
 | ByteSize              | `uint`                   | Size of variant data block, in bytes.                              |
@@ -170,7 +170,7 @@ There are 2 reasons to include shader source code in your release build:
 
 If you need to bundle source code for run-time compilation, but you do not wish to make the files publicly visible, consider using encrypted resource data files. Inside of an encrypted and compressed resource file, all assets contained therein should be safe from leaking unless users can gain access to the decryption key. See [Resource Guide](../Resources/Resource%20Guide.md) for details.
 
-Note that source code must be bundled as a single monolothic string. Any and all include logic - linking in additional source code files - is not supported at this time. When in doubt, consider copy-pasting your included/shared sourc files (ex.: "lighting.hlsl") before the start of a specific shader's source code (i.e.: prefix "lighting.hlsl" to "pixel_shader.hlsl").
+Note that source code must be bundled as a single monolithic string. Any and all include logic - linking in additional source code files - is not supported at this time. When in doubt, consider copy-pasting your included/shared sourc files (ex.: "lighting.hlsl") before the start of a specific shader's source code (i.e.: prefix "lighting.hlsl" to "pixel_shader.hlsl").
 
 ### 4. Compiled Data
 The compiled data section consists of a contiguous sequence of byte data blocks. Each block contains pre-compiled shader programs for a specific variant of a shader asset, and targeting a specific graphics API.
