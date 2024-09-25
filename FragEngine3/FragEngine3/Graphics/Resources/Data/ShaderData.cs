@@ -68,6 +68,8 @@ public sealed class ShaderData
 		};
 	}
 
+	public bool HasSourceCode() => SourceCode is not null && Description?.SourceCode is not null;
+
 	public static bool Read(BinaryReader _reader, out ShaderData? _outData, CompiledShaderDataType _typeFlags = CompiledShaderDataType.ALL)
 	{
 		if (_reader is null)

@@ -162,6 +162,7 @@ public static class ShaderImporter
 
 		ShaderStages stage = _shaderData.Description.ShaderStage;
 		Dictionary<MeshVertexDataFlags, Shader> variants = [];
+		uint maxVariantIndex = 0;
 
 		// Compile or upload any pre-compiled shader programs immediately:
 		if (hasPrecompiledVariants)
@@ -174,6 +175,9 @@ public static class ShaderImporter
 					Shader variant = _graphicsCore.MainFactory.CreateShader(ref desc);
 
 					variants.Add(kvp.Key, variant);
+
+					uint variantIndex = kvp.Key.GetVariantIndex();
+					maxVariantIndex = Math.Max(variantIndex, maxVariantIndex);
 				}
 				catch (Exception ex)
 				{
@@ -183,23 +187,53 @@ public static class ShaderImporter
 			}
 		}
 
+		byte[]? sanitizedSourceCodeBytes = null;
+
+		if (_shaderData.HasSourceCode())
+		{
+			ShaderConfig shaderConfig = ShaderConfig.ConfigWhiteLit;
+
+			if (ShaderConfig.TryParseDescriptionTxt(_shaderData.Description.SourceCode!.MaximumCompiledFeaturesTxt, out shaderConfig))
+			{
+				uint supportedVariantIndex = shaderConfig.GetVertexDataForVariantFlags().GetVariantIndex();
+				maxVariantIndex = Math.Max(supportedVariantIndex, maxVariantIndex);
+			}
+
+			// Remove all vertex variants flags and feature defines from source code, so we can quickly prepend them later:
+			if (_shaderData.SourceCode!.TryGetValue(_graphicsCore.DefaultShaderLanguage, out sanitizedSourceCodeBytes))
+			{
+				if (ShaderSourceCodeDefiner.SetVariantDefines(sanitizedSourceCodeBytes!, 0, true, out var buffer))
+				{
+					sanitizedSourceCodeBytes = new byte[buffer!.Length];
+					Array.Copy(buffer.Utf8ByteBuffer, 0, sanitizedSourceCodeBytes, 0, buffer.Length);
+					buffer!.ReleaseBuffer();
+				}
+				if (ShaderSourceCodeDefiner.SetFeatureDefines(sanitizedSourceCodeBytes!, shaderConfig.GetFeatureDefineStrings(false), true, out buffer))
+				{
+					sanitizedSourceCodeBytes = new byte[buffer!.Length];
+					Array.Copy(buffer.Utf8ByteBuffer, 0, sanitizedSourceCodeBytes, 0, buffer.Length);
+					buffer!.ReleaseBuffer();
+				}
+			}
+		}
+
+		uint maxVariantCount = Math.Max(maxVariantIndex + 1, 1);
+		Shader?[] variantLookupTable = new Shader?[maxVariantCount];
+		foreach (var kvp in variants)
+		{
+			uint variantIndex = kvp.Key.GetVariantIndex();
+			variantLookupTable[variantIndex] = kvp.Value;
+		}
+
 		// Try creating the shader resource:
-		try
-		{
-			_outShaderRes = new ShaderResource(
-				_resourceKey,
-				_graphicsCore,
-				variants,
-				_shaderData,
-				stage);
-			return true;
-		}
-		catch (Exception ex)
-		{
-			logger?.LogException($"Failed to create shader resource instance for resource key '{_resourceKey}'!", ex);
-			_outShaderRes = null;
-			return false;
-		}
+		_outShaderRes = new(
+			_resourceKey,
+			_graphicsCore,
+			stage,
+			variantLookupTable,
+			_shaderData.Description.SourceCode,
+			sanitizedSourceCodeBytes);
+		return true;
 	}
 
 	private static bool GatherPrecompiledVariants(

@@ -26,5 +26,6 @@ public enum ShaderLightingModel
 	Phong			= 0,	// 'P'
 	BlinnPhong,				// 'BP'
 	Beckmann,				// 'B'
+	Cell,					// 'C'
 	//...
 }
