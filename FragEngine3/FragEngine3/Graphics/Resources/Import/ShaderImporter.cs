@@ -171,9 +171,14 @@ public static class ShaderImporter
 		{
 			foreach (var kvp in variantBytesDict)
 			{
+				if (!_shaderData.Description.GetCompiledShaderVariantData(_graphicsCore.CompiledShaderDataType, kvp.Key, string.Empty, out var data))
+				{
+					continue;
+				}
+
 				try
 				{
-					ShaderDescription desc = new(stage, kvp.Value, string.Empty);		//TODO [important]: Entry point must be valid for SPIR-V!
+					ShaderDescription desc = new(stage, kvp.Value, data.EntryPoint);
 					Shader variant = _graphicsCore.MainFactory.CreateShader(ref desc);
 
 					variants.Add(kvp.Key, variant);
@@ -185,7 +190,6 @@ public static class ShaderImporter
 				catch (Exception ex)
 				{
 					logger?.LogException($"Failed to load pre-compiled shader variant '{kvp.Key}' for shader resource '{_resourceKey}'!", ex);
-					continue;
 				}
 			}
 		}
@@ -268,7 +272,7 @@ public static class ShaderImporter
 
 			// Gather variants' pre-compiled byte data:
 			byte[] variantBytes = new byte[compiledVariant.ByteSize];
-			Array.Copy(byteCode, compiledVariant.ByteOffset, variantBytes, 0, variantBytes.Length);
+			Array.Copy(byteCode, compiledVariant.RelativeByteOffset, variantBytes, 0, variantBytes.Length);
 			_dstVariantBytesDict.Add(compiledVariant.VariantFlags, variantBytes);
 		}
 		

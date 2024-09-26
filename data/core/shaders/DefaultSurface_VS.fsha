@@ -1,4 +1,4 @@
-FSHA_10_0037_0041_0691_06DC_26B5_04_00002D9B_000038FC
+FSHA_10_0037_0041_072F_077A_26B5_04_00002E39_000038FC
 ########
 {
   "ShaderStage": 1,
@@ -44,7 +44,8 @@ FSHA_10_0037_0041_0691_06DC_26B5_04_00002D9B_000038FC
       "VariantFlags": 1,
       "VariantDescriptionTxt": "At_Nyn0_Ly101p140_V000",
       "EntryPoint": "Main_Vertex",
-      "ByteOffset": 0,
+      "RelativeByteOffset": 0,
+      "TotalByteOffset": 0,
       "ByteSize": 4240
     },
     {
@@ -52,7 +53,8 @@ FSHA_10_0037_0041_0691_06DC_26B5_04_00002D9B_000038FC
       "VariantFlags": 3,
       "VariantDescriptionTxt": "At_Nyn0_Ly101p140_V100",
       "EntryPoint": "Main_Vertex_Ext",
-      "ByteOffset": 4240,
+      "RelativeByteOffset": 4240,
+      "TotalByteOffset": 4240,
       "ByteSize": 4912
     },
     {
@@ -60,7 +62,8 @@ FSHA_10_0037_0041_0691_06DC_26B5_04_00002D9B_000038FC
       "VariantFlags": 1,
       "VariantDescriptionTxt": "At_Nyn0_Ly101p140_V000",
       "EntryPoint": "Main_Vertex",
-      "ByteOffset": 0,
+      "RelativeByteOffset": 0,
+      "TotalByteOffset": 9152,
       "ByteSize": 2428
     },
     {
@@ -68,7 +71,8 @@ FSHA_10_0037_0041_0691_06DC_26B5_04_00002D9B_000038FC
       "VariantFlags": 3,
       "VariantDescriptionTxt": "At_Nyn0_Ly101p140_V100",
       "EntryPoint": "Main_Vertex_Ext",
-      "ByteOffset": 2428,
+      "RelativeByteOffset": 2428,
+      "TotalByteOffset": 11580,
       "ByteSize": 3008
     }
   ]

@@ -24,9 +24,13 @@ public sealed class ShaderDescriptionVariantData
 	public string EntryPoint { get; init; } = string.Empty;
 
 	/// <summary>
+	/// Starting position offset relative to beginning of its data type's block in compiled shader data section.
+	/// </summary>
+	public uint RelativeByteOffset { get; set; }
+	/// <summary>
 	/// Starting position offset relative to beginning of compiled shader data section.
 	/// </summary>
-	public uint ByteOffset { get; set; }
+	public uint TotalByteOffset { get; set; }
 	/// <summary>
 	/// Size of the compiled data block, in bytes.
 	/// </summary>

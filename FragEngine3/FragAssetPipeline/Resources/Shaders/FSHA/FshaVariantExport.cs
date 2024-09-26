@@ -85,7 +85,7 @@ internal static class FshaVariantExport
 				vertexDataFlags = kvp.Key,
 				entryPoint = kvp.Value,
 				compiledData = dxcResult.compiledShader,
-				byteOffset = _outputDetails.dxbcByteSize,
+				relativeByteOffset = _outputDetails.dxbcByteSize,
 				totalByteOffset = _outputDetails.totalByteSize,
 			};
 			_compiledVariants.Add(compiledVariant);
@@ -139,7 +139,7 @@ internal static class FshaVariantExport
 				vertexDataFlags = kvp.Key,
 				entryPoint = kvp.Value,
 				compiledData = dxcResult.compiledShader,
-				byteOffset = _outputDetails.spirvByteSize,
+				relativeByteOffset = _outputDetails.spirvByteSize,
 				totalByteOffset = _outputDetails.totalByteSize,
 			};
 			_compiledVariants.Add(compiledVariant);

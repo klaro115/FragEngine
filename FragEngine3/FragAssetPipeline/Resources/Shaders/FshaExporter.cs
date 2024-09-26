@@ -129,7 +129,8 @@ public static class FshaExporter
 				VariantFlags = compiledVariant.vertexDataFlags,
 				VariantDescriptionTxt = variantConfig.CreateDescriptionTxt(),
 				EntryPoint = compiledVariant.entryPoint,
-				ByteOffset = compiledVariant.byteOffset,
+				RelativeByteOffset = compiledVariant.relativeByteOffset,
+				TotalByteOffset = compiledVariant.totalByteOffset,
 				ByteSize = (uint)compiledVariant.compiledData.Length,
 			};
 			entryPointData[i] = new()
@@ -149,7 +150,7 @@ public static class FshaExporter
 			};
 			Array.Copy(
 				compiledVariant.compiledData, 0,
-				allByteCode, compiledVariant.byteOffset,
+				allByteCode, compiledVariant.relativeByteOffset,
 				compiledVariant.compiledData.Length);
 		}
 

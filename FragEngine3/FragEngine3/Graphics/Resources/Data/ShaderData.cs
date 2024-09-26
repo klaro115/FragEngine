@@ -311,26 +311,23 @@ public sealed class ShaderData
 			try
 			{
 				// Jump to compiled code's start position on the reader stream:
-				long variantStartPosition = _shaderDataStartPosition + variantData.ByteOffset;
+				long variantStartPosition = _shaderDataStartPosition + variantData.TotalByteOffset;
 				_reader.JumpToPosition(variantStartPosition);
 
 				// Read all variant bytes from stream into buffer list:
 				int remainingSize = (int)variantData.ByteSize;
 				while (remainingSize > readBufferCapacity)
 				{
-					_reader.Read(byteBuffer, 0, readBufferCapacity);
+					int bytesRead = _reader.Read(byteBuffer, 0, readBufferCapacity);
 					bufferList.AddRange(byteBuffer);
-					remainingSize -= readBufferCapacity;
+					remainingSize -= bytesRead;
 				}
 				if (remainingSize > 0)
 				{
-					_reader.Read(byteBuffer, 0, remainingSize);
-					ReadOnlySpan<byte> span = new(byteBuffer, 0, remainingSize);
+					int bytesRead = _reader.Read(byteBuffer, 0, remainingSize);
+					ReadOnlySpan<byte> span = new(byteBuffer, 0, bytesRead);
 					bufferList.AddRange(span);
 				}
-
-				// Update raw variant data to use imported array indices instead of file byte offsets:
-				variantData.ByteOffset = variantStartIdx;
 			}
 			catch (Exception ex)
 			{
