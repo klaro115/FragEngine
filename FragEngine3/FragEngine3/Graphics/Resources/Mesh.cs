@@ -631,6 +631,8 @@ public sealed class Mesh : Resource
 			{
 				// Create staging buffer:
 				DeviceBuffer stagingBuffer = graphicsCore.MainFactory.CreateBuffer(ref bufferDesc);
+				stagingBuffer.Name = $"BufGeometryDownload_{resourceKey}_V{(int)_dataFlag}";
+
 				stagingBuffers[stagingBufferIdx] = stagingBuffer;
 				dataTypes[stagingBufferIdx] = _dataFlag;
 				stagingBufferIdx++;
@@ -693,7 +695,6 @@ public sealed class Mesh : Resource
 
 			// Get staging buffer, abort quietly if no destination exists:
 			DeviceBuffer stagingBuffer = _request.StagingBuffers[stagingBufferIdx];
-			MeshVertexDataFlags dataType = _request.StagingBufferDataTypes[stagingBufferIdx];
 
 			if (_dstDataBuffer is null)
 			{

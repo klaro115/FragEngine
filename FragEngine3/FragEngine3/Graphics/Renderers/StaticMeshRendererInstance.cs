@@ -278,7 +278,7 @@ public sealed class StaticMeshRendererInstance : IPhysicalRenderer
 			return false;
 		}
 
-		if (_newOverrideResourceSet == null || _newOverrideResourceSet.IsDisposed)
+		if (_newOverrideResourceSet is null || _newOverrideResourceSet.IsDisposed)
 		{
 			overrideBoundResourceSet = null;
 		}
@@ -383,7 +383,7 @@ public sealed class StaticMeshRendererInstance : IPhysicalRenderer
 		_cameraPassCtx.CmdList.SetGraphicsResourceSet(1, resSetObject);
 
 		ResourceSet? boundResourceSet = overrideBoundResourceSet ?? _material.BoundResourceSet;
-		if (boundResourceSet != null && _material.BoundResourceLayout != null)
+		if (boundResourceSet is not null && _material.BoundResourceLayout is not null)
 		{
 			_cameraPassCtx.CmdList.SetGraphicsResourceSet(2, boundResourceSet);
 		}

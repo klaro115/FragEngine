@@ -78,7 +78,7 @@ public sealed class SamplerManager(GraphicsCore _core) : IDisposable
 		}
 
 		// Create and register a new sampler:
-		return TryCreateNewSampler(ref desc, out _outSampler);
+		return TryCreateNewSampler(ref desc, samplerId, out _outSampler);
 	}
 
 	public bool GetSampler(ulong _samplerId, out Sampler _outSampler)
@@ -105,7 +105,7 @@ public sealed class SamplerManager(GraphicsCore _core) : IDisposable
 		SamplerDescription desc = MaterialDataDescriptionParser.DecodeIdentifier_Sampler(_samplerId);
 
 		// Create and register a new sampler:
-		return TryCreateNewSampler(ref desc, out _outSampler);
+		return TryCreateNewSampler(ref desc, _samplerId, out _outSampler);
 	}
 
 	public bool GetSampler(ref SamplerDescription _desc, out Sampler _outSampler)
@@ -132,14 +132,15 @@ public sealed class SamplerManager(GraphicsCore _core) : IDisposable
 		}
 
 		// Create and register a new sampler:
-		return TryCreateNewSampler(ref _desc, out _outSampler);
+		return TryCreateNewSampler(ref _desc, samplerId, out _outSampler);
 	}
 
-	private bool TryCreateNewSampler(ref SamplerDescription _desc, out Sampler _outSampler)
+	private bool TryCreateNewSampler(ref SamplerDescription _desc, ulong _samplerId, out Sampler _outSampler)
 	{
 		try
 		{
 			_outSampler = core.MainFactory.CreateSampler(ref _desc);
+			_outSampler.Name = $"Sampler_ID={_samplerId}";
 			return true;
 		}
 		catch (Exception ex)

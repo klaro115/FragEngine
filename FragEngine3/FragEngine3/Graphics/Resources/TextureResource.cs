@@ -45,7 +45,7 @@ public sealed class TextureResource : Resource
 	#region Properties
 
 	public override ResourceType ResourceType => ResourceType.Texture;
-	public override bool IsLoaded => !IsDisposed && Texture != null && !Texture.IsDisposed;
+	public override bool IsLoaded => !IsDisposed && Texture is not null && !Texture.IsDisposed;
 
 	public Texture? Texture { get; private set; } = null;
 
@@ -74,7 +74,7 @@ public sealed class TextureResource : Resource
 			Logger.LogError("Cannot set pixel data of uninitialized texture resource!");
 			return false;
 		}
-		if (_rawImage == null || !_rawImage.IsValid())
+		if (_rawImage is null || !_rawImage.IsValid())
 		{
 			Logger.LogError("Cannot set pixel data of texture from null or invalid raw image data!");
 			return false;
@@ -95,7 +95,7 @@ public sealed class TextureResource : Resource
 		// Local helper method for uploading pixels of arbitrary types and layouts:
 		bool UpdateTexture<T>(T[]? _pixelData) where T : unmanaged
 		{
-			if (_pixelData == null) return false;
+			if (_pixelData is null) return false;
 			try
 			{
 				core.Device.UpdateTexture(Texture, _pixelData, 0, 0, 0, _rawImage.width, _rawImage.height, 1, 0, 0);
@@ -134,7 +134,7 @@ public sealed class TextureResource : Resource
 
 	public static bool CreateTexture(ResourceHandle _handle, GraphicsCore _graphicsCore, RawImageData _rawImageData, out TextureResource? _outTexture)
 	{
-		if (_graphicsCore == null)
+		if (_graphicsCore is null)
 		{
 			Logger.Instance?.LogError("Cannot create texture using null graphics core!");
 			_outTexture = null;
@@ -147,7 +147,7 @@ public sealed class TextureResource : Resource
 			_outTexture = null;
 			return false;
 		}
-		if (_handle == null || !_handle.IsValid)
+		if (_handle is null || !_handle.IsValid)
 		{
 			logger.LogError("Cannot create texture using null or invalid resource handle!");
 			_outTexture = null;
@@ -158,7 +158,7 @@ public sealed class TextureResource : Resource
 		if (_handle.IsLoaded)
 		{
 			Resource? oldResource = _handle.GetResource(false, false);
-			if (oldResource != null && !oldResource.IsDisposed)
+			if (oldResource is not null && !oldResource.IsDisposed)
 			{
 				logger.LogError("Cannot create texture; resource handle is already loaded and has a resource assigned!");
 				_outTexture = null;
@@ -173,6 +173,7 @@ public sealed class TextureResource : Resource
 			TextureDescription textureDesc = _rawImageData.CreateTextureDescription();
 
 			texture = _graphicsCore.MainFactory.CreateTexture(ref textureDesc);
+			texture.Name = $"Tex_{_handle.resourceKey}_{_rawImageData.width}x{_rawImageData.height}p_{textureDesc.Format}";
 		}
 		catch (Exception ex)
 		{

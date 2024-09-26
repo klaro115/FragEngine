@@ -56,7 +56,7 @@ public sealed class RawImageData
 		get
 		{
 			Array? pixelData = GetPixelDataArray();
-			return pixelData != null ? Math.Min((uint)pixelData.Length, PixelCount) : 0u;
+			return pixelData is not null ? Math.Min((uint)pixelData.Length, PixelCount) : 0u;
 		}
 	}
 
@@ -94,7 +94,7 @@ public sealed class RawImageData
 	public bool IsValid()
 	{
 		Array? pixelData = GetPixelDataArray();
-		return pixelData != null && pixelData.Length >= PixelCount;
+		return pixelData is not null && pixelData.Length >= PixelCount;
 	}
 
 	public Array? GetPixelDataArray() => bitsPerPixel switch
@@ -204,7 +204,7 @@ public sealed class RawImageData
 			return false;
 		}
 
-		if (pixelData_RgbaByte != null)
+		if (pixelData_RgbaByte is not null)
 		{
 			for (uint i = 0; i < pixelData_RgbaByte.Length; ++i)
 			{
@@ -212,7 +212,7 @@ public sealed class RawImageData
 				pixelData_RgbaByte[i] = new(pixel.R, (byte)(0xFF - pixel.G), pixel.B, pixel.A);
 			}
 		}
-		else if (pixelData_RgbaFloat != null)
+		else if (pixelData_RgbaFloat is not null)
 		{
 			for (uint i = 0; i < pixelData_RgbaFloat.Length; ++i)
 			{
@@ -263,7 +263,7 @@ public sealed class RawImageData
 		// Local helper method for padding pixel data arrays of arbitrary pixel size and layout:
 		void PadSizeTyped<T>(ref T[]? _pixels, T _padValue) where T : unmanaged
 		{
-			if (_pixels == null) return;
+			if (_pixels is null) return;
 
 			T[] po2Pixels = new T[po2PixelCount];
 			for (int y = 0; y < height; ++y)
@@ -310,7 +310,7 @@ public sealed class RawImageData
 
 		static void ConvertSRgbToLinear<TColor>(TColor[]? _pixels, Func<TColor, TColor> _funcCvtChannel) where TColor : unmanaged
 		{
-			if (_pixels == null) return;
+			if (_pixels is null) return;
 
 			for (uint i = 0; i < _pixels.Length; ++i)
 			{
@@ -398,7 +398,7 @@ public sealed class RawImageData
 		// Local helper method for copying a rectangle of pixels of arbitrary pixel size and layout:
 		T[]? CropPixels<T>(T[]? _pixels) where T : unmanaged
 		{
-			if (_pixels == null) return null;
+			if (_pixels is null) return null;
 
 			T[] cropped = new T[_cropWidth * _cropHeight];
 			for (uint y = _startY;  y < _cropHeight; y++)
@@ -458,19 +458,19 @@ public sealed class RawImageData
 		bool success = true;
 
 		// Iteratively generate pixel data for each LOD:
-		if (pixelData_MonoByte != null)
+		if (pixelData_MonoByte is not null)
 		{
 			success &= GenerateMipMaps(_levels, ref pixelData_MonoByte, levelSizes, mipmappedPixelCount, FuncAverage_MonoByte);
 		}
-		if (pixelData_MonoFloat != null)
+		if (pixelData_MonoFloat is not null)
 		{
 			success &= GenerateMipMaps(_levels, ref pixelData_MonoFloat, levelSizes, mipmappedPixelCount, FuncAverage_MonoFloat);
 		}
-		if (pixelData_RgbaByte != null)
+		if (pixelData_RgbaByte is not null)
 		{
 			success &= GenerateMipMaps(_levels, ref pixelData_RgbaByte, levelSizes, mipmappedPixelCount, FuncAverage_RgbaByte);
 		}
-		if (pixelData_RgbaFloat != null)
+		if (pixelData_RgbaFloat is not null)
 		{
 			success &= GenerateMipMaps(_levels, ref pixelData_RgbaFloat, levelSizes, mipmappedPixelCount, FuncAverage_RgbaFloat);
 		}
@@ -516,7 +516,7 @@ public sealed class RawImageData
 		{
 			Logger.Instance?.LogWarning("Raw image data already has mipmaps; are you sure you want to create them twice?");
 		}
-		if (_pixels == null || _pixels.Length < width * height)
+		if (_pixels is null || _pixels.Length < width * height)
 		{
 			Logger.Instance?.LogError("Pixel data array has invalid size for mip map calculation!");
 			return false;

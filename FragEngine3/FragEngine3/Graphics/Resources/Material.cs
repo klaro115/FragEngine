@@ -5,7 +5,6 @@ using FragEngine3.Graphics.Internal;
 using FragEngine3.Graphics.Resources.Data;
 using FragEngine3.Graphics.Resources.Data.MaterialTypes;
 using FragEngine3.Resources;
-using FragEngine3.Resources.Data;
 using FragEngine3.Utility.Serialization;
 using Veldrid;
 
@@ -91,12 +90,25 @@ public class Material(GraphicsCore _core, ResourceHandle _handle) : Resource(_ha
 	public RenderMode RenderMode
 	{
 		get => renderModeDesc.Value.renderMode;
-		set { RenderModeDesc rmd = renderModeDesc.Value; rmd.renderMode = value; renderModeDesc.UpdateValue(renderModeDesc.Version + 1, rmd); }
+		set
+		{
+			RenderModeDesc rmd = renderModeDesc.Value;
+			rmd.renderMode = value;
+			renderModeDesc.UpdateValue(renderModeDesc.Version + 1, rmd);
+		}
 	}
 	public float ZSortingBias
 	{
 		get => renderModeDesc.Value.zSortingBias;
-		set { if (!float.IsNaN(value)) { RenderModeDesc rmd = renderModeDesc.Value; rmd.zSortingBias = value; renderModeDesc.UpdateValue(renderModeDesc.Version + 1, rmd); } }
+		set
+		{
+			if (!float.IsNaN(value))
+			{
+				RenderModeDesc rmd = renderModeDesc.Value;
+				rmd.zSortingBias = value;
+				renderModeDesc.UpdateValue(renderModeDesc.Version + 1, rmd);
+			}
+		}
 	}
 
 	// REPLACEMENTS:
@@ -104,7 +116,7 @@ public class Material(GraphicsCore _core, ResourceHandle _handle) : Resource(_ha
 	/// <summary>
 	/// Gets whether this material has a valid simplified replacement material assigned.
 	/// </summary>
-	public bool HasSimplifiedMaterialVersion => SimplifiedMaterialVersion != null && SimplifiedMaterialVersion.IsValid;
+	public bool HasSimplifiedMaterialVersion => SimplifiedMaterialVersion is not null && SimplifiedMaterialVersion.IsValid;
 	/// <summary>
 	/// Gets or sets a replacement material that may be used when simplified or low-detail rendering is required. This may be used for reflections
 	/// or distant LODs, or when rendering your game at exceptionally low graphics settings.
@@ -114,7 +126,7 @@ public class Material(GraphicsCore _core, ResourceHandle _handle) : Resource(_ha
 	/// <summary>
 	/// Gets whether this material has a valid shadow map rendering material assigned.
 	/// </summary>
-	public bool HasShadowMapMaterialVersion => ShadowMapMaterialVersion != null && ShadowMapMaterialVersion.IsValid;
+	public bool HasShadowMapMaterialVersion => ShadowMapMaterialVersion is not null && ShadowMapMaterialVersion.IsValid;
 	/// <summary>
 	/// Gets or sets a replacement material that may be used when rendering shadow maps for geometry that would otherwise use this material.
 	/// </summary>
@@ -135,7 +147,7 @@ public class Material(GraphicsCore _core, ResourceHandle _handle) : Resource(_ha
 
 	internal bool IsPipelineUpToDate(in PipelineState? _pipeline, uint _rendererVersion)
 	{
-		if (_pipeline == null || _pipeline.IsDisposed)
+		if (_pipeline is null || _pipeline.IsDisposed)
 		{
 			return false;
 		}
@@ -147,7 +159,7 @@ public class Material(GraphicsCore _core, ResourceHandle _handle) : Resource(_ha
 	{
 		uint minVariantCount = _variantIdx + 1;
 
-		if (shaderSetDescs == null)
+		if (shaderSetDescs is null)
 		{
 			shaderSetDescs = new VersionedMember<ShaderSetDescription>[minVariantCount];
 			Array.Fill(shaderSetDescs, new(default, 0));
@@ -169,7 +181,7 @@ public class Material(GraphicsCore _core, ResourceHandle _handle) : Resource(_ha
 
 	private bool LoadShaderVariant(ResourceHandle? _handle, ShaderStages _stageFlag, bool _fallbackToBasicVariant, ref MeshVertexDataFlags _vertexDataFlags, out Shader? _outShader)
 	{
-		if (_handle == null || !_handle.IsValid)
+		if (_handle is null || !_handle.IsValid)
 		{
 			_outShader = null;
 			return false;
@@ -181,10 +193,10 @@ public class Material(GraphicsCore _core, ResourceHandle _handle) : Resource(_ha
 			_outShader = null;
 			return false;
 		}
-		if (!shaderRes.GetShaderProgram(_vertexDataFlags, out _outShader) || _outShader == null)
+		if (!shaderRes.GetShaderProgram(_vertexDataFlags, out _outShader) || _outShader is null)
 		{
 			// If allowed, try falling back to basic variant, see if that can be loaded:
-			if (!_fallbackToBasicVariant || !shaderRes.GetShaderProgram(MeshVertexDataFlags.BasicSurfaceData, out _outShader) || _outShader == null)
+			if (!_fallbackToBasicVariant || !shaderRes.GetShaderProgram(MeshVertexDataFlags.BasicSurfaceData, out _outShader) || _outShader is null)
 			{
 				Logger.LogWarning($"Shader variant program '{_vertexDataFlags}' of shader resource '{_handle.resourceKey}' could not be loaded! (Stage: {_stageFlag}");
 				_outShader = null!;
@@ -229,14 +241,14 @@ public class Material(GraphicsCore _core, ResourceHandle _handle) : Resource(_ha
 
 		// SHADER SET:
 
-		bool hasGeometryShader = capabilities.geometryShaders && geometryShader != null;
-		bool hasTesselationShader = capabilities.tesselationShaders && tesselationShaderCtrl != null && tesselationShaderEval != null;
+		bool hasGeometryShader = capabilities.geometryShaders && geometryShader is not null;
+		bool hasTesselationShader = capabilities.tesselationShaders && tesselationShaderCtrl is not null && tesselationShaderEval is not null;
 
 		int shaderCount = 0;
-		if (vertexShader != null)	shaderCount++;
-		if (hasGeometryShader)		shaderCount++;
-		if (hasTesselationShader)	shaderCount += 2;
-		if (pixelShader != null)	shaderCount++;
+		if (vertexShader is not null)	shaderCount++;
+		if (hasGeometryShader)			shaderCount++;
+		if (hasTesselationShader)		shaderCount += 2;
+		if (pixelShader is not null)	shaderCount++;
 
 		try
 		{
@@ -274,7 +286,7 @@ public class Material(GraphicsCore _core, ResourceHandle _handle) : Resource(_ha
 			// Local helper method for fetching and loading a shader variant:
 			bool AddShaderVariant(ResourceHandle? _handle, ShaderStages _stageFlag, bool _fallbackToBasicVariant)
 			{
-				if (!LoadShaderVariant(_handle, _stageFlag, _fallbackToBasicVariant, ref _vertexDataFlags, out Shader? shader) || shader == null)
+				if (!LoadShaderVariant(_handle, _stageFlag, _fallbackToBasicVariant, ref _vertexDataFlags, out Shader? shader) || shader is null)
 				{
 					errorStages |= _stageFlag;
 					return false;
@@ -334,7 +346,7 @@ public class Material(GraphicsCore _core, ResourceHandle _handle) : Resource(_ha
 	{
 		// Purge outdated previously created resource sets:
 		boundResourceSet.DisposeValue();
-		if (boundResourceLayout == null || boundResourceKeys == null)
+		if (boundResourceLayout is null || boundResourceKeys is null)
 		{
 			return false;
 		}
@@ -399,7 +411,7 @@ public class Material(GraphicsCore _core, ResourceHandle _handle) : Resource(_ha
 
 	internal bool CreatePipeline(SceneContext _sceneCtx, CameraPassContext _cameraPassCtx, uint _rendererVersion, MeshVertexDataFlags _vertexDataFlags, out PipelineState _outPipeline)
 	{
-		if (_sceneCtx == null || _cameraPassCtx == null)
+		if (_sceneCtx is null || _cameraPassCtx is null)
 		{
 			_outPipeline = null!;
 			return false;
@@ -437,7 +449,7 @@ public class Material(GraphicsCore _core, ResourceHandle _handle) : Resource(_ha
 			}
 			shaderSetDesc = shaderSetDescs![variantIdx];
 		}
-		if (boundResourceSet.Value == null && boundResourceLayout != null && !UseExternalBoundResources && !CreateBoundResourceSet())
+		if (boundResourceSet.Value is null && boundResourceLayout is not null && !UseExternalBoundResources && !CreateBoundResourceSet())
 		{
 			_outPipeline = null!;
 			return false;
@@ -474,7 +486,7 @@ public class Material(GraphicsCore _core, ResourceHandle _handle) : Resource(_ha
 				rasterizerState = RasterizerStateDescription.CullNone;
 			}
 
-			ResourceLayout[] resourceLayouts = boundResourceLayout != null
+			ResourceLayout[] resourceLayouts = boundResourceLayout is not null
 				? [ _sceneCtx.ResLayoutCamera, _sceneCtx.ResLayoutObject, boundResourceLayout ]
 				: [ _sceneCtx.ResLayoutCamera, _sceneCtx.ResLayoutObject ];
 
@@ -490,7 +502,7 @@ public class Material(GraphicsCore _core, ResourceHandle _handle) : Resource(_ha
 			Pipeline pipeline = core.MainFactory.CreateGraphicsPipeline(ref pipelineDesc);
 			uint newPipelineVersion = materialVersion ^ _rendererVersion;
 
-			if (_cameraPassCtx.OutputDesc.ColorAttachments != null && _cameraPassCtx.OutputDesc.ColorAttachments.Length != 0)
+			if (_cameraPassCtx.OutputDesc.ColorAttachments is not null && _cameraPassCtx.OutputDesc.ColorAttachments.Length != 0)
 			{
 				PixelFormat colorFormat = _cameraPassCtx.OutputDesc.ColorAttachments[0].Format;
 				pipeline.Name = $"{resourceKey}_{colorFormat}";
@@ -514,14 +526,14 @@ public class Material(GraphicsCore _core, ResourceHandle _handle) : Resource(_ha
 	public override IEnumerator<ResourceHandle> GetResourceDependencies()
 	{
 		// Shader programs:
-		if (vertexShader != null)	yield return vertexShader;
-		if (geometryShader != null)	yield return geometryShader;
-		if (tesselationShaderCtrl != null && tesselationShaderEval != null)
+		if (vertexShader is not null)	yield return vertexShader;
+		if (geometryShader is not null)	yield return geometryShader;
+		if (tesselationShaderCtrl is not null && tesselationShaderEval is not null)
 		{
 			yield return tesselationShaderCtrl;
 			yield return tesselationShaderEval;
 		}
-		if (pixelShader != null)	yield return pixelShader;
+		if (pixelShader is not null)	yield return pixelShader;
 
 		//TODO: Iterate dependencies and referenced assets.
 
@@ -534,19 +546,19 @@ public class Material(GraphicsCore _core, ResourceHandle _handle) : Resource(_ha
 
 	public static bool CreateMaterial(ResourceHandle _handle, GraphicsCore _graphicsCore, out Material? _outMaterial)
 	{
-		if (_handle == null || !_handle.IsValid)
+		if (_handle is null || !_handle.IsValid)
 		{
 			Logger.Instance?.LogError("Cannot create material from null or invalid resource handle!");
 			_outMaterial = null;
 			return false;
 		}
-		if (_handle.resourceManager == null || _handle.resourceManager.IsDisposed)
+		if (_handle.resourceManager is null || _handle.resourceManager.IsDisposed)
 		{
 			Logger.Instance?.LogError("Cannot create material using null or disposed resource manager!");
 			_outMaterial = null;
 			return false;
 		}
-		if (_graphicsCore == null || !_graphicsCore.IsInitialized)
+		if (_graphicsCore is null || !_graphicsCore.IsInitialized)
 		{
 			_handle.resourceManager.engine.Logger.LogError("Cannot create material using null or uninitialized graphics core!");
 			_outMaterial = null;
@@ -563,7 +575,7 @@ public class Material(GraphicsCore _core, ResourceHandle _handle) : Resource(_ha
 		Logger logger = _graphicsCore.graphicsSystem.engine.Logger ?? Logger.Instance!;
 
 		// Retrieve the file that this resource is loaded from:
-		if (!_handle.resourceManager.GetFileWithResource(_handle.resourceKey, out ResourceFileHandle? fileHandle) || fileHandle == null)
+		if (!_handle.resourceManager.GetFileWithResource(_handle.resourceKey, out ResourceFileHandle? fileHandle) || fileHandle is null)
 		{
 			logger.LogError($"Could not find source file for resource handle '{_handle}'!");
 			_outMaterial = null;
@@ -592,7 +604,7 @@ public class Material(GraphicsCore _core, ResourceHandle _handle) : Resource(_ha
 		}
 
 		// Try deserializing material description data from JSON:
-		if (!Serializer.DeserializeFromJson(jsonTxt, out MaterialData? data) || data == null)
+		if (!Serializer.DeserializeFromJson(jsonTxt, out MaterialData? data) || data is null)
 		{
 			_outMaterial = null;
 			return false;
@@ -629,7 +641,7 @@ public class Material(GraphicsCore _core, ResourceHandle _handle) : Resource(_ha
 
 		// Assemble stencil description, if required and available:
 		StencilBehaviourDesc stencilDesc;
-		if (data.States.StencilFront != null && data.States.StencilBack != null)
+		if (data.States.StencilFront is not null && data.States.StencilBack is not null)
 		{
 			stencilDesc = new()
 			{
