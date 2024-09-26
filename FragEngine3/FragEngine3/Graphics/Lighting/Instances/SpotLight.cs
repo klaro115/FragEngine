@@ -2,31 +2,33 @@
 using FragEngine3.Graphics.Components.Data;
 using FragEngine3.Graphics.Lighting.Data;
 using FragEngine3.Graphics.Utility;
-using FragEngine3.Scenes;
 using System.Numerics;
 
 namespace FragEngine3.Graphics.Lighting.Instances;
 
-internal sealed class DirectionalLightInstance : LightInstance
+internal sealed class SpotLight : LightInstance
 {
 	#region Constructors
 
-	public DirectionalLightInstance(GraphicsCore _core) : base(_core)
+	public SpotLight(GraphicsCore _core) : base(_core)
 	{
-		data.type = (uint)LightType.Directional;
+		data.type = (uint)LightType.Spot;
+		data.position = worldPose.position;
 		data.direction = worldPose.Forward;
-		data.shadowCascadeRange = LightConstants.directionalLightSize;
+		data.spotMinDot = MathF.Cos(spotAngleRad * LightConstants.DEG2RAD);
+		data.shadowCascadeRange = MaxLightRange / Math.Max(ShadowCascades, 1);
 	}
 
 	#endregion
 	#region Fields
 
-	private static readonly bool rotateProjectionAlongCamera = false;
+	private float maxLightRangeSq = 10.0f;
+	private float spotAngleRad = 30.0f * LightConstants.DEG2RAD;
 
 	#endregion
 	#region Properties
 
-	public override LightType Type => LightType.Directional;
+	public override LightType Type => LightType.Spot;
 
 	public override float LightIntensity
 	{
@@ -34,8 +36,24 @@ internal sealed class DirectionalLightInstance : LightInstance
 		set
 		{
 			data.intensity = Math.Max(value, 0.0f);
-			MaxLightRange = 1.0e+8f;
+			MaxLightRange = MathF.Sqrt(data.intensity / LightConstants.MIN_LIGHT_INTENSITY);
+			maxLightRangeSq = MaxLightRange * MaxLightRange;
 		}
+	}
+
+	public float SpotAngleRadians
+	{
+		get => spotAngleRad;
+		set
+		{
+			spotAngleRad = Math.Clamp(value, 0.0f, MathF.PI);
+			data.spotMinDot = MathF.Cos(spotAngleRad * 0.5f);
+		}
+	}
+	public float SpotAngleDegrees
+	{
+		get => spotAngleRad * LightConstants.RAD2DEG;
+		set => SpotAngleRadians = value * LightConstants.DEG2RAD;
 	}
 
 	#endregion
@@ -45,69 +63,51 @@ internal sealed class DirectionalLightInstance : LightInstance
 	{
 		if (IsStaticLight && staticLightDirtyFlags.HasFlag(StaticLightDirtyFlags.Data)) return data;
 
+		data.position = worldPose.position;
 		data.direction = worldPose.Forward;
 		data.shadowMapIdx = ShadowMapIdx;
 		data.shadowCascades = ShadowCascades;
-		data.shadowCascadeRange = LightConstants.directionalLightSize;
+		data.shadowCascadeRange = maxLightRangeSq;
 
 		staticLightDirtyFlags &= ~StaticLightDirtyFlags.Data;
 		return data;
 	}
 
-	public override bool CheckVisibilityByCamera(in Camera _camera)
+	public override bool CheckVisibilityByCamera(in CameraComponent _camera)
 	{
 		return true;
 	}
 
 	public override bool CheckIsRendererInRange(in IPhysicalRenderer _renderer)
 	{
-		return true;
+		float maxEffectRange = MaxLightRange + _renderer.BoundingRadius;
+		float lightDistSq = Vector3.DistanceSquared(_renderer.VisualCenterPoint, worldPose.position);
+		return lightDistSq < maxEffectRange * maxEffectRange;
 	}
 
 	protected override Matrix4x4 RecalculateShadowProjectionMatrix(Vector3 _shadingFocalPoint, uint _cascadeIdx)
 	{
-		float maxRange = LightConstants.directionalLightSize * Math.Max(MathF.Pow(2, ShadowCascades), 1);
-		float maxDirectionalRange = LightConstants.directionalLightSize * MathF.Floor(MathF.Pow(2, _cascadeIdx));
-
-		Vector3 lightDir = worldPose.Forward;
-		Quaternion worldRot = worldPose.rotation;
-
-		// Orient light map projection to have its pixel grid roughly aligned with the camera's direction:
-		if (rotateProjectionAlongCamera && Camera.MainCamera != null)
-		{
-			Vector3 worldUp = Vector3.Transform(Vector3.UnitY, worldRot);
-			Vector3 cameraDir = Camera.MainCamera.node.WorldForward;
-
-			Vector3 lightDirProj = Vector3.Normalize(cameraDir.ProjectToPlane(lightDir));
-			float cameraRotAngle = VectorExt.Angle(worldUp, lightDirProj, true);
-			Quaternion cameraRot = Quaternion.CreateFromAxisAngle(lightDir, cameraRotAngle);
-			worldRot = cameraRot * worldRot;
-		}
-
-		// Transform from a world space position (relative to a given focal point), to orthographics projection space, to shadow map UV coordinates:
-		Vector3 posOrigin = _shadingFocalPoint - lightDir * maxRange * 0.5f;
-		Pose originPose = new(posOrigin, worldRot, Vector3.One, false);
-		if (!Matrix4x4.Invert(originPose.Matrix, out Matrix4x4 mtxWorld2Local))
+		// Transform from a world space position, to the light's local space, to perspective projection clip space:
+		if (!Matrix4x4.Invert(worldPose.Matrix, out Matrix4x4 mtxWorld2Local))
 		{
 			mtxWorld2Local = Matrix4x4.Identity;
 		}
-		Matrix4x4 mtxLocal2Clip = Matrix4x4.CreateOrthographicLeftHanded(maxDirectionalRange, maxDirectionalRange, 0.01f, maxRange);
+		Matrix4x4 mtxLocal2Clip = Matrix4x4.CreatePerspectiveFieldOfViewLeftHanded(spotAngleRad, 1, 0.01f, MaxLightRange);
 		Matrix4x4 mtxWorld2Clip = mtxWorld2Local * mtxLocal2Clip;
 
-		mtxWorld2Clip *= Matrix4x4.CreateScale(1, -1, 1);
-		return mtxWorld2Clip;
+		return mtxWorld2Clip * Matrix4x4.CreateScale(1, -1, 1);
 	}
 
 	protected override bool UpdateShadowMapCameraInstance(float _shadingFocalPointRadius)
 	{
 		// Ensure a camera instance is ready for drawing the scene:
-		if (shadowCameraInstance == null || shadowCameraInstance.IsDisposed)
+		if (shadowCameraInstance is null || shadowCameraInstance.IsDisposed)
 		{
 			if (!ShadowMapUtility.UpdateOrCreateShadowMapCameraInstance(
 				GraphicsCore,
-				true,
+				false,
 				MaxLightRange,
-				0.0f,
+				SpotAngleRadians,
 				ref shadowCameraInstance))
 			{
 				return false;
@@ -122,6 +122,7 @@ internal sealed class DirectionalLightInstance : LightInstance
 
 		data.color = (Vector3)Color32.ParseHexString(_lightData.LightColor);
 		LightIntensity = _lightData.LightIntensity;
+		SpotAngleDegrees = _lightData.SpotAngleDegrees;
 
 		CastShadows = _lightData.CastShadows;
 		ShadowCascades = _lightData.ShadowCascades;
@@ -134,11 +135,11 @@ internal sealed class DirectionalLightInstance : LightInstance
 	{
 		_outLightData = new()
 		{
-			Type = LightType.Directional,
+			Type = LightType.Spot,
 
 			LightColor = new Color32(data.color).ToHexString(),
-			LightIntensity = data.intensity,
-			SpotAngleDegrees = 0,
+			LightIntensity = LightIntensity,
+			SpotAngleDegrees = SpotAngleDegrees,
 
 			CastShadows = CastShadows,
 			ShadowCascades = ShadowCascades,

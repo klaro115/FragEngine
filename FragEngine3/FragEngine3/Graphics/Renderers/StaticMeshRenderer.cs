@@ -11,11 +11,11 @@ using Veldrid;
 
 namespace FragEngine3.Graphics.Renderers;
 
-public sealed class StaticMeshRendererInstance : IPhysicalRenderer
+public sealed class StaticMeshRenderer : IPhysicalRenderer
 {
 
 	#region Constructors
-	public StaticMeshRendererInstance(GraphicsCore _graphicsCore, string? _rendererName = null)
+	public StaticMeshRenderer(GraphicsCore _graphicsCore, string? _rendererName = null)
 	{
 		graphicsCore = _graphicsCore ?? throw new ArgumentNullException(nameof(_graphicsCore), "Graphics core may not be null!");
 		name = !string.IsNullOrEmpty(_rendererName) ? _rendererName : "StaticMeshRendererInstance";
@@ -26,7 +26,7 @@ public sealed class StaticMeshRendererInstance : IPhysicalRenderer
 		cbObject.Name = $"CBObject_{name}";
 	}
 
-	~StaticMeshRendererInstance()
+	~StaticMeshRenderer()
 	{
 		if (!IsDisposed) Dispose(false);
 	}
@@ -37,7 +37,7 @@ public sealed class StaticMeshRendererInstance : IPhysicalRenderer
 	/// <summary>
 	/// Event that is triggered whenever the renderer's resources (mesh and materials) have been changed.
 	/// </summary>
-	public event Action<StaticMeshRendererInstance>? OnResourcesChanged = null;
+	public event Action<StaticMeshRenderer>? OnResourcesChanged = null;
 
 	#endregion
 	#region Fields

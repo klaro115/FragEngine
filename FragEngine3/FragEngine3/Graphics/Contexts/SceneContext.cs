@@ -1,4 +1,4 @@
-﻿using FragEngine3.Graphics.Lighting;
+﻿using FragEngine3.Graphics.Lighting.Internal;
 using FragEngine3.Scenes;
 using Veldrid;
 

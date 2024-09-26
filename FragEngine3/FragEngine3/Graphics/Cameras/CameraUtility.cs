@@ -1,6 +1,6 @@
 ﻿using FragEngine3.Graphics.ConstantBuffers;
 using FragEngine3.Graphics.Contexts;
-using FragEngine3.Graphics.Lighting;
+using FragEngine3.Graphics.Lighting.Internal;
 using FragEngine3.Scenes;
 using System.Numerics;
 using Veldrid;

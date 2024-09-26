@@ -26,24 +26,36 @@ public interface ISceneUpdateListener : ISceneEventListener
 
 // UPDATE / DRAW:
 
+/// <summary>
+/// Interface for all components and behaviours that respond to the <see cref="SceneEventType.EarlyUpdate"/> event.
+/// </summary>
 [SceneEventInterface(SceneEventType.EarlyUpdate)]
 public interface IOnEarlyUpdateListener : ISceneUpdateListener
 {
 	bool OnEarlyUpdate();
 }
 
+/// <summary>
+/// Interface for all components and behaviours that respond to the <see cref="SceneEventType.MainUpdate"/> event.
+/// </summary>
 [SceneEventInterface(SceneEventType.MainUpdate)]
 public interface IOnMainUpdateListener : ISceneUpdateListener
 {
 	bool OnUpdate();				//TODO: Consider passing along a context object, with deltaTime and frame count ready to go?
 }
 
+/// <summary>
+/// Interface for all components and behaviours that respond to the <see cref="SceneEventType.LateUpdate"/> event.
+/// </summary>
 [SceneEventInterface(SceneEventType.LateUpdate)]
 public interface IOnLateUpdateListener : ISceneUpdateListener
 {
 	bool OnLateUpdate();
 }
 
+/// <summary>
+/// Interface for all components and behaviours that respond to the <see cref="SceneEventType.FixedUpdate"/> event.
+/// </summary>
 [SceneEventInterface(SceneEventType.FixedUpdate)]
 public interface IOnFixedUpdateListener : ISceneUpdateListener
 {
@@ -52,6 +64,9 @@ public interface IOnFixedUpdateListener : ISceneUpdateListener
 
 // NODE STATE:
 
+/// <summary>
+/// Interface for all components and behaviours that respond to a node's <see cref="SceneEventType.OnNodeDestroyed"/> event.
+/// </summary>
 [SceneEventInterface(SceneEventType.OnNodeDestroyed)]
 public interface IOnNodeDestroyedListener : ISceneEventListener
 {
@@ -63,6 +78,9 @@ public interface IOnNodeDestroyedListener : ISceneEventListener
 	void OnNodeDestroyed();
 }
 
+/// <summary>
+/// Interface for all components and behaviours that respond to a node's <see cref="SceneEventType.OnSetNodeEnabled"/> event.
+/// </summary>
 [SceneEventInterface(SceneEventType.OnSetNodeEnabled)]
 public interface IOnNodeSetEnabledListener : ISceneEventListener
 {
@@ -74,6 +92,9 @@ public interface IOnNodeSetEnabledListener : ISceneEventListener
 	void OnNodeEnabled(bool _isEnabled);
 }
 
+/// <summary>
+/// Interface for all components and behaviours that respond to a node's <see cref="SceneEventType.OnParentChanged"/> event.
+/// </summary>
 [SceneEventInterface(SceneEventType.OnParentChanged)]
 public interface IOnNodeParentChangedListener : ISceneEventListener
 {
@@ -87,6 +108,9 @@ public interface IOnNodeParentChangedListener : ISceneEventListener
 
 // COMPONENTS:
 
+/// <summary>
+/// Interface for all components and behaviours that respond to a node's <see cref="SceneEventType.OnComponentAdded"/> event.
+/// </summary>
 [SceneEventInterface(SceneEventType.OnComponentAdded)]
 public interface IOnComponentAddedListener : ISceneEventListener
 {
@@ -97,6 +121,9 @@ public interface IOnComponentAddedListener : ISceneEventListener
 	void OnComponentAdded(Component _newComponent);
 }
 
+/// <summary>
+/// Interface for all components and behaviours that respond to a node's <see cref="SceneEventType.OnComponentRemoved"/> event.
+/// </summary>
 [SceneEventInterface(SceneEventType.OnComponentRemoved)]
 public interface IOnComponentRemovedListener : ISceneEventListener
 {

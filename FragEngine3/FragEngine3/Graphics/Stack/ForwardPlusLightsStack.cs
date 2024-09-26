@@ -276,7 +276,7 @@ public sealed class ForwardPlusLightsStack : IGraphicsStack		//TODO: This type i
 		return true;
 	}
 
-	public bool DrawStack(Scene _scene, List<IRenderer> _renderers, in IList<Camera> _cameras, in IList<ILightSource> _lights)
+	public bool DrawStack(Scene _scene, List<IRenderer> _renderers, in IList<CameraComponent> _cameras, in IList<ILightSource> _lights)
 	{
 		if (!IsInitialized)
 		{
@@ -373,7 +373,7 @@ public sealed class ForwardPlusLightsStack : IGraphicsStack		//TODO: This type i
 
 	private bool BeginDrawScene(
 		in List<IRenderer> _renderers,
-		in IList<Camera> _cameras,
+		in IList<CameraComponent> _cameras,
 		in IList<ILightSource> _lights,
 		uint _maxActiveLightCount,
 		out SceneContext _outSceneCtx,
@@ -400,8 +400,8 @@ public sealed class ForwardPlusLightsStack : IGraphicsStack		//TODO: This type i
 
 		// Identify (main) camera focal point:
 		{
-			Camera focalCamera = Camera.MainCamera is not null && Camera.MainCamera.node.scene == Scene
-				? Camera.MainCamera
+			CameraComponent focalCamera = CameraComponent.MainCamera is not null && CameraComponent.MainCamera.node.scene == Scene
+				? CameraComponent.MainCamera
 				: _cameras[0];
 
 			Pose cameraWorldPose = focalCamera.node.WorldTransformation;

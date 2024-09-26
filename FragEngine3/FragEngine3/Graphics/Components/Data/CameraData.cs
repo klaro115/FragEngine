@@ -3,7 +3,7 @@
 namespace FragEngine3.Graphics.Components.Data;
 
 [Serializable]
-[ComponentDataType(typeof(Camera))]
+[ComponentDataType(typeof(CameraComponent))]
 public sealed class CameraData
 {
 	#region Properties

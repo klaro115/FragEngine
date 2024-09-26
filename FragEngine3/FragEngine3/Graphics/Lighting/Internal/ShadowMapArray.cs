@@ -2,7 +2,7 @@
 using System.Numerics;
 using Veldrid;
 
-namespace FragEngine3.Graphics.Lighting;
+namespace FragEngine3.Graphics.Lighting.Internal;
 
 /// <summary>
 /// Management and container type for shadow maps and shadow projection matrix buffers.
@@ -73,7 +73,7 @@ public sealed class ShadowMapArray : IDisposable
 	/// <summary>
 	/// Gets the number of shadow maps that are currently in use.
 	/// </summary>
-	public uint Count {  get; private set; } = 0;
+	public uint Count { get; private set; } = 0;
 	/// <summary>
 	/// Gets the total number of shadow maps that are currently allocated.
 	/// </summary>
@@ -163,8 +163,8 @@ public sealed class ShadowMapArray : IDisposable
 			_outFramebuffer = null!;
 			return false;
 		}
-		
-		if (_shadowMapArrayIdx >= Capacity)		//Note: 'Count' would be more correct here, but 'Capacity' is safer against crashes and aborts.
+
+		if (_shadowMapArrayIdx >= Capacity)     //Note: 'Count' would be more correct here, but 'Capacity' is safer against crashes and aborts.
 		{
 			Logger.LogError($"Shadow map index {_shadowMapArrayIdx} is out of range! Make sure you call 'Prepare()' with the right number of array elements!");
 			_outFramebuffer = null!;

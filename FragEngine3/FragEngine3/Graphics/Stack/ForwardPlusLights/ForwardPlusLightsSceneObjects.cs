@@ -7,7 +7,7 @@ internal sealed class ForwardPlusLightsSceneObjects
 {
 	#region Fields
 
-	public readonly List<Camera> activeCameras = new(2);
+	public readonly List<CameraComponent> activeCameras = new(2);
 	public readonly List<ILightSource> activeLights = new(10);
 	public readonly List<ILightSource> activeLightsShadowMapped = new(5);
 
@@ -42,11 +42,11 @@ internal sealed class ForwardPlusLightsSceneObjects
 
 	public void PrepareScene(
 		in List<IRenderer> _renderers,
-		in IList<Camera> _cameras,
+		in IList<CameraComponent> _cameras,
 		in IList<ILightSource> _lights)
 	{
 		// Identify only active cameras and visible light sources:
-		foreach (Camera camera in _cameras)
+		foreach (CameraComponent camera in _cameras)
 		{
 			if (!camera.IsDisposed && camera.layerMask != 0 && camera.node.IsEnabledInHierarchy())
 			{
@@ -61,7 +61,7 @@ internal sealed class ForwardPlusLightsSceneObjects
 				continue;
 
 			// Only retain sources whose light may be seen by an active camera:
-			foreach (Camera camera in activeCameras)
+			foreach (CameraComponent camera in activeCameras)
 			{
 				if (light.CheckVisibilityByCamera(in camera))
 				{

@@ -3,7 +3,7 @@ using FragEngine3.Scenes.Data;
 
 namespace FragEngine3.Graphics.Components.Data;
 
-[ComponentDataType(typeof (Light))]
+[ComponentDataType(typeof (LightComponent))]
 public sealed class LightData
 {
 	#region Properties

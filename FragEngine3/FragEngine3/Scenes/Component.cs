@@ -4,10 +4,14 @@ using FragEngine3.Scenes.EventSystem;
 
 namespace FragEngine3.Scenes;
 
+/// <summary>
+/// Base class for behaviour and logic modules that can be attached to a <see cref="SceneNode"/>.
+/// </summary>
+/// <param name="_node">The node that the component will be attached to. Ownership of the component will be held by this node instance.</param>
 public abstract class Component(SceneNode _node) : ISceneElement
 {
-
 	#region Constructors
+
 	~Component()
 	{
 		if (!IsDisposed) Dispose(false);
@@ -16,6 +20,9 @@ public abstract class Component(SceneNode _node) : ISceneElement
 	#endregion
 	#region Fields
 
+	/// <summary>
+	/// The node that this component is attached to.
+	/// </summary>
 	public readonly SceneNode node = _node ?? throw new ArgumentNullException(nameof(_node), "Node may not be null!");
 
 	#endregion
@@ -46,11 +53,18 @@ public abstract class Component(SceneNode _node) : ISceneElement
 			node.RemoveComponent(this);
 		}
 	}
+	/// <summary>
+	/// Safely destroys and disposes the component.
+	/// </summary>
 	public void Destroy()
 	{
 		if (!IsDisposed) Dispose();
 	}
 
+	/// <summary>
+	/// Causes the component to reset and re-evaluate its current state. This may be called to forcibly exit undefined states, or to clear
+	/// out temporary resources and free up memory by discarding cached data.
+	/// </summary>
 	public virtual void Refresh() { }
 
 	/// <summary>

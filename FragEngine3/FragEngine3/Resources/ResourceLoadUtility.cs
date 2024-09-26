@@ -21,7 +21,7 @@ public static class ResourceLoadUtility
 	/// resource may still be pending for asynchronous loading in the background. If true, the resource will be loaded immediately on the calling thread, possible inducing lag spikes.</param>
 	/// <param name="_outResourceIsReady">Outputs whether the resource has been fully loaded and is ready for immediate use.</param>
 	/// <returns>True if the resource is loaded, or if it has been queued for async loading. False if the resource is not loaded and loading has failed.</returns>
-	[Obsolete($"Replaced by new implementation in {nameof(StaticMeshRendererInstance)}")]
+	[Obsolete($"Replaced by new implementation in {nameof(StaticMeshRenderer)}")]
 	public static bool EnsureResourceIsLoaded<T>(ResourceHandle? _resourceHandle, ref T? _resource, bool _dontContinueUnlessFullyLoaded, out bool _outResourceIsReady) where T : Resource
 	{
 		// Check resource and load it now if necessary:
@@ -52,7 +52,7 @@ public static class ResourceLoadUtility
 		return true;
 	}
 
-	[Obsolete($"Replaced by new implementation in {nameof(StaticMeshRendererInstance)}")]
+	[Obsolete($"Replaced by new implementation in {nameof(StaticMeshRenderer)}")]
 	public static bool EnsureMeshIsLoaded(ResourceHandle? _resourceHandle, ref Mesh? _mesh, ref float _boundingRadius, bool _dontContinueUnlessFullyLoaded, out bool _outResourceIsReady)
 	{
 		// Check resource and load it now if necessary:

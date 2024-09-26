@@ -41,7 +41,7 @@ internal sealed class ForwardPlusLightsSceneRender(ForwardPlusLightsStack _stack
 
 		for (uint i = 0; i < sceneObjects.ActiveCamerasCount; ++i)
 		{
-			Camera camera = sceneObjects.activeCameras[(int)i];
+			CameraComponent camera = sceneObjects.activeCameras[(int)i];
 
 			// Pre-filter lights to only include those are actually visible by current camera:
 			visibleLights.Clear();
@@ -156,7 +156,7 @@ internal sealed class ForwardPlusLightsSceneRender(ForwardPlusLightsStack _stack
 	private bool DrawSceneRenderers(
 		in SceneContext _sceneCtx,
 		in CommandList _cmdList,
-		Camera _camera,
+		CameraComponent _camera,
 		RenderMode _renderMode,
 		in List<IRenderer> _renderers,
 		bool _clearRenderTargets,
@@ -195,7 +195,7 @@ internal sealed class ForwardPlusLightsSceneRender(ForwardPlusLightsStack _stack
 		in SceneContext _sceneCtx,
 		in CommandList _cmdList,
 		in Framebuffer _inputFramebuffer,
-		Camera _camera,
+		CameraComponent _camera,
 		IPostProcessingStack _postProcessingStack,
 		RenderMode _renderMode,
 		bool _rebuildResSetCamera,

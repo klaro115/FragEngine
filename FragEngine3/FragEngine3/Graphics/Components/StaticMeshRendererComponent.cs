@@ -11,11 +11,11 @@ using Veldrid;
 
 namespace FragEngine3.Graphics.Components;
 
-public sealed class StaticMeshRenderer : Component, IPhysicalRenderer
+public sealed class StaticMeshRendererComponent : Component, IPhysicalRenderer
 {
 	#region Constructors
 
-	public StaticMeshRenderer(SceneNode _node) : base(_node)
+	public StaticMeshRendererComponent(SceneNode _node) : base(_node)
 	{
 		graphicsCore = _node?.scene.engine.GraphicsSystem.graphicsCore ??  throw new ArgumentNullException(nameof(_node), "Node and graphics core may not be null!");
 
@@ -29,14 +29,14 @@ public sealed class StaticMeshRenderer : Component, IPhysicalRenderer
 	/// <summary>
 	/// Event that is triggered whenever the renderer's resources (mesh and materials) have been changed.
 	/// </summary>
-	public event Action<StaticMeshRenderer>? OnResourcesChanged = null;
+	public event Action<StaticMeshRendererComponent>? OnResourcesChanged = null;
 
 	#endregion
 	#region Fields
 
 	public readonly GraphicsCore graphicsCore;
 
-	private readonly StaticMeshRendererInstance instance;
+	private readonly StaticMeshRenderer instance;
 
 	#endregion
 	#region Properties
@@ -82,7 +82,7 @@ public sealed class StaticMeshRenderer : Component, IPhysicalRenderer
 	/// </summary>
 	public void MarkDirty() => instance.MarkDirty();
 
-	private void OnInstanceResourcesChangedListener(StaticMeshRendererInstance instance)
+	private void OnInstanceResourcesChangedListener(StaticMeshRenderer instance)
 	{
 		if (!IsDisposed)
 		{

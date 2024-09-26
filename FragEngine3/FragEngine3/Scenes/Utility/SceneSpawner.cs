@@ -12,7 +12,7 @@ public static class SceneSpawner
 
 	// CAMERAS:
 
-	public static bool CreateCamera(in Scene _scene, bool _isMainCamera, out Camera _outCamera)
+	public static bool CreateCamera(in Scene _scene, bool _isMainCamera, out CameraComponent _outCamera)
 	{
 		if (_scene == null || _scene.IsDisposed)
 		{
@@ -36,7 +36,7 @@ public static class SceneSpawner
 
 	// LIGHTS:
 
-	public static bool CreateLight(in Scene _scene, LightType _type, out Light _outLight)
+	public static bool CreateLight(in Scene _scene, LightType _type, out LightComponent _outLight)
 	{
 		if (_scene == null || _scene.IsDisposed)
 		{
@@ -54,7 +54,7 @@ public static class SceneSpawner
 		_outLight.Type = _type;
 		return true;
 	}
-	public static bool CreateLight(in SceneNode _parent, LightType _type, out Light _outLight)
+	public static bool CreateLight(in SceneNode _parent, LightType _type, out LightComponent _outLight)
 	{
 		if (_parent == null || _parent.IsDisposed)
 		{
@@ -75,7 +75,7 @@ public static class SceneSpawner
 
 	// GEOMETRY:
 
-	public static bool CreateStaticMeshRenderer(in Scene _scene, out StaticMeshRenderer _outRenderer)
+	public static bool CreateStaticMeshRenderer(in Scene _scene, out StaticMeshRendererComponent _outRenderer)
 	{
 		if (_scene == null || _scene.IsDisposed)
 		{
@@ -91,7 +91,7 @@ public static class SceneSpawner
 		}
 		return true;
 	}
-	public static bool CreateStaticMeshRenderer(in SceneNode _parent, out StaticMeshRenderer _outRenderer)
+	public static bool CreateStaticMeshRenderer(in SceneNode _parent, out StaticMeshRendererComponent _outRenderer)
 	{
 		if (_parent == null || _parent.IsDisposed)
 		{

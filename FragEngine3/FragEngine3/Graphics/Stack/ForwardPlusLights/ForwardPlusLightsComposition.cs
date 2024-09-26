@@ -26,8 +26,8 @@ internal sealed class ForwardPlusLightsComposition(ForwardPlusLightsStack _stack
 
 	private ResourceSet? compositeSceneResourceSet = null;
 	private ResourceSet? compositeUIResourceSet = null;
-	private StaticMeshRenderer? compositeSceneRenderer = null;
-	private StaticMeshRenderer? compositeUIRenderer = null;
+	private StaticMeshRendererComponent? compositeSceneRenderer = null;
+	private StaticMeshRendererComponent? compositeUIRenderer = null;
 
 	#endregion
 	#region Constants
@@ -137,7 +137,7 @@ internal sealed class ForwardPlusLightsComposition(ForwardPlusLightsStack _stack
 
 	public bool CompositeSceneOutput(
 		in SceneContext _sceneCtx,
-		Camera _camera,
+		CameraComponent _camera,
 		bool _rebuildResSetCamera,
 		uint _cameraIdx,
 		out Framebuffer _outSceneFramebuffer)
@@ -235,7 +235,7 @@ internal sealed class ForwardPlusLightsComposition(ForwardPlusLightsStack _stack
 	public bool CompositeFinalOutput(
 		in SceneContext _sceneCtx,
 		in Framebuffer _inputFramebuffer,
-		Camera _camera,
+		CameraComponent _camera,
 		bool _rebuildResSetCamera,
 		uint _cameraIdx,
 		out Framebuffer _outFinalFramebuffer)

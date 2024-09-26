@@ -106,7 +106,7 @@ public interface ILightSource : IDisposable
 	/// </summary>
 	/// <param name="_camera">The camera whose pixels may or may not be illuminated by this light source.</param>
 	/// <returns>True if this instance's light could possibly be seen by the camera, false otherwise.</returns>
-	bool CheckVisibilityByCamera(in Camera _camera);
+	bool CheckVisibilityByCamera(in CameraComponent _camera);
 
 	/// <summary>
 	/// Check whether light emitted by this light source has any chance of reaching a given renderer.

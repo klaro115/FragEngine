@@ -93,7 +93,7 @@ public sealed class TestApplicationLogic : ApplicationLogic
 		scene.settings.AmbientLightIntensityHigh = new(0.17f, 0.17f, 0.25f, 0);
 
 		// Create a camera:
-		if (SceneSpawner.CreateCamera(scene, true, out Camera camera))
+		if (SceneSpawner.CreateCamera(scene, true, out CameraComponent camera))
 		{
 			camera.node.LocalPosition = new Vector3(0, 0, -3);
 			camera.node.LocalRotation = Quaternion.Identity;
@@ -123,7 +123,7 @@ public sealed class TestApplicationLogic : ApplicationLogic
 		}
 
 		// Create a directional light:
-		if (SceneSpawner.CreateLight(scene, LightType.Directional, out Light light))
+		if (SceneSpawner.CreateLight(scene, LightType.Directional, out LightComponent light))
 		{
 			light.node.Name = "Sun";
 			light.node.WorldPosition = new Vector3(0, 5, 0);
@@ -176,7 +176,7 @@ public sealed class TestApplicationLogic : ApplicationLogic
 			light.LightIntensity = 7;
 		}
 
-		if (SceneSpawner.CreateStaticMeshRenderer(scene, out StaticMeshRenderer rabbit))
+		if (SceneSpawner.CreateStaticMeshRenderer(scene, out StaticMeshRendererComponent rabbit))
 		{
 			rabbit.node.Name = "Rabbit";
 			rabbit.node.LocalPosition = new Vector3(0, -1.5f, 2);
@@ -190,7 +190,7 @@ public sealed class TestApplicationLogic : ApplicationLogic
 		}
 
 		MeshPrimitiveFactory.CreateCubeMesh("Cube", Engine, new(2, 2, 2), true, out _, out _, out ResourceHandle cubeHandle);
-		if (SceneSpawner.CreateStaticMeshRenderer(scene, out StaticMeshRenderer cube))
+		if (SceneSpawner.CreateStaticMeshRenderer(scene, out StaticMeshRendererComponent cube))
 		{
 			cube.node.Name = "Cube";
 			cube.node.LocalPosition = new Vector3(2.5f, -0.5f, 2);
@@ -204,7 +204,7 @@ public sealed class TestApplicationLogic : ApplicationLogic
 		}
 
 		MeshPrimitiveFactory.CreateCylinderMesh("Cylinder", Engine, 0.5f, 2, 32, true, out _, out _, out ResourceHandle cylinderHandle);
-		if (SceneSpawner.CreateStaticMeshRenderer(scene, out StaticMeshRenderer cylinder))
+		if (SceneSpawner.CreateStaticMeshRenderer(scene, out StaticMeshRendererComponent cylinder))
 		{
 			cylinder.node.Name = "Cylinder";
 			cylinder.node.LocalPosition = new Vector3(-2.5f, 0, 2);
@@ -217,7 +217,7 @@ public sealed class TestApplicationLogic : ApplicationLogic
 		}
 
 		MeshPrimitiveFactory.CreateConeMesh("Cone", Engine, 0.75f, 1, 32, true, out _, out _, out ResourceHandle coneHandle);
-		if (SceneSpawner.CreateStaticMeshRenderer(scene, out StaticMeshRenderer cone))
+		if (SceneSpawner.CreateStaticMeshRenderer(scene, out StaticMeshRendererComponent cone))
 		{
 			cone.node.Name = "Cone";
 			cone.node.LocalPosition = new Vector3(0, 2, 2);
@@ -230,7 +230,7 @@ public sealed class TestApplicationLogic : ApplicationLogic
 		}
 
 		MeshPrimitiveFactory.CreateIcosahedronMesh("Icosahedron", Engine, 0.75f, false, out _, out _, out ResourceHandle d20Handle);
-		if (SceneSpawner.CreateStaticMeshRenderer(scene, out StaticMeshRenderer d20))
+		if (SceneSpawner.CreateStaticMeshRenderer(scene, out StaticMeshRendererComponent d20))
 		{
 			d20.node.Name = "D20";
 			d20.node.LocalPosition = new Vector3(0, 1, 2);
@@ -243,7 +243,7 @@ public sealed class TestApplicationLogic : ApplicationLogic
 		}
 
 		MeshPrimitiveFactory.CreatePlaneMesh("Plane", Engine, new Vector2(5, 5), 6, true, out _, out _, out ResourceHandle planeHandle);
-		if (SceneSpawner.CreateStaticMeshRenderer(scene, out StaticMeshRenderer plane))
+		if (SceneSpawner.CreateStaticMeshRenderer(scene, out StaticMeshRendererComponent plane))
 		{
 			plane.node.Name = "Ground";
 			plane.node.LocalPosition = new Vector3(0, -1.5f, 2);
@@ -282,7 +282,7 @@ public sealed class TestApplicationLogic : ApplicationLogic
 			plane.DontDrawUnlessFullyLoaded = true;
 		}
 
-		if (SceneSpawner.CreateStaticMeshRenderer(scene, out StaticMeshRenderer fbxRenderer))
+		if (SceneSpawner.CreateStaticMeshRenderer(scene, out StaticMeshRendererComponent fbxRenderer))
 		{
 			fbxRenderer.node.Name = "FBX";
 			fbxRenderer.node.LocalPosition = new(0, 0, 1);
@@ -313,7 +313,7 @@ public sealed class TestApplicationLogic : ApplicationLogic
 		};
 		Mesh quadMesh = new("Quad", Engine, out ResourceHandle quadHandle);
 		quadMesh.SetGeometry(in quadData);
-		if (SceneSpawner.CreateStaticMeshRenderer(scene, out StaticMeshRenderer quad))
+		if (SceneSpawner.CreateStaticMeshRenderer(scene, out StaticMeshRendererComponent quad))
 		{
 			quad.node.Name = "Quad";
 			quad.node.LocalTransformation = Pose.Identity;
@@ -369,9 +369,9 @@ public sealed class TestApplicationLogic : ApplicationLogic
 		//}
 
 		// Camera controls:
-		if (Camera.MainCamera is not null)
+		if (CameraComponent.MainCamera is not null)
 		{
-			Pose p = Camera.MainCamera.node.LocalTransformation;
+			Pose p = CameraComponent.MainCamera.node.LocalTransformation;
 			Vector3 inputWASD = Engine.InputManager.GetKeyAxesSmoothed(InputAxis.WASD);
 			Vector3 localMovement = new Vector3(inputWASD.X, inputWASD.Z, inputWASD.Y) * deltaTime;
 			if (Engine.InputManager.GetKey(Key.ShiftLeft))
@@ -391,7 +391,7 @@ public sealed class TestApplicationLogic : ApplicationLogic
 				p.rotation = Quaternion.CreateFromYawPitchRoll(cameraYaw * DEG2RAD, cameraPitch * DEG2RAD, 0);
 			}
 
-			Camera.MainCamera.node.LocalTransformation = p;
+			CameraComponent.MainCamera.node.LocalTransformation = p;
 		}
 
 		// Try downloading mesh geometry data from GPU memory when pressing 'T':
@@ -418,7 +418,7 @@ public sealed class TestApplicationLogic : ApplicationLogic
 		// Switch main directional light between static and non-static mode when pressing 'Z':
 		if (Engine.InputManager.GetKeyUp(Key.Y) && scene.FindNode("Sun", out SceneNode? sunNode) && sunNode is not null)
 		{
-			Light light = sunNode.GetComponent<Light>()!;
+			LightComponent light = sunNode.GetComponent<LightComponent>()!;
 			light.IsStaticLight = !light.IsStaticLight;
 		}
 

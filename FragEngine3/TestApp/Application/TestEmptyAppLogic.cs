@@ -79,7 +79,7 @@ public sealed class TestEmptyAppLogic : ApplicationLogic
 		scene.settings.AmbientLightIntensityHigh = new(0.17f, 0.17f, 0.25f, 0);
 
 		// Create a camera:
-		if (SceneSpawner.CreateCamera(scene, true, out Camera camera))
+		if (SceneSpawner.CreateCamera(scene, true, out CameraComponent camera))
 		{
 			camera.node.LocalPosition = new Vector3(0, 0, -3);
 			camera.node.LocalRotation = Quaternion.Identity;
@@ -108,7 +108,7 @@ public sealed class TestEmptyAppLogic : ApplicationLogic
 		}
 
 		// Create a directional light:
-		if (SceneSpawner.CreateLight(scene, LightType.Directional, out Light light))
+		if (SceneSpawner.CreateLight(scene, LightType.Directional, out LightComponent light))
 		{
 			light.node.Name = "Sun";
 			light.node.WorldPosition = new Vector3(0, 5, 0);
@@ -121,7 +121,7 @@ public sealed class TestEmptyAppLogic : ApplicationLogic
 		}
 
 		MeshPrimitiveFactory.CreateCubeMesh("Cube", Engine, new(2, 2, 2), false, out _, out _, out ResourceHandle cubeHandle);
-		if (SceneSpawner.CreateStaticMeshRenderer(scene, out StaticMeshRenderer cube))
+		if (SceneSpawner.CreateStaticMeshRenderer(scene, out StaticMeshRendererComponent cube))
 		{
 			cube.node.Name = "Cube";
 			cube.node.LocalPosition = new Vector3(0, -0.5f, 2);

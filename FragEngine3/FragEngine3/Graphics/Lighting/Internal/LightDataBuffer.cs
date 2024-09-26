@@ -2,7 +2,7 @@
 using FragEngine3.Graphics.Lighting.Data;
 using Veldrid;
 
-namespace FragEngine3.Graphics.Lighting;
+namespace FragEngine3.Graphics.Lighting.Internal;
 
 public sealed class LightDataBuffer : IDisposable
 {
@@ -153,7 +153,7 @@ public sealed class LightDataBuffer : IDisposable
 
 		try
 		{
-			BufLights = core.MainFactory.CreateBuffer(ref  bufferDesc);
+			BufLights = core.MainFactory.CreateBuffer(ref bufferDesc);
 			BufLights.Name = $"BufLights_Capacity={Capacity}";
 
 			return true;

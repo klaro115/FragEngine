@@ -98,7 +98,7 @@ No support is planned for the foreseeable future. Android will have to wait unti
 ## Work In Progress
 
 - Linux support:
-    - SPIR-V shader support
+    - SPIR-V shader support **[Pipeline creation fails]**
 
 #### On Hold
 

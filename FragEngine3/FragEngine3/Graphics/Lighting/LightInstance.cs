@@ -5,6 +5,7 @@ using FragEngine3.Graphics.Components.Data;
 using FragEngine3.Graphics.Components.Internal;
 using FragEngine3.Graphics.Contexts;
 using FragEngine3.Graphics.Lighting.Data;
+using FragEngine3.Graphics.Lighting.Internal;
 using FragEngine3.Scenes;
 using System.Numerics;
 using Veldrid;
@@ -407,7 +408,7 @@ internal abstract class LightInstance(GraphicsCore _core) : ILightSource
 
 	protected abstract Matrix4x4 RecalculateShadowProjectionMatrix(Vector3 _shadingFocalPoint, uint _cascadeIdx);
 
-	public abstract bool CheckVisibilityByCamera(in Camera _camera);
+	public abstract bool CheckVisibilityByCamera(in CameraComponent _camera);
 	public abstract bool CheckIsRendererInRange(in IPhysicalRenderer _renderer);
 
 	public abstract bool LoadFromData(in LightData _lightData);

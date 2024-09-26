@@ -6,11 +6,11 @@ using System.Numerics;
 
 namespace FragEngine3.Graphics.Lighting.Instances;
 
-internal sealed class PointLightInstance : LightInstance
+internal sealed class PointLight : LightInstance
 {
 	#region Constructors
 
-	public PointLightInstance(GraphicsCore _core) : base(_core)
+	public PointLight(GraphicsCore _core) : base(_core)
 	{
 		data.type = (uint)LightType.Point;
 		data.position = worldPose.position;
@@ -62,7 +62,7 @@ internal sealed class PointLightInstance : LightInstance
 		return data;
 	}
 
-	public override bool CheckVisibilityByCamera(in Camera _camera)
+	public override bool CheckVisibilityByCamera(in CameraComponent _camera)
 	{
 		return true;
 	}
@@ -84,7 +84,7 @@ internal sealed class PointLightInstance : LightInstance
 	protected override bool UpdateShadowMapCameraInstance(float _shadingFocalPointRadius)
 	{
 		// Ensure a camera instance is ready for drawing the scene:
-		if (shadowCameraInstance == null || shadowCameraInstance.IsDisposed)
+		if (shadowCameraInstance is null || shadowCameraInstance.IsDisposed)
 		{
 			if (!ShadowMapUtility.UpdateOrCreateShadowMapCameraInstance(
 				GraphicsCore,

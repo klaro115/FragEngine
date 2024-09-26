@@ -3,7 +3,7 @@
 namespace FragEngine3.Graphics.Components.Data;
 
 [Serializable]
-[ComponentDataType(typeof(StaticMeshRenderer))]
+[ComponentDataType(typeof(StaticMeshRendererComponent))]
 public sealed class StaticMeshRendererData
 {
 	#region Properties

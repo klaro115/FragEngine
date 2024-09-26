@@ -17,7 +17,7 @@ internal sealed class SceneDrawManager(Scene _scene) : IDisposable
 
 	private readonly List<IRenderer> renderers = [];        //TODO [later]: Split into multiple renderer groups that may populate command lists in parallel, each in their own thread.
 
-	private readonly List<Camera> cameras = new(4);
+	private readonly List<CameraComponent> cameras = new(4);
 	private readonly List<ILightSource> lights = new(64);
 
 	private readonly object lockObj = new();
@@ -128,7 +128,7 @@ internal sealed class SceneDrawManager(Scene _scene) : IDisposable
 		return true;
 	}
 
-	public bool RegisterCamera(Camera _newCamera)
+	public bool RegisterCamera(CameraComponent _newCamera)
 	{
 		if (_newCamera is null || _newCamera.IsDisposed)
 		{
@@ -146,7 +146,7 @@ internal sealed class SceneDrawManager(Scene _scene) : IDisposable
 		return true;
 	}
 
-	public bool UnregisterCamera(Camera _oldCamera)
+	public bool UnregisterCamera(CameraComponent _oldCamera)
 	{
 		if (_oldCamera is null)
 		{
