@@ -3,6 +3,11 @@ using FragEngine3.Scenes;
 
 namespace FragEngine3.Graphics.Stack;
 
+/// <summary>
+/// Base interface for classes that are used to render a scene's graphics. The stack governs
+/// how the scene looks, and how its contents are composited for final output. Ownership of
+/// a graphics stack lies with the scene it was assigned to during first initialization.
+/// </summary>
 public interface IGraphicsStack : IDisposable
 {
 	#region Properties
@@ -26,12 +31,23 @@ public interface IGraphicsStack : IDisposable
 	/// </summary>
 	bool IsDrawing { get; }
 
+	/// <summary>
+	/// The graphics core that this graphics stack was created for.
+	/// </summary>
 	GraphicsCore Core { get; }
 
 	#endregion
 	#region Methods
 
+	/// <summary>
+	/// Initialized the stack for a given scene.
+	/// </summary>
+	/// <param name="_scene">The scene that shall be rendered using this graphics stack.</param>
+	/// <returns>True if the stack was successfully initialized, false otherwise.</returns>
 	bool Initialize(Scene _scene);
+	/// <summary>
+	/// Shuts down the stack and releases all resources tied to the scene's contents.
+	/// </summary>
 	void Shutdown();
 
 	/// <summary>

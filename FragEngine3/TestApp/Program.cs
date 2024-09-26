@@ -11,8 +11,8 @@ config.Graphics.CenterWindowOnScreen = false;
 Engine? engine = null;
 try
 {
-	//engine = new(new TestApplicationLogic(), config);
-	engine = new(new TestEmptyAppLogic(), config);
+	engine = new(new TestApplicationLogic(), config);
+	//engine = new(new TestEmptyAppLogic(), config);
 	engine.Run();
 }
 catch (Exception ex)

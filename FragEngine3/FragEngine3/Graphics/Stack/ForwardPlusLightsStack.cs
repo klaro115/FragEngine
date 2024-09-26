@@ -13,7 +13,7 @@ using Veldrid;
 
 namespace FragEngine3.Graphics.Stack;
 
-public sealed class ForwardPlusLightsStack : IGraphicsStack		//TODO: This type is a convoluted and unmaintainable mess, needs intense cleaning up.
+public sealed class ForwardPlusLightsStack : IGraphicsStack
 {
 	#region Constructors
 
@@ -256,8 +256,8 @@ public sealed class ForwardPlusLightsStack : IGraphicsStack		//TODO: This type i
 		bool success = true;
 
 		// If available, refresh post-processing stacks:
-		success &= postProcessingStackScene == null || postProcessingStackScene.Refresh();
-		success &= postProcessingStackFinal == null || postProcessingStackFinal.Refresh();
+		success &= postProcessingStackScene is null || postProcessingStackScene.Refresh();
+		success &= postProcessingStackFinal is null || postProcessingStackFinal.Refresh();
 
 		return success;
 	}
