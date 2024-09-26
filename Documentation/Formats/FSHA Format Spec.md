@@ -121,7 +121,8 @@ _Source code:_ [ShaderDescriptionVariantData](../../FragEngine3/FragEngine3/Grap
 | VariantFlags          | `MeshVertexDataFlags`    | Bit mask of all vertex data flags that apply to this variant.      |
 | VariantDescriptionTxt | `string`                 | Descriptor string of the variant's shader features.<sup>1</sup>    |
 | EntryPoint            | `string`                 | Name of this variant's entrypoint function within the source code. |
-| ByteOffset            | `uint`                   | Offset of variant data block from start of compiled data section.  |
+| RelativeByteOffset    | `uint`                   | Offset of variant data block from start of compiled type block.    |
+| TotalByteOffset       | `uint`                   | Offset of variant data block from start of compiled data section.  |
 | ByteSize              | `uint`                   | Size of variant data block, in bytes.                              |
 
 #### ShaderLanguage Enum

@@ -179,7 +179,9 @@ public static class ShaderImporter
 				try
 				{
 					ShaderDescription desc = new(stage, kvp.Value, data.EntryPoint);
+
 					Shader variant = _graphicsCore.MainFactory.CreateShader(ref desc);
+					variant.Name = $"{_resourceKey}_{stage}_V{(int)kvp.Key}";
 
 					variants.Add(kvp.Key, variant);
 

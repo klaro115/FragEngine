@@ -54,14 +54,6 @@ public abstract class Component(SceneNode _node) : ISceneElement
 	public virtual void Refresh() { }
 
 	/// <summary>
-	/// Receiver method for scene events that this component is listening to.
-	/// </summary>
-	/// <param name="_eventType">The type of the received event.</param>
-	/// <param name="_stateObject">A state object containing additional data associated with the event.</param>
-	[Obsolete("Replaced by event listener interfaces")]
-	public virtual void ReceiveSceneEvent(SceneEventType _eventType, object? _eventData) { }
-
-	/// <summary>
 	/// Gets an enumerator for iterating over all non-update scene event types that this component is listening to.<para/>
 	/// NOTE: The base implementation will check if the component implements any of the known listener interfaces; for more efficient event
 	/// registration, components should override this method and directly return all event types whose interfaces they actually implement.

@@ -165,7 +165,7 @@ public sealed class ShaderResource : Resource
 		}
 		if (_variantFlags == 0 || (_variantFlags & unsupportedVariantFlags) != 0 || !canCompileFromSourceCode)
 		{
-			Logger?.LogError($"Cannot compile shader variants from source; missing source code, or invalid variant flags! Flags: '{_variantFlags}'");
+			Logger?.LogError($"Cannot compile shader variants from source; missing source code, or unsupported variant flags! Flags: '{_variantFlags}'");
 			return false;
 		}
 
@@ -219,6 +219,7 @@ public sealed class ShaderResource : Resource
 			ShaderDescription shaderDesc = new(Stage, variantSourceCodeBytes, entryPoint.EntryPoint);
 
 			shader = graphicsCore.MainFactory.CreateShader(ref shaderDesc);
+			shader.Name = $"{resourceKey}_{Stage}_V{(int)_variantFlags}";
 
 			shaderVariants[variantIdx] = shader;
 			compiledVariantCount++;
