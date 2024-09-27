@@ -43,7 +43,7 @@
     "Resources":
     [
         {
-            "ResourceKey": "TexBrickWall_diff",
+            "ResourceKey": "TexHeightmap",
             "SlotName": "TexMain",
             "SlotIndex": 4,
             "ResourceKind": 3,
@@ -52,18 +52,9 @@
             "IsBoundBySystem": false
         },
         {
-            "ResourceKey": "TexBrickWall_norm",
+            "ResourceKey": "TexFeatureTest_Normal",
             "SlotName": "TexNormal",
             "SlotIndex": 5,
-            "ResourceKind": 3,
-            "ShaderStageFlags": 16,
-            "Description": null,
-            "IsBoundBySystem": false
-        },
-        {
-            "ResourceKey": "TexBrickWall_disp",
-            "SlotName": "TexParallax",
-            "SlotIndex": 6,
             "ResourceKind": 3,
             "ShaderStageFlags": 16,
             "Description": null,

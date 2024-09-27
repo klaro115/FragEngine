@@ -282,7 +282,7 @@ public sealed class TestApplicationLogic : ApplicationLogic
 			plane.DontDrawUnlessFullyLoaded = true;
 		}
 
-		MeshPrimitiveFactory.CreatePlaneMesh("Heightmap", Engine, new Vector2(2, 2), 1, true, out _, out _, out ResourceHandle heightmapHandle);
+		MeshPrimitiveFactory.CreatePlaneMesh("Heightmap", Engine, new Vector2(2, 2), 30, true, out _, out _, out ResourceHandle heightmapHandle);
 		if (SceneSpawner.CreateStaticMeshRenderer(scene, out StaticMeshRendererComponent heightmap))
 		{
 			heightmap.node.Name = "Heightmap";

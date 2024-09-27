@@ -229,11 +229,11 @@ public static class FshaExporter
 		{
 			FileHeader = new ShaderDataFileHeader()
 			{
-				formatSpecifier = "FSHA",
+				formatSpecifier = ShaderDataConstants.FHSA_FORMAT_SPECIFIER,
 				formatVersion = new()
 				{
-					major = 1,
-					minor = 0
+					major = ShaderDataConstants.FSHA_CURRENT_MAJOR_VERSION,
+					minor = ShaderDataConstants.FSHA_CURRENT_MINOR_VERSION,
 				},
 				fileHeaderSize = ShaderDataFileHeader.minFileHeaderSize,
 				sourceCode = new()

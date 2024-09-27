@@ -1,6 +1,6 @@
 <h1>FSHA - Shader Format Specification</h1>
 
-_Format version: 1.0_
+_Format version: 0.1_
 
 - [About](#about)
 - [Structure](#structure)

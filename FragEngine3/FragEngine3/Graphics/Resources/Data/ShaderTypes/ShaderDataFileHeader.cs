@@ -8,7 +8,7 @@ public struct ShaderDataFileHeader()
 
 	// FORMAT IDENTIFIERS:
 
-	public string formatSpecifier = "FSHA";				// 4 letter ASCII, file format specifier. Ex.: "FSHA" = 'Fragment Shader'
+	public string formatSpecifier = ShaderDataConstants.FHSA_FORMAT_SPECIFIER;	// 4 letter ASCII, file format specifier. Ex.: "FSHA" = 'Fragment Shader'
 	public ShaderDataVersion formatVersion = new();		// Version of the shader file format. Default: "10" (2x 4-bit number formatted as 2-digit hex)
 
 	// CONTENT TABLE:
