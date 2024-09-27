@@ -97,6 +97,9 @@ No support is planned for the foreseeable future. Android will have to wait unti
 
 ## Work In Progress
 
+- Refactor graphics architecture:
+    - Rework materials:
+        - Support for user-supplied constant buffers
 - Linux support:
     - SPIR-V shader support **[Pipeline creation fails]**
 
@@ -119,7 +122,6 @@ The following is a rough and very short-sighted roadmap of features that are goi
     - Add rendering groups for auto-parallelizing draw call creation
     - Rework materials:
         - Standard shader constant buffer _(i.e. CBDefaultSurface)_
-        - Support for user-supplied constant buffers
         - Split material type into standard/user variants
 - UI:
     - Text rendering

@@ -242,7 +242,7 @@ public sealed class TestApplicationLogic : ApplicationLogic
 			d20.SetMaterial("Mtl_DefaultSurface");
 		}
 
-		MeshPrimitiveFactory.CreatePlaneMesh("Plane", Engine, new Vector2(5, 5), 6, true, out _, out _, out ResourceHandle planeHandle);
+		MeshPrimitiveFactory.CreatePlaneMesh("Plane", Engine, new Vector2(5, 5), 1, true, out _, out _, out ResourceHandle planeHandle);
 		if (SceneSpawner.CreateStaticMeshRenderer(scene, out StaticMeshRendererComponent plane))
 		{
 			plane.node.Name = "Ground";
@@ -282,13 +282,27 @@ public sealed class TestApplicationLogic : ApplicationLogic
 			plane.DontDrawUnlessFullyLoaded = true;
 		}
 
+		MeshPrimitiveFactory.CreatePlaneMesh("Heightmap", Engine, new Vector2(2, 2), 1, true, out _, out _, out ResourceHandle heightmapHandle);
+		if (SceneSpawner.CreateStaticMeshRenderer(scene, out StaticMeshRendererComponent heightmap))
+		{
+			heightmap.node.Name = "Heightmap";
+			heightmap.node.LocalPosition = new Vector3(0, -1, -1);
+			heightmap.node.LocalRotation = Quaternion.Identity;
+			heightmap.node.LocalScale = Vector3.One;
+			//heightmap.node.SetEnabled(false);
+
+			heightmap.SetMesh(heightmapHandle);
+			heightmap.SetMaterial("Mtl_Heightmap");
+			heightmap.DontDrawUnlessFullyLoaded = true;
+		}
+
 		if (SceneSpawner.CreateStaticMeshRenderer(scene, out StaticMeshRendererComponent fbxRenderer))
 		{
 			fbxRenderer.node.Name = "FBX";
 			fbxRenderer.node.LocalPosition = new(0, 0, 1);
 			fbxRenderer.node.SetRotationFromYawPitchRoll(0, 0, 0, false, true);
 			fbxRenderer.node.LocalScale = Vector3.One * 0.5f;
-			//fbxRenderer.node.SetEnabled(false);
+			fbxRenderer.node.SetEnabled(false);
 		
 			fbxRenderer.SetMesh("Cube.obj");
 			//fbxRenderer.SetMesh("Plane.fbx");

@@ -4,8 +4,6 @@
 
 // Variants:
 #define VARIANT_EXTENDED            // Whether to always create a shader variant using extended surface data
-#define VARIANT_BLENDSHAPES         // Whether to always create a shader variant using blend shape data
-#define VARIANT_ANIMATED            // Whether to always create a shader variant using bone animation data
 
 /****************** CONSTANTS: *****************/
 
@@ -38,6 +36,20 @@ cbuffer CBObject : register(b2)
     float boundingRadius;           // Bounding sphere radius of the object.
 };
 
+// Constant buffer containing heightmap settings:
+cbuffer CBHeightmap : register(b4)
+{
+    float4 heightmapTiling;         // Offset (XY) and scale (ZW) of the heightmap. This can be used to crop a section of the height map.
+    float minAltitude;              // Minimum displacement along surface normal, all vertices are moved by at least this much.
+    float maxAltitude;              // Maximum displacement along surface normal, no vertex will move further than this.
+    float altitudeRange;            // Difference between minimum and maximum displacement altitudes.
+};
+
+/***************** RESOURCES: ******************/
+
+Texture2D<float> TexHeightmap : register(vs, t7);
+SamplerState SamplerHeightmap : register(vs, s2);
+
 /**************** VERTEX INPUT: ****************/
 
 struct VertexInput_Basic
@@ -54,22 +66,6 @@ struct VertexInput_Extended
     float2 uv2 : TEXCOORD1;
 };
 #endif //VARIANT_EXTENDED
-
-#ifdef VARIANT_BLENDSHAPES
-struct VertexInput_BlendShapes
-{
-    uint4 blendIndices : NORMAL2;
-    float4 blendWeights : TEXCOORD2;
-};
-#endif //VARIANT_BLENDSHAPES
-
-#ifdef VARIANT_ANIMATED
-struct VertexInput_BoneWeights
-{
-    uint4 blendIndices : NORMAL3;
-    float4 blendWeights : TEXCOORD3;
-};
-#endif //VARIANT_ANIMATED
 
 /**************** VERTEX OUTPUT: ***************/
 
@@ -90,6 +86,22 @@ struct VertexOutput_Extended
 };
 #endif //VARIANT_EXTENDED
 
+/****************** FUNCTIONS: *****************/
+
+float GetHeightmapDisplacement(const float2 _inputUv)
+{
+    const float2 heightmapUv = (_inputUv + heightmapTiling.xy) * heightmapTiling.zw;
+    const float heightFactor = TexHeightmap.SampleLevel(SamplerHeightmap, heightmapUv, 0);
+    return minAltitude + heightFactor * altitudeRange;
+}
+
+void ApplyHeightmap(inout VertexInput_Basic _inputBasic)
+{
+    const float displacement = GetHeightmapDisplacement(_inputBasic.uv);
+
+    _inputBasic.position += _inputBasic.normal * displacement;
+}
+
 /******************* SHADERS: ******************/
 
 void Main_Vertex(
@@ -98,6 +110,8 @@ void Main_Vertex(
 {
     float4x4 mtxLocal2Clip = mul(mtxWorld2Clip, mtxLocal2World);
     float3 viewDir = worldPosition - cameraPosition.xyz;
+
+    ApplyHeightmap(inputBasic);
 
     outputBasic.position = mul(mtxLocal2Clip, float4(inputBasic.position, 1));
     outputBasic.worldPosition = mul(mtxLocal2World, float4(inputBasic.position, 1)).xyz;
@@ -115,6 +129,8 @@ void Main_Vertex_Ext(
     float4x4 mtxLocal2Clip = mul(mtxWorld2Clip, mtxLocal2World);
     float3 viewDir = worldPosition - cameraPosition.xyz;
 
+    ApplyHeightmap(inputBasic);
+
     outputBasic.position = mul(mtxLocal2Clip, float4(inputBasic.position, 1));
     outputBasic.worldPosition = mul(mtxLocal2World, float4(inputBasic.position, 1)).xyz;
     outputBasic.normal = normalize(mul(mtxLocal2World, float4(inputBasic.normal, 0)).xyz);
@@ -125,5 +141,3 @@ void Main_Vertex_Ext(
     outputExt.uv2 = inputExt.uv2;
 }
 #endif //VARIANT_EXTENDED
-
-//TODO [later]: Add blendshape and bone animation variant entrypoints.

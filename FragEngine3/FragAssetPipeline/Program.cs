@@ -13,6 +13,7 @@ ShaderDetails[] details =
 [
 	new("Basic_VS", "Main_Vertex", ShaderStages.Vertex, flagsExt),
 	new("DefaultSurface_VS", "Main_Vertex", ShaderStages.Vertex, flagsExt),
+	new("Heightmap_VS", "Main_Vertex", ShaderStages.Vertex, flagsExt),
 	new("DefaultSurface_modular_PS", "Main_Pixel", ShaderStages.Fragment, flagsExt),
 	new("shadows/AlphaShadow_PS", "Main_Pixel", ShaderStages.Fragment, flagsExt),
 	new("shadows/DefaultShadow_PS", "Main_Pixel", ShaderStages.Fragment, flagsExt),
