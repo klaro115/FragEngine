@@ -4,9 +4,9 @@ using FragEngine3.Graphics.Resources;
 using FragEngine3.Graphics.Resources.Data;
 using Veldrid;
 
-namespace FragAssetPipeline;
+namespace FragAssetPipeline.Processes;
 
-internal sealed class ShaderDetails(string _fileName, string _entryPointNameBase, ShaderStages _stage, MeshVertexDataFlags _maxVertexFlafs)
+internal sealed class ShaderProcessDetails(string _fileName, string _entryPointNameBase, ShaderStages _stage, MeshVertexDataFlags _maxVertexFlafs)
 {
 	public readonly string fileName = _fileName;
 	public readonly string entryPointNameBase = _entryPointNameBase;

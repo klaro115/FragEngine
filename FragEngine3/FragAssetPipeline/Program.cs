@@ -1,4 +1,4 @@
-﻿using FragAssetPipeline;
+﻿using FragAssetPipeline.Processes;
 using FragAssetPipeline.Resources.Shaders;
 using FragEngine3.Graphics.Resources;
 using FragEngine3.Graphics.Resources.Data.ShaderTypes;
@@ -9,7 +9,7 @@ Console.WriteLine("### BEGIN ###\n");
 const MeshVertexDataFlags flagsBasic = MeshVertexDataFlags.BasicSurfaceData;
 const MeshVertexDataFlags flagsExt = MeshVertexDataFlags.BasicSurfaceData | MeshVertexDataFlags.ExtendedSurfaceData;
 
-ShaderDetails[] details =
+ShaderProcessDetails[] details =
 [
 	new("Basic_VS", "Main_Vertex", ShaderStages.Vertex, flagsExt),
 	new("DefaultSurface_VS", "Main_Vertex", ShaderStages.Vertex, flagsExt),
