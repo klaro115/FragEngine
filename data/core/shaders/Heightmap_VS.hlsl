@@ -92,14 +92,14 @@ float GetHeightmapDisplacement(const float2 _inputUv)
 {
     const float2 heightmapUv = (_inputUv + heightmapTiling.xy) * heightmapTiling.zw;
     const float heightFactor = TexHeightmap.SampleLevel(SamplerHeightmap, heightmapUv, 0);
-    return minAltitude + heightFactor * altitudeRange;
+    return heightFactor;//minAltitude + heightFactor * altitudeRange;
 }
 
-void ApplyHeightmap(inout VertexInput_Basic _inputBasic)
+void ApplyHeightmap(inout float3 _position, inout float3 _normal, const in float2 _uv)
 {
-    const float displacement = GetHeightmapDisplacement(_inputBasic.uv);
+    const float displacement = GetHeightmapDisplacement(_uv);
 
-    _inputBasic.position += _inputBasic.normal * displacement;
+    _position += _normal * displacement;
 }
 
 /******************* SHADERS: ******************/
@@ -108,14 +108,17 @@ void Main_Vertex(
     in VertexInput_Basic inputBasic,
     out VertexOutput_Basic outputBasic)
 {
-    float4x4 mtxLocal2Clip = mul(mtxWorld2Clip, mtxLocal2World);
-    float3 viewDir = worldPosition - cameraPosition.xyz;
+    const float4x4 mtxLocal2Clip = mul(mtxWorld2Clip, mtxLocal2World);
 
-    ApplyHeightmap(inputBasic);
+    float3 position = inputBasic.position;
+    float3 normal = inputBasic.normal;
+    ApplyHeightmap(position, normal, inputBasic.uv);
 
-    outputBasic.position = mul(mtxLocal2Clip, float4(inputBasic.position, 1));
-    outputBasic.worldPosition = mul(mtxLocal2World, float4(inputBasic.position, 1)).xyz;
-    outputBasic.normal = normalize(mul(mtxLocal2World, float4(inputBasic.normal, 0)).xyz);
+    position += normal * sin(position.z * 7) * 0.3;
+
+    outputBasic.position = mul(mtxLocal2Clip, float4(position, 1));
+    outputBasic.worldPosition = mul(mtxLocal2World, float4(position, 1)).xyz;
+    outputBasic.normal = normalize(mul(mtxLocal2World, float4(normal, 0)).xyz);
     outputBasic.uv = inputBasic.uv;
 }
 
@@ -126,14 +129,17 @@ void Main_Vertex_Ext(
     out VertexOutput_Basic outputBasic,
     out VertexOutput_Extended outputExt)
 {
-    float4x4 mtxLocal2Clip = mul(mtxWorld2Clip, mtxLocal2World);
-    float3 viewDir = worldPosition - cameraPosition.xyz;
+    const float4x4 mtxLocal2Clip = mul(mtxWorld2Clip, mtxLocal2World);
 
-    ApplyHeightmap(inputBasic);
+    float3 position = inputBasic.position;
+    float3 normal = inputBasic.normal;
+    ApplyHeightmap(position, normal, inputBasic.uv);
 
-    outputBasic.position = mul(mtxLocal2Clip, float4(inputBasic.position, 1));
-    outputBasic.worldPosition = mul(mtxLocal2World, float4(inputBasic.position, 1)).xyz;
-    outputBasic.normal = normalize(mul(mtxLocal2World, float4(inputBasic.normal, 0)).xyz);
+    position += normal * sin(position.z * 7) * 0.3;
+
+    outputBasic.position = mul(mtxLocal2Clip, float4(position, 1));
+    outputBasic.worldPosition = mul(mtxLocal2World, float4(position, 1)).xyz;
+    outputBasic.normal = normalize(mul(mtxLocal2World, float4(normal, 0)).xyz);
     outputBasic.uv = inputBasic.uv;
 
     outputExt.tangent = normalize(mul(mtxLocal2World, float4(inputExt.tangent, 0)).xyz);
