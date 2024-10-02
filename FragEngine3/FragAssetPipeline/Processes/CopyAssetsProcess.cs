@@ -54,6 +54,8 @@ internal static class CopyAssetsProcess
 			Directory.CreateDirectory(outputBasePath);
 		}
 
+		
+
 		//TODO 1: Copy resource files to relative destinations.
 		//TODO 2: Gather and copy data files for each resource file.
 
