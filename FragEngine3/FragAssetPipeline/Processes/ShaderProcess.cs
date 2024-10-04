@@ -1,5 +1,4 @@
-﻿using FragAssetPipeline.Resources;
-using FragAssetPipeline.Resources.Shaders;
+﻿using FragAssetPipeline.Resources.Shaders;
 using FragEngine3.Graphics.Resources;
 using FragEngine3.Graphics.Resources.Data;
 using FragEngine3.Graphics.Resources.Data.ShaderTypes;
