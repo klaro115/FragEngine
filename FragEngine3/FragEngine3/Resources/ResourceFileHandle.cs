@@ -393,19 +393,21 @@ public sealed class ResourceFileHandle : IEquatable<ResourceFileHandle>
 	/// <param name="_dataFilePath">File path of the data file we want to hash.</param>
 	/// <param name="_outHashValue">Outputs a 64-bit integer containing the calculated hash value.</param>
 	/// <returns>True if a hash could be calculated for the given data file, false otherwise.</returns>
-	public static bool CalculateDataFileHash(string _dataFilePath, out ulong _outHashValue)
+	public static bool CalculateDataFileHash(string _dataFilePath, out ulong _outHashValue, out ulong _outFileSize)
 	{
 		// Verify parameters:
 		if (string.IsNullOrEmpty(_dataFilePath))
 		{
 			Logger.Instance?.LogError("Cannot calculate resource data file hash using null or blank file path!");
 			_outHashValue = 0;
+			_outFileSize = 0;
 			return false;
 		}
 		if (!File.Exists(_dataFilePath))
 		{
 			Logger.Instance?.LogError($"Cannot calculate resource data file hash; file path does not exist! File path: '{_dataFilePath}'");
 			_outHashValue = 0;
+			_outFileSize = 0;
 			return false;
 		}
 
@@ -419,11 +421,13 @@ public sealed class ResourceFileHandle : IEquatable<ResourceFileHandle>
 		{
 			Logger.Instance?.LogException($"Failed to read data file while calculating resource file hash! File path: '{_dataFilePath}'", ex);
 			_outHashValue = 0;
+			_outFileSize = 0;
 			return false;
 		}
 
 		// Calculate hash value and return success:
 		_outHashValue = XxHash3.HashToUInt64(bytes.AsSpan());
+		_outFileSize = (ulong)bytes.Length;
 		return true;
 	}
 
@@ -433,7 +437,7 @@ public sealed class ResourceFileHandle : IEquatable<ResourceFileHandle>
 	/// <returns>True if the data file's hash could be calculated and matched ours, false otherwise.</returns>
 	public bool VerifyDataFileHash()
 	{
-		if (!CalculateDataFileHash(dataFilePath, out ulong calculatedHash))
+		if (!CalculateDataFileHash(dataFilePath, out ulong calculatedHash, out _))
 		{
 			return false;
 		}
