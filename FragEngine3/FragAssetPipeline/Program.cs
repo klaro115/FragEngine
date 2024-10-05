@@ -159,11 +159,18 @@ internal static class Program
 		Console.ForegroundColor = prevColor;
 	}
 
-	public static void PrintError(string _message)
+	public static void PrintError(string _message, bool _addErrorPrefix = true)
 	{
 		ConsoleColor prevColor = Console.ForegroundColor;
 		Console.ForegroundColor = ConsoleColor.Red;
-		Console.WriteLine($"Error! {_message}");
+		if (_addErrorPrefix)
+		{
+			Console.WriteLine($"Error! {_message}");
+		}
+		else
+		{
+			Console.WriteLine(_message);
+		}
 		Console.ForegroundColor = prevColor;
 	}
 
