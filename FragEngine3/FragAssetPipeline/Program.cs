@@ -1,7 +1,5 @@
 ﻿using FragAssetPipeline.Processes;
-using FragAssetPipeline.Resources.Shaders;
 using FragEngine3.Graphics.Resources;
-using FragEngine3.Graphics.Resources.Data.ShaderTypes;
 using Veldrid;
 
 namespace FragAssetPipeline;
@@ -10,13 +8,15 @@ internal static class Program
 {
 	#region Constants
 
+	private static bool autoGenerateFresFiles = true;
+
 	private const MeshVertexDataFlags flagsBasic = MeshVertexDataFlags.BasicSurfaceData;
 	private const MeshVertexDataFlags flagsExt = MeshVertexDataFlags.BasicSurfaceData | MeshVertexDataFlags.ExtendedSurfaceData;
 
 	#endregion
 	#region Fields
 
-	private static readonly ShaderProcessDetails[] details =
+	private static readonly ShaderProcess.Details[] details =
 	[
 		new("Basic_VS",                           "Basic_VS",                                       "Main_Vertex", ShaderStages.Vertex,   flagsExt),
 		new("DefaultSurface_VS",                  "DefaultSurface_VS",                              "Main_Vertex", ShaderStages.Vertex,   flagsExt),
@@ -50,38 +50,80 @@ internal static class Program
 	{
 		Console.WriteLine("### BEGIN ###\n");
 
+		string? assetPipelineEntryPath = Path.GetDirectoryName(System.Reflection.Assembly.GetEntryAssembly()?.Location);
+		string assetPipelineBuildDir = Path.GetFullPath(assetPipelineEntryPath ?? Environment.CurrentDirectory);
+
+		string inputAssetsAbsDir = Path.GetFullPath(Path.Combine(assetPipelineBuildDir, ProgramConstants.inputAssetsRelativePath));
+		string outputAssetsAbsDir = Path.GetFullPath(Path.Combine(assetPipelineBuildDir, ProgramConstants.outputAssetsRelativePath));
+
+		if (!Directory.Exists(inputAssetsAbsDir))
+		{
+			PrintError($"Asset input directory does not exist! Path: '{inputAssetsAbsDir}'");
+			Console.WriteLine("\n#### END ####");
+			return;
+		}
+		if (!Directory.Exists(outputAssetsAbsDir))
+		{
+			Directory.CreateDirectory(outputAssetsAbsDir);
+		}
+
+		List<string> resourceFilePaths = [];
+
 		PrintStatus("## PROCESSING SHADERS:");
-		ProcessShaders();
+		ProcessShaders(inputAssetsAbsDir, outputAssetsAbsDir, resourceFilePaths);
 
 		//...
 
 		PrintStatus("\n## PROCESSING OUTPUT:");
-		ProcessOutput();
+		ProcessOutput(resourceFilePaths);
 
 		Console.WriteLine("\n#### END ####");
 	}
 
-	private static bool ProcessShaders()
+	private static bool ProcessShaders(string _inputAssetDir, string _outputAssetDir, List<string> _dstResourceFilePaths)
 	{
-		const bool autoGenerateFresFiles = true;
+		string inputShaderDir = Path.Combine(_inputAssetDir, "shaders");
+		string outputShaderDir = Path.Combine(_outputAssetDir, "shaders");
 
+		// Ensure input and output directories exist; create output if missing:
+		if (!Directory.Exists(_inputAssetDir))
+		{
+			PrintError($"Input directory for shader process does not exist! Path: '{inputShaderDir}'");
+			return false;
+		}
+		if (!Directory.Exists(_outputAssetDir))
+		{
+			Directory.CreateDirectory(_outputAssetDir);
+		}
+
+		// Process and output shaders one after the other:
 		int successCount = 0;
 		int totalShaderCount = details.Length;
 
-		foreach (var detail in details)
+		foreach (ShaderProcess.Details detail in details)
 		{
-			if (!ShaderProcess.CompileShaderToFSHA(detail, in shaderConfig))
+			// Compile and bundle shader data file in FSHA format:
+			if (!ShaderProcess.CompileShaderToFSHA(inputShaderDir, outputShaderDir, detail, in shaderConfig, out string dataFilePath))
 			{
 				continue;
 			}
-			if (autoGenerateFresFiles && !ShaderProcess.GenerateResourceMetadataFile(detail))
+			// Optionally, generate a metadata file to go with the data file:
+			if (autoGenerateFresFiles)
 			{
-				continue;
+				if (!ShaderProcess.GenerateResourceMetadataFile(inputShaderDir, outputShaderDir, detail, out string metadataFilePath))
+				{
+					continue;
+				}
+				_dstResourceFilePaths.Add(metadataFilePath);
 			}
-
+			else
+			{
+				_dstResourceFilePaths.Add(dataFilePath);
+			}
 			successCount++;
 		}
 
+		// Print a brief summary of processing results:
 		if (successCount < totalShaderCount)
 		{
 			PrintWarning($"Processing of {successCount}/{totalShaderCount} shader resources failed!");
@@ -93,9 +135,8 @@ internal static class Program
 		return successCount == totalShaderCount;
 	}
 
-	private static bool ProcessOutput()
+	private static bool ProcessOutput(List<string> _dstResourceFilePaths)
 	{
-		List<string> resourceFilePaths = [];
 
 		//TODO
 
