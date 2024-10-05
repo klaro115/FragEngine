@@ -18,13 +18,13 @@ internal static class Program
 
 	private static readonly ShaderProcess.Details[] details =
 	[
-		new("Basic_VS",                           "Basic_VS",                                       "Main_Vertex", ShaderStages.Vertex,   flagsExt),
-		new("DefaultSurface_VS",                  "DefaultSurface_VS",                              "Main_Vertex", ShaderStages.Vertex,   flagsExt),
-		new("DefaultSurface_modular_PS",          "DefaultSurface_modular_PS",                      "Main_Pixel",  ShaderStages.Fragment, flagsExt),
-		new("AlphaShadow_PS",                     "shadows/AlphaShadow_PS",                         "Main_Pixel",  ShaderStages.Fragment, flagsExt),
-		new("DefaultShadow_PS",				      "shadows/DefaultShadow_PS",                       "Main_Pixel",  ShaderStages.Fragment, flagsExt),
-		new("ForwardPlusLight_CompositeScene_PS", "composition/ForwardPlusLight_CompositeScene_PS", "Main_Pixel",  ShaderStages.Fragment, flagsBasic),
-		new("ForwardPlusLight_CompositeUI_PS",    "composition/ForwardPlusLight_CompositeUI_PS",    "Main_Pixel",  ShaderStages.Fragment, flagsBasic),
+		new("Basic_VS",                           "Basic_VS.hlsl",                                       "Main_Vertex", ShaderStages.Vertex,   flagsExt),
+		new("DefaultSurface_VS",                  "DefaultSurface_VS.hlsl",                              "Main_Vertex", ShaderStages.Vertex,   flagsExt),
+		new("DefaultSurface_modular_PS",          "DefaultSurface_modular_PS.hlsl",                      "Main_Pixel",  ShaderStages.Fragment, flagsExt),
+		new("AlphaShadow_PS",                     "shadows/AlphaShadow_PS.hlsl",                         "Main_Pixel",  ShaderStages.Fragment, flagsExt),
+		new("DefaultShadow_PS",                   "shadows/DefaultShadow_PS.hlsl",                       "Main_Pixel",  ShaderStages.Fragment, flagsExt),
+		new("ForwardPlusLight_CompositeScene_PS", "composition/ForwardPlusLight_CompositeScene_PS.hlsl", "Main_Pixel",  ShaderStages.Fragment, flagsBasic),
+		new("ForwardPlusLight_CompositeUI_PS",    "composition/ForwardPlusLight_CompositeUI_PS.hlsl",    "Main_Pixel",  ShaderStages.Fragment, flagsBasic),
 	];
 
 	private static readonly ShaderConfig shaderConfig = new()
@@ -86,14 +86,14 @@ internal static class Program
 		string outputShaderDir = Path.Combine(_outputAssetDir, "shaders");
 
 		// Ensure input and output directories exist; create output if missing:
-		if (!Directory.Exists(_inputAssetDir))
+		if (!Directory.Exists(inputShaderDir))
 		{
 			PrintError($"Input directory for shader process does not exist! Path: '{inputShaderDir}'");
 			return false;
 		}
-		if (!Directory.Exists(_outputAssetDir))
+		if (!Directory.Exists(outputShaderDir))
 		{
-			Directory.CreateDirectory(_outputAssetDir);
+			Directory.CreateDirectory(outputShaderDir);
 		}
 
 		// Process and output shaders one after the other:

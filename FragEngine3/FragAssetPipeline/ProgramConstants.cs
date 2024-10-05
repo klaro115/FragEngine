@@ -6,14 +6,14 @@ public static class ProgramConstants
 
 	// Asset source files, in the "Assets" folder in the repository's root directory:
 	public const string inputRootRelativePath = "../../../../../";
-	public const string inputAssetsRelativePath = inputRootRelativePath + "Assets/";
+	public const string inputAssetsRelativePath = inputRootRelativePath + "Assets/core/";
 
 	#endregion
 	#region Constants Output
 
 	// Processed resource files, in the "data" folder in the repository's root directory:
 	public const string outputRootRelativePath = "../../../../../";
-	public const string outputAssetsRelativePath = outputRootRelativePath + "data/";
+	public const string outputAssetsRelativePath = outputRootRelativePath + "data/core/";
 
 	#endregion
 	#region Constants Build
@@ -26,7 +26,7 @@ public static class ProgramConstants
 	private string buildType = "Release";
 #endif
 	private const string buildNetVersionName = "net8.0";
-	public const string buildRelativePath = $"../../../../{buildProjectName}/bin/{buildType}/{buildNetVersionName}/";
+	public const string buildRelativePath = $"../../../../{buildProjectName}/bin/{buildType}/{buildNetVersionName}/core/";
 
 	#endregion
 }

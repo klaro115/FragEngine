@@ -26,7 +26,7 @@ internal static class ShaderProcess
 	#endregion
 	#region Fields
 
-	private static readonly string[] shaderFileExtensions =
+	private static readonly string[] shaderSourceFileExtensions =
 	[
 		".fsha",
 		".hlsl",
@@ -82,6 +82,12 @@ internal static class ShaderProcess
 			return false;
 		}
 
+		string outputDir = Path.GetDirectoryName(_outDataFilePath)!;
+		if (!Directory.Exists(outputDir))
+		{
+			Directory.CreateDirectory(outputDir);
+		}
+
 		// Export shader data:
 		bool success = FshaExporter.ExportShaderFromHlslFile(sourceDataFilePath, _exportOptions, out ShaderData? shaderData);
 
@@ -131,14 +137,9 @@ internal static class ShaderProcess
 		}
 
 		// Assemble output and relative file paths:
-		_outMetadataFilePath = Path.Combine(_outputDir, $"{_details.resourceKey}.fres");
+		_outMetadataFilePath = Path.ChangeExtension(outputPath, ".fres");
 
-		string dataFileName = Path.GetFileName(_details.relativeFilePath);
-		if (string.IsNullOrEmpty(dataFileName))
-		{
-			dataFileName = _details.relativeFilePath;
-		}
-		string relativeDataFilePath = $"./{dataFileName}";
+		string dataFileRelPath = $"./{Path.GetFileNameWithoutExtension(outputPath)}";
 
 		// Calculate hash and measure size of output data file:
 		if (!ResourceFileHandle.CalculateDataFileHash(outputPath, out ulong dataFileHash, out ulong dataFileSize))
@@ -164,7 +165,7 @@ internal static class ShaderProcess
 
 		ResourceFileData resFileData = new()
 		{
-			DataFilePath = relativeDataFilePath,
+			DataFilePath = dataFileRelPath,
 			DataFileType = ResourceFileType.Single,
 			DataFileSize = dataFileSize,
 			DataFileHash = dataFileHash,
@@ -203,7 +204,7 @@ internal static class ShaderProcess
 		bool sourceFileExists = File.Exists(_outAbsSourceFilePath);
 		if (!sourceFileExists)
 		{
-			foreach (string shaderFileExt in shaderFileExtensions)
+			foreach (string shaderFileExt in shaderSourceFileExtensions)
 			{
 				_outAbsSourceFilePath = Path.ChangeExtension(_outAbsSourceFilePath, shaderFileExt);
 				if (sourceFileExists = File.Exists(_outAbsSourceFilePath))
