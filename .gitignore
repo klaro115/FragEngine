@@ -100,6 +100,9 @@ StyleCopReport.xml
 *.scc
 
 # [Custom] Exceptions for assets:
+!Assets/**/*.obj
+!Assets/**/**/*.obj
+!Assets/**/**/**/*.obj
 !data/**/*.obj
 !data/**/**/*.obj
 !data/**/**/**/*.obj
