@@ -31,6 +31,7 @@ bld/
 [Oo]bj/
 [Ll]og/
 [Ll]ogs/
+[Dd]ata/
 
 # Visual Studio 2015/2017 cache/options directory
 .vs/
@@ -103,9 +104,6 @@ StyleCopReport.xml
 !Assets/**/*.obj
 !Assets/**/**/*.obj
 !Assets/**/**/**/*.obj
-!data/**/*.obj
-!data/**/**/*.obj
-!data/**/**/**/*.obj
 
 # Chutzpah Test files
 _Chutzpah*
