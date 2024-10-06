@@ -74,6 +74,9 @@ internal static class Program
 
 		//...
 
+		PrintStatus("## BUNDLING RESOURCES:");
+		ProcessBundling(resourceFilePaths, outputAssetsAbsDir);
+
 		PrintStatus("\n## PROCESSING OUTPUT:");
 		ProcessOutput(resourceFilePaths);
 
@@ -133,6 +136,13 @@ internal static class Program
 			Console.WriteLine($"Processing of all {totalShaderCount} shader resources succeeded.");
 		}
 		return successCount == totalShaderCount;
+	}
+
+	private static bool ProcessBundling(List<string> _srcResourceMetadataPaths, string _dstAssetsAbsDir)
+	{
+		string outputFilePath = Path.Combine(_dstAssetsAbsDir, "ResourcePackage.fres");
+
+		return ResourceBundlingProcess.CombineResourcesFiles(_srcResourceMetadataPaths, outputFilePath, true, false);
 	}
 
 	private static bool ProcessOutput(List<string> _dstResourceFilePaths)

@@ -49,12 +49,11 @@ internal static class ResourceBundlingProcess
 			: ResourceConstants.FILE_EXT_BATCH_NORMAL_COMPRESSED;
 		string outputMetadataFilePath = Path.Combine(outputDir, $"{outputFileName}{ResourceConstants.FILE_EXT_METADATA}");
 		string outputDataFilePath = Path.Combine(outputDir, $"{outputFileName}{outputDataFileExtension}");
-		//string outputDataFileName = Path.GetFileName(outputDataFilePath);
 
 		// Gather all resource handles and other info needed for the data merge:
 		if (!GatherAllResourceHandles(
 			_metadataFilePaths,
-			out List<ResourceAndFilePair> srcResourceHandles,
+			out List<ResourceAndFilePair> srcResourcesFilePairs,
 			out ulong totalDataFileSize))
 		{
 			Program.PrintError($"Failed to gather and combine any resources for combined output file: '{_outputFilePath}'");
@@ -64,7 +63,7 @@ internal static class ResourceBundlingProcess
 		// Merge all data files into one, and remap resource locations:
 		if (!CombineDataFiles(
 			outputDataFilePath,
-			srcResourceHandles,
+			srcResourcesFilePairs,
 			_useBlockCompression,
 			out ResourceHandleData[] dstResourceHandles,
 			out ResourceFileType dstDataFileType,
@@ -103,7 +102,7 @@ internal static class ResourceBundlingProcess
 
 	private static bool GatherAllResourceHandles(
 		IEnumerable<string> _metadataFilePaths,
-		out List<ResourceAndFilePair> _outSrcResourceHandles,
+		out List<ResourceAndFilePair> _outSrcResourceFilePairs,
 		out ulong _outTotalDataFileSize)
 	{
 		// Count any upcoming errors:
@@ -118,7 +117,7 @@ internal static class ResourceBundlingProcess
 		// Gather all resource handles across all metadata files:
 		Console.WriteLine($"+ Gathering resource handles from {totalFileCount} resource files...");
 
-		_outSrcResourceHandles = new(totalFileCount);
+		_outSrcResourceFilePairs = new(totalFileCount);
 
 		foreach (string metadataFilePath in _metadataFilePaths)
 		{
@@ -158,44 +157,50 @@ internal static class ResourceBundlingProcess
 			int actualResourceCount = Math.Min(fileData.ResourceCount, resourceArrayCount);
 			for (int i = 0; i < actualResourceCount; ++i)
 			{
-				_outSrcResourceHandles.Add(new ResourceAndFilePair(dataFileAbsPath, fileData.Resources![i], fileData));
+				_outSrcResourceFilePairs.Add(new ResourceAndFilePair(dataFileAbsPath, fileData.Resources![i], fileData));
 			}
 		}
 
 		// Print out error summary:
 		if (errorCountNull != 0)
 		{
-			Program.PrintError($"{errorCountNull}/{totalFileCount} ({(float)errorCountNull / totalFileCount:0.#}%) resource files were null or empty!");
+			Program.PrintError($"  - {errorCountNull}/{totalFileCount} ({(float)errorCountNull / totalFileCount * 100:0.#}%) resource files were null or empty!");
 		}
 		if (errorCountMissing != 0)
 		{
-			Program.PrintError($"{errorCountMissing}/{totalFileCount} ({(float)errorCountMissing / totalFileCount:0.#}%) resource files could not be found!");
+			Program.PrintError($"  - {errorCountMissing}/{totalFileCount} ({(float)errorCountMissing / totalFileCount * 100:0.#}%) resource files could not be found!");
 		}
 		if (errorCountFormat != 0)
 		{
-			Program.PrintError($"{errorCountFormat}/{totalFileCount} ({(float)errorCountFormat / totalFileCount:0.#}%) resource files were of unsupported file fomats!");
+			Program.PrintError($"  - {errorCountFormat}/{totalFileCount} ({(float)errorCountFormat / totalFileCount * 100:0.#}%) resource files were of unsupported file fomats!");
 		}
 		if (errorCountParse != 0)
 		{
-			Program.PrintError($"{errorCountParse}/{totalFileCount} ({(float)errorCountParse / totalFileCount:0.#}%) resource files could not be parsed!");
+			Program.PrintError($"  - {errorCountParse}/{totalFileCount} ({(float)errorCountParse / totalFileCount * 100:0.#}%) resource files could not be parsed!");
 		}
-		Console.WriteLine($"+ Resource metadata files read: {successCount}/{_outTotalDataFileSize} ({(float)successCount / totalFileCount:0.#}%)");
-		Console.WriteLine($"+ Resource handles found: {_outSrcResourceHandles.Count} ({(float)_outSrcResourceHandles.Count / successCount:0.#} per file)");
+		Console.WriteLine($"  - Resource metadata files read: {successCount}/{totalFileCount} ({(float)successCount / totalFileCount * 100:0.#}%)");
+		Console.WriteLine($"  - Resource handles found: {_outSrcResourceFilePairs.Count} ({(float)_outSrcResourceFilePairs.Count / successCount:0.#} per file)");
 
-		return successCount != 0 && _outSrcResourceHandles.Count != 0;
+		return successCount != 0 && _outSrcResourceFilePairs.Count != 0;
 	}
 
 	private static bool CombineDataFiles(
 		string outputDataFilePath,
-		List<ResourceAndFilePair> _srcResourceHandles,
+		List<ResourceAndFilePair> _srcResourceFilePairs,
 		bool _useBlockCompression,
 		out ResourceHandleData[] _outDstResourceHandles,
 		out ResourceFileType _outDstDataFileType,
 		out ulong _outCompressionBlockSize,
 		out uint _outCompressionBlockCount)
 	{
+		Console.WriteLine($"+ Combining resource data from {_srcResourceFilePairs.Count} source data files...");
+
+		int totalResourceCount = _srcResourceFilePairs.Count();
+		int successCount = 0;
+		int errorCount = 0;
+
 		// Prepare buffers and counters for combined file contents:
-		_outDstResourceHandles = new ResourceHandleData[_srcResourceHandles.Count];
+		_outDstResourceHandles = new ResourceHandleData[_srcResourceFilePairs.Count];
 
 		_outDstDataFileType = _useBlockCompression
 			? ResourceFileType.Batch_BlockCompressed
@@ -212,22 +217,69 @@ internal static class ResourceBundlingProcess
 			fileStream = new(outputDataFilePath, FileMode.Create, FileAccess.Write);
 			compressionStream = new DeflateStream(fileStream, CompressionMode.Compress);	//TODO [later]: Use a block-compression stream instead if requested, and once implemented.
 
-			ResourceFileData? currentFileData = null;
+			ResourceFileData? loadedFileData = null;
 			byte[] srcDataFileBytes = [];
 			int currentHandleIdx = 0;
+			ulong uncompressedByteSize = 0;
 
-			foreach (ResourceAndFilePair rfp in _srcResourceHandles)
+			foreach (ResourceAndFilePair rfp in _srcResourceFilePairs)
 			{
-				if (rfp.fileData != currentFileData)
+				ResourceHandleData resHandle = rfp.resourceData;
+				ResourceFileType dataFileType = rfp.fileData.DataFileType;
+
+				// If source data file changes between resources, load its contents now:
+				if (rfp.fileData != loadedFileData)
 				{
-					currentFileData = rfp.fileData;
-					srcDataFileBytes = File.ReadAllBytes(rfp.dataFileAbsPath);
+					if (!LoadAndDecompressSourceFile(rfp, ref srcDataFileBytes))
+					{
+						Program.PrintError($"  * Failed to read source data file for resource key '{rfp.resourceData.ResourceKey}'!", false);
+						errorCount++;
+						continue;
+					}
+					loadedFileData = rfp.fileData;
 				}
 
-				//TODO 1: Append source bytes to compression stream.
-				//TODO 2: Update byte sizes and offsets in resource handle data.
+				// Append source bytes to compression stream:
+				bool hasCopySucceeded = true;
+				switch (dataFileType)
+				{
+					case ResourceFileType.Single:
+					case ResourceFileType.Batch_Compressed:
+						// For compressed files, append only the specific resource's data: (file was already decompressed during loading)
+						if (resHandle.DataOffset != 0 && resHandle.DataSize != 0)
+						{
+							int dataSize = (int)resHandle.DataSize;
+							compressionStream.Write(srcDataFileBytes, (int)resHandle.DataOffset, dataSize);
 
-				_outDstResourceHandles[currentHandleIdx] = rfp.resourceData;
+							rfp.resourceData.DataOffset = uncompressedByteSize;
+							uncompressedByteSize += (ulong)dataSize;
+						}
+						// For single-resource files, just append uncompressed source data as-is:
+						else
+						{
+							compressionStream.Write(srcDataFileBytes);
+
+							rfp.resourceData.DataOffset = uncompressedByteSize;
+							uncompressedByteSize += (ulong)srcDataFileBytes.Length;
+						}
+						break;
+					case ResourceFileType.Batch_BlockCompressed:
+						{
+							//TODO [later]: Block (de)compression not implemented yet.
+						}
+						break;
+					default:
+						Program.PrintError($"  * Unsupported data file type '{dataFileType}' for resource key '{rfp.resourceData.ResourceKey}'!", false);
+						hasCopySucceeded = false;
+						errorCount++;
+						break;
+				}
+				
+				if (hasCopySucceeded)
+				{
+					_outDstResourceHandles[currentHandleIdx++] = rfp.resourceData;
+					successCount++;
+				}
 			}
 		}
 		catch (Exception ex)
@@ -237,8 +289,71 @@ internal static class ResourceBundlingProcess
 		}
 		finally
 		{
-			compressionStream?.Dispose();
-			fileStream?.Dispose();
+			compressionStream?.Close();
+			fileStream?.Close();
+		}
+
+		if (errorCount != 0)
+		{
+			Program.PrintError($"  - {errorCount}/{totalResourceCount} ({(float)errorCount / totalResourceCount * 100:0.#}%) resources could not be combined!");
+		}
+		Console.WriteLine($"  - Resources combined: {successCount}/{totalResourceCount} ({(float)successCount / totalResourceCount * 100:0.#}%)");
+		return true;
+	}
+
+	private static bool LoadAndDecompressSourceFile(ResourceAndFilePair _resourceFilePair, ref byte[] _srcDataFileBytes)
+	{
+		// Read all bytes from source data file:
+		try
+		{
+			_srcDataFileBytes = File.ReadAllBytes(_resourceFilePair.dataFileAbsPath);
+		}
+		catch (Exception ex)
+		{
+			Program.PrintError($"  * Failed to read source data file! File path: '{_resourceFilePair.fileData.DataFilePath}'!\nException: {ex}");
+			return false;
+		}
+
+		// If source file is contîguously compressed, decompress file immediately: (block-compressed files are decompressed on-the-fly)
+		if (_resourceFilePair.fileData.DataFileType == ResourceFileType.Batch_Compressed)
+		{
+			int uncompressedFileSize = Math.Max((int)_resourceFilePair.fileData.UncompressedFileSize, _srcDataFileBytes.Length);
+			int actualUncompressedSize;
+			byte[] decompressedDataFileBytes;
+
+			// Try decompressing byte data:
+			MemoryStream? decompressFileStream = null;
+			DeflateStream? decompressionStream = null;
+
+			try
+			{
+				decompressFileStream = new(_srcDataFileBytes);
+				decompressionStream = new(decompressFileStream, CompressionMode.Decompress);
+
+				decompressedDataFileBytes = new byte[uncompressedFileSize];
+				actualUncompressedSize = decompressionStream.Read(decompressedDataFileBytes, 0, uncompressedFileSize);
+			}
+			catch (Exception ex)
+			{
+				Program.PrintError($"  * Failed to decompress source data file! File path: '{_resourceFilePair.fileData.DataFilePath}'!\nException: {ex}");
+				return false;
+			}
+			finally
+			{
+				decompressionStream?.Close();
+				decompressFileStream?.Close();
+			}
+			
+			// Swap source data byte buffer with decompressed data:
+			if (actualUncompressedSize != uncompressedFileSize)
+			{
+				_srcDataFileBytes = new byte[actualUncompressedSize];
+				Array.Copy(decompressedDataFileBytes, _srcDataFileBytes, actualUncompressedSize);
+			}
+			else
+			{
+				_srcDataFileBytes = decompressedDataFileBytes;
+			}
 		}
 		return true;
 	}

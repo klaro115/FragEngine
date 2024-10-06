@@ -139,7 +139,7 @@ internal static class ShaderProcess
 		// Assemble output and relative file paths:
 		_outMetadataFilePath = Path.ChangeExtension(outputPath, ".fres");
 
-		string dataFileRelPath = $"./{Path.GetFileNameWithoutExtension(outputPath)}";
+		string dataFileRelPath = $"./{Path.GetFileName(outputPath)}";
 
 		// Calculate hash and measure size of output data file:
 		if (!ResourceFileHandle.CalculateDataFileHash(outputPath, out ulong dataFileHash, out ulong dataFileSize))
