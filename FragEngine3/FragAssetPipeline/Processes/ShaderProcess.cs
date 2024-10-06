@@ -8,17 +8,29 @@ using Veldrid;
 
 namespace FragAssetPipeline.Processes;
 
+/// <summary>
+/// Utility class for processing shader resources for deployment.
+/// </summary>
 internal static class ShaderProcess
 {
 	#region Types
 
-	public sealed class Details(string _resourceKey, string _relativeFilePath, string _entryPointNameBase, ShaderStages _stage, MeshVertexDataFlags _maxVertexFlafs, bool _bundleSourceCode = true)
+	/// <summary>
+	/// Details and additional information on how to process and export a shader resource.
+	/// </summary>
+	/// <param name="_resourceKey">The resource key through which the resource will be accessed.</param>
+	/// <param name="_relativeFilePath">File path to the resource, relative to the input directory containing source assets.</param>
+	/// <param name="_entryPointNameBase">Base name of entry point functions within the source code.</param>
+	/// <param name="_stage">The shader stage within the rasterized pipeline that this resource's shader programs will be bound to.</param>
+	/// <param name="_maxVertexFlags">Maximum vertex flags that should be pre-compiled; variants with other flags may still be compiled from source code at run-time.</param>
+	/// <param name="_bundleSourceCode">Whether to include original source code in the exported FSHA file. If false, run-time compilation of additional variants won't be possible.</param>
+	public sealed class Details(string _resourceKey, string _relativeFilePath, string _entryPointNameBase, ShaderStages _stage, MeshVertexDataFlags _maxVertexFlags, bool _bundleSourceCode = true)
 	{
 		public readonly string resourceKey = _resourceKey;
 		public readonly string relativeFilePath = _relativeFilePath;
 		public readonly string entryPointNameBase = _entryPointNameBase;
 		public readonly ShaderStages stage = _stage;
-		public readonly MeshVertexDataFlags maxVertexFlags = _maxVertexFlafs;
+		public readonly MeshVertexDataFlags maxVertexFlags = _maxVertexFlags;
 		public string descriptionTxt = "At_Nyn0_Ly101p140_V100";
 		public bool bundleSourceCode = _bundleSourceCode;
 	}
@@ -38,6 +50,15 @@ internal static class ShaderProcess
 	#endregion
 	#region Methods
 
+	/// <summary>
+	/// Pre-compiles and packages a shader asset into FSHA format that can be used directly be the engine.
+	/// </summary>
+	/// <param name="_inputDir">Input root directory of all shader source files.</param>
+	/// <param name="_outputDir">Output root directory for all shader asset files.</param>
+	/// <param name="_details">Details for exporting and compiling the shader resource.</param>
+	/// <param name="_shaderConfig">The shader configuration specifying features and flags that should be set when compiling shader variants.</param>
+	/// <param name="_outDataFilePath">Outputs a file path to the resulting exported data file in FSHA format.</param>
+	/// <returns>True if compilation and bundling succeeded, false otherwise.</returns>
 	public static bool CompileShaderToFSHA(string _inputDir, string _outputDir, Details _details, in ShaderConfig _shaderConfig, out string _outDataFilePath)
 	{
 		if (_details is null)

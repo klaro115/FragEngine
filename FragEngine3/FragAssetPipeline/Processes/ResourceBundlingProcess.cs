@@ -4,6 +4,9 @@ using System.IO.Compression;
 
 namespace FragAssetPipeline.Processes;
 
+/// <summary>
+/// Utility class for bundling and combining multiple individual resource files into one compressed resource file.
+/// </summary>
 internal static class ResourceBundlingProcess
 {
 	#region Types
@@ -21,7 +24,6 @@ internal static class ResourceBundlingProcess
 	public static bool CombineResourcesFiles(
 		IEnumerable<string> _metadataFilePaths,
 		string _outputFilePath,
-		bool _compressDataFile,
 		bool _useBlockCompression)
 	{
 		if (_metadataFilePaths is null || !_metadataFilePaths.Any())

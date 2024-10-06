@@ -140,9 +140,15 @@ internal static class Program
 
 	private static bool ProcessBundling(List<string> _srcResourceMetadataPaths, string _dstAssetsAbsDir)
 	{
+		if (_srcResourceMetadataPaths.Count	< 2)
+		{
+			PrintWarning("Skipping resource bundling process; process requires at least 2 individual resource files.");
+			return true;
+		}
+
 		string outputFilePath = Path.Combine(_dstAssetsAbsDir, "ResourcePackage.fres");
 
-		return ResourceBundlingProcess.CombineResourcesFiles(_srcResourceMetadataPaths, outputFilePath, true, false);
+		return ResourceBundlingProcess.CombineResourcesFiles(_srcResourceMetadataPaths, outputFilePath, false);
 	}
 
 	private static bool ProcessOutput(List<string> _dstResourceFilePaths)
