@@ -26,7 +26,7 @@ public static class ProgramConstants
 	private string buildType = "Release";
 #endif
 	private const string buildNetVersionName = "net8.0";
-	public const string buildRelativePath = $"../../../../{buildProjectName}/bin/{buildType}/{buildNetVersionName}/core/";
+	public const string buildAssetsRelativePath = $"../../../../{buildProjectName}/bin/{buildType}/{buildNetVersionName}/data/core/";
 
 	#endregion
 }

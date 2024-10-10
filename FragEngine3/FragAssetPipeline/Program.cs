@@ -53,8 +53,9 @@ internal static class Program
 		string? assetPipelineEntryPath = Path.GetDirectoryName(System.Reflection.Assembly.GetEntryAssembly()?.Location);
 		string assetPipelineBuildDir = Path.GetFullPath(assetPipelineEntryPath ?? Environment.CurrentDirectory);
 
-		string inputAssetsAbsDir = Path.GetFullPath(Path.Combine(assetPipelineBuildDir, ProgramConstants.inputAssetsRelativePath));
-		string outputAssetsAbsDir = Path.GetFullPath(Path.Combine(assetPipelineBuildDir, ProgramConstants.outputAssetsRelativePath));
+		string inputAssetsAbsDir = Path.GetFullPath(Path.Combine(assetPipelineBuildDir, ProgramConstants.inputAssetsRelativePath));		// "Assets" folder
+		string outputAssetsAbsDir = Path.GetFullPath(Path.Combine(assetPipelineBuildDir, ProgramConstants.outputAssetsRelativePath));	// "data" folder
+		string buildAssetsAbsDir = Path.GetFullPath(Path.Combine(assetPipelineBuildDir, ProgramConstants.buildAssetsRelativePath));		// "data" folder in TestApp's build directory
 
 		if (!Directory.Exists(inputAssetsAbsDir))
 		{
@@ -65,6 +66,10 @@ internal static class Program
 		if (!Directory.Exists(outputAssetsAbsDir))
 		{
 			Directory.CreateDirectory(outputAssetsAbsDir);
+		}
+		if (!Directory.Exists(buildAssetsAbsDir))
+		{
+			Directory.CreateDirectory(buildAssetsAbsDir);
 		}
 
 		List<string> resourceFilePaths = [];
@@ -78,7 +83,7 @@ internal static class Program
 		ProcessBundling(resourceFilePaths, outputAssetsAbsDir);
 
 		PrintStatus("\n## PROCESSING OUTPUT:");
-		ProcessOutput(resourceFilePaths);
+		ProcessOutput(resourceFilePaths, outputAssetsAbsDir, buildAssetsAbsDir);
 
 		Console.WriteLine("\n#### END ####");
 	}
@@ -151,12 +156,15 @@ internal static class Program
 		return ResourceBundlingProcess.CombineResourcesFiles(_srcResourceMetadataPaths, outputFilePath, false);
 	}
 
-	private static bool ProcessOutput(List<string> _dstResourceFilePaths)
+	private static bool ProcessOutput(List<string> _srcResourceFilePaths, string _srcResourceRootAbsDir, string _dstResourceRootAbsDir)
 	{
+		if (_srcResourceFilePaths.Count == 0)
+		{
+			PrintWarning("Skipping output copying process; process requires at least 1 resource file.");
+			return true;
+		}
 
-		//TODO
-
-		return true;
+		return CopyAssetsProcess.CopyAssetsToOutputDirectory(_srcResourceFilePaths, _srcResourceRootAbsDir, _dstResourceRootAbsDir);
 	}
 
 	public static void PrintStatus(string _message)
