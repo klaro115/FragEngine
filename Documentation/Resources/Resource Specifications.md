@@ -17,9 +17,10 @@ This is the immediate JSON-serialized data type of all ".fres" metadata files. T
 
 | Field:                  | Type:                  | Description:                                                        |
 | ----------------------- | ---------------------- | ------------------------------------------------------------------- |
-| `DataFilePath`:         | `string`               | Relative path to the data file containing the resources' data.      |
-| `DataFileType`:         | `ResourceFileType`     | Type of resource file:<br> 0=`Single`<br> 1=`Batch_Compressed`<br> 2=`Batch_BlockCompressed` |
+| `DataFilePath`          | `string`               | Relative path to the data file containing the resources' data.      |
+| `DataFileType`          | `ResourceFileType`     | Type of resource file:<br> 0=`Single`<br> 1=`Batch_Compressed`<br> 2=`Batch_BlockCompressed` |
 | `DataFileSize`          | `ulong`                | Byte size of the data file. If 0, file size will be measured at launch. |
+| `DataFileHash`          | `ulong`                | 64-bit hash value of the data file, uses the xxHash3 algorithm.     |
 | `UncompressedFileSize`  | `ulong`                | Byte size of the uncompressed data file contents. Must be non-zero for compressed file types. |
 | `BlockSize`             | `ulong`                | Byte size of compression blocks, block-compressed file type only.   |
 | `BlockCount`            | `uint`                 | Total number of compressed blocks, block-compressed file type only. |

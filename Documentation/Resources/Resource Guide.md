@@ -1,6 +1,7 @@
 <h1>Asset & Resource Guide</h1>
 
-Resources are primarily loaded from files located within the "data" folder. Each resource file might contain one or more resources, and must be accompanied by a descriptive resource metadata file.
+Resources are primarily loaded from files located within the "data" folder within the app's build output directory. Each resource file might contain one or more resources, and must be accompanied by a descriptive resource metadata file.
+Resources are converted and copied to this data folder automatically by the asset pipeline, which is executed by running the `FragAssetPipeline` project in the solution.
 
 - [Metadata Files](#metadata-files)
 - [Data Files](#data-files)
