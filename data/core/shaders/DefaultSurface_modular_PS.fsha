@@ -1,975 +1,0 @@
-FSHA_01_0037_0041_072D_0778_7CBE_04_00008440_0000A060
-########
-{
-  "ShaderStage": 16,
-  "RequiredVariants": 15,
-  "SourceCode": {
-    "EntryPointNameBase": "Main_Pixel",
-    "EntryPoints": [
-      {
-        "VariantFlags": 1,
-        "EntryPoint": "Main_Pixel"
-      },
-      {
-        "VariantFlags": 3,
-        "EntryPoint": "Main_Pixel_Ext"
-      },
-      {
-        "VariantFlags": 1,
-        "EntryPoint": "Main_Pixel"
-      },
-      {
-        "VariantFlags": 3,
-        "EntryPoint": "Main_Pixel_Ext"
-      }
-    ],
-    "SupportedFeaturesTxt": "At_Nyn0_Ly101p140_V100",
-    "MaximumCompiledFeaturesTxt": "At_Nyn0_Ly101p140_V100",
-    "SourceCodeBlocks": [
-      {
-        "Language": 1,
-        "ByteOffset": 0,
-        "ByteSize": 23576
-      },
-      {
-        "Language": 2,
-        "ByteOffset": 23576,
-        "ByteSize": 8338
-      }
-    ]
-  },
-  "CompiledVariants": [
-    {
-      "Type": 1,
-      "VariantFlags": 1,
-      "VariantDescriptionTxt": "At_Nyn0_Ly101p140_V000",
-      "EntryPoint": "Main_Pixel",
-      "RelativeByteOffset": 0,
-      "TotalByteOffset": 0,
-      "ByteSize": 7860
-    },
-    {
-      "Type": 1,
-      "VariantFlags": 3,
-      "VariantDescriptionTxt": "At_Nyn0_Ly101p140_V100",
-      "EntryPoint": "Main_Pixel_Ext",
-      "RelativeByteOffset": 7860,
-      "TotalByteOffset": 7860,
-      "ByteSize": 8300
-    },
-    {
-      "Type": 4,
-      "VariantFlags": 1,
-      "VariantDescriptionTxt": "At_Nyn0_Ly101p140_V000",
-      "EntryPoint": "Main_Pixel",
-      "RelativeByteOffset": 0,
-      "TotalByteOffset": 16160,
-      "ByteSize": 12308
-    },
-    {
-      "Type": 4,
-      "VariantFlags": 3,
-      "VariantDescriptionTxt": "At_Nyn0_Ly101p140_V100",
-      "EntryPoint": "Main_Pixel_Ext",
-      "RelativeByteOffset": 12308,
-      "TotalByteOffset": 28468,
-      "ByteSize": 12588
-    }
-  ]
-}########
-//#pragma pack_matrix( column_major )
-
-/******************* DEFINES: ******************/
-
-// Albedo:
-#define FEATURE_ALBEDO_TEXTURE 1                // Whether to initialize albedo color from main texture. If false, a color literal is used
-#define FEATURE_ALBEDO_COLOR half4(1, 1, 1, 1)  // Color literal from which albedo may be initialized
-
-// Normals:
-#define FEATURE_NORMALS                         // Whether to use normal maps in all further shading
-#define FEATURE_PARALLAX                        // Whether to use height/parallax maps to modulate UV sampling
-#define FEATURE_PARALLAX_FULL                   // Whether to use full iteratively traced parallax with occlusion, instead of just simple UV offsetting.
-
-// Lighting:
-#define FEATURE_LIGHT                           // Whether to apply lighting
-#define FEATURE_LIGHT_AMBIENT                   // Whether to add directional ambient intensity to base lighting
-#define FEATURE_LIGHT_LIGHTMAPS                 // Whether to add light map intensity to base lighting
-#define FEATURE_LIGHT_SOURCES                   // Whether to use light sources from the scene to light up the object
-#define FEATURE_LIGHT_MODEL Phong
-#define FEATURE_LIGHT_SHADOWMAPS                // Whether to use shadow maps to mask out light rays coming from light sources
-#define FEATURE_LIGHT_SHADOWMAPS_RES 1024       // The resolution of shadow maps, in pixels per side.
-#define FEATURE_LIGHT_SHADOWMAPS_AA 2           // If defined, controls the number of depth samples read from shadow map per pixel 
-#define FEATURE_LIGHT_INDIRECT 5                // If defined, controls the number of indirect light samples per pixel, sample count is NxN, must be 2 or higher
-
-// Variants:
-#define VARIANT_EXTENDED                        // Whether to always create a shader variant using extended surface data
-#define VARIANT_BLENDSHAPES                     // Whether to always create a shader variant using blend shape data
-#define VARIANT_ANIMATED                        // Whether to always create a shader variant using bone animation data
-
-#if FEATURE_ALBEDO_TEXTURE == 0
-    #ifndef FEATURE_ALBEDO_COLOR
-        #define FEATURE_ALBEDO_COLOR half4(1, 1, 1, 1)
-    #endif
-#endif
-
-/****************** CONSTANTS: *****************/
-
-#ifdef FEATURE_LIGHT_AMBIENT
-// Constant buffer containing all scene-wide settings:
-cbuffer CBScene : register(b0)
-{
-    // Scene lighting:
-    float4 ambientLightLow;         // Ambient light color and intensity coming from bottom-up.
-    float4 ambientLightMid;         // Ambient light color and intensity coming from all sides.
-    float4 ambientLightHigh;        // Ambient light color and intensity coming from top-down.
-    float shadowFadeStart;          // Percentage of the shadow distance in projection space where they start fading out.
-};
-#endif //FEATURE_LIGHT_AMBIENT
-
-#if defined(FEATURE_LIGHT_SOURCES) || defined(FEATURE_PARALLAX)
-// Constant buffer containing all settings that apply for everything drawn by currently active camera:
-cbuffer CBCamera : register(b1)
-{
-    // Camera vectors & matrices:
-    float4x4 mtxWorld2Clip;         // Camera's full projection matrix, transforming from world space to clip space coordinates.
-    float4 cameraPosition;          // Camera position, in world space.
-    float4 cameraDirection;         // Camera forward facing direction, in world space.
-    float4x4 mtxCameraMotion;       // Camera movement matrix, encoding motion/transformation from previous to current frame.
-
-	// Camera parameters:
-    uint cameraIdx;                 // Index of the currently drawing camera.
-    uint resolutionX;               // Render target width, in pixels.
-    uint resolutionY;               // Render target height, in pixels.
-    float nearClipPlane;            // Camera's near clipping plane distance.
-    float farClipPlane;             // Camera's far clipping plane distance.
-
-    // Per-camera lighting:
-    uint lightCount;                // Total number of lights affecting this camera.
-    uint shadowMappedLightCount;    // Total number of lights that have a layer of the shadow map texture array assigned.
-};
-#endif //FEATURE_LIGHT_SOURCES
-
-// Constant buffer containing only object-specific settings:
-cbuffer CBObject : register(b2)
-{
-    float4x4 mtxLocal2World;        // Object world matrix, transforming vertices from model space to world space.
-    float3 worldPosition;           // World space position of the object.
-    float boundingRadius;           // Bounding sphere radius of the object.
-};
-
-// Constant buffer containing material-specific settings:
-cbuffer CBDefaultSurface : register(b3)
-{
-    float4 tintColor;               // Color tint applied to albedo.
-    float roughness;                // Roughness rating of the surface.
-    float shininess;                // How shiny or metallic the surface is.
-    float reflectionIndex;          // Reflection index of the material's surface.
-    float refractionIndex;          // Refraction index of the material's substance.
-};
-
-/****************** RESOURCES: *****************/
-
-// ResSetCamera:
-
-#ifdef FEATURE_LIGHT_SOURCES
-struct Light
-{
-    float3 lightColor;
-    float lightIntensity;
-    float3 lightPosition;
-    uint lightType;
-    float3 lightDirection;
-    float lightSpotMinDot;
-    uint shadowMapIdx;
-    float shadowBias;
-    uint shadowCascades;
-    float shadowCascadeRange;
-    float3 shadowDepthBias;
-    float _padding;
-};
-
-StructuredBuffer<Light> BufLights : register(ps, t0);               // Buffer containing an array of light source data. Number of lights is given in 'CBGlobal.lightCount'.
-#endif
-
-#ifdef FEATURE_LIGHT_SHADOWMAPS
-Texture2DArray<half> TexShadowMaps : register(ps, t1);
-StructuredBuffer<float4x4> BufShadowMatrices : register(ps, t3);    // Buffer containing an array of projection matrices for shadow maps, transforming world position to clip space and back.
-SamplerState SamplerShadowMaps : register(ps, s0);
-    #if defined(FEATURE_LIGHT_INDIRECT) && FEATURE_LIGHT_INDIRECT > 1
-    Texture2DArray<half3> TexShadowNormalMaps : register(ps, t2);
-    #endif
-#endif
-
-// ResSetBound:
-
-#if FEATURE_ALBEDO_TEXTURE == 1
-Texture2D<half4> TexMain : register(ps, t4);
-#endif //FEATURE_ALBEDO_TEXTURE == 1
-
-#ifdef FEATURE_NORMALS
-Texture2D<half3> TexNormal : register(ps, t5);
-#endif //FEATURE_NORMALS
-
-#ifdef FEATURE_PARALLAX
-Texture2D<half> TexParallax : register(ps, t6);
-#endif //FEATURE_PARALLAX
-
-#ifdef FEATURE_LIGHT_LIGHTMAPS
-Texture2D<half3> TexLightmap : register(ps, t7);
-#endif //FEATURE_LIGHT_LIGHTMAPS
-
-#if FEATURE_ALBEDO_TEXTURE == 1 || defined(FEATURE_NORMALS) || defined(FEATURE_PARALLAX) || defined(FEATURE_LIGHT_LIGHTMAPS)
-    #define HAS_SAMPLER_MAIN
-    SamplerState SamplerMain : register(s1);
-#endif //HAS_SAMPLER_MAIN
-
-
-/**************** VERTEX OUTPUT: ***************/
-
-struct VertexOutput_Basic
-{
-    float4 position : SV_POSITION;
-    float3 worldPosition : COLOR0;
-    float3 normal : NORMAL0;
-    float2 uv : TEXCOORD0;
-};
-
-#ifdef VARIANT_EXTENDED
-struct VertexOutput_Extended
-{
-    float3 tangent : TANGENT0;
-    float3 binormal : NORMAL1;
-    float2 uv2 : TEXCOORD1;
-};
-#endif //VARIANT_EXTENDED
-
-#ifdef FEATURE_LIGHT
-
-/****************** LIGHTING: ******************/
-
-#ifdef FEATURE_LIGHT_AMBIENT
-half3 CalculateAmbientLight(const in float3 _worldNormal)
-{
-    const half dotY = (half)dot(_worldNormal, float3(0, 1, 0));
-    const half wLow = max(-dotY, 0);
-    const half wHigh = max(dotY, 0);
-    const half wMid = 1.0 - wHigh - wLow;
-    return (wLow * (half4)ambientLightLow + wHigh * (half4)ambientLightHigh + wMid * (half4)ambientLightMid).xyz;
-}
-#endif //FEATURE_LIGHT_AMBIENT
-
-#ifdef FEATURE_LIGHT_LIGHTMAP
-half3 CalculateLightmaps(const in float2 _uv)
-{
-    return TexLightmap.Sample(SamplerMain, _uv);
-}
-#endif //FEATURE_LIGHT_LIGHTMAP
-
-#ifdef FEATURE_LIGHT_SOURCES
-#if FEATURE_LIGHT_MODEL == Phong
-half3 CalculatePhongLighting(const in Light _light, const in float3 _worldPosition, const in float3 _worldNormal)
-{
-    half3 lightIntens = (half3)(_light.lightColor * _light.lightIntensity);
-    float3 lightRayDir;
-
-    // Directional light:
-    if (_light.lightType == 2)
-    {
-        lightRayDir = _light.lightDirection;
-    }
-    // Point or Spot light:
-    else
-    {
-        const float3 lightOffset = _worldPosition - _light.lightPosition;
-        lightIntens /= (half)dot(lightOffset, lightOffset);
-        lightRayDir = normalize(lightOffset);
-
-        // Spot light angle:
-        if (_light.lightType == 1 && dot(_light.lightDirection, lightRayDir) < _light.lightSpotMinDot)
-        {
-            lightIntens = half3(0, 0, 0);
-        }
-    }
-
-    const half lightDot = max(-(half)dot(lightRayDir, _worldNormal), 0.0);
-    return lightIntens.xyz * lightDot;
-}
-//... (insert further lighting models here)
-#endif //FEATURE_LIGHT_MODEL == Phong
-
-#ifdef FEATURE_LIGHT_SHADOWMAPS
-#if defined(FEATURE_LIGHT_INDIRECT) && FEATURE_LIGHT_INDIRECT > 1
-half3 CalculateIndirectLightScatter(const in Light _light, const in float3 _worldPosition, const in float3 _surfaceNormal)
-{
-    static const int halfKernel = FEATURE_LIGHT_INDIRECT / 2;
-    static const half uvKernelSteps = 1.0 / 256;
-    static const float bounceAmount = 0.025;
-
-    // Determine shadow cascade for this pixel:
-    const float cameraDist = length(_worldPosition - cameraPosition.xyz);
-    const uint cascadeOffset = (uint)(2 * cameraDist / _light.shadowCascadeRange);
-    const uint cascadeIdx = min(cascadeOffset, _light.shadowCascades);
-    const uint shadowMapIdx = _light.shadowMapIdx + cascadeIdx;
-
-    const float4x4 mtxShadowWorld2Clip = BufShadowMatrices[2 * shadowMapIdx];
-    const float4x4 mtxShadowClip2World = BufShadowMatrices[2 * shadowMapIdx + 1];
-
-    // Add a bias to position along surface normal, to counter-act stair-stepping artifacts:
-    const float4 worldPosBiased = float4(_worldPosition + _surfaceNormal * _light.shadowBias, 1);
-
-    // Transform pixel position to light's clip space, then to UV space:
-    float4 shadowProj = mul(mtxShadowWorld2Clip, worldPosBiased);
-    shadowProj /= shadowProj.w;
-    const float2 shadowUv = float2(shadowProj.x + 1, 1 - shadowProj.y) * 0.5;
-
-    float lightBounceSum = 0.0;
-
-    for (int y = -halfKernel; y < halfKernel; ++y)
-    {
-        const half uvY = shadowUv.y + y * uvKernelSteps;
-        for (int x = -halfKernel; x < halfKernel; ++x)
-        {
-            const half uvX = shadowUv.x + x * uvKernelSteps;
-            const half3 uv = half3(uvX, uvY, _light.shadowMapIdx);
-
-            const half3 normal = TexShadowNormalMaps.Sample(SamplerShadowMaps, uv) * 2 - 1;
-            const half depth = TexShadowMaps.Sample(SamplerShadowMaps, uv);
-
-            const half4 posClipSpace = half4(uvX * 2 - 1, 1 - uvY * 2, depth, 1);
-            const float3 posWorld = mul(mtxShadowClip2World, posClipSpace).xyz;
-
-            // Determine approximate lighting at sampled point, pre-bounce:
-            const float3 lightOffset = posWorld - _light.lightPosition;
-            const float intensityPreBounce = max(-dot(lightOffset / length(lightOffset), normal), 0) / dot(lightOffset, lightOffset);
-
-            // Determine radiated lighting at center point, post-bounce:
-            const float3 offsetBounced = worldPosBiased.xyz - posWorld;
-            const float distSqBounced = dot(offsetBounced, offsetBounced);
-            const float intensityPostBounce = intensityPreBounce / distSqBounced;
-
-            lightBounceSum += dot(offsetBounced, _surfaceNormal) < 0 ? intensityPostBounce : 0;
-        }
-    }
-    lightBounceSum *= bounceAmount;
-
-    return lightBounceSum * _light.lightIntensity * _light.lightColor;
-}
-
-#endif //FEATURE_LIGHT_INDIRECT
-#define SHADOW_EDGE_FACE_SCALE 10.0
-
-#if defined(FEATURE_LIGHT_SHADOWMAPS_AA) && FEATURE_LIGHT_SHADOWMAPS_AA > 1
-    // MSAA offsets for shadow depth sampling:
-    #if FEATURE_LIGHT_SHADOWMAPS_AA == 2
-        static const float2 shadowSamplingOffsets[] =
-        {
-            { -0.5 / FEATURE_LIGHT_SHADOWMAPS_RES, -0.25 / FEATURE_LIGHT_SHADOWMAPS_RES },
-            {  0.5 / FEATURE_LIGHT_SHADOWMAPS_RES,  0.25 / FEATURE_LIGHT_SHADOWMAPS_RES }
-        };
-    #elif FEATURE_LIGHT_SHADOWMAPS_AA == 4
-        static const float2 shadowSamplingOffsets[] =
-        {
-            {  0, 0 },
-            {  0, 0.5 / FEATURE_LIGHT_SHADOWMAPS_RES },
-            { -0.25 / FEATURE_LIGHT_SHADOWMAPS_RES, -0.25 / FEATURE_LIGHT_SHADOWMAPS_RES },
-            {  0.25 / FEATURE_LIGHT_SHADOWMAPS_RES, -0.25 / FEATURE_LIGHT_SHADOWMAPS_RES },
-        };
-    #elif FEATURE_LIGHT_SHADOWMAPS_AA == 8
-        static const float2 shadowSamplingOffsets[] =
-        {
-            {  0, 0 },
-            {  0,  0.5 / FEATURE_LIGHT_SHADOWMAPS_RES },
-            {  0, -0.5 / FEATURE_LIGHT_SHADOWMAPS_RES },
-            {  0.5 / FEATURE_LIGHT_SHADOWMAPS_RES, 0 },
-            { -0.5 / FEATURE_LIGHT_SHADOWMAPS_RES, 0 },
-            { -0.25 / FEATURE_LIGHT_SHADOWMAPS_RES, 0.2 / FEATURE_LIGHT_SHADOWMAPS_RES },
-            { -0.25 / FEATURE_LIGHT_SHADOWMAPS_RES, -0.2 / FEATURE_LIGHT_SHADOWMAPS_RES },
-            {  0.25 / FEATURE_LIGHT_SHADOWMAPS_RES, 0.2 / FEATURE_LIGHT_SHADOWMAPS_RES },
-            {  0.25 / FEATURE_LIGHT_SHADOWMAPS_RES, -0.2 / FEATURE_LIGHT_SHADOWMAPS_RES },
-        };
-    #else
-        #error "Shadow sampling count FEATURE_LIGHT_SHADOWMAPS_AA can only be 2, 4 or 8"
-    #endif
-#endif
-
-half CalculateShadowMapLightWeight(const in Light _light, const in float3 _worldPosition, const in float3 _surfaceNormal)
-{
-    // Determine shadow cascade for this pixel:
-    const float cameraDist = length(_worldPosition - cameraPosition.xyz);
-    const uint cascadeOffset = (uint)(2 * cameraDist / _light.shadowCascadeRange);
-    const uint cascadeIdx = min(cascadeOffset, _light.shadowCascades);
-    const uint shadowMapIdx = _light.shadowMapIdx + cascadeIdx;
-
-    // Add a bias to position along surface normal, to counter-act stair-stepping artifacts:
-    const float4 worldPosBiased = float4(_worldPosition + _surfaceNormal * _light.shadowBias + _light.shadowDepthBias, 1);
-
-    // Transform pixel position to light's clip space, then to UV space:
-    float4 shadowProj = mul(BufShadowMatrices[2 * shadowMapIdx], worldPosBiased);
-    shadowProj /= shadowProj.w;
-    const float2 shadowUv = float2(shadowProj.x + 1, 1 - shadowProj.y) * 0.5;
-
-#if defined(FEATURE_LIGHT_SHADOWMAPS_AA) && FEATURE_LIGHT_SHADOWMAPS_AA > 1
-    // Calculate shadow depth by averaging from multiple samples:
-    static const half invShadowSampleCount = 1.0 / FEATURE_LIGHT_SHADOWMAPS_AA;
-    half lightWeight = 0;
-    for (uint i = 0; i < FEATURE_LIGHT_SHADOWMAPS_AA; ++i)
-    {
-        const float2 shadowSampleUv = shadowUv + shadowSamplingOffsets[i];
-        const half shadowDepth = TexShadowMaps.Sample(SamplerShadowMaps, float3(shadowSampleUv.x, shadowSampleUv.y, shadowMapIdx));
-        lightWeight += shadowDepth > shadowProj.z ? 1 : 0;
-    }
-    lightWeight *= invShadowSampleCount;
-#else
-    // Calculate shadow depth from a single sample:
-    const half shadowDepth = TexShadowMaps.Sample(SamplerShadowMaps, float3(shadowUv.x, shadowUv.y, shadowMapIdx));
-    half lightWeight = shadowDepth > shadowProj.z ? 1 : 0;
-#endif //FEATURE_LIGHT_SHADOWMAPS_AA
-    
-    // Fade shadows out near boundaries of UV/Depth space:
-    if (_light.lightType == 2 && shadowMapIdx == _light.shadowCascades)
-    {
-        const half3 edgeUv = half3(shadowUv, shadowProj.z) * SHADOW_EDGE_FACE_SCALE;
-        const half3 edgeMax = min(min(edgeUv, SHADOW_EDGE_FACE_SCALE - edgeUv), 1);
-        const half k = 1 - min(min(edgeMax.x, edgeMax.y), edgeMax.z);
-        lightWeight = lerp(lightWeight, 1.0, clamp(k, 0, 1));
-    }
-
-    return lightWeight;
-}
-#endif //FEATURE_LIGHT_SHADOWMAPS
-#endif //FEATURE_LIGHT_SOURCES
-
-half3 CalculateTotalLightIntensity(const in float3 _worldPosition, const in float3 _worldNormal, const in float3 _surfaceNormal, const in float2 _uv)
-{
-    #ifdef FEATURE_LIGHT_AMBIENT
-    half3 totalLightIntensity = CalculateAmbientLight(_worldNormal);
-    #else
-    half3 totalLightIntensity = half3(0, 0, 0);
-    #endif //FEATURE_LIGHT_AMBIENT
-
-    // Apply light maps:
-    #ifdef FEATURE_LIGHT_LIGHTMAP
-    totalLightIntensity += CalculateLightmaps(_uv);
-    #endif
-
-    #ifdef FEATURE_LIGHT_SOURCES
-    {
-        uint i = 0;
-        #ifdef FEATURE_LIGHT_SHADOWMAPS
-        // Shadow-casting light sources:
-        for (; i < shadowMappedLightCount; ++i)
-        {
-            Light light = BufLights[i];
-
-            const half3 lightIntensity = CalculatePhongLighting(light, _worldPosition, _worldNormal);
-            const half lightWeight = CalculateShadowMapLightWeight(light, _worldPosition, _surfaceNormal);
-            totalLightIntensity += lightIntensity * lightWeight;
-
-            #ifdef FEATURE_LIGHT_INDIRECT
-            totalLightIntensity += CalculateIndirectLightScatter(light, _worldPosition, _surfaceNormal);
-            #endif //FEATURE_LIGHT_INDIRECT
-        }
-        #else
-        uint shadowMappedLightCount = 0;
-        #endif //FEATURE_LIGHT_SHADOWMAPS
-        // Simple light sources:
-        for (i = shadowMappedLightCount; i < lightCount; ++i)
-        {
-            totalLightIntensity += CalculatePhongLighting(BufLights[i], _worldPosition, _worldNormal);
-        }
-    }
-    #endif //FEATURE_LIGHT_SOURCES
-
-    return totalLightIntensity;
-}
-
-#endif //FEATURE_LIGHT
-
-#ifdef FEATURE_NORMALS
-/******************* NORMALS: ******************/
-
-half3 UnpackNormalMap(const in half3 _texNormal)
-{
-    // Unpack direction vector from normal map colors:
-    return half3(_texNormal.x * 2 - 1, _texNormal.z, _texNormal.y * 2 - 1); // NOTE: Texture normals are expected to be in OpenGL standard.
-}
-
-half3 ApplyNormalMap(const in half3 _worldNormal, const in half3 _worldTangent, const in half3 _worldBinormal, in half3 _texNormal)
-{
-    _texNormal = UnpackNormalMap(_texNormal);
-
-    // Create rotation matrix, projecting from flat surface (UV) space to surface in world space:
-    const half3x3 mtxNormalRot =
-    {
-        _worldBinormal.x, _worldNormal.x, _worldTangent.x,
-        _worldBinormal.y, _worldNormal.y, _worldTangent.y,
-        _worldBinormal.z, _worldNormal.z, _worldTangent.z,
-    };
-    const half3 normal = mul(mtxNormalRot, _texNormal);
-    return normal;
-}
-#endif //FEATURE_NORMALS
-
-#ifdef FEATURE_PARALLAX
-/****************** PARALLAX: ******************/
-
-float3 ProjectOnPlane(const float3 _vector, const float3 _planeNormal)
-{
-    return _vector - dot(_vector, _planeNormal);
-}
-
-half2 WorldOffset2Pixel(
-    const float3 _worldOffset,
-    const in float3 _worldPosition,
-    const in half2 _uv)
-{
-    const float3 ddxPos = ddx(_worldPosition);
-    const float3 ddyPos = ddy(_worldPosition);
-    const float invWorldPerPixelX = 1.0 / length(ddxPos);
-    const float invWorldPerPixelY = 1.0 / length(ddyPos);
-    return
-        ddx(_uv) * (half)dot(_worldOffset, ddxPos * invWorldPerPixelX) +
-        ddy(_uv) * (half)dot(_worldOffset, ddyPos * invWorldPerPixelY);
-}
-
-half2 ApplyParallaxMap(const in float3 _worldPosition, const in float3 _surfaceNormal, const half2 _uv)
-{
-    static const float MAX_DEPTH = 0.05;
-
-    const float3 viewOffset = _worldPosition - cameraPosition.xyz;
-    
-#ifdef FEATURE_PARALLAX_FULL
-    static const uint MAX_ITERATIONS = 6;
-
-    const float invViewDist = 1.0 / length(viewOffset);
-    const float3 viewDir = viewOffset * invViewDist;
-
-    const float3 maxRayOffset = viewDir * abs(MAX_DEPTH / dot(viewDir, _surfaceNormal));
-    const float3 maxSurfaceOffset = ProjectOnPlane(maxRayOffset, _surfaceNormal);
-    const half2 maxUvOffset = WorldOffset2Pixel(maxSurfaceOffset, _worldPosition, _uv) * 200 * invViewDist;
-
-    half2 uvOffset;
-    half2 curUV = _uv;
-    float minK = 0.0;
-    float maxK = 1.0;
-
-    for (uint i = 0; i < MAX_ITERATIONS; ++i)
-    {
-        float k = 0.5 * (minK + maxK);
-        
-        const float3 rayOffset = k * maxRayOffset;
-        uvOffset = k * maxUvOffset;
-        curUV = _uv + uvOffset;
-
-        const half sampledHeight = (1.0 - TexParallax.Sample(SamplerMain, curUV)) * MAX_DEPTH;
-        const half rayHeight = abs(dot(rayOffset, _surfaceNormal));
-
-        if (sampledHeight > rayHeight)
-        {
-            minK = k;
-        }
-        else
-        {
-            maxK = k;
-        }
-    }
-    return curUV + normalize(uvOffset) * 0.002;
-#else
-    const float3 surfaceDir = normalize(ProjectOnPlane(viewOffset, _surfaceNormal));
-    
-    const half depth = TexParallax.Sample(SamplerMain, _uv) * MAX_DEPTH;
-
-    return _uv - WorldOffset2Pixel(surfaceDir * depth, _worldPosition, _uv) * 100;
-#endif //FEATURE_PARALLAX_FULL
-}
-#endif //FEATURE_PARALLAX
-
-/******************* SHADERS: ******************/
-
-half4 Main_Pixel(in VertexOutput_Basic inputBasic) : SV_Target0
-{
-    #ifdef FEATURE_PARALLAX
-    // Recalculate UV from parallax map:
-    float2 uv = ApplyParallaxMap(inputBasic.worldPosition, inputBasic.normal, inputBasic.uv);
-    #else
-    float2 uv = inputBasic.uv;
-    #endif //FEATURE_PARALLAX
-
-    #if FEATURE_ALBEDO_TEXTURE == 1
-    // Sample base color from main texture:
-    half4 albedo = TexMain.Sample(SamplerMain, uv);
-    #else
-    half4 albedo = FEATURE_ALBEDO_COLOR;
-    #endif //FEATURE_ALBEDO_TEXTURE == 1
-
-    #ifdef FEATURE_NORMALS
-    // Calculate normals from normal map:
-    half3 normal = TexNormal.Sample(SamplerMain, uv);
-    normal = ApplyNormalMap(inputBasic.normal, half3(0, 0, 1), half3(1, 0, 0), normal);
-    #else
-    half3 normal = inputBasic.normal;
-    #endif //FEATURE_NORMALS
-
-    #ifdef FEATURE_LIGHT
-    // Apply basic phong lighting:
-    const half3 totalLightIntensity = CalculateTotalLightIntensity(inputBasic.worldPosition, normal, inputBasic.normal, uv);
-
-    albedo *= half4(totalLightIntensity, 1);
-    #endif //FEATURE_LIGHT
-
-    // Return final color:
-    return albedo;
-};
-
-#ifdef VARIANT_EXTENDED
-half4 Main_Pixel_Ext(in VertexOutput_Basic inputBasic, in VertexOutput_Extended inputExt) : SV_Target0
-{
-    #ifdef FEATURE_PARALLAX
-    // Recalculate UV from parallax map:
-    float2 uv = ApplyParallaxMap(inputBasic.worldPosition, inputBasic.normal, inputBasic.uv);
-    #else
-    float2 uv = inputBasic.uv;
-    #endif //FEATURE_PARALLAX
-
-    #if FEATURE_ALBEDO_TEXTURE == 1
-    // Sample base color from main texture:
-    half4 albedo = TexMain.Sample(SamplerMain, uv);
-    #else
-    half4 albedo = FEATURE_ALBEDO_COLOR;
-    #endif //FEATURE_ALBEDO_TEXTURE == 1
-
-    #ifdef FEATURE_NORMALS
-    // Calculate normals from normal map:
-    half3 normal = TexNormal.Sample(SamplerMain, uv);
-    normal = ApplyNormalMap(inputBasic.normal, inputExt.tangent, inputExt.binormal, normal);
-    #else
-    half3 normal = inputBasic.normal;
-    #endif //FEATURE_NORMALS
-
-    #ifdef FEATURE_LIGHT
-    // Apply basic phong lighting:
-    const half3 totalLightIntensity = CalculateTotalLightIntensity(inputBasic.worldPosition, normal, inputBasic.normal, uv);
-
-    albedo *= half4(totalLightIntensity, 1);
-    #endif //FEATURE_LIGHT
-
-    // Return final color:
-    return albedo;
-};
-#endif //VARIANT_EXTENDED
-########
-#include <metal_stdlib>
-using namespace metal;
-
-/******************* DEFINES: ******************/
-
-// Albedo:
-#define FEATURE_ALBEDO_TEXTURE 1                // Whether to initialize albedo color from main texture. If false, a color literal is used
-#define FEATURE_ALBEDO_COLOR half4(1, 1, 1, 1)  // Color literal from which albedo may be initialized
-
-// Normals:
-#define FEATURE_NORMALS                         // Whether to use normal maps in all further shading
-
-// Lighting:
-#define FEATURE_LIGHT                           // Whether to apply lighting
-#define FEATURE_LIGHT_AMBIENT                   // Whether to add directional ambient intensity to base lighting
-#define FEATURE_LIGHT_LIGHTMAPS                 // Whether to add light map intensity to base lighting
-#define FEATURE_LIGHT_SOURCES                   // Whether to use light sources from the scene to light up the object
-#define FEATURE_LIGHT_MODEL Phong               // Which lighting model to use for light sources. Default is "Phong"
-#define FEATURE_LIGHT_SHADOWMAPS                // Whether to use shadow maps to mask out light rays coming from light sources
-
-// Variants:
-#define VARIANT_EXTENDED                        // Whether to always create a shader variant using extended surface data
-#define VARIANT_BLENDSHAPES                     // Whether to always create a shader variant using blend shape data
-#define VARIANT_ANIMATED                        // Whether to always create a shader variant using bone animation data    
-
-#if FEATURE_ALBEDO_TEXTURE == 0
-    #ifndef FEATURE_ALBEDO_COLOR
-        #define FEATURE_ALBEDO_COLOR half4(1, 1, 1, 1)
-    #endif
-#endif
-
-/****************** CONSTANTS: *****************/
-
-#ifdef FEATURE_LIGHT_AMBIENT
-// Constant buffer containing all scene-wide settings:
-struct CBScene
-{
-    // Scene lighting:
-    float4 ambientLightLow;         // Ambient light color and intensity coming from bottom-up.
-    float4 ambientLightMid;         // Ambient light color and intensity coming from all sides.
-    float4 ambientLightHigh;        // Ambient light color and intensity coming from top-down.
-    float shadowFadeStart;          // Percentage of the shadow distance in projection space where they start fading out.
-};
-#endif //FEATURE_LIGHT_AMBIENT
-
-#ifdef FEATURE_LIGHT_SOURCES
-// Constant buffer containing all settings that apply for everything drawn by currently active camera:
-struct CBCamera
-{
-    // Camera vectors & matrices:
-    float4x4 mtxWorld2Clip;         // Camera's full projection matrix, transforming from world space to clip space coordinates.
-    float4 cameraPosition;          // Camera position, in world space.
-    float4 cameraDirection;         // Camera forward facing direction, in world space.
-    float4x4 mtxCameraMotion;       // Camera movement matrix, encoding motion/transformation from previous to current frame.
-
-	// Camera parameters:
-    uint cameraIdx;                 // Index of the currently drawing camera.
-    uint resolutionX;               // Render target width, in pixels.
-    uint resolutionY;               // Render target height, in pixels.
-    float nearClipPlane;            // Camera's near clipping plane distance.
-    float farClipPlane;             // Camera's far clipping plane distance.
-
-    // Per-camera lighting:
-    uint lightCount;                // Total number of lights affecting this camera.
-    uint shadowMappedLightCount;    // Total number of lights that have a layer of the shadow map texture array assigned.
-};
-#endif //FEATURE_LIGHT_SOURCES
-
-struct CBObject
-{
-    float4x4 mtxLocal2World;    // Object world matrix, transforming vertices from model space to world space.
-    float3 worldPosition;       // World space position of the object.
-    float boundingRadius;       // Bounding sphere radius of the object.
-};
-
-/****************** RESOURCES: *****************/
-
-#ifdef FEATURE_LIGHT_SOURCES
-struct Light
-{
-    float3 lightColor;
-    float lightIntensity;
-    float3 lightPosition;
-    uint lightType;
-    float3 lightDirection;
-    float lightSpotMinDot;
-    float4x4 mtxShadowWorld2Clip;
-    uint shadowMapIdx;
-    float shadowBias;
-    float shadowDepthBias;
-    uint shadowCascades;
-    float shadowCascadeRange;
-};
-#endif
-
-/**************** VERTEX OUTPUT: ***************/
-
-struct VertexOutput_Basic
-{
-    float4 position         [[ position ]];
-    float3 worldPosition    [[ user(worldPosition) ]];
-    float3 normal           [[ user(normal) ]];
-    float2 uv               [[ user(uv) ]];
-};
-
-#ifdef VARIANT_EXTENDED
-struct VertexOutput_Extended
-{
-    float4 position         [[ position ]];
-    float3 worldPosition    [[ user(worldPosition) ]];
-    float3 normal           [[ user(normal) ]];
-    float2 uv               [[ user(uv) ]];
-
-    float3 tangent          [[ user(tangent) ]];
-    float3 binormal         [[ user(binormal) ]];
-    float2 uv2              [[ user(uv2) ]];
-};
-#else
-#endif //VARIANT_EXTENDED
-
-#ifdef FEATURE_LIGHT
-/****************** LIGHTING: ******************/
-
-half3 CalculateAmbientLight(
-    device const CBScene& cbScene,
-    const float3& _normal)
-{
-    const half dotY = (half)dot(_normal, float3(0, 1, 0));
-    const half wLow = max(-dotY, (half)0);
-    const half wHigh = max(dotY, (half)0);
-    const half wMid = 1 - wHigh - wLow;
-    return (wLow * (half4)cbScene.ambientLightLow + wHigh * (half4)cbScene.ambientLightHigh + wMid * (half4)cbScene.ambientLightMid).xyz;
-}
-
-#else
-#endif //FEATURE_LIGHT
-
-#ifdef FEATURE_NORMALS
-/******************* NORMALS: ******************/
-
-half3 UnpackNormalMap(const half3& _texNormal)
-{
-    // Unpack direction vector from normal map colors:
-    return half3(_texNormal.x * 2 - 1, _texNormal.z, _texNormal.y * 2 - 1); // NOTE: Texture normals are expected to be in OpenGL standard.
-}
-
-half3 ApplyNormalMap(const half3& _worldNormal, const half3& _worldTangent, const half3& _worldBinormal, half3 _texNormal)
-{
-    _texNormal = UnpackNormalMap(_texNormal);
-
-    // Create rotation matrix, projecting from flat surface (UV) space to surface in world space:
-    const half3x3 mtxNormalRot =
-    {
-        _worldBinormal.x, _worldNormal.x, _worldTangent.x,
-        _worldBinormal.y, _worldNormal.y, _worldTangent.y,
-        _worldBinormal.z, _worldNormal.z, _worldTangent.z,
-    };
-    const half3 normal = mtxNormalRot * _texNormal;
-    return normal;
-}
-#else
-#endif //FEATURE_NORMALS
-
-/******************* SHADERS: ******************/
-
-half4 fragment Main_Pixel(
-    VertexOutput_Basic inputBasic                       [[ stage_in ]],
-    device const CBScene& cbScene                       [[ buffer( 0 ) ]],
-    device const CBCamera& cbCamera                     [[ buffer( 1 ) ]],
-    device const CBObject& cbObject                     [[ buffer( 2 ) ]],
-    device const Light* BufLights                       [[ buffer( 3 ) ]],
-    texture2d_array<half, access::sample> TexShadowMaps [[ texture( 0 ) ]])
-{
-    half4 albedo = {1, 1, 1, 1};
-
-    // Apply basic phong lighting:
-    half3 totalLightIntensity = CalculateAmbientLight(cbScene, inputBasic.normal);
-    for (uint i = 0; i < cbCamera.lightCount; ++i)
-    {
-        device const Light& light = BufLights[i];
-
-        half3 lightIntens = (half3)(light.lightColor * light.lightIntensity);
-        float3 lightRayDir;
-
-        // Directional light:
-        if (light.lightType == 2)
-        {
-            lightRayDir = light.lightDirection;
-        }
-        // Point or Spot light:
-        else
-        {
-            const float3 lightOffset = inputBasic.worldPosition - light.lightPosition;
-            lightIntens /= (half)dot(lightOffset, lightOffset);
-            lightRayDir = normalize(lightOffset);
-
-            // Spot light angle:
-            if (light.lightType == 1 && dot(light.lightDirection, lightRayDir) < light.lightSpotMinDot)
-            {
-                lightIntens = half3(0, 0, 0);
-            }
-        }
-
-        const half lightDot = max(-(half)dot(lightRayDir, inputBasic.normal), (half)0.0);
-        totalLightIntensity += lightIntens.xyz * lightDot;
-    }
-    albedo *= half4(totalLightIntensity, 1);
-
-    // Return final color:
-    return albedo;
-};
-########
-          DXBCr√nCˆâ,Ü?ﬂqB∂1   ¥     8   H   ¸   8  L  h  SFI0           ISG1¨             à                            î                           ö                           °                       SV_Position COLOR NORMAL TEXCOORD   OSG14             (       @                 SV_Target   PSV0  4                       ˇˇˇˇ                                                                                                                                                                                                                                                               $    COLOR NORMAL TEXCOORD Main_Pixel                      D         C          C          B            D                                                           HASH       Ù∆õ¬KCÜßÑï_ìI6DXILD  c   —  DXIL     ,  BC¿ﬁ!  »  Ç        Å#ëA»I29íÑ%ãbÄEBíB‰28K
-2ràHê CFà• 2B‰Hêë#ƒPAQÅå·ÉÂä9FQ     å‡ˇˇˇˇ@®Ñˇˇˇˇ m0Üˇˇˇˇ 	® I     Ç`B L    â     2"»	 dÖì#§Ñì#„Ñ°êLéåÑ‰L®¬@	 òò# É9§ÅP ê° ÅP‚¶·Ú'Ï!$%§ïò¸‚∂Q1*‹3\˛Ñ=Ñ‰á@3,
-ÖQå¡`0 jîa@–£ ¬`0)∆Ä04)áÇ¿ 
-™‹4\˛Ñ=Ñ‰ØÑ¥ìè‹6*ÅPéÅA Ñ)ƒÄ0ê¶Å@ú£ÜÀü∞áê|n£äïò¸‚∂1Ö˙5\˛Ñ=Ñ‰sU¨ƒ‰#∑çÅ@(Dà¿ ê®¬`0 “AP°@ òË40å0«HSD	ì_"∆1!F5PT¬Ä0PfÍ∆Å¬aÊ¡fÅ‰°∆ÅÍA ÅD°Ã¡ A¯Ä“·–Å¸ +bÕT„¿·0Û‡¥P¯@ı Â §
-Ú ·ê|Ä·¿Ê‡z†Ìê0ø@˘ ÂÄ¬L⁄8∞C8Ã√<∏-î>–C=»C9»)ÑÇ<»C8‰†C8∞É9¯.z#Cƒf∫txáy†vá|xáz†7váyò7òzêázz®y(rÖz0s(y‡Évzêát¿>0vxáp†6 :`0†? ?@Ååf3≈¡8∞C8Ã√<∏-î>–C=»C9»)ÑÇ<»C8‰ÿC9å=ºÉ<:Ñ;òÄ¡¯¯ÅËA;§<Ã√/–C>¿C9†Ä0ìå;Ñ√<ÃÉ–B9‡=‘É<îÉêB(»É<ÑC>Å=î√8–√;»†C8∞É9∞ÃÅÄÅ AU#€Ll0ÏÛ0n@ÂÄÙPÚPr@
-|`Â0ÙÚ¿ËÏ`l t‡`‡z†Ìê0ø@˘ ÂÄ¬La0ÏÛ0n@ÂÄÙPÚPr@
-|`Â0ÙÚ¿ËÏ`l t‡`‡Hà·(7å;Ñ√<ÃÉ–B9‡=‘É<îÉêÿC9å=ºÉ<:Ñ;òÄ¡¯¯ÅËA;§<Ã√/–C>¿C9†Ä0Så;Ñ√<ÃÉ–B9‡=‘É<îÉêÿC9å=ºÉ<:Ñ;òÄ¡¯¯T;‚Õ„¿·0Û‡¥P¯@ı Â §¿ËÏ`~†z–È ÛÙêP( ÃTç;Ñ√<ÃÉ–B9‡=‘É<îÉê†C8∞É9¯>˙›¡m¨@4"b±ÿÄÇ7é4- ÊPìœm¿ÄY,&#ÉÅ@√õ§)¢Ñ…gÊYààùÄâ@Åä	Aò# Ö)    r¿át`á6háyhr¿áØPm–zPm z0r†s mêq†s mêx†s mêq`z0r–È0r†s mêv@z`t–Êv†s m`s z0r–Ê`t†v@m‡x†q`z0r†v@Cû           Ü<        y         Ú4@        0‰yÄ        `»       ¿êg        Ä!O¿        CÄ       Ü<        y8         Ú|@        0‰         Úê        yŒ Ä       ≤@    2òLêå	&G∆C"î@D1å FÅîCIAB)Z·îJ¢
-a†
-ÑêB∞ ¢Õ –mÄt3 ‘õ ‡ 	g à8@∆ :é9  ¿Û<¿Û<¿ÛPk  y  ù   LêFDèoÏÌM$∆«EÜf∆eÜe,«∆&g&eCLàgÇ@@ÑÅò —a0(¿ÕMi√Ä$ƒÅò&m &5A ™¬lH¶Yñ¡Y†	ò¡Å∞&ƒµAX®… 5À0LK5A ∞	ú¡Å»6C∂!π∞f!g—&wÄÇkñkòñjÇ@h=HÉâ˜5ã7\K5A ∂	B®¡Ü$ƒ†Y¬`∏ñjÇ 
-k∞!I»†Yí·Z™GdmåALDÅ&∑YŒ†YñÄ	)¥¡ÅË6 É4À0¨∞AH6ò òÇl@7hñeXÄ»‡Õ2∞Ax8ÿ@ò–q0A8Ö7ÿÃ¡A ®4Ö•π}A•·ï±qô≤˙ÇzõK£K{sõ ﬂ° É¡2A(¬`ÇPà¡Üeπ<»=ÿÉa> X=1=IMä1ÿ ”Üe<‡=¯É!> NORMALñKÄÙ‡Ü<∏¯ àPa==Imb√BêÅ¸¡î¬¢BaLÅ…î’Uò‹Y›° É	·mUÿ∞,®Ä©†|0Ï¡¬´∞!`Ö√)¥0A@Ö2ÿ ,Ø∞°®;p9ÄÖ*llvm.identSÇ†
-ûã]ô‹\⁄õ€îÄhBÜÁb∆fW&7%0Íê·πÃ°Öëï…5Ωëï±M	í2dx.resourcesSÇ8®CÜÁbóVvóD6EFW6%òÉ:dx.entryPointsSX  y  Q   3Äƒ·f=àC8Ñ√åBÄyxsòqÊ ÌÙÄ3B¬¡Œ°f0=àC8ÑÉÃ=»C=å=Ãxåtp{yHáppzpvxáp áÃÏê·0n0„P3ƒﬁ!ÿ!¬af0â;ºÉ;–C9¥<ºÉ<Ñ;Ãv`{h7hárh7Äápêáp`v(v¯vxáwÄá_áqáròáyòÅ,ÓÓ‡ı¿Ï0b»°‰°Ã°‰°‹a !ƒÅ a÷êC9»C9òC9»C9∏√8îC8à;î√/ºÉ<¸Ç;‘;∞√ƒ!|pz(ávÄá—C¯‡‰ Á‡ˆÚ¿·êÔPÙ0ÉÅ»‹@‰°¬a‹@‰   q   =   †ò “¸)rã%@√Â;è a~q€¶ óÔ<~Ä4@Ñ˘»m€¬6\æÛ¯B@ï0îÑò_‹∂1l√Â;è/TQQÈ CIÄÄ˘»mõÉ4\æÛ¯BD Õ∞f‡óÔ<˛‡L∂_‹∂8√Â;è?8”Ì∑m”p˘Œ„/0àÕCM~q€vpóÔ<~XUDT:¿‡∑m◊p˘Œ„GÄµQEAD•>r€6 óÔ<æ0œB¯≈mõ@5\æÛ¯“‰DJM5˘≈m[É4\æÛ¯Ma~q€FóÔ<>’ Ê∑  a   Í  U,   *   d†B9îG	°†
-Æÿ™†∞
-ß¿J¶Ä
-§,
-5†L
-¶,ä´‹f JÆÏ
-© àc≠9Á¨7F Ç àsc Ç`7F Ç àÛ¬Ç ÿc ¬tåÄ ‚›Ç†
-cÔLöp7F–ösN{c Ç2åÄ Ç†0F Ç àˇ¬Ç ¸çÄ Ç`00F Ç à#     #	 Ç`p∞pÒ+∞Bå$ Ç¡ƒ÷§@
-n0bê  g ôòÇ)º¡àAÄ ú¡,h© #	 Ç`p¥∞ÅÇ*»Bå$ Ç¡‘
-¥@r0bê  g`ù(ƒB,Ã¡àAÄ ú¡-x•`∂@#	 Ç`p∏ô¬,ÃBå$ Ç¡‰ê.‡Çå$ Ç¡ËBîB-‘¬å$ ÇÅÅØê∂p
-c0bê  F:¿Ç.‹Çê¡àAÄ Í≥Ä©P#	 Ç``¨É,–B.‡Åå$ ÇÅ¡≥P∫†
-g0bê  F;–¬/Ï+†¡àAÄ ÓP‡¿{ê#	 Ç``ºÉ-ÑC/¥Çå Ç¡gi†‹¬hB å&¡h¬ ÿ1ƒ«é!>vÒ±aêèÉ|L‡c!¯å Ç¡ì{òÙ1%êè)Ç|L‰3b∞  Q?Ù¡ óUôÙ10 É$‰!∞¿êè	Ü|l0‰3b∞  —Hå¬ ∑ƒ«!>FÒ10 É%V¡10 É'%X¡10 ÉG%Z¡10 Ég%^!F ¡‡a	XÉ A0xZ"¬¿C>fÚ±@Äèá|L‡3b`  œL‘B`|–«E>¶(Ú±@Äè-ã|L‡3b`  èNB`£–gƒ¿ @û¯Ö;10 Éß'¿·L±‰cã%c,˘å, ÇA‡¿m⁄ Ú1¡êœàÅÄ <dÅ0b`  OY§√ÿ≤…«òM>÷lÚ1X É-–Å∆@!∞¿êè	Ü|LP‡cÇ£ÉpêèÉ|L‰3KTpúA0P1–p¡@Å*¿&± ‰cA»«Ñ:êèu #˘X°»«[Äè	∂ üÉ A0h¸‚∆ÅÑ¿Ã¡-‹bÃa4! ÏÇ¯XÚ1X É4@bQ]»\10 ÉG4Ë"é·õnx¶`∫aÇõˆ√A^Ä¡,É#	 Ç`0ôFM<Œ„å Ç¡ì1X§Ú±@êèI¸ ˘ÿ0¡«Ñ	># Ç`–ƒÜJ–√;A>‰ChÑÜK‰√hB å&¡h¬ å&√à¡Ä 4∂Ò˙@á·˛`¶1˛0ö £	B0ö06åÑ|,0	¯QÚ± %‡3bÄ  d@=a≈0bÄ  dP>aFIå  Çÿ∆Oÿ√aF–1X É<¿ÇîH	î∞ó‚3bp  öoD†# Ç`†˝FO+a-ƒ«Ç!># Ç`Å«Xånå&¿hÇå&Çà|lH‰cÉ"üÉ A0¯ŒC-TB7F`4AF¡G>6<Ú±íè
-|lP‡cÉüÉ A0¯‚É.h¢=F`4AF¡K>6\Ú±ìè)|L‡c  üÉ A0˝ãü8ç—Ñ@nÍfú!ò% *ÜTbòa†bH%Ü*ÜTbòa†ÇH%F~Ü A0®LD5“"–è›òè—Ñ MÇ—ÑA1P ÉJE\£-ä˛Ëç˚MÄ A0®X6ﬁ‚®ç»è—Ñ MÇ—ÑA1P ÏEhc.ñﬁè˛MÄ A0®dƒ6Í¢·çÛ¯è—Ñ MÇ—ÑA1P ¨Ft#/"ÒHèMÄ A0®pÑ7ˆbëı(ë—Ñ 1P ,G|£/™ıhèMÄ A0®x<˛‚ ç˜Hë—Ñ 1P É Gƒ#42ôèMÄ—!Mª6˘∂…«≤M>√çÄ¡,ÉQ#
- Ç`Pôâz§F–G~Ã»hB XhlÒ±–ÿ‚c°±≈gƒ`@¢6ièA!0%†è)}LË3b`  èúËa"˘ÿÄ»g∏A÷F ¡ ≤˚0¯àAé‚´!–ÈÜXÇÈÒXÑÈÜÒXÜYc†bÄ¬(*8 åb†bÄ¬(*Z ¥b†b†B+*Z ¥bƒ`@"QëAÃ°∆¡‚#àœà¡Ä h†‚{Xê»«ÑD>6$Ú18 ÉOTJƒ<Êd4! FÑ`4al<Ü¯ÿxÒ±Ò‚c√ ˘ò¿«B>&10 ÉßVn$∞ D‰c¡–Á¬å Ç7+hÏA† ˆÙ!˙êèÖ}»«˙ÄèÙË>6¸|l¯¯ÿ)%Wnƒ@@*q1ì	l≈N^e4! FÑ`4aFàaƒ@@™sY1‡dOhe4! FÑ`4aFàaƒ@@*vÅìYÏTre4! FÑ`4aFàaƒ@@™x©Å˙§T|e4! FÑ`4aFà¡&L># Ç`@Ò¢'å  Ç»Àû,X`¡≥8˘å  Ç‘ãüH\0bÄ  d`/‚pÅ
-t,˘å  Ç‰ã®T`å  ÇËÀ®D`X–@«82êœàÄ êAøò
-F¡àÄ êÅøú
-EÅt¨	Ëcä@;˙ÿ@'±:‚cBû»«=ëè	§L>áÉ1x ÉÜfZÖN‚d>!íâ>MÄ·à@æÈ?Èì¿íVÅè%ØüÉ A0htfVÙ‰NÑ‡ïQô[ï—Ñ é ·õn ïQ	,8‡cA™»g∏°B
-ùe8ê¿*YëèU≥"√bE>&+C|lVÜ¯≠Ò18 Mlƒ≈F ¡@õq1ÜÉ A0–»Ü\åaƒ‡ @¥≤)óAVF ¡@3sfeƒ‡ @¥≥9óÅVF ¡@CtÑÉ A0–“&]¡n%àœà¡Ä hkì.¡≠å ÇÅ∆6Ï‰äÈ
-˘X`¡gñ ®Ñ√{á@>ˆÇ|Lê¯T-∏Õé( ÇAu7˚¬+¡⁄¨Ÿå&¿hÇå&¬àÅÄ T{Û/‡RêÃÀ†ÕhB å&¡h¬ å( ÇAı7#C.I Ã€å&¿hÇå&¬àÅÄ T£s2Ë“ºÃÕ¿ÕhB å&¡h¬ 9∞É|F ¡ÄDge¿ÅÇ A0 É—a^`á¿\Äéù<»gƒ @»¿t^f‡!1@ 28ò˘x,ÿËX:–É|F ¡ÄTgf ÅÇ A0 É’°ôp†á¿Ç^Äé%}ÃËc»¿«BFàè	%#LF>≥…@≈`bHH,Ñ¨!%±\00bF>ô%P*%πe†Ç‡µ‰îfÅÕ»«Ç>«É1x É}¬FeJF8ò¡‹)òMÄ—!MjF>6ÿå|l∏˘ÿ†3±ag‡cœ¿gƒ‡@˘Yôy&ZtF|ƒÁmtf4! ÃÈ˘X 6±Íg‰c>ƒ«>êœàÄ ê¡˚‡M¡àÄ ê¸‰çÅs ;˛@># Ç`@Û√7|`# Ç`@Ù”7y∞ÿtl˘å  Ç‹Ë¸Åå  Ç‡OË¡Xê–±d>‚c∆|ƒ«Ü˘àèÉ|l‰cÅ #˘ò¿gƒ¿ @ûjù¿íÄ>ñÙ±d†œà¡Ä D.‰:ÉÑ|÷7A|F ¡@c!’	fƒ`@¢äù«iß±∫»‚cua≈«Íbäœà¡Ä D5T;ÉB`A!;˙å, ÇAÑC∏cÑ‹ƒ‹G°C|”ÉËÏ|ld√Å
-Å¡,√¢&
-4Ç·ÜÄÖ¿`ñÅI€vêè=cÅèŸÔ»«ÇD>à|L‡˘ÿ¿#Ú±cÄè…√ C¯ôÑå ÇÅîQ˙®é¸å&¬p√ê¡,—≥Œ@≈ NÇ”T‚$8Õ@≈ NÇ”å ÇÅ¨—˚¿˛å&¬hÇ7Ã2<T0K TÒ 9œ@≈íÛTÒ 9œ@Ûå( ÇAÖG¸≥;µPç&¿hÇå&¬àÅÄ T|BøSº—•—hB å( ÇAÂG">«	Õ–ç( ÇÊG#$>…ç&¿àÅÄ T°TB‰£¨êπ—hB å&¡h¬ ¬»«F>¶0Ún@Óf§(1P É*ïZà}§‚!;MÄ—ÑFMpÇ—Ñ∞Û	‚cÁ3ƒ«Œßàœà¡Ä D≥4CÉB`M@k˙X3–gƒ¿ @\#¬D>& Ú±ëœpCK`0b∞  /ÒvYƒ GÒ’Ët√	-¡t
--¬tC
--√,Å4P1ÿdDÉ@F4P1ÿdDÉ(@Z4P1à§EÉ(@Z4b∞  :°— ,≥2)c7ƒgƒ‡ @4s"£@Ü,H‰cB"˘ÿÄ±‡c¿ß‡ú`ƒ‡ @ƒ`ùﬁÜh4!ÜÜÄf†)ò%†*ñpúi†b`	«ô*ñpú…¥ëèh#–F>#	 Ç`Ä¯S9µS;˘“0bê  à?ïS;µ+	#	 Ç`Ä¯S9µS;ıR0bê  à?ïS;µ8°       DXBC≤¢»†ﬂ∞°¬.3Æ\¡f   l      8   H   d  †  $  @  SFI0           ISG1            Ë                            Ù                           ˙                                                                               
-                          ˙                      SV_Position COLOR NORMAL TEXCOORD TANGENT   OSG14             (       @                 SV_Target   PSV0|  4                       ˇˇˇˇ                    /                                                                                                                                                                                                                                           @    COLOR NORMAL TEXCOORD TANGENT NORMAL TEXCOORD Main_Pixel_Ext                         D         C          C          B          C         C   &      b            D                                                                                     HASH       £v˛P Rì@
-¨â„¥›DXIL$  c   	  DXIL       BC¿ﬁ!     Ç        Å#ëA»I29íÑ%ãbÄEBíB‰28K
-2ràHê CFà• 2B‰Hêë#ƒPAQÅå·ÉÂä9FQ     å‡ˇˇˇˇ@®Ñˇˇˇˇ m0Üˇˇˇˇ 	® I     Ç`B L    â     2"»	 dÖì#§Ñì#„Ñ°êLéåÑ‰L®¬@	 òò# É9§ÅP ê° ÅP‚¶·Ú'Ï!$%§ïò¸‚∂Q1*‹3\˛Ñ=Ñ‰á@3,
-ÖQå¡`0 jîa@–£ ¬`0)∆Ä04)áÇ¿ 
-™‹4\˛Ñ=Ñ‰ØÑ¥ìè‹6*ÅPéÅA Ñ)ƒÄ0ê¶Å@ú£ÜÀü∞áê|n£äïò¸‚∂1Ö˙5\˛Ñ=Ñ‰sU¨ƒ‰#∑çÅ@(Dà¿ ê®¬`0 “AP°@ òË40å0«HSD	ì_"∆1!F5PT¬Ä0PfÍ∆Å¬aÊ¡fÅ‰°∆ÅÍA ÅD°Ã¡ A¯Ä“·–Å¸ +bÕT„¿·0Û‡¥P¯@ı Â §
-Ú ·ê|Ä·¿Ê‡z†Ìê0ø@˘ ÂÄ¬L⁄8∞C8Ã√<∏-î>–C=»C9»)ÑÇ<»C8‰†C8∞É9¯.z#Cƒf∫txáy†vá|xáz†7váyò7òzêázz®y(rÖz0s(y‡Évzêát¿>0vxáp†6 :`0†? ?@Ååf3≈¡8∞C8Ã√<∏-î>–C=»C9»)ÑÇ<»C8‰ÿC9å=ºÉ<:Ñ;òÄ¡¯¯ÅËA;§<Ã√/–C>¿C9†Ä0ìå;Ñ√<ÃÉ–B9‡=‘É<îÉêB(»É<ÑC>Å=î√8–√;»†C8∞É9∞ÃÅÄÅ AU#€Ll0ÏÛ0n@ÂÄÙPÚPr@
-|`Â0ÙÚ¿ËÏ`l t‡`‡z†Ìê0ø@˘ ÂÄ¬La0ÏÛ0n@ÂÄÙPÚPr@
-|`Â0ÙÚ¿ËÏ`l t‡`‡Hà·(7å;Ñ√<ÃÉ–B9‡=‘É<îÉêÿC9å=ºÉ<:Ñ;òÄ¡¯¯ÅËA;§<Ã√/–C>¿C9†Ä0Så;Ñ√<ÃÉ–B9‡=‘É<îÉêÿC9å=ºÉ<:Ñ;òÄ¡¯¯T;‚Õ„¿·0Û‡¥P¯@ı Â §¿ËÏ`~†z–È ÛÙêP( ÃTç;Ñ√<ÃÉ–B9‡=‘É<îÉê†C8∞É9¯>˙›¡m¨@4"b±ÿÄÇ7é4- ÊPìœm¿ÄY,&#ÉÅ@√õ§)¢Ñ…gÊYààùÄâ@ÅäôAò# Ö)    r¿át`á6háyhr¿áØPm–zPm z0r†s mêq†s mêx†s mêq`z0r–È0r†s mêv@z`t–Êv†s m`s z0r–Ê`t†v@m‡x†q`z0r†v@Cû           Ü<        y         Ú4@        0‰yÄ        `»       ¿êg        Ä!O¿        CÄ       Ü<        y8         Ú|@        0‰         Úê        yŒ Ä       ≤@    2òLêå	&G∆C"î@D1å FÅîCIAB)Z·îJ¢
-a†
-ÑêB∞ ¢Õ –mÄt3 ‘õ ‡ 	g à8@∆ :éï]  ¿Û<¿Û<¿Û ¿q¿q‘ö   y  Æ   LêFDèoÏÌM$∆«EÜf∆eÜe,«∆&g&eCLàgÇ@@ÑÅò —a0(¿ÕMi√Ä$ƒÅò&m &5A ™¬lH¶Yñ¡Y†	ò¡Å∞&ƒµAX®… 5À0LK5A ∞	ú¡Å»6C∂!π∞f!g—&wÄÇkñkòñjÇ@h=HÉâ˜5ã7\K5A ∂	B®¡Ü$ƒ†Y¬`∏ñjÇ 
-k∞!I»†Yí·Z™GdmåALDÅ&∑YŒ†YñÄ	)¥¡ÅË6 É4À0¨∞AH6ò òÇl@7hñeXÄ»‡Õ2∞Ax8ÿ@ò–q0A8Ö7ÿÃ¡A Ë4Ö•π}A•·ï±}·—qô≤˙ÇzõK£K{sõ ﬂ° É¡2A(¬`ÇPà¡Üeπ<»=ÿÉa> X=1=IMä1ÿ ”Üe<‡=¯É!> NORMALñKÄÙ‡Ü<∏¯ àPa==Imb√BêÅ¸¡î™ ß£"'™ãw
-x¿zCx| 
-Ça√¢Ä|ê
-0‰A(lXR¿>HÖ?˛Ä¯`√—°0
-¶Ä
-™∞
-L¶¨æ®¬‰Œ Ë&LoÉ@º¬Üei<p=‡Éa>ÄÖA,lXAÄ	*î¡a°ÖEÿ¡,»A-Tac≥ksI#+s£õU»\Ï ‰Ê“ﬁ‹¶D2<ª06ª2π)ÅQáœe-å¨LÆÈç¨åmJêî!√së+õ{´ì+õõƒA2<ª¥≤ª$≤)∫0∫≤)¡‘!√s)s£ìÀÉzKs£õõ‘ y  Q   3Äƒ·f=àC8Ñ√åBÄyxsòqÊ ÌÙÄ3B¬¡Œ°f0=àC8ÑÉÃ=»C=å=Ãxåtp{yHáppzpvxáp áÃÏê·0n0„P3ƒﬁ!ÿ!¬af0â;ºÉ;–C9¥<ºÉ<Ñ;Ãv`{h7hárh7Äápêáp`v(v¯vxáwÄá_áqáròáyòÅ,ÓÓ‡ı¿Ï0b»°‰°Ã°‰°‹a !ƒÅ a÷êC9»C9òC9»C9∏√8îC8à;î√/ºÉ<¸Ç;‘;∞√ƒ!|pz(ávÄá—C¯‡‰ Á‡ˆÚ¿·êÔPÙ0ÉÅ»‹@‰°¬a‹@‰   q   >   ‡ò “¸)rÀÔ]ì%@√Â;è a~q€¶ óÔ<~Ä4@Ñ˘»m€¬6\æÛ¯B@ï0îÑò_‹∂1l√Â;è/TQQÈ CIÄÄ˘»mõÉ4\æÛ¯BD Õ∞f‡óÔ<˛‡L∂_‹∂8√Â;è?8”Ì∑m”p˘Œ„/0àÕCM~q€vpóÔ<~XUDT:¿‡∑m◊p˘Œ„GÄµQEAD•>r€6 óÔ<æ0œB¯≈mõ@5\æÛ¯“‰DJM5˘≈m[É4\æÛ¯Ma~q€FóÔ<>’ Ê∑   a     U,   *   d†B9îG	°†
-Æÿ™†∞
-ß¿J¶Ä
-§,
-5†L
-¶∏ R`†‹JÆÏ
-© àc≠9Á¨7F Ç àsc Ç`7F Ç àÛ¬Ç ÿc ¬tåÄ ‚›Ç†
-cÔLöp7F–ösN{c Ç2åÄ Ç†0F Ç àˇ¬Ç ¸çÄ Ç`000F Ç à    #	 Ç`p∞pÒ+∞Bå$ Ç¡ƒ÷§@
-n0bê  g ôòÇ)º¡àAÄ ú¡,h© #	 Ç`p¥∞ÅÇ*»Bå$ Ç¡‘
-¥@r0bê  g`ù(ƒB,Ã¡àAÄ ú¡-x•`∂@#	 Ç`p∏ô¬,ÃBå$ Ç¡‰ê.‡Çå$ Ç¡ËBîB-‘¬å$ ÇÅÅØ‡
-∂p
-d0bê  F:¿¬+‹¬)î¡àAÄ Í±Äw`#	 Ç``¨É,B.®¬å$ ÇÅ¡≥–∫êh0bê  F;–Ç-Ï+§¡àAÄ ÓP∑¿{†#	 Ç``ºÉ-‡B/¥¬å$ ÇÅ∑ æ
-l0bê  F<‡¬8¸Ç¥¡àAÄ Úê‰ ∞‡# Ç`•4∫0ö £	B0ö0vÒ±càèC|l‰c√ ¯A»«Ñ ># Ç`ÉF}L	‰cä S˘å, ÇA0¡eU}F ¡‡âz,0‰cÇ!˘å, ÇAd•0A«mFÒ1BàèC|F ¡‡Y	WF ¡‡aâWF ¡‡i	XF ¡‡q	YÉ A0x^b¬`ƒ¿ @ò†Ö00√êèÜ|,‡c«!¯å Ç¡c∏òÙ1Eëè)ä|,‡cÀ"¯å Ç¡”øX)Ù10 ÉÁ'ƒ·F ¡‡ãq∏S,˘ÿb…«K># Ç`çÖ8põ6ÅÜ|L0‰3b`  œY¨√å Ç¡ÉÏ∂lÚ1fìè5õ|F ¡ Zu É1ÉA,0‰cÇ!¯ò†¿«ËÄ‰c¡ ˘Ã^ gTxúA0PA∏
-pÅ	|,˘XPÚ1°‰cC»«E>V(Ú1¡‡cÇ-¿gƒ‡@ö––s¯!Hátàã∏¯átM Ká >»É|F ¡ ëXîDrF ¡‡)çªÜ#Ü@¯¶û)ònò ¡&øÄ¡pC¿`0À ¡àAÄ ÆQt¡;°#	 Ç``ºÜ]ÿE_∏≈Jå$ ÇÅwq~·,1bê  kÏÑI—àÅÄ <ØqÅQ !˘X%Ú±Äêè|L∞‡3b  Õm¿Ñ>‘É¸√?ú∆i‘ƒ?å&¿hÇå&¬h1å< ÇA√5˙p$A¨¡:A£	0ö £	É`CJ»«ñÄè+!\>6¯É|F ¡Äv£,Ù¡F ¡Äx√,≤!0cìœàÄ êÅo†?$¡àÄ ê¡o§EHÅ%#!ü A0 ÉX`Ç A0 Ò`/	F ¡ Zµ8àÄ&fÇ&L'Ç¯å ÇÅñgÿƒà¡Ä hÍÅ√MÿMÒ±`àœà¡Ä |Î·.1£	0ö £	É`"˘ÿ†»gƒ‡ @>˘®ãö(è—Ñ MÇ—ÑA∞¡ëèè|lÄ‰cÉ¯ÿ†¿gƒ‡ @>˛¯ãü¿è—Ñ MÇ—ÑA∞¡íèó|l¿‰c  S¯ò2¿gƒ‡ @ƒ†DRC-dc4!ÜÉYgf	àÅä!ïf®RâaÜÅä!ïf® RâA°aƒ@@™°∫Jƒ<¸c4! FÑ`4aF ¡†™‹¿ãE–CDF`ƒ@@™—Ω8¿É=Hd4! FÑ`4aF ¡ ”ﬂã=‹EF`ƒ@@™–hŒC>Td4! FÑ`4aF ¡ Ú ç®=Ë√EF`ƒ@@™11”ò\ƒ>`d4! F ¡ #Ù@ç >CFF`ƒ@@™3Q’∏»C?hd4! F ¡†Jˆ`çÏF¸√FF`4AF¡ÆM>ÜmÚ±lìœpı#`0À`¡àÅÄ TqB¥ˇA">2ö ñ[|,5∂¯XjlÒ1X ÉOÓcÇAL	Ëcä@S˙å Ç¡”'%BXÄ»«D>6 Ún;ÉÉ A0àBD¬ >bÜ#á¯jt∫°=ñ`∫¡=a∫·=ñañ¿®‡Ä0äÅä£®‡Ä0äÅäÅ≠®hÅ–äÅäÅ≠1X É®UXdÇt0áq0˛‚3bp  ⁄™§HÄ$Ú1!ëèâ|F ¡‡kâ?MÄ—!M[è!>∂C|l=Ü¯ÿ0»«ÜA>&1Çêè	|F ¡‡1	,X˘XpÙπÄ0# Ç`¿˘ ú{P(Ä˝»«@Å?‰c°¿Ú±Å?‡c¿«˛Äè ˛ >6¸|J!ó1P É™]‡DFÇp	]MÄ—!MÑ—b1P ÉJ^Í‰Få=1ï_MÄ—!MÑ—b1P ÉÍ^ÙÑGñPYrMÄ—!MÑ—b1P Éä_˛$L TÅïtMÄ—!MÑ—b∞	ìœàÄ êøò É# Ç`@˝r*Xp@«,N># Ç`@ £*å  ÇÑÃ™8\`ÅÀ¿@># Ç`@$„*# Ç`@%Û*4–1é‰3bÄ  dÄ2≤ÇëA0bÄ  dê2≥BëA`k˙ò"–«éÅ>6¯	|ÏOÜ¯ò@*Ú1°T‰c¬´¿«ÑXÅœ·¡†F ¡†˘\˘>Ñ‡T^ÊezÂTF`8"PÑo∫UR%∞W‡câÆ¿gƒ‡@ö≤ÒïR!8Z•fjf\Ze4! Ü#H¯¶\ÂU¯X@+Ún(Öê É¬á@g$∞™W‰cïØ»«0^ëèı Ûï!>ˆ+C|F ¡@kõv1ÜÉ A0–‹∆]åaƒ‡ @¥∑yc18 n‡e‡ïÉ A0–‚&^Ü^18 Mn‰eïÉ A0–Êf^aƒ‡ @4∫°ó@∞p	‚3bp  ö›–K0.# Ç`†›ÕΩ„b‰B≈«Ñ@>Xô%@*·p√ﬁ!êèΩÉ ‰>Uy≥#
- Ç`PâN…úK`76Û6£	0ö £	É0b†  ïÈ§Ã∫/£3s3ö £	B0ö0#
- Ç`P©NÀºKB3>s7£	0ö £	É0b†  ïÎƒÃº4:#6{3ö £	B0ö0FÏ ü A0 É÷πp`á`ƒ @»¿upÜÿ!∞ †cÁ Ú1@ 2àùùxF ¡Ädág~v:ñÙ ü A0 É⁄˘ôr†á`ƒ @»¿v¿&Ë!∞††cI@3˙ò†2±ï‚cÃ»«Ñòëœ,A2P1¯À@ÅnHI,Ãûëè|f	îÅäAIÓA® ‰-πÂÇÅY6Ú±`Åœ±∆†F ¡†ô∂©òé`g∆g|‚fgF`4AF¡∞ëèa#ƒF>6î|l0¯ÿp61x É¶Ï¶gtÜâñ≤iüˆŸõ≤M s–F>¨|¨R˘⁄Ò±Å‰3bÄ  d†?§ìB0bÄ  d∞?•cG`¡@«é?êœàÄ êÅˇ†¡àÄ ê¡ˇ§N,Åv [DA># Ç`@"ƒ:†# Ç`@#‘:|‰t,ôè¯ò1Ò±a>‚c√ ˘X ¿«B>&10 É«Üp'∞$†è%},Ë3b∞  Q·Œ a ü°NüÉ A0–n®v“1X ÉàávÁqö«i¨.≤¯X]XÒ±∫ò‚3b∞  ˝Œ ÉXP»«éÄ># Ç`çë¯°7yÉ7√AÎﬂt√‡:Å{ €É¡pCPC`0À∞(Åâ¬Å`∏!∏!0òe`í¿vÉ‰cAè¿«ÿÅG‡c6r>Ú± ëè<"xD>6à|Ï‡cÚ0¿«ê>E&l# Ç` pD?µ”?£	Å0‹0d0À@4¡,Å3P1àì‡4É8	N3P1àì‡4# Ç` v§?ª3B£	Å0ö √B@≥Ã@C<HŒ3P1ƒÉ‰<C<HŒ3PAƒÉƒ<#
- Ç`Pçí	ôOpG8G£	0ö £	É0b†  ’)©ê˙z§Ct4ö #
- Ç`P•±œ!C>dG#
- Ç`Ä•RµrC=tG£	0b†  +Ω–˚(6Fy4ö £	B0ö0Ü0Ú±Ñëè)å|ÜQÉY)
-F ¡†¢•∫IåŒ(îF`4°Fú`4·Ï}Ç¯ÿ˚Ò±˜)‚3b∞  ë/ı– ÉX–«Å>÷Ù10 Égú÷à∞ ëè	à|l@‰3‹êÒå, ÇAtNfÑ]1√AD|5:›0CK0›@Cã0›PCÀ0K Tv —@≈`êTv —@≈ 
-êT¢ i—@≈ 
-êç, ÇA4Or4¡À∞L òÒ18 -ûﬁ(!˘òê»«ÜD>6‡|l¿¯ÿÄ)<ê'18 1∞'=⁄°QMÇ·Ü! ÉYh
-f	®ÅäÅ%g®X¬q¶ÅäÅ%g≤°m‰cC€»«Ü∂ëœàAÄ  )O¯ÑOÈ4å$ ÇíRÑO¯tK¬àAÄ  )O¯ÑOËå$ ÇíRÑO¯¥NmÉ       #     —                GLSL.std.450              
-       Main_Pixel                           v       type.CBScene             ambientLightLow         ambientLightMid         ambientLightHigh            shadowFadeStart      CBScene   	   type.CBCamera     	       mtxWorld2Clip     	      cameraPosition    	      cameraDirection   	      mtxCameraMotion   	      cameraIdx     	      resolutionX   	      resolutionY   	      nearClipPlane     	      farClipPlane      	   	   lightCount   	 	   
-   shadowMappedLightCount    
-   CBCamera     	    type.StructuredBuffer.Light      Light            lightColor          lightIntensity          lightPosition           lightType           lightDirection          lightSpotMinDot         shadowMapIdx            shadowBias          shadowCascades       	   shadowCascadeRange       
-   shadowDepthBias         _padding         BufLights        type.2d.image.array      TexShadowMaps        type.StructuredBuffer.mat4v4float        BufShadowMatrices        type.sampler         SamplerShadowMaps        TexShadowNormalMaps      type.2d.image        TexMain      TexNormal        TexParallax      SamplerMain      shadowSamplingOffsets        in.var.COLOR0        in.var.NORMAL0       in.var.TEXCOORD0         out.var.SV_Target0       Main_Pixel       type.sampled.image       type.sampled.image  G            G           G           G            G     "       G     !       G  
-   "       G  
-   !      G     "       G     !       G     "       G     !      G     "       G     !      G     "       G     !       G     "       G     !      G     "       G     !      G     "       G     !      G     "       G     !      G     "       G     !      H         #       H        #      H        #       H        #   0   G        H  	       #       H  	             H  	          H  	      #   @   H  	      #   P   H  	      #   `   H  	            H  	         H  	      #   †   H  	      #   §   H  	      #   ®   H  	      #   ¨   H  	      #   ∞   H  	   	   #   ¥   H  	   
-   #   ∏   G  	      H         #       H        #      H        #      H        #      H        #       H        #   ,   H        #   0   H        #   4   H        #   8   H     	   #   <   H     
-   #   @   H        #   L   G        P   H         #       H            G        G        @   H         #       H               H            H            G                 +            ∫+     !     Äπ+     "      :+     #     Ä9+     $     Ä?  %          +  %   &      +  %   '      +     (         )           *   *  *   +   +     ,   ÕÃL=)  *   -     .           +  .   /      +     0     HC+  .   1       +     2      ?+  .   3      +     4   o;+  %   5       +  %   6   
-   +  %   7   	   +     8      @+  .   9      ,  )   :   (   (   (   +     ;      A,  )   <   ;   ;   ;   ,  )   =   $   $   $   +     >     Ä;+     ?   ÕÃÃ<+  %   @   ˛ˇˇˇ  A              A   A   A         B           C   A        	   C   A   A   C   .   .   .         .   .      D      	        )      )   .   )      .      .      )                         E          	                              F               C              G                 H           	                               I            J           K   J   9      L      )      M      J      N      A     O   !  P   O      Q      J              R      A     S   )         T      .      U            V      C           ;  B         ;  D   
-      ;  E         ;  F          ;  G         ;  H          ;  F          ;  I          ;  I          ;  I          ;  H          ;  L         ;  L         ;  M         ;  N            W      K        X     J   Y     %   Z   ,  J   [       !   ,  J   \   "   #   ,  K   ]   [   \   +     ^     Äø  _   *         `      )      a         +  .   b      +  .   c      +  .   d      6  O          P   ¯  e   ;  W         >     ]   =  )   f      =  )   g      =  J   h      A  R   i   
-   &   =  A   j   i   O  )   k   j   j             É  )   l   f   k        m      B   l   à     n   $   m   é  )   o   l   n   î     p   o   g   à     q   ,   p        r         q   é  )   s   o   r   î     t   s   g   P  )   u   t   t   t   É  )   v   s   u   œ  )   w   f   –  )   x   f        y      B   w   à     z   $   y        {      B   x   à     |   $   {   œ  J   }   h   é  )   ~   w   z   î        v   ~   é  J   Ä   }      –  J   Å   h   é  )   Ç   x   |   î     É   v   Ç   é  J   Ñ   Å   É   Å  J   Ö   Ä   Ñ   é  J   Ü   Ö   0   é  J   á   Ü   n   ˘  à   ¯  à   ı     â   $   e   ä   ã   ı     å   (   e   ç   ã   ı  J   é   Y   e   è   ã   ı  J   ê   h   e   ë   ã   ı  .   í   1   e   ì   ã   ∞  *   î   í   /   ˆ  ï   ã       ˙  î   ã   ï   ¯  ã   Å     ñ   å   â   Ö     ó   2   ñ   é  )   ò   s   ó   é  J   è   á   ó   Å  J   ë   h   è   =     ô      =     ö      V     õ   ô   ö   W  A   ú   õ   ë       Q     ù   ú       É     û   $   ù   Ö     ü   û   ,   î     †   ò   g        °         †   ∫  *   ¢   ü   °   ©     ä   ¢   â   ó   ©     ç   ¢   ó   å   Ä  .   ì   í   3   ˘  à   ¯  ï     J   £      E   é   é  J   §   £   4   Å  J   •   ê   §   =     ¶      =     ß      V     ®   ¶   ß   W  A   ©   ®   •       =     ™      V     ´   ™   ß   W  A   ¨   ´   •       Q     ≠   ¨            Æ      2   ≠   8   ^   Q     Ø   ¨      Q     ∞   ¨           ±      2   ∞   8   ^   P  )   ≤   Æ   Ø   ±   Q     ≥   g       Q     ¥   g      Q     µ   g      P  )   ∂   $   ≥   (   P  )   ∑   (   ¥   (   P  )   ∏   (   µ   $   P  S   π   ∂   ∑   ∏   ê  )   ∫   ≤   π   Q     ª   ∫           º   ª        Ω      P   º   (        æ      P   ª   (   É     ø   $   æ   É     ¿   ø   Ω   A  R   ¡      5   =  A   ¬   ¡   é  A   √   ¬   Ω   A  R   ƒ      '   =  A   ≈   ƒ   é  A   ∆   ≈   æ   Å  A   «   √   ∆   A  R   »      &   =  A   …   »   é  A       …   ¿   Å  A   À   «       O  )   Ã   À   À             ˘  Õ   ¯  Õ   ı     Œ   X   ï   œ   –   ı  %   —   Z   ï   “   –   ı  *   ”   +   ï   ‘   –   ı  *   ’   +   ï   ÷   –   ı     ◊   X   ï   ÿ   –   ı  *   Ÿ   +   ï   ⁄   –   ı  )   €   Ã   ï   ‹   –   ı  .   ›   1   ï   ﬁ   –   A  T   ﬂ   
-   6   =  .   ‡   ﬂ   ∞  *   ·   ›   ‡   ˆ  ‚   –       ˙  ·   „   ‚   ¯  „   A  U   ‰      5   ›   =     Â   ‰   Q  )   Ê   Â       Q     Á   Â      Q  )   Ë   Â      Q  .   È   Â      Q  )   Í   Â      Q     Î   Â      Q  .   Ï   Â      Q     Ì   Â      Q  .   Ó   Â      Q     Ô   Â   	   Q  )      Â   
-   é  )   Ò   Ê   Á   ™  *   Ú   È   9   ˜  Û       ˙  Ú   Ù   ı   ¯  Ù   ˘  Û   ¯  ı   É  )   ˆ   f   Ë   î     ˜   ˆ   ˆ   P  )   ¯   ˜   ˜   ˜   à  )   ˘   Ò   ¯     )   ˙      E   ˆ   ™  *   ˚   È   3   î     ¸   Í   ˙   ∏  *   ˝   ¸   Î   ß  *   ˛   ˚   ˝   P  _   ˇ   ˛   ˛   ˛   ©  )      ˇ   :   ˘   ˘  Û   ¯  Û   ı  )     Ò   Ù      ı   ı  )     Í   Ù   ˙   ı   î         ∫                      P     (   é  )         Ö       8   m   à         Ô   m  .   	      .   
-     &   	  Ó   Ä  .     Ï   
-  é  )     g   Ì   Å  )     f     Å  )          Q             Q            Q            P  A           $   Ñ  .     9     A  V        5     =  C       ê  A         Q            P  A             à  A         Q             Å         $   Q            É       $     P  J         é  J       2   ©  *   ⁄   Ÿ   Ÿ   -   ©     ÿ   Ÿ   ◊   2   ˘     ¯     ı     !  (   Û   "  #  ı  .   $  1   Û   %  #  ∞  *   &  $  9   ˆ  '  #      ˙  &  #  '  ¯  #  A  Q   (     $  =  J   )  (  Å  J   *    )  =     +     =     ,     Q     -  *      Q     .  *     p     /    P  )   0  -  .  /  V     1  +  ,  W  A   2  1  0      Q     3  2      Q     4       ∫  *   5  3  4  ©  %   6  5  &   5   o     7  6  Å     "  !  7  Ä  .   %  $  3   ˘     ¯  '  Ö     8  !  ÿ   ™  *   9    Ó   ß  *   :  Ú   9  ˜  ;      ˙  :  <  ;  ¯  <  Q     =       Q     >        Q     ?       P  )   @  >  ?  =  é  )   A  @  ;   É  )   B  <   A    )   C     O   A  B    )   D     O   C  =   Q     E  D      Q     F  D          G     O   E  F  Q     H  D          I     O   G  H  É     J  $   I       K     +   J  (   $        L     .   8  $   K  ˘  ;  ¯  ;  ı     M  8  '  L  <  é  )   N    M  Å  )   O  €   N  ©  *   ÷   ’   ’   -   ©  %   “   ’   —   '   ©  *   ‘   ”   ”   -   ©     œ   ”   Œ   ?   =  C   P    Ä  .   Q    3   A  V   R     5   Q  =  C   S  R  Q     T        Q     U       Q     V       P  A   W  T  U  V  $   ê  A   X  W  P  Q     Y  X     P  A   Z  Y  Y  Y  Y  à  A   [  X  Z  Q     \  [      Å     ]  \  $   Q     ^  [     É     _  $   ^  P  J   `  ]  _  é  J   a  `  2   ˘  b  ¯  b  ı     c  (   ;  d  e  ı  %   f  @   ;  g  e  ±  *   h  f  “   ˆ  i  e      ˙  h  j  i  ¯  j  Q     k  a     o     l  f       m     2   l  >   k  ˘  n  ¯  n  ı     d  c  j  o  p  ı  %   q  @   j  r  p  ±  *   s  q  “   ˆ  t  p      ˙  s  p  t  ¯  p  Q     u  a      o     v  q       w     2   v  >   u  p     x  Ï   P  )   y  w  m  x  =     z     =     {     V     |  z  {  W  A   }  |  y      O  )   ~  }  }            é  )     ~  8   É  )   Ä    =   =     Å     V     Ç  Å  {  W  A   É  Ç  y      Q     Ñ  É           Ö     2   w  8   ^        Ü  m       á     2   Ü  8   $   P  A   à  Ö  á  Ñ  $   ê  A   â  à  S  O  )   ä  â  â            É  )   ã  ä  Ë        å     B   ã  P  )   ç  å  å  å  à  )   é  ã  ç  î     è  é  Ä       ê  è       ë     P   ê  (   î     í  ã  ã  à     ì  ë  í  O  )   î  W  W            É  )   ï  î  ä  î     ñ  ï  ï  à     ó  ì  ñ  î     ò  ï  g   ∏  *   ô  ò  (   ©     ö  ô  ó  (   Å     o  d  ö  Ä  %   r  q  &   ˘  n  ¯  t  ˘  e  ¯  e  Ä  %   g  f  &   ˘  b  ¯  i  Ö     õ  c  œ   Ö     ú  õ  Á   é  )   ù  Ê   ú  Å  )   ‹   O  ù  ˘  –   ¯  –   Ä  .   ﬁ   ›   3   ˘  Õ   ¯  ‚   ˘  û  ¯  û  ı  )   ü  €   ‚   †  °  ı  .   ¢  ‡   ‚   £  °  A  T   §  
-   7   =  .   •  §  ∞  *   ¶  ¢  •  ˆ  ß  °      ˙  ¶  ®  ß  ¯  ®  A  U   ©     5   ¢  A  `   ™  ©  1   =  )   ´  ™  A  a   ¨  ©  3   =     ≠  ¨  A  `   Æ  ©  9   =  )   Ø  Æ  A  T   ∞  ©  b   =  .   ±  ∞  A  `   ≤  ©  c   =  )   ≥  ≤  A  a   ¥  ©  d   =     µ  ¥  é  )   ∂  ´  ≠  ™  *   ∑  ±  9   ˜  ∏      ˙  ∑  π  ∫  ¯  π  ˘  ∏  ¯  ∫  É  )   ª  f   Ø  î     º  ª  ª  P  )   Ω  º  º  º  à  )   æ  ∂  Ω    )   ø     E   ª  ™  *   ¿  ±  3   î     ¡  ≥  ø  ∏  *   ¬  ¡  µ  ß  *   √  ¿  ¬  P  _   ƒ  √  √  √  ©  )   ≈  ƒ  :   æ  ˘  ∏  ¯  ∏  ı  )   ∆  ∂  π  ≈  ∫  ı  )   «  ≥  π  ø  ∫  î     »  «  ∫        …  »             P   …  (   é  )   À  ∆     Å  )   †  ü  À  ˘  °  ¯  °  Ä  .   £  ¢  3   ˘  û  ¯  ß  Q     Ã  ü      Q     Õ  ü     Q     Œ  ü     P  A   œ  Ã  Õ  Œ  $   Ö  A   –  ©   œ  >     –  ˝  8  #     €                GLSL.std.450                     Main_Pixel_Ext                                 v    	   type.CBScene      	       ambientLightLow   	      ambientLightMid   	      ambientLightHigh      	      shadowFadeStart   
-   CBScene      type.CBCamera            mtxWorld2Clip           cameraPosition          cameraDirection         mtxCameraMotion         cameraIdx           resolutionX         resolutionY         nearClipPlane           farClipPlane         	   lightCount   	    
-   shadowMappedLightCount       CBCamera     	    type.StructuredBuffer.Light      Light            lightColor          lightIntensity          lightPosition           lightType           lightDirection          lightSpotMinDot         shadowMapIdx            shadowBias          shadowCascades       	   shadowCascadeRange       
-   shadowDepthBias         _padding         BufLights        type.2d.image.array      TexShadowMaps        type.StructuredBuffer.mat4v4float        BufShadowMatrices        type.sampler         SamplerShadowMaps        TexShadowNormalMaps      type.2d.image        TexMain      TexNormal        TexParallax      SamplerMain      shadowSamplingOffsets        in.var.COLOR0        in.var.NORMAL0       in.var.TEXCOORD0         in.var.TANGENT0      in.var.NORMAL1       out.var.SV_Target0       Main_Pixel_Ext       type.sampled.image       type.sampled.image  G            G           G           G           G           G            G  
-   "       G  
-   !       G     "       G     !      G     "       G     !       G     "       G     !      G     "       G     !      G     "       G     !       G     "       G     !      G     "       G     !      G     "       G     !      G     "       G     !      G     "       G     !      H  	       #       H  	      #      H  	      #       H  	      #   0   G  	      H         #       H               H            H        #   @   H        #   P   H        #   `   H              H           H        #   †   H        #   §   H        #   ®   H        #   ¨   H        #   ∞   H     	   #   ¥   H     
-   #   ∏   G        H         #       H        #      H        #      H        #      H        #       H        #   ,   H        #   0   H        #   4   H        #   8   H     	   #   <   H     
-   #   @   H        #   L   G        P   H         #       H            G        G         @   H         #       H               H            H            G          !       +  !   "      ∫+  !   #     Äπ+  !   $      :+  !   %     Ä9+  !   &     Ä?  '          +  '   (      +  '   )      +  '   *         +   *  +   ,   +  !   -   ÕÃL=)  +   .     /           +  /   0      +  !   1     HC+  !   2       +  /   3       +  !   4      ?+  /   5      +  !   6   o;+  '   7   
-   +  '   8   	   +  !   9      @  :   !      +  /   ;      ,  :   <   2   2   2   +  !   =      A,  :   >   =   =   =   ,  :   ?   &   &   &   +  !   @     Ä;+  !   A   ÕÃÃ<+  '   B   ˛ˇˇˇ  C   !        	   C   C   C   !      D      	     E   C           E   C   C   E   /   /   /   !   !   /   /      F              :   !   :   /   :   !   /   !   /   !   :   !                      G          	    !                          H                E               I                 J           	    !                           K            L   !        M   L   ;      N      :      O      L      P      C     Q   !  R   Q      S      L              T      C     U   :         V      /      W            X      E           ;  D   
-      ;  F         ;  G         ;  H          ;  I         ;  J          ;  H          ;  K          ;  K          ;  K          ;  J          ;  N         ;  N         ;  O         ;  N         ;  N         ;  P            Y      M     !   Z     L   [     '   \   ,  L   ]   "   #   ,  L   ^   $   %   ,  M   _   ]   ^   +  !   `     Äø  a   +         b      :      c      !   +  /   d      +  /   e      +  /   f      6  Q          R   ¯  g   ;  Y         >     _   =  :   h      =  :   i      =  L   j      =  :   k      =  :   l      A  T   m      (   =  C   n   m   O  :   o   n   n             É  :   p   h   o     !   q      B   p   à  !   r   &   q   é  :   s   p   r   î  !   t   s   i   à  !   u   -   t     !   v         u   é  :   w   s   v   î  !   x   w   i   P  :   y   x   x   x   É  :   z   w   y   œ  :   {   h   –  :   |   h     !   }      B   {   à  !   ~   &   }     !         B   |   à  !   Ä   &      œ  L   Å   j   é  :   Ç   {   ~   î  !   É   z   Ç   é  L   Ñ   Å   É   –  L   Ö   j   é  :   Ü   |   Ä   î  !   á   z   Ü   é  L   à   Ö   á   Å  L   â   Ñ   à   é  L   ä   â   1   é  L   ã   ä   r   ˘  å   ¯  å   ı  !   ç   &   g   é   è   ı  !   ê   2   g   ë   è   ı  L   í   [   g   ì   è   ı  L   î   j   g   ï   è   ı  /   ñ   3   g   ó   è   ∞  +   ò   ñ   0   ˆ  ô   è       ˙  ò   è   ô   ¯  è   Å  !   ö   ê   ç   Ö  !   õ   4   ö   é  :   ú   w   õ   é  L   ì   ã   õ   Å  L   ï   j   ì   =     ù      =     û      V     ü   ù   û   W  C   †   ü   ï       Q  !   °   †       É  !   ¢   &   °   Ö  !   £   ¢   -   î  !   §   ú   i     !   •         §   ∫  +   ¶   £   •   ©  !   é   ¶   ç   õ   ©  !   ë   ¶   õ   ê   Ä  /   ó   ñ   5   ˘  å   ¯  ô     L   ß      E   í   é  L   ®   ß   6   Å  L   ©   î   ®   =     ™      =     ´      V     ¨   ™   ´   W  C   ≠   ¨   ©       =     Æ      V     Ø   Æ   ´   W  C   ∞   Ø   ©       Q  !   ±   ∞         !   ≤      2   ±   9   `   Q  !   ≥   ∞      Q  !   ¥   ∞        !   µ      2   ¥   9   `   P  :   ∂   ≤   ≥   µ   Q  !   ∑   l       Q  !   ∏   i       Q  !   π   k       Q  !   ∫   l      Q  !   ª   i      Q  !   º   k      Q  !   Ω   l      Q  !   æ   i      Q  !   ø   k      P  :   ¿   ∑   ∏   π   P  :   ¡   ∫   ª   º   P  :   ¬   Ω   æ   ø   P  U   √   ¿   ¡   ¬   ê  :   ƒ   ∂   √   Q  !   ≈   ƒ        !   ∆   ≈     !   «      P   ∆   2     !   »      P   ≈   2   É  !   …   &   »   É  !       …   «   A  T   À   
-   *   =  C   Ã   À   é  C   Õ   Ã   «   A  T   Œ   
-   )   =  C   œ   Œ   é  C   –   œ   »   Å  C   —   Õ   –   A  T   “   
-   (   =  C   ”   “   é  C   ‘   ”       Å  C   ’   —   ‘   O  :   ÷   ’   ’             ˘  ◊   ¯  ◊   ı  !   ÿ   Z   ô   Ÿ   ⁄   ı  '   €   \   ô   ‹   ⁄   ı  +   ›   ,   ô   ﬁ   ⁄   ı  +   ﬂ   ,   ô   ‡   ⁄   ı  !   ·   Z   ô   ‚   ⁄   ı  +   „   ,   ô   ‰   ⁄   ı  :   Â   ÷   ô   Ê   ⁄   ı  /   Á   3   ô   Ë   ⁄   A  V   È      7   =  /   Í   È   ∞  +   Î   Á   Í   ˆ  Ï   ⁄       ˙  Î   Ì   Ï   ¯  Ì   A  W   Ó      *   Á   =     Ô   Ó   Q  :      Ô       Q  !   Ò   Ô      Q  :   Ú   Ô      Q  /   Û   Ô      Q  :   Ù   Ô      Q  !   ı   Ô      Q  /   ˆ   Ô      Q  !   ˜   Ô      Q  /   ¯   Ô      Q  !   ˘   Ô   	   Q  :   ˙   Ô   
-   é  :   ˚      Ò   ™  +   ¸   Û   ;   ˜  ˝       ˙  ¸   ˛   ˇ   ¯  ˛   ˘  ˝   ¯  ˇ   É  :      h   Ú   î  !           P  :           à  :     ˚       :        E      ™  +     Û   5   î  !     Ù     ∏  +       ı   ß  +         P  a   	        ©  :   
-  	  <     ˘  ˝   ¯  ˝   ı  :     ˚   ˛   
-  ˇ   ı  :     Ù   ˛     ˇ   î  !       ƒ     !         !        P     2   é  :         Ö  !     9   q   à  !       ˘   m  /         /        &     ¯   Ä  /     ˆ     é  :     i   ˜   Å  :     h     Å  :       ˙   Q  !           Q  !          Q  !          P  C           &   Ñ  /     ;     A  X        *     =  E       ê  C          Q  !   !        P  C   "  !  !  !  !  à  C   #     "  Q  !   $  #      Å  !   %  $  &   Q  !   &  #     É  !   '  &   &  P  L   (  %  '  é  L   )  (  4   ©  +   ‰   „   „   .   ©  !   ‚   „   ·   4   ˘  *  ¯  *  ı  !   +  2   ˝   ,  -  ı  /   .  3   ˝   /  -  ∞  +   0  .  ;   ˆ  1  -      ˙  0  -  1  ¯  -  A  S   2     .  =  L   3  2  Å  L   4  )  3  =     5     =     6     Q  !   7  4      Q  !   8  4     p  !   9    P  :   :  7  8  9  V     ;  5  6  W  C   <  ;  :      Q  !   =  <      Q  !   >  #     ∫  +   ?  =  >  ©  '   @  ?  (   *   o  !   A  @  Å  !   ,  +  A  Ä  /   /  .  5   ˘  *  ¯  1  Ö  !   B  +  ‚   ™  +   C    ¯   ß  +   D  ¸   C  ˜  E      ˙  D  F  E  ¯  F  Q  !   G  #     Q  !   H  )      Q  !   I  )     P  :   J  H  I  G  é  :   K  J  =   É  :   L  >   K    :   M     O   K  L    :   N     O   M  ?   Q  !   O  N      Q  !   P  N       !   Q     O   O  P  Q  !   R  N       !   S     O   Q  R  É  !   T  &   S    !   U     +   T  2   &     !   V     .   B  &   U  ˘  E  ¯  E  ı  !   W  B  1  V  F  é  :   X    W  Å  :   Y  Â   X  ©  +   ‡   ﬂ   ﬂ   .   ©  '   ‹   ﬂ   €   )   ©  +   ﬁ   ›   ›   .   ©  !   Ÿ   ›   ÿ   A   =  E   Z    Ä  /   [    5   A  X   \     *   [  =  E   ]  \  Q  !   ^        Q  !   _       Q  !   `       P  C   a  ^  _  `  &   ê  C   b  a  Z  Q  !   c  b     P  C   d  c  c  c  c  à  C   e  b  d  Q  !   f  e      Å  !   g  f  &   Q  !   h  e     É  !   i  &   h  P  L   j  g  i  é  L   k  j  4   ˘  l  ¯  l  ı  !   m  2   E  n  o  ı  '   p  B   E  q  o  ±  +   r  p  ‹   ˆ  s  o      ˙  r  t  s  ¯  t  Q  !   u  k     o  !   v  p    !   w     2   v  @   u  ˘  x  ¯  x  ı  !   n  m  t  y  z  ı  '   {  B   t  |  z  ±  +   }  {  ‹   ˆ  ~  z      ˙  }  z  ~  ¯  z  Q  !     k      o  !   Ä  {    !   Å     2   Ä  @     p  !   Ç  ˆ   P  :   É  Å  w  Ç  =     Ñ     =     Ö     V     Ü  Ñ  Ö  W  C   á  Ü  É      O  :   à  á  á            é  :   â  à  9   É  :   ä  â  ?   =     ã     V     å  ã  Ö  W  C   ç  å  É      Q  !   é  ç        !   è     2   Å  9   `     !   ê  w    !   ë     2   ê  9   &   P  C   í  è  ë  é  &   ê  C   ì  í  ]  O  :   î  ì  ì            É  :   ï  î  Ú     !   ñ     B   ï  P  :   ó  ñ  ñ  ñ  à  :   ò  ï  ó  î  !   ô  ò  ä    !   ö  ô    !   õ     P   ö  2   î  !   ú  ï  ï  à  !   ù  õ  ú  O  :   û  a  a            É  :   ü  û  î  î  !   †  ü  ü  à  !   °  ù  †  î  !   ¢  ü  i   ∏  +   £  ¢  2   ©  !   §  £  °  2   Å  !   y  n  §  Ä  '   |  {  (   ˘  x  ¯  ~  ˘  o  ¯  o  Ä  '   q  p  (   ˘  l  ¯  s  Ö  !   •  m  Ÿ   Ö  !   ¶  •  Ò   é  :   ß     ¶  Å  :   Ê   Y  ß  ˘  ⁄   ¯  ⁄   Ä  /   Ë   Á   5   ˘  ◊   ¯  Ï   ˘  ®  ¯  ®  ı  :   ©  Â   Ï   ™  ´  ı  /   ¨  Í   Ï   ≠  ´  A  V   Æ     8   =  /   Ø  Æ  ∞  +   ∞  ¨  Ø  ˆ  ±  ´      ˙  ∞  ≤  ±  ¯  ≤  A  W   ≥     *   ¨  A  b   ¥  ≥  3   =  :   µ  ¥  A  c   ∂  ≥  5   =  !   ∑  ∂  A  b   ∏  ≥  ;   =  :   π  ∏  A  V   ∫  ≥  d   =  /   ª  ∫  A  b   º  ≥  e   =  :   Ω  º  A  c   æ  ≥  f   =  !   ø  æ  é  :   ¿  µ  ∑  ™  +   ¡  ª  ;   ˜  ¬      ˙  ¡  √  ƒ  ¯  √  ˘  ¬  ¯  ƒ  É  :   ≈  h   π  î  !   ∆  ≈  ≈  P  :   «  ∆  ∆  ∆  à  :   »  ¿  «    :   …     E   ≈  ™  +      ª  5   î  !   À  Ω  …  ∏  +   Ã  À  ø  ß  +   Õ     Ã  P  a   Œ  Õ  Õ  Õ  ©  :   œ  Œ  <   »  ˘  ¬  ¯  ¬  ı  :   –  ¿  √  œ  ƒ  ı  :   —  Ω  √  …  ƒ  î  !   “  —  ƒ     !   ”  “    !   ‘     P   ”  2   é  :   ’  –  ‘  Å  :   ™  ©  ’  ˘  ´  ¯  ´  Ä  /   ≠  ¨  5   ˘  ®  ¯  ±  Q  !   ÷  ©      Q  !   ◊  ©     Q  !   ÿ  ©     P  C   Ÿ  ÷  ◊  ÿ  &   Ö  C   ⁄  ≠   Ÿ  >     ⁄  ˝  8  

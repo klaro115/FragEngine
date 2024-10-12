@@ -1,416 +1,0 @@
-FSHA_01_0037_0041_072F_077A_2731_04_00002EB5_000038FC
-########
-{
-  "ShaderStage": 1,
-  "RequiredVariants": 15,
-  "SourceCode": {
-    "EntryPointNameBase": "Main_Vertex",
-    "EntryPoints": [
-      {
-        "VariantFlags": 1,
-        "EntryPoint": "Main_Vertex"
-      },
-      {
-        "VariantFlags": 3,
-        "EntryPoint": "Main_Vertex_Ext"
-      },
-      {
-        "VariantFlags": 1,
-        "EntryPoint": "Main_Vertex"
-      },
-      {
-        "VariantFlags": 3,
-        "EntryPoint": "Main_Vertex_Ext"
-      }
-    ],
-    "SupportedFeaturesTxt": "At_Nyn0_Ly101p140_V100",
-    "MaximumCompiledFeaturesTxt": "At_Nyn0_Ly101p140_V100",
-    "SourceCodeBlocks": [
-      {
-        "Language": 1,
-        "ByteOffset": 0,
-        "ByteSize": 4698
-      },
-      {
-        "Language": 2,
-        "ByteOffset": 4698,
-        "ByteSize": 5315
-      }
-    ]
-  },
-  "CompiledVariants": [
-    {
-      "Type": 1,
-      "VariantFlags": 1,
-      "VariantDescriptionTxt": "At_Nyn0_Ly101p140_V000",
-      "EntryPoint": "Main_Vertex",
-      "RelativeByteOffset": 0,
-      "TotalByteOffset": 0,
-      "ByteSize": 4240
-    },
-    {
-      "Type": 1,
-      "VariantFlags": 3,
-      "VariantDescriptionTxt": "At_Nyn0_Ly101p140_V100",
-      "EntryPoint": "Main_Vertex_Ext",
-      "RelativeByteOffset": 4240,
-      "TotalByteOffset": 4240,
-      "ByteSize": 4912
-    },
-    {
-      "Type": 4,
-      "VariantFlags": 1,
-      "VariantDescriptionTxt": "At_Nyn0_Ly101p140_V000",
-      "EntryPoint": "Main_Vertex",
-      "RelativeByteOffset": 0,
-      "TotalByteOffset": 9152,
-      "ByteSize": 2428
-    },
-    {
-      "Type": 4,
-      "VariantFlags": 3,
-      "VariantDescriptionTxt": "At_Nyn0_Ly101p140_V100",
-      "EntryPoint": "Main_Vertex_Ext",
-      "RelativeByteOffset": 2428,
-      "TotalByteOffset": 11580,
-      "ByteSize": 3008
-    }
-  ]
-}########
-#pragma pack_matrix( column_major )
-
-/******************* DEFINES: ******************/
-
-// Variants:
-#define VARIANT_EXTENDED            // Whether to always create a shader variant using extended surface data
-#define VARIANT_BLENDSHAPES         // Whether to always create a shader variant using blend shape data
-#define VARIANT_ANIMATED            // Whether to always create a shader variant using bone animation data
-
-/****************** CONSTANTS: *****************/
-
-// Constant buffer containing all settings that apply for everything drawn by currently active camera:
-cbuffer CBCamera : register(b1)
-{
-    // Camera vectors & matrices:
-    float4x4 mtxWorld2Clip;         // Camera's full projection matrix, transforming from world space to clip space coordinates.
-    float4 cameraPosition;          // Camera position, in world space.
-    float4 cameraDirection;         // Camera forward facing direction, in world space.
-    float4x4 mtxCameraMotion;       // Camera movement matrix, encoding motion/transformation from previous to current frame.
-
-	// Camera parameters:
-    uint cameraIdx;                 // Index of the currently drawing camera.
-    uint resolutionX;               // Render target width, in pixels.
-    uint resolutionY;               // Render target height, in pixels.
-    float nearClipPlane;            // Camera's near clipping plane distance.
-    float farClipPlane;             // Camera's far clipping plane distance.
-
-    // Per-camera lighting:
-    uint lightCount;                // Total number of lights affecting this camera.
-    uint shadowMappedLightCount;    // Total number of lights that have a layer of the shadow map texture array assigned.
-};
-
-// Constant buffer containing only object-specific settings:
-cbuffer CBObject : register(b2)
-{
-    float4x4 mtxLocal2World;        // Object world matrix, transforming vertices from model space to world space.
-    float3 worldPosition;           // World space position of the object.
-    float boundingRadius;           // Bounding sphere radius of the object.
-};
-
-/**************** VERTEX INPUT: ****************/
-
-struct VertexInput_Basic
-{
-    float3 position : POSITION;
-    float3 normal : NORMAL0;
-    float2 uv : TEXCOORD0;
-};
-
-#ifdef VARIANT_EXTENDED
-struct VertexInput_Extended
-{
-    float3 tangent : NORMAL1;
-    float2 uv2 : TEXCOORD1;
-};
-#endif //VARIANT_EXTENDED
-
-#ifdef VARIANT_BLENDSHAPES
-struct VertexInput_BlendShapes
-{
-    uint4 blendIndices : NORMAL2;
-    float4 blendWeights : TEXCOORD2;
-};
-#endif //VARIANT_BLENDSHAPES
-
-#ifdef VARIANT_ANIMATED
-struct VertexInput_BoneWeights
-{
-    uint4 blendIndices : NORMAL3;
-    float4 blendWeights : TEXCOORD3;
-};
-#endif //VARIANT_ANIMATED
-
-/**************** VERTEX OUTPUT: ***************/
-
-struct VertexOutput_Basic
-{
-    float4 position : SV_POSITION;
-    float3 worldPosition : COLOR0;
-    float3 normal : NORMAL0;
-    float2 uv : TEXCOORD0;
-};
-
-#ifdef VARIANT_EXTENDED
-struct VertexOutput_Extended
-{
-    float3 tangent : TANGENT0;
-    float3 binormal : NORMAL1;
-    float2 uv2 : TEXCOORD1;
-};
-#endif //VARIANT_EXTENDED
-
-/******************* SHADERS: ******************/
-
-void Main_Vertex(
-    in VertexInput_Basic inputBasic,
-    out VertexOutput_Basic outputBasic)
-{
-    float4x4 mtxLocal2Clip = mul(mtxWorld2Clip, mtxLocal2World);
-    float3 viewDir = worldPosition - cameraPosition.xyz;
-
-    outputBasic.position = mul(mtxLocal2Clip, float4(inputBasic.position, 1));
-    outputBasic.worldPosition = mul(mtxLocal2World, float4(inputBasic.position, 1)).xyz;
-    outputBasic.normal = normalize(mul(mtxLocal2World, float4(inputBasic.normal, 0)).xyz);
-    outputBasic.uv = inputBasic.uv;
-}
-
-#ifdef VARIANT_EXTENDED
-void Main_Vertex_Ext(
-    in VertexInput_Basic inputBasic,
-    in VertexInput_Extended inputExt,
-    out VertexOutput_Basic outputBasic,
-    out VertexOutput_Extended outputExt)
-{
-    float4x4 mtxLocal2Clip = mul(mtxWorld2Clip, mtxLocal2World);
-    float3 viewDir = worldPosition - cameraPosition.xyz;
-
-    outputBasic.position = mul(mtxLocal2Clip, float4(inputBasic.position, 1));
-    outputBasic.worldPosition = mul(mtxLocal2World, float4(inputBasic.position, 1)).xyz;
-    outputBasic.normal = normalize(mul(mtxLocal2World, float4(inputBasic.normal, 0)).xyz);
-    outputBasic.uv = inputBasic.uv;
-
-    outputExt.tangent = normalize(mul(mtxLocal2World, float4(inputExt.tangent, 0)).xyz);
-    outputExt.binormal = cross(outputBasic.normal, outputExt.tangent);
-    outputExt.uv2 = inputExt.uv2;
-}
-#endif //VARIANT_EXTENDED
-
-//TODO [later]: Add blendshape and bone animation variant entrypoints.
-########
-#include <metal_stdlib>
-using namespace metal;
-
-/****************** CONSTANTS: *****************/
-
-// Constant buffer containing all settings that apply for everything drawn by currently active camera:
-struct CBCamera
-{
-    // Camera vectors & matrices:
-    float4x4 mtxWorld2Clip;         // Camera's full projection matrix, transforming from world space to clip space coordinates.
-    float4 cameraPosition;          // Camera position, in world space.
-    float4 cameraDirection;         // Camera forward facing direction, in world space.
-    float4x4 mtxCameraMotion;       // Camera movement matrix, encoding motion/transformation from previous to current frame.
-
-	// Camera parameters:
-    uint cameraIdx;                 // Index of the currently drawing camera.
-    uint resolutionX;               // Render target width, in pixels.
-    uint resolutionY;               // Render target height, in pixels.
-    float nearClipPlane;            // Camera's near clipping plane distance.
-    float farClipPlane;             // Camera's far clipping plane distance.
-
-    // Per-camera lighting:
-    uint lightCount;                // Total number of lights affecting this camera.
-    uint shadowMappedLightCount;    // Total number of lights that have a layer of the shadow map texture array assigned.
-};
-
-struct CBObject
-{
-    float4x4 mtxLocal2World;    // Object world matrix, transforming vertices from model space to world space.
-    float3 worldPosition;       // World space position of the object.
-    float boundingRadius;       // Bounding sphere radius of the object.
-};
-
-/**************** VERTEX INPUT: ****************/
-
-struct VertexInput_Basic
-{
-    float3 position         [[ attribute( 0 ) ]];
-    float3 normal           [[ attribute( 1 ) ]];
-    float2 uv               [[ attribute( 2 ) ]];
-};
-
-struct VertexInput_Extended
-{
-    float3 tangent          [[ attribute( 3 ) ]];
-    float2 uv2              [[ attribute( 4 ) ]];
-};
-
-struct VertexInput_BlendShapes
-{
-    uint4 blendIndices      [[ attribute( 5 ) ]];
-    float4 blendWeights     [[ attribute( 6 ) ]];
-};
-
-struct VertexInput_BoneWeights
-{
-    uint4 blendIndices      [[ attribute( 7 ) ]];
-    float4 blendWeights     [[ attribute( 8 ) ]];
-};
-
-/**************** VERTEX OUTPUT: ***************/
-
-struct VertexOutput_Basic
-{
-    float4 position         [[ position ]];
-    float3 worldPosition    [[ user(worldPosition) ]];
-    float3 normal           [[ user(normal) ]];
-    float2 uv               [[ user(uv) ]];
-};
-
-struct VertexOutput_Extended
-{
-    float4 position         [[ position ]];
-    float3 worldPosition    [[ user(worldPosition) ]];
-    float3 normal           [[ user(normal) ]];
-    float2 uv               [[ user(uv) ]];
-
-    float3 tangent          [[ user(tangent) ]];
-    float3 binormal         [[ user(binormal) ]];
-    float2 uv2              [[ user(uv2) ]];
-};
-
-/******************* SHADERS: ******************/
-
-VertexOutput_Basic vertex Main_Vertex(
-    device const VertexInput_Basic* pInputBasic [[ buffer( 0 ) ]],
-    device const CBCamera& cbCamera             [[ buffer( 1 ) ]],
-    device const CBObject& cbObject             [[ buffer( 3 ) ]],
-    uint vertexId                               [[ vertex_id ]])
-{
-    //^NOTE: Using 'ResourceBindingModel.Default', vertex buffers come before actual resources.
-    // See this page for full explanation: https://veldrid.dev/articles/shaders.html
-
-    const device VertexInput_Basic& inputBasic = pInputBasic[vertexId];
-
-    float4 projResult = cbCamera.mtxWorld2Clip * (cbObject.mtxLocal2World * float4(inputBasic.position, 1));
-
-    VertexOutput_Basic outputBasic;
-    outputBasic.position = projResult;
-    outputBasic.worldPosition = (cbObject.mtxLocal2World * float4(inputBasic.position, 1)).xyz;
-    outputBasic.normal = normalize((cbObject.mtxLocal2World * float4(inputBasic.normal, 0)).xyz);
-    outputBasic.uv = inputBasic.uv;
-    return outputBasic;
-}
-
-VertexOutput_Extended vertex Main_Vertex_Ext(
-    device const VertexInput_Basic* pInputBasic     [[ buffer( 0 ) ]],
-    device const VertexInput_Extended* pInputExt    [[ buffer( 1 ) ]],
-    device const CBCamera& cbCamera                 [[ buffer( 2 ) ]],
-    device const CBObject& cbObject                 [[ buffer( 4 ) ]],
-    uint vertexId                                   [[ vertex_id ]])
-{
-    const device VertexInput_Basic& inputBasic = pInputBasic[vertexId];
-    const device VertexInput_Extended& inputExt = pInputExt[vertexId];
-
-    float4 projResult = cbCamera.mtxWorld2Clip * (cbObject.mtxLocal2World * float4(inputBasic.position, 1));
-    //float4 projResult = cbCamera.mtxWorld2Clip * float4(inputBasic.position, 1);
-
-    VertexOutput_Extended outputExt;
-    outputExt.position = projResult;
-    outputExt.worldPosition = (cbObject.mtxLocal2World * float4(inputBasic.position, 1)).xyz;
-    outputExt.normal = normalize((cbObject.mtxLocal2World * float4(inputBasic.normal, 0)).xyz);
-    outputExt.uv = inputBasic.uv;
-
-    outputExt.tangent = normalize((cbObject.mtxLocal2World * float4(inputExt.tangent, 0)).xyz);
-    outputExt.binormal = cross(outputExt.normal, outputExt.tangent);
-    outputExt.uv2 = inputExt.uv2;
-    return outputExt;
-}
-########
-          DXBCØ÷rÆÚ)áüåÆëL‡€j   ê     8   H   ‘   à  Ï    SFI0           ISG1Ñ             h                            q                           x                       POSITION NORMAL TEXCOORD    OSG1¨             à                            î                           ö                           °                       SV_Position COLOR NORMAL TEXCOORD   PSV0\  4                      ˇˇˇˇ                   0                                                 <    POSITION NORMAL TEXCOORD COLOR NORMAL TEXCOORD Main_Vertex                   C    
-       C           B             D         C           C   '       B                                            HASH       •€Lêæîªtñﬂ¸‘e¢DXILÄ  c  `  DXIL     h  BC¿ﬁ!  W  Ç        Å#ëA»I29íÑ%ãbÄEBíBƒ28K
-2bàHê CFà• 2B‰Hê#ƒPAQÅå·ÉÂä1FQ     å‡ˇˇˇˇ@®Ñˇˇˇˇ m0Üˇˇˇˇ 	® I     Ç`B L    â   0   2"à	 dÖ#§Ñ#„Ñ°êLååÑƒLÑ¡@	 
-f Ê¿`é )∆@DAêQÄ àb § 1√0§îa bé.¬BÚπç*VbÚã€Fƒ0˜ó?a!˘!–ÅÇßïb Üa†ié (DQë50å@Iê›t8“¥ òCM>∑q CD Z¥,”ÇÇ†man:iZ Ã°&ü€– !Ñ	Z7êó r¿át`á6háyhr¿áØPm–zPm z0r†s mêq†s mêx†s mêq`z0r–È0r†s mêv@z`t–Êv†s m`s z0r–Ê`t†v@m‡x†q`z0r†v@Cû           Ü<        y         Ú(@        0‰aÄ        `»0       ¿êg        Ä!è¿        Y       2òLêå	&G∆C"J†
-¢F 
-_†
-4† Éäí(É"(‚f Ëõ p,Fq˛·˛ Ò ƒ $@y  n   LêFDèoÏÌM$∆«EÜf∆eÜe,«∆&g&eCLdÇ@$ÑÅò  a0(ÿÕMàe√Ä$ƒÅ`&‹E`Ç@4êÖiñapÄ	¬áMgÇ@<êjñhêÄ¬3m  Ä&`êm¨	Ç pi
-Ks˚≤*ì£+√#ı4ïDïÙ‰4A(§	B1mñ	BAMhÉ@|ñE€∏éºÖNORMALñA6Æ„o‡¿ÄU÷–”ì—°®6±aâ»`„:n(Éà3ÉCå¡pô≤˙ÇzõK£K{sõ ÷Åà6ƒlXñ4ÿºN5X86`1ÙƒÙ$µa‹`„∫2ºÅÉK$◊ï¡‡ElX2ÿ∏ÆÜ2 83ÿ@¥¡¿Al–@ÄñÕATac≥ksI#+s£õU»\Ï ‰Ê“ﬁ‹¶D2<ª06ª2π)ÅQáœe-å¨LÆÈç¨åmJêî!√së+õ{´ì+õõPu»\Ï“ Óí»¶Ë¬Ë ¶V2<ó27:π<®∑47∫π)¡ y  L   3Äƒ·f=àC8Ñ√åBÄyxsòqÊ ÌÙÄ3B¬¡Œ°f0=àC8ÑÉÃ=»C=å=Ãxåtp{yHáppzpvxáp áÃÏê·0n0„P3ƒﬁ!ÿ!¬af0â;ºÉ;–C9¥<ºÉ<Ñ;Ãv`{h7hárh7Äápêáp`v(v¯vxáwÄá_áqáròáyòÅ,ÓÓ‡ı¿Ï0b»°‰°Ã°‰°‹a !ƒÅ a÷êC9»C9òC9»C9∏√8îC8à;î√/ºÉ<¸Ç;‘;∞√å»!|prásp{y`áp»áw®zòÅ<‰Än@Â–   q       ∞ò “¸/Mƒe€p˘Œ„UDT:¿P `~q€v óÔ<æ¿DÑ@3,Ñ8√Â;è?8”Ì∑m”p˘Œ„/0àÕCM~q€&PóÔ<æ49ÅR”CM~q€f óÔ<˛DDDò_‹∂<√Â;èO5@Ñ˘≈m  a   Ã  A,      DWŸïB!Ã î\πï%@’     #	 Ç``u≈√Y¡àAÄ Xûeù0bê  F$ò6!#	 Ç``òÅímE2bê  ∆,`¿U àAÄ h¿ÑAw,#	 Ç``§A#^≈å$ ÇÅ°Œ˜aÕàAÄ kÄ(ŒàAÄ l ÖA`œà¡Ä Di0)b0ö £	B0ö0£	ƒ0bp  ë`œå&¿hÇå&¬h1å ÇA4•£	0ö £	É0ö@# Ç`·Ådt0ö £	B0ö0£	ƒ0bp  QúAg£	0ö £	É0ö@# Ç`âà¡å&¿hÇå&¬h1å ÇAt
-qp~0ö £	B0ö0£	ƒ0bp  +ÿ†¬hB å&¡h¬ å&ÉMg ü A0òb°û3F ¡`í?XŒ 1@ Éi˛‡8É¿.3êœàÄ Lµ
-ì# Ç`0ŸÇ(<få  Ç¡t£∞òA`[»gƒ @¶\(Ö´Ç A0òt¡¶2F ¡`⁄ÖSx  ∞è‰3bÄ  S/§¬F¡àÄ Læ†
-# Ç`0˝¬*Ldò‹Å|F ¡`
-áVÓ 1@ ÉI\AªÉ`ƒ @¶qxÎ3;êœàÄ LÂb`¡àÄ LÊ û# Ç`0ù√,hvò‘Å|F ¡`JáZ0É:F ¡`R[É:F ¡`Zá[Í 07†˘å  Ç¡‘π†tå  Ç¡‰∫`tå  Ç¡Ùª tXúÇ|F ¡`äá^hÉSF ¡`í_HÉSF ¡`öá_(ÉS¨LA># Ç`0’C8ƒÅ)# Ç`0ŸÉ8¥Å)# Ç`0›√8§Å)ñ• ü A0òÚ°Í†Ç A0òÙ¡‚†Ç A0òˆ·⁄†ÎRêœàÄ L˝êy@
-¡àÄ L˛†u@
-¡àÄ Lˇ∞q@
-ÅÅ¬-»gƒ @¶êh>∏Ö`ƒ @&ëp<∏Ö`ƒ @¶ëx:∏Ö¿H¡‰3bÄ  SIƒ(ÿB0bÄ  ìI»ÿB0bÄ  ”IÃÿB`®PÚ1@ É)%ÍÅj!1@ ÉI%Ïj!1@ Éi%ÓÅj!0V†˘å  Ç¡‘˘Ä
-¥å  Ç¡‰˙@
-¥å  Ç¡Ù˚ 
-¥X¨É|F ¡`äâ~–ÉuF ¡`í	∏Éu,†ËXºÉ|F ¡`™âêpÉwF ¡`≤	ëXÉw,@ËXÃÉ|F ¡` âíÉyF ¡`“	ì¯Ê!∞ÄÉée˜ ü A0òz"%¨{F ¡`Ú	ïòÓ!∞ ÇŒàAÄ  d°:°3—å$ ÇB*°:A…àAÄ  d°:°1Qå$ ÇB*°:!¡à¡Ä Da±"°£	0ö £	É0bp  QYºÑIà≈hB å&¡h¬ å ÇAî3°`1ö £	B0ö0# Ç`µ≈M∏DZå&¿hÇå&Ç=+!ü A0ò‚¢'òïF ¡`íüHV"∞¿ÄéI/!ü A0òÍ",ûóF ¡`≤±`^"∞ ÅéU3!ü A0òÚ¢,§ôF ¡`“≥xf"∞ÄÅŒàAÄ  †azaoëå$ Çf°v≈àAÄ  †azamå ÇA‘g·v1ö £	B0ö0# Ç`Ö∆ZàÖ_å&¿hÇå&¬à¡Ä D•Òf¡£	0ö £	É`ãY»gƒ @¶‘®ƒ,Ç A0òT√.
-≥¨I˘å  Ç¡ƒx°§E0bÄ  Sk‰≈ëÅ=l!ü A0ò^c/∂F ¡`ÇæHÿ"1X Ö6Ó‚ ÇÉF ¡Ä°çª,H‰c¬!
-˘å$ Ç¢†·∞ë√àAÄ  ∫Æz!å$ Ç¢†·∞q¡àAÄ  ∫≥©a#	 Ç`ÄËhÃlËE]       DXBC„”.F§2a\Ä/ÿ˚%à   0     8   H     0  4  P  SFI0           ISG1ƒ             ®                            ±                           ∏                           ±                          ∏                      POSITION NORMAL TEXCOORD    OSG1            Ë                            Ù                           ˙                                                                              
-                          ˙                      SV_Position COLOR NORMAL TEXCOORD TANGENT   PSV0¸  4                      ˇˇˇˇ                   X                                                 h    POSITION NORMAL TEXCOORD NORMAL TEXCOORD COLOR NORMAL TEXCOORD TANGENT NORMAL TEXCOORD Main_Vertex_Ext                      C    
-       C           B          C    !      B             D  *       C   0       C   7       B   @       C   H      C   O      b                 p  p  p                      w   w   w      @   Ä          HASH       ü¡YKË¿j∫u˙9™NDXILÿ  c  ∂  DXIL     ¿  BC¿ﬁ!  ≠  Ç        Å#ëA»I29íÑ%ãbÄEBíBƒ28K
-2bàHê CFà• 2B‰Hê#ƒPAQÅå·ÉÂä1FQ     å‡ˇˇˇˇ@®Ñˇˇˇˇ m0Üˇˇˇˇ 	® I     Ç`B L    â   0   2"à	 dÖ#§Ñ#„Ñ°êLååÑƒLÑ¡@	 
-f Ê¿`é )∆@DAêQÄ àb § 1√0§îa bé.¬BÚπç*VbÚã€Fƒ0˜ó?a!˘!–ÅÇßïb Üa†ié (DQë50å@Iê›t8“¥ òCM>∑q CD Z¥,”ÇÇ†man:iZ Ã°&ü€– !Ñ	Z7êó r¿át`á6háyhr¿áØPm–zPm z0r†s mêq†s mêx†s mêq`z0r–È0r†s mêv@z`t–Êv†s m`s z0r–Ê`t†v@m‡x†q`z0r†v@Cû           Ü<        y         Ú(@        0‰aÄ        `»0       ¿êg        Ä!è¿        Y       2òLêå	&G∆C"J†
-¢F 
-_†
-4†
-°<JÅäí(É"(‚f Ëõ p,J∫˛·˛ Ò<@<¡ A  A–=@t› A¡   y  á   LêFDèoÏÌM$∆«EÜf∆eÜe,«∆&g&eCLdÇ@$ÑÅò  a0(ÿÕMàe√Ä$ƒÅ`&\F`Ç@4êÖiñapÄ	¬ßMgÇ@<êjñhêÄ¬3m  Ä&`∞m¨	Ç i
-Ks˚≤*ì£+√˚*¬£#ı4ïDïÙ‰4A(®	BQmñ	BaMhÉ@|ñE€∏éºÖNORMALñA6Æ„o‡¿ÄU÷–”ì—°∏6±aâ»`„:n(Éà3É¡∞a!ƒ`„–Ä<ÇÉ	mX‘Ä6∏°‘Ä3ÉEå¡§¡pô≤˙ÇzõK£K{sõ ÿÅê6ƒlXñ6ÿºŒ7X88`1ÙƒÙ$µa‰`„∫2ºÅÉK$◊ï¡‡ElX2ÿ∏ÆÜ2 83‡A‰tT‰DµaQ;ÿ∏ÆO80ò ”Üƒ`„–†80ÿ∞$d∞qhPCe`é8ò:®É;»=ÿ0∞¡ 
-,„É
-®¬∆f◊ÊíFVÊF7%™ê·πÿï…Õ•ΩπM	à&dx.valverS£ûÀZYô\”Y€î )CÜÁ"W6˜V'7V67%†Íê·πÿ•ï›%ëM—Ö—ïM	¨:dx.entryPointsS>  y  L   3Äƒ·f=àC8Ñ√åBÄyxsòqÊ ÌÙÄ3B¬¡Œ°f0=àC8ÑÉÃ=»C=å=Ãxåtp{yHáppzpvxáp áÃÏê·0n0„P3ƒﬁ!ÿ!¬af0â;ºÉ;–C9¥<ºÉ<Ñ;Ãv`{h7hárh7Äápêáp`v(v¯vxáwÄá_áqáròáyòÅ,ÓÓ‡ı¿Ï0b»°‰°Ã°‰°‹a !ƒÅ a÷êC9»C9òC9»C9∏√8îC8à;î√/ºÉ<¸Ç;‘;∞√å»!|prásp{y`áp»áw®zòÅ<‰Än@Â–   q   !   ò “¸/Mƒı{◊d€p˘Œ„UDT:¿P `~q€v óÔ<æ¿DÑ@3,Ñ8√Â;è?8”Ì∑m”p˘Œ„/0àÕCM~q€&PóÔ<æ49ÅR”CM~q€f óÔ<˛DDDò_‹∂<√Â;èO5@Ñ˘≈m   a     A,      D◊@Ÿï\πï%@’    #	 Ç``uE√Y¡àAÄ Xû·dù0bê  FTï%#	 Ç``òÅemÖ2bê  ∆\7-#	 Ç``†›¡å$ ÇÅëYxS3bê  Üh›g9#	 Ç``¨¡ÊÅÅÚå$ ÇÅ¡\Ñç$ ÇÅ—ùàç$ ÇÅ·ﬁå&ç$ ÇÅÒê¡6ç$ ÇÅ`PeP#	 Ç``ƒAòÅl’à¡Ä DnP=g0ö £	B0ö0£	ƒ0bp  —hå&¿hÇå&¬h1å ÇAÑ_ˆ£	0ö £	É0ö@# Ç`ıxy0ö £	B0ö0£	ƒ0bp  ë(§ÅÏ¡hB å&¡h¬ å&√à¡Ä Dß‡g@
-£	0ö £	É0ö@# Ç`±¬∞¡(å&¿hÇå&¬h1å ÇAx≠0ö £	B0ö0£	ƒ`”»gƒ @&[ ÖÁÇ A0òn!ñ3F ¡`¬Q8Œ ∞À‰3bÄ  ì.ê¬d¡àÄ LªP
-è# Ç`0ÒÇ),fÿVÚ1@ É…P·*É`ƒ @¶_HÖ©Ç A0ò¿Aû2Ï#˘å  Ç¡$¨∞ëA0bÄ  ”8¥¬E¡àÄ L‰‡
-&w ü A0òÃº;F ¡`:áX–Ó 1@ É	d¡∫É¿Ã¿‰3bÄ  ì:–ÇÿA0bÄ  ”:‘Çg¡àÄ LÏ`ö¶u ü A0ò‹Ã†Ç A0òﬁ!ƒ†Ç A0ò‡Aº:ÃË@># Ç`0…/®# Ç`0ÕC/ò# Ç`0—É/àß ü A0òÏ⁄‡Ç A0òÓ!“‡Ç A0òA ‡´SêœàÄ L˙@q`
-¡àÄ L˚Pm`
-¡àÄ L¸`i`
-ÅÂA)»gƒ @&@á:(Ö`ƒ @¶Há8(Ö`ƒ @&êPá6(Ö¿˙Ä‰3bÄ  ìH∞CêB0bÄ  ”H¥CêB0bÄ  I∏CêB`†pÚ1@ É…$‡Ån!1@ ÉÈ$‚n!1@ É	%‰Ån!0R∞˘å  Ç¡§Ù 
-∂å  Ç¡¥ı¿∂å  Ç¡ƒˆÄ∂*‘Ç|F ¡`r	| ÖZF ¡`zâ| ÖZF ¡`Ç	}‡ÉZåhA># Ç`0…?†-# Ç`0ÕD?ê-# Ç`0—Ñ?Ä-÷Î ü A0òl$Ù`Ç A0òn"$Ó`Ë :Ô ü A0òtÇ$‹‡Ç A0òv¢$÷‡– :VÛ ü A0ò|%ƒ`Ç A0ò~"%æy,‡†cŸ=»gƒ @&±`	ÎÇ A0ò∆¢%¶{,Ä†c˜∞Ú1@ É…,`bˆ!1@ ÉÈ,b‚ˆ!∞`†c˙Ú1@ ÉI-h¬˛!1@ Éi-jB˛!∞¿†c˝0Ú1@ É…-p"F"1@ ÉÈ-r¢F"∞ †c#°Ú1@ ÉI.x‚T"1@ Éi.zbT"∞íh	˘å  Ç¡T?-å  Ç¡d`—-ÿI¿Ñ|F ¡`¬±	òF ¡` ã±¯òF ¡@È∞8à‡ Ç A0`˙,˘òp»«ÜB>=!ü A0ò@C-Z¢'Ç A0òBc-R¢'õ	∞êœàÄ L£—/¡àÄ L§·+Å’ƒX»gƒ @&”Äãòã`ƒ @¶”àãñã`ƒ`@î’pãÉ"10 f5‹"∞ ëè	á|l(‰c$ ˘òƒ«I>VTÚ1!àè!ó|Lπ‰cBüÉ A0@t#5`6N√F ¡ —ç‘Äÿ–=1H D7R6`£4Ï`ƒ @›HÿÄ”êÉÉ A0@t#5h6N√F ¡ —ç‘†ÿ–51H D7RÉ6`£4Ã`ƒ @›H◊Äç”–F ¡ —ç‘pÿ–ãlƒ @›H◊Äç“¿F ¡ —ç‘òÿ8ç∏1H D7Rc6`C/‡bƒ @›Hç’Äç”`F ¡ —ç‘Xÿ–ãeƒ @›Hç’Äç“PF ¡ —ç‘Hÿ8çcƒ @›Hç‘ÄΩ F ¡ —ç‘Hÿ(ç`ƒ @›HçÿÄç”∞ãÉ A0@t#5b6Ù¢.      #     9                 GLSL.std.450                      Main_Vertex                   	        v    
-   type.CBCamera     
-       mtxWorld2Clip     
-      cameraPosition    
-      cameraDirection   
-      mtxCameraMotion   
-      cameraIdx     
-      resolutionX   
-      resolutionY   
-      nearClipPlane     
-      farClipPlane      
-   	   lightCount   	 
-   
-   shadowMappedLightCount       CBCamera         type.CBObject            mtxLocal2World          worldPosition           boundingRadius       CBObject         in.var.POSITION      in.var.NORMAL0       in.var.TEXCOORD0         out.var.COLOR0       out.var.NORMAL0   	   out.var.TEXCOORD0        Main_Vertex G            G            G           G           G            G           G  	         G     "       G     !      G     "       G     !      H  
-       #       H  
-             H  
-          H  
-      #   @   H  
-      #   P   H  
-      #   `   H  
-            H  
-         H  
-      #   †   H  
-      #   §   H  
-      #   ®   H  
-      #   ¨   H  
-      #   ∞   H  
-   	   #   ¥   H  
-   
-   #   ∏   G  
-      H         #       H               H            H        #   @   H        #   L   G                    +                     +          Ä?+                                                 
-                                             
-                                                                                                                    !            !         ;           ;           ;           ;           ;           ;           ;           ;           ;     	      6                ¯  "   =     #      =     $      =     %      A  !   &         =     '   &   A  !   (         =     )   (   í     *   )   '   Q     +   #       Q     ,   #      Q     -   #      P     .   +   ,   -      ê     /   .   *   ê     0   .   )   O     1   0   0             Q     2   $       Q     3   $      Q     4   $      P     5   2   3   4      ê     6   5   )   O     7   6   6                  8      E   7   >     /   >     1   >     8   >  	   %   ˝  8  #     H                 GLSL.std.450                      Main_Vertex_Ext                   	   
-                    v       type.CBCamera            mtxWorld2Clip           cameraPosition          cameraDirection         mtxCameraMotion         cameraIdx           resolutionX         resolutionY         nearClipPlane           farClipPlane         	   lightCount   	    
-   shadowMappedLightCount       CBCamera         type.CBObject            mtxLocal2World          worldPosition           boundingRadius       CBObject         in.var.POSITION      in.var.NORMAL0       in.var.TEXCOORD0         in.var.NORMAL1       in.var.TEXCOORD1      	   out.var.COLOR0    
-   out.var.NORMAL0      out.var.TEXCOORD0        out.var.TANGENT0         out.var.NORMAL1      out.var.TEXCOORD1        Main_Vertex_Ext G            G            G           G           G           G           G  	          G  
-         G           G           G           G           G     "       G     !      G     "       G     !      H         #       H               H            H        #   @   H        #   P   H        #   `   H              H           H        #   †   H        #   §   H        #   ®   H        #   ¨   H        #   ∞   H     	   #   ¥   H     
-   #   ∏   G        H         #       H               H            H        #   @   H        #   L   G                    +                     +          Ä?+                                                                                                                                                                             !            "            #           $   !  %   $      &         ;           ;           ;           ;           ;            ;           ;            ;  !         ;  "   	      ;  "   
-      ;  #         ;  "         ;  "         ;  #         6  $          %   ¯  '   =     (      =     )      =     *      =     +      =     ,      A  &   -         =     .   -   A  &   /         =     0   /   í     1   0   .   Q     2   (       Q     3   (      Q     4   (      P     5   2   3   4      ê     6   5   1   ê     7   5   0   O     8   7   7             Q     9   )       Q     :   )      Q     ;   )      P     <   9   :   ;      ê     =   <   0   O     >   =   =                  ?      E   >   Q     @   +       Q     A   +      Q     B   +      P     C   @   A   B      ê     D   C   0   O     E   D   D                  F      E   E        G      D   ?   F   >     6   >  	   8   >  
-   ?   >     *   >     F   >     G   >     ,   ˝  8  
