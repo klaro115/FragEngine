@@ -55,13 +55,12 @@ For more information on how to implement app logic, see the [Architecture Guide]
 
 
 ## Assets
-An assets folder exists within the root directory, called "data". This folder must be copied into the build results directory.
-Scripts for Windows and MacOS are included, to automate this copying as much as possible.
-Eventually, a proper asset pipeline is planned, to replace and automate asset processing and bundling further.
+An assets folder exists within the root directory, called "Assets".
+Processing and conversion of source assets into resources that are natively usable by the engine is handled by the asset pipeline.
 
 #### Resource Files
 
-Resources are primarily loaded from files located within the "data" folder. Each resource file might contain one or more resources, and must be accompanied by a descriptive resource metadata file. You may refer to the [Resource Guide](./Documentation/Resources/Resource%20Guide.md) for more details on asset management.
+Resources are primarily loaded from files located within the "Assets" folder. Each resource file might contain one or more resources, and must be accompanied by a descriptive resource metadata file. You may refer to the [Resource Guide](./Documentation/Resources/Resource%20Guide.md) for more details on asset management.
 
 #### Shaders & Graphics
 
