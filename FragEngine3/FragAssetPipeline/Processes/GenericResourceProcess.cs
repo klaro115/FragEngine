@@ -4,6 +4,8 @@ namespace FragAssetPipeline.Processes;
 
 internal static class GenericResourceProcess
 {
+	#region Methods
+
 	public static bool PrepareResources(string inputFolderAbsPath, string _outputFolderAbsPath, List<string> _dstResourceFilePaths)
 	{
 		// Ensure input and output directories exist; create output if missing:
@@ -74,4 +76,6 @@ internal static class GenericResourceProcess
 		}
 		return successCount == totalResourceCount;
 	}
+
+	#endregion
 }

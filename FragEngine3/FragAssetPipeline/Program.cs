@@ -49,7 +49,7 @@ internal static class Program
 
 	private static void Main(string[] args)
 	{
-		Console.WriteLine("### BEGIN ###\n");
+		Console.WriteLine("### BEGIN ###");
 
 		string? assetPipelineEntryPath = Path.GetDirectoryName(System.Reflection.Assembly.GetEntryAssembly()?.Location);
 		string assetPipelineBuildDir = Path.GetFullPath(assetPipelineEntryPath ?? Environment.CurrentDirectory);
@@ -73,29 +73,56 @@ internal static class Program
 			Directory.CreateDirectory(buildAssetsAbsDir);
 		}
 
+		if (clearBuildDirFirst)
+		{
+			PrintStatus("\n## CLEARING DESTINATIONS:");
+			ClearDestinationFolders(outputAssetsAbsDir, buildAssetsAbsDir);
+		}
+
 		List<string> resourceFilePaths = [];
 
-		PrintStatus("## PROCESSING SHADERS:");
+		PrintStatus("\n## PROCESSING SHADERS:");
 		ProcessShaders(inputAssetsAbsDir, outputAssetsAbsDir, resourceFilePaths);
 
-		PrintStatus("## PROCESSING MODELS:");
+		PrintStatus("\n## PROCESSING MODELS:");
 		ProcessGenericResources(inputAssetsAbsDir, outputAssetsAbsDir, "models", resourceFilePaths);
 
-		PrintStatus("## PROCESSING TEXTURES:");
+		PrintStatus("\n## PROCESSING TEXTURES:");
 		ProcessGenericResources(inputAssetsAbsDir, outputAssetsAbsDir, "textures", resourceFilePaths);
 
-		PrintStatus("## PROCESSING MATERIALS:");
+		PrintStatus("\n## PROCESSING MATERIALS:");
 		ProcessGenericResources(inputAssetsAbsDir, outputAssetsAbsDir, "materials", resourceFilePaths);
 
 		//...
 
-		PrintStatus("## BUNDLING RESOURCES:");
+		PrintStatus("\n## BUNDLING RESOURCES:");
 		ProcessBundling(resourceFilePaths, outputAssetsAbsDir);
 
 		PrintStatus("\n## PROCESSING OUTPUT:");
 		ProcessOutput(resourceFilePaths, outputAssetsAbsDir, buildAssetsAbsDir);
 
 		Console.WriteLine("\n#### END ####");
+	}
+
+	private static bool ClearDestinationFolders(string _outputAssetsAbsDir, string _buildAssetsAbsDir)
+	{
+		bool success = true;
+
+		Console.WriteLine($"Clearing data folder...");
+		if (!ClearingProcess.ClearFolder(_outputAssetsAbsDir, true))
+		{
+			PrintError("Failed to clear data folder!");
+			success = false;
+		}
+
+		Console.WriteLine($"Clearing build folder...");
+		if (!ClearingProcess.ClearFolder(_buildAssetsAbsDir, true))
+		{
+			PrintError("Failed to clear resources in build directory!");
+			success = false;
+		}
+
+		return success;
 	}
 
 	private static bool ProcessShaders(string _inputAssetDir, string _outputAssetDir, List<string> _dstResourceFilePaths)
