@@ -113,7 +113,7 @@ internal static class CopyAssetsProcess
 				continue;
 			}
 
-			File.Copy(srcFileAbsPath, dstFileAbsPath, true);
+			File.Copy(srcDataFileAbsPath, dstFileAbsPath, true);
 			successCount++;
 		}
 

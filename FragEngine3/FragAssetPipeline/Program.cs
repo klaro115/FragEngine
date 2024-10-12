@@ -1,5 +1,6 @@
 ﻿using FragAssetPipeline.Processes;
 using FragEngine3.Graphics.Resources;
+using FragEngine3.Resources.Data;
 using Veldrid;
 
 namespace FragAssetPipeline;
@@ -8,6 +9,7 @@ internal static class Program
 {
 	#region Constants
 
+	private static bool clearBuildDirFirst = true;
 	private static bool autoGenerateFresFiles = true;
 
 	private const MeshVertexDataFlags flagsBasic = MeshVertexDataFlags.BasicSurfaceData;
@@ -20,7 +22,7 @@ internal static class Program
 	[
 		new("Basic_VS",                           "Basic_VS.hlsl",                                       "Main_Vertex", ShaderStages.Vertex,   flagsExt),
 		new("DefaultSurface_VS",                  "DefaultSurface_VS.hlsl",                              "Main_Vertex", ShaderStages.Vertex,   flagsExt),
-		new("DefaultSurface_modular_PS",          "DefaultSurface_modular_PS.hlsl",                      "Main_Pixel",  ShaderStages.Fragment, flagsExt),
+		new("DefaultSurface_PS",                  "DefaultSurface_modular_PS.hlsl",                      "Main_Pixel",  ShaderStages.Fragment, flagsExt),
 		new("AlphaShadow_PS",                     "shadows/AlphaShadow_PS.hlsl",                         "Main_Pixel",  ShaderStages.Fragment, flagsExt),
 		new("DefaultShadow_PS",                   "shadows/DefaultShadow_PS.hlsl",                       "Main_Pixel",  ShaderStages.Fragment, flagsExt),
 		new("ForwardPlusLight_CompositeScene_PS", "composition/ForwardPlusLight_CompositeScene_PS.hlsl", "Main_Pixel",  ShaderStages.Fragment, flagsBasic),
@@ -76,6 +78,15 @@ internal static class Program
 
 		PrintStatus("## PROCESSING SHADERS:");
 		ProcessShaders(inputAssetsAbsDir, outputAssetsAbsDir, resourceFilePaths);
+
+		PrintStatus("## PROCESSING MODELS:");
+		ProcessGenericResources(inputAssetsAbsDir, outputAssetsAbsDir, "models", resourceFilePaths);
+
+		PrintStatus("## PROCESSING TEXTURES:");
+		ProcessGenericResources(inputAssetsAbsDir, outputAssetsAbsDir, "textures", resourceFilePaths);
+
+		PrintStatus("## PROCESSING MATERIALS:");
+		ProcessGenericResources(inputAssetsAbsDir, outputAssetsAbsDir, "materials", resourceFilePaths);
 
 		//...
 
@@ -134,13 +145,87 @@ internal static class Program
 		// Print a brief summary of processing results:
 		if (successCount < totalShaderCount)
 		{
-			PrintWarning($"Processing of {successCount}/{totalShaderCount} shader resources failed!");
+			PrintWarning($"Processing of {totalShaderCount - successCount}/{totalShaderCount} shader resources failed!");
 		}
 		else
 		{
 			Console.WriteLine($"Processing of all {totalShaderCount} shader resources succeeded.");
 		}
 		return successCount == totalShaderCount;
+	}
+
+	private static bool ProcessGenericResources(string _inputAssetDir, string _outputAssetDir, string _assetCategoryDirName, List<string> _dstResourceFilePaths)
+	{
+		string inputSubDir = Path.Combine(_inputAssetDir, _assetCategoryDirName);
+		string outputSubDir = Path.Combine(_outputAssetDir, _assetCategoryDirName);
+
+		// Ensure input and output directories exist; create output if missing:
+		if (!Directory.Exists(inputSubDir))
+		{
+			PrintError($"Input directory for generic resource process does not exist! Path: '{inputSubDir}'");
+			return false;
+		}
+		if (!Directory.Exists(outputSubDir))
+		{
+			Directory.CreateDirectory(outputSubDir);
+		}
+
+		string[] metadataFilePaths = Directory.GetFiles(inputSubDir, "*.fres", SearchOption.AllDirectories);
+		if (metadataFilePaths.Length == 0)
+		{
+			PrintWarning("Skipping generic resource process; process requires at least 1 resource file in input directory.");
+			return true;
+		}
+
+		// Process and output resources one after the other:
+		int successCount = 0;
+		int totalResourceCount = 0;
+
+		foreach (string srcMetadataFilePath in metadataFilePaths)
+		{
+			// Skip resources that were already captured otherwise:
+			if (_dstResourceFilePaths.Contains(srcMetadataFilePath)) continue;
+
+			totalResourceCount++;
+
+			if (!ResourceFileData.DeserializeFromFile(srcMetadataFilePath, out ResourceFileData fileData))
+			{
+				continue;
+			}
+
+			string srcMetadataDirPath = Path.GetDirectoryName(srcMetadataFilePath) ?? "./";
+			string srcDataFilePath = Path.Combine(srcMetadataDirPath, fileData.DataFilePath);
+			if (!File.Exists(srcDataFilePath))
+			{
+				continue;
+			}
+
+			string dstFolderDir = Path.Combine(outputSubDir, Path.GetRelativePath(inputSubDir, srcMetadataDirPath));
+			if (!Directory.Exists(dstFolderDir))
+			{
+				Directory.CreateDirectory(dstFolderDir);
+			}
+
+			string dstMetadataFilePath = Path.Combine(dstFolderDir, Path.GetFileName(srcMetadataFilePath));
+			string dstDataFilePath = Path.Combine(dstFolderDir, Path.GetFileName(srcDataFilePath));
+
+			File.Copy(srcMetadataFilePath, dstMetadataFilePath, true);
+			File.Copy(srcDataFilePath, dstDataFilePath, true);
+
+			_dstResourceFilePaths.Add(dstMetadataFilePath);
+			successCount++;
+		}
+
+		// Print a brief summary of processing results:
+		if (successCount < totalResourceCount)
+		{
+			PrintWarning($"Processing of {totalResourceCount - successCount}/{totalResourceCount} generic resources failed!");
+		}
+		else
+		{
+			Console.WriteLine($"Processing of all {totalResourceCount} generic resources succeeded.");
+		}
+		return successCount == totalResourceCount;
 	}
 
 	private static bool ProcessBundling(List<string> _srcResourceMetadataPaths, string _dstAssetsAbsDir)

@@ -145,27 +145,28 @@ internal static class ShaderProcess
 	/// <returns>True if metadata file creation succeeded, false otherwise.</returns>
 	public static bool GenerateResourceMetadataFile(string _inputDir, string _outputDir, Details _details, out string _outMetadataFilePath)
 	{
-		if (!GetOutputPathFromFileName(_details.relativeFilePath, _inputDir, _outputDir, out _, out string outputPath))
+		if (!GetOutputPathFromFileName(_details.relativeFilePath, _inputDir, _outputDir, out _, out string outputDataFilePath))
 		{
 			_outMetadataFilePath = string.Empty;
 			return false;
 		}
-		if (!File.Exists(outputPath))
+		if (!File.Exists(outputDataFilePath))
 		{
-			Program.PrintError($"Shader resource output file does not exist! File path: '{outputPath}'");
+			Program.PrintError($"Shader resource output file does not exist! File path: '{outputDataFilePath}'");
 			_outMetadataFilePath = string.Empty;
 			return false;
 		}
 
-		// Assemble output and relative file paths:
-		_outMetadataFilePath = Path.ChangeExtension(outputPath, ".fres");
+		// Assemble output and relative file paths: (name metadata file after the resource key)
+		string outputDirPath = Path.GetDirectoryName(outputDataFilePath) ?? "./";
+		_outMetadataFilePath = Path.Combine(outputDirPath, $"{_details.resourceKey}{ResourceConstants.FILE_EXT_METADATA}");
 
-		string dataFileRelPath = $"./{Path.GetFileName(outputPath)}";
+		string dataFileRelPath = $"./{Path.GetFileName(outputDataFilePath)}";
 
 		// Calculate hash and measure size of output data file:
-		if (!ResourceFileHandle.CalculateDataFileHash(outputPath, out ulong dataFileHash, out ulong dataFileSize))
+		if (!ResourceFileHandle.CalculateDataFileHash(outputDataFilePath, out ulong dataFileHash, out ulong dataFileSize))
 		{
-			Program.PrintError($"Failed to calculate hash and measure file size of shader resource data file! File path: '{outputPath}'");
+			Program.PrintError($"Failed to calculate hash and measure file size of shader resource data file! File path: '{outputDataFilePath}'");
 			return false;
 		}
 		
