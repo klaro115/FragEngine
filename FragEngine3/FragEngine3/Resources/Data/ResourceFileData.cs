@@ -13,6 +13,7 @@ public sealed class ResourceFileData
 	public string DataFilePath { get; set; } = string.Empty;
 	public ResourceFileType DataFileType { get; set; } = ResourceFileType.Single;
 	public ulong DataFileSize { get; set; } = 0;
+	public ulong DataFileHash { get; set; } = 0;    // xxHash3 checksum as a big-endian 64-bit number.
 
 	// Compression details:
 	public ulong UncompressedFileSize {  get; set; } = 0;
@@ -112,7 +113,7 @@ public sealed class ResourceFileData
 		}
 
 		return IsComplete();
-		}
+	}
 
 	public bool SerializeToFile(string _filePath) => Serializer.SerializeJsonToFile(this, _filePath);
 	public static bool DeserializeFromFile(string _filePath, out ResourceFileData _outFileData) => Serializer.DeserializeJsonFromFile(_filePath, out _outFileData!);

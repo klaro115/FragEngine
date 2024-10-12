@@ -124,7 +124,7 @@ public static class DxCompiler
 
 			// Check for errors:
 			using var errorBlob = results.GetOutput(DxcOutKind.Errors);
-			if (errorBlob is not null && errorBlob.BufferSize > 0)
+			if (errorBlob is not null && errorBlob.AsSpan().Length > 0)
 			{
 				string errorTxt = Encoding.UTF8.GetString(errorBlob.AsSpan());
 				Console.WriteLine($"Error! Failed to compile HLSL shader variant!\nFile path: '{_hlslFilePath}'\nError output: '{errorTxt}'");
@@ -133,7 +133,7 @@ public static class DxCompiler
 
 			// Get compiled shader:
 			using var shaderBlob = results.GetOutput(DxcOutKind.Object);
-			if (shaderBlob is null || shaderBlob.BufferSize == 0)
+			if (shaderBlob is null || shaderBlob.AsSpan().Length == 0)
 			{
 				Console.WriteLine($"Error! Failed to compile HLSL shader variant; output was empty!\nFile path: '{_hlslFilePath}'");
 				return DxcResult.Failure;

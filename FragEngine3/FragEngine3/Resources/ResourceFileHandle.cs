@@ -1,4 +1,5 @@
 ﻿using System.IO.Compression;
+using System.IO.Hashing;
 using FragEngine3.EngineCore;
 using FragEngine3.Resources.Data;
 
@@ -36,7 +37,7 @@ public sealed class ResourceFileHandle : IEquatable<ResourceFileHandle>
 		uncompressedFileSize = _data.UncompressedFileSize;
 		blockSize = _data.BlockSize;
 		blockCount = _data.BlockCount;
-
+		
 		if (_data.Resources != null)
 		{
 			int resourceCount = Math.Min(_data.ResourceCount, _data.Resources.Length);
@@ -77,6 +78,7 @@ public sealed class ResourceFileHandle : IEquatable<ResourceFileHandle>
 	public readonly ResourceFileType dataFileType = ResourceFileType.Single;
 	public readonly ResourceSource dataFileSource;
 	public readonly ulong dataFileSize;
+	public readonly ulong dataFileHash;	// xxHash3 checksum as a big-endian 64-bit number.
 
 	// Compression details:
 	public readonly ulong uncompressedFileSize;
@@ -380,6 +382,68 @@ public sealed class ResourceFileHandle : IEquatable<ResourceFileHandle>
 			Resources = resourceData,
 		};
 		return true;
+	}
+
+	/// <summary>
+	/// Tries to calculate a hash checksum from the data file using the xxHash3 algorithm. Note that this is a slow-ish process, because the
+	/// entire data file has to be read into memory, and a hash calculated from it.<para/>
+	/// HASH ALGORITHM: xxHash3 on GitHub: https://github.com/Cyan4973/xxHash<para/>
+	/// IMPLEMENTATION: https://learn.microsoft.com/en-us/dotnet/api/system.io.hashing.xxhash3?view=net-8.0
+	/// </summary>
+	/// <param name="_dataFilePath">File path of the data file we want to hash.</param>
+	/// <param name="_outHashValue">Outputs a 64-bit integer containing the calculated hash value.</param>
+	/// <returns>True if a hash could be calculated for the given data file, false otherwise.</returns>
+	public static bool CalculateDataFileHash(string _dataFilePath, out ulong _outHashValue, out ulong _outFileSize)
+	{
+		// Verify parameters:
+		if (string.IsNullOrEmpty(_dataFilePath))
+		{
+			Logger.Instance?.LogError("Cannot calculate resource data file hash using null or blank file path!");
+			_outHashValue = 0;
+			_outFileSize = 0;
+			return false;
+		}
+		if (!File.Exists(_dataFilePath))
+		{
+			Logger.Instance?.LogError($"Cannot calculate resource data file hash; file path does not exist! File path: '{_dataFilePath}'");
+			_outHashValue = 0;
+			_outFileSize = 0;
+			return false;
+		}
+
+		// Read the entire data file into memory:
+		byte[] bytes;
+		try
+		{
+			bytes = File.ReadAllBytes(_dataFilePath);
+		}
+		catch (Exception ex)
+		{
+			Logger.Instance?.LogException($"Failed to read data file while calculating resource file hash! File path: '{_dataFilePath}'", ex);
+			_outHashValue = 0;
+			_outFileSize = 0;
+			return false;
+		}
+
+		// Calculate hash value and return success:
+		_outHashValue = XxHash3.HashToUInt64(bytes.AsSpan());
+		_outFileSize = (ulong)bytes.Length;
+		return true;
+	}
+
+	/// <summary>
+	/// Calculates a hash checksum for the data file, then compares it against the value in <see cref="dataFileHash"/>.
+	/// </summary>
+	/// <returns>True if the data file's hash could be calculated and matched ours, false otherwise.</returns>
+	public bool VerifyDataFileHash()
+	{
+		if (!CalculateDataFileHash(dataFilePath, out ulong calculatedHash, out _))
+		{
+			return false;
+		}
+
+		// Compare hashes and return result:
+		return calculatedHash == dataFileHash;
 	}
 
 	public bool Equals(ResourceFileHandle? other) => ReferenceEquals(this, other) || string.CompareOrdinal(other?.Key, Key) == 0;

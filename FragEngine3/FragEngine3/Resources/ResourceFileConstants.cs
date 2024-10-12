@@ -119,7 +119,7 @@ internal static class ResourceFileConstants
 		new(ResourceType.Script, new string[]
 		{
 			".cs",
-			".js",	// who in their right mind would use JS anyways?
+			".js",		// who in their right mind would use JS anyways?
 			".lua",
 			".py",
 			".rb",
