@@ -1,0 +1,282 @@
+{
+  "DataFilePath": "./outputDataFileName",
+  "DataFileType": 1,
+  "DataFileSize": 11169714,
+  "DataFileHash": 14675614708042959722,
+  "UncompressedFileSize": 154415,
+  "BlockSize": 0,
+  "BlockCount": 0,
+  "ResourceCount": 27,
+  "Resources": [
+    {
+      "ResourceKey": "Basic_VS",
+      "ResourceType": 4,
+      "PlatformFlags": 0,
+      "ImportFlags": null,
+      "DataOffset": 0,
+      "DataSize": 13443,
+      "DependencyCount": 0,
+      "Dependencies": null
+    },
+    {
+      "ResourceKey": "DefaultSurface_VS",
+      "ResourceType": 4,
+      "PlatformFlags": 0,
+      "ImportFlags": null,
+      "DataOffset": 13443,
+      "DataSize": 26545,
+      "DependencyCount": 0,
+      "Dependencies": null
+    },
+    {
+      "ResourceKey": "DefaultSurface_PS",
+      "ResourceType": 4,
+      "PlatformFlags": 0,
+      "ImportFlags": null,
+      "DataOffset": 39988,
+      "DataSize": 74920,
+      "DependencyCount": 0,
+      "Dependencies": null
+    },
+    {
+      "ResourceKey": "AlphaShadow_PS",
+      "ResourceType": 4,
+      "PlatformFlags": 0,
+      "ImportFlags": null,
+      "DataOffset": 114908,
+      "DataSize": 10836,
+      "DependencyCount": 0,
+      "Dependencies": null
+    },
+    {
+      "ResourceKey": "DefaultShadow_PS",
+      "ResourceType": 4,
+      "PlatformFlags": 0,
+      "ImportFlags": null,
+      "DataOffset": 125744,
+      "DataSize": 9095,
+      "DependencyCount": 0,
+      "Dependencies": null
+    },
+    {
+      "ResourceKey": "ForwardPlusLight_CompositeScene_PS",
+      "ResourceType": 4,
+      "PlatformFlags": 0,
+      "ImportFlags": null,
+      "DataOffset": 134839,
+      "DataSize": 10001,
+      "DependencyCount": 0,
+      "Dependencies": null
+    },
+    {
+      "ResourceKey": "ForwardPlusLight_CompositeUI_PS",
+      "ResourceType": 4,
+      "PlatformFlags": 0,
+      "ImportFlags": null,
+      "DataOffset": 144840,
+      "DataSize": 9575,
+      "DependencyCount": 0,
+      "Dependencies": null
+    },
+    {
+      "ResourceKey": "Cube.obj",
+      "ResourceType": 7,
+      "PlatformFlags": 0,
+      "ImportFlags": null,
+      "DataOffset": 154415,
+      "DataSize": 0,
+      "DependencyCount": 0,
+      "Dependencies": null
+    },
+    {
+      "ResourceKey": "Cylinder.obj",
+      "ResourceType": 7,
+      "PlatformFlags": 0,
+      "ImportFlags": null,
+      "DataOffset": 169323,
+      "DataSize": 0,
+      "DependencyCount": 0,
+      "Dependencies": null
+    },
+    {
+      "ResourceKey": "Plane.fbx",
+      "ResourceType": 7,
+      "PlatformFlags": 0,
+      "ImportFlags": null,
+      "DataOffset": 172258,
+      "DataSize": 0,
+      "DependencyCount": 0,
+      "Dependencies": null
+    },
+    {
+      "ResourceKey": "Rabbit.obj",
+      "ResourceType": 7,
+      "PlatformFlags": 0,
+      "ImportFlags": null,
+      "DataOffset": 187054,
+      "DataSize": 0,
+      "DependencyCount": 0,
+      "Dependencies": null
+    },
+    {
+      "ResourceKey": "TexFlauschi512",
+      "ResourceType": 2,
+      "PlatformFlags": 0,
+      "ImportFlags": "SDR",
+      "DataOffset": 255234,
+      "DataSize": 0,
+      "DependencyCount": 0,
+      "Dependencies": null
+    },
+    {
+      "ResourceKey": "TexFeatureTest_Normal",
+      "ResourceType": 2,
+      "PlatformFlags": 0,
+      "ImportFlags": "normalsDX;mipmap=3",
+      "DataOffset": 1041720,
+      "DataSize": 0,
+      "DependencyCount": 0,
+      "Dependencies": null
+    },
+    {
+      "ResourceKey": "TexQoiDice",
+      "ResourceType": 2,
+      "PlatformFlags": 0,
+      "ImportFlags": null,
+      "DataOffset": 5956974,
+      "DataSize": 0,
+      "DependencyCount": 0,
+      "Dependencies": null
+    },
+    {
+      "ResourceKey": "TexQoiEdgecase",
+      "ResourceType": 2,
+      "PlatformFlags": 0,
+      "ImportFlags": null,
+      "DataOffset": 6476627,
+      "DataSize": 0,
+      "DependencyCount": 0,
+      "Dependencies": null
+    },
+    {
+      "ResourceKey": "TexQoiTestcard_rgba",
+      "ResourceType": 2,
+      "PlatformFlags": 0,
+      "ImportFlags": null,
+      "DataOffset": 6478741,
+      "DataSize": 0,
+      "DependencyCount": 0,
+      "Dependencies": null
+    },
+    {
+      "ResourceKey": "TexBrickWall_diff",
+      "ResourceType": 2,
+      "PlatformFlags": 0,
+      "ImportFlags": "SDR",
+      "DataOffset": 6502908,
+      "DataSize": 0,
+      "DependencyCount": 0,
+      "Dependencies": null
+    },
+    {
+      "ResourceKey": "TexBrickWall_disp",
+      "ResourceType": 2,
+      "PlatformFlags": 0,
+      "ImportFlags": "SDR;mirrorY",
+      "DataOffset": 8692042,
+      "DataSize": 0,
+      "DependencyCount": 0,
+      "Dependencies": null
+    },
+    {
+      "ResourceKey": "TexBrickWall_norm",
+      "ResourceType": 2,
+      "PlatformFlags": 0,
+      "ImportFlags": "normalsDX",
+      "DataOffset": 9478528,
+      "DataSize": 0,
+      "DependencyCount": 0,
+      "Dependencies": null
+    },
+    {
+      "ResourceKey": "TexBrickWall_spec",
+      "ResourceType": 2,
+      "PlatformFlags": 0,
+      "ImportFlags": "SDR",
+      "DataOffset": 12023080,
+      "DataSize": 0,
+      "DependencyCount": 0,
+      "Dependencies": null
+    },
+    {
+      "ResourceKey": "Mtl_BrickWall",
+      "ResourceType": 5,
+      "PlatformFlags": 0,
+      "ImportFlags": null,
+      "DataOffset": 12799018,
+      "DataSize": 0,
+      "DependencyCount": 0,
+      "Dependencies": null
+    },
+    {
+      "ResourceKey": "Mtl_DefaultSurface",
+      "ResourceType": 5,
+      "PlatformFlags": 0,
+      "ImportFlags": null,
+      "DataOffset": 12801112,
+      "DataSize": 0,
+      "DependencyCount": 0,
+      "Dependencies": null
+    },
+    {
+      "ResourceKey": "Mtl_DiffuseImage",
+      "ResourceType": 5,
+      "PlatformFlags": 0,
+      "ImportFlags": null,
+      "DataOffset": 12803197,
+      "DataSize": 0,
+      "DependencyCount": 0,
+      "Dependencies": null
+    },
+    {
+      "ResourceKey": "Mtl_ForwardPlusLight_CompositeScene",
+      "ResourceType": 5,
+      "PlatformFlags": 0,
+      "ImportFlags": null,
+      "DataOffset": 12804740,
+      "DataSize": 0,
+      "DependencyCount": 0,
+      "Dependencies": null
+    },
+    {
+      "ResourceKey": "Mtl_ForwardPlusLight_CompositeUI",
+      "ResourceType": 5,
+      "PlatformFlags": 0,
+      "ImportFlags": null,
+      "DataOffset": 12806816,
+      "DataSize": 0,
+      "DependencyCount": 0,
+      "Dependencies": null
+    },
+    {
+      "ResourceKey": "Mtl_DefaultShadow",
+      "ResourceType": 5,
+      "PlatformFlags": 0,
+      "ImportFlags": null,
+      "DataOffset": 12808603,
+      "DataSize": 0,
+      "DependencyCount": 0,
+      "Dependencies": null
+    },
+    {
+      "ResourceKey": "Mtl_DiffuseImage_Shadow",
+      "ResourceType": 5,
+      "PlatformFlags": 0,
+      "ImportFlags": null,
+      "DataOffset": 12809563,
+      "DataSize": 0,
+      "DependencyCount": 0,
+      "Dependencies": null
+    }
+  ]
+}
