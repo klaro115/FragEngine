@@ -1,5 +1,5 @@
 {
-    "DataFilePath": "./Mtl_Heightmap.json",
+    "DataFilePath": "./LightingTestRoom.obj",
     "DataFileType": 0,
     "DataFileSize": 0,
     "UncompressedFileSize": 0,
@@ -9,8 +9,8 @@
     "Resources":
     [
         {
-            "ResourceKey": "Mtl_Heightmap",
-            "ResourceType": 5,
+            "ResourceKey": "LightingTestRoom.obj",
+            "ResourceType": 7,
             "PlatformFlags": 0,
             "DataOffset": 0,
             "DataSize": 0,
