@@ -33,6 +33,12 @@ internal static class ShaderProcess
 		public readonly MeshVertexDataFlags maxVertexFlags = _maxVertexFlags;
 		public string descriptionTxt = "At_Nyn0_Ly101p140_V100";
 		public bool bundleSourceCode = _bundleSourceCode;
+
+		public ShaderConfig Config
+		{
+			get => ShaderConfig.TryParseDescriptionTxt(descriptionTxt, out ShaderConfig config) ? config : default;
+			set => descriptionTxt = value.CreateDescriptionTxt();
+		}
 	}
 
 	#endregion
@@ -79,10 +85,10 @@ internal static class ShaderProcess
 			supportedFeatures = _shaderConfig,
 		};
 
-		return CompileShaderToFSHA(_details.relativeFilePath, _inputDir, _outputDir, options, out _outDataFilePath);
+		return CompileShaderToFSHA(_details.relativeFilePath, _details.resourceKey, _inputDir, _outputDir, options, out _outDataFilePath);
 	}
 
-	public static bool CompileShaderToFSHA(string _hlslFileRelativePath, string _inputDir, string _outputDir, FshaExportOptions _exportOptions, out string _outDataFilePath)
+	public static bool CompileShaderToFSHA(string _hlslFileRelativePath, string? _overrideFileName, string _inputDir, string _outputDir, FshaExportOptions _exportOptions, out string _outDataFilePath)
 	{
 		if (string.IsNullOrEmpty(_hlslFileRelativePath))
 		{
@@ -97,7 +103,7 @@ internal static class ShaderProcess
 			return false;
 		}
 
-		if (!GetOutputPathFromFileName(_hlslFileRelativePath, _inputDir, _outputDir, out string sourceDataFilePath, out _outDataFilePath))
+		if (!GetOutputPathFromFileName(_hlslFileRelativePath, _overrideFileName, _inputDir, _outputDir, out string sourceDataFilePath, out _outDataFilePath))
 		{
 			_outDataFilePath = string.Empty;
 			return false;
@@ -143,9 +149,9 @@ internal static class ShaderProcess
 	/// <param name="_details">Details and compiler instructions for processing this shader resource.</param>
 	/// <param name="_outMetadataFilePath">Outputs the file path to the metadata file that was created, located within the output directory.</param>
 	/// <returns>True if metadata file creation succeeded, false otherwise.</returns>
-	public static bool GenerateResourceMetadataFile(string _inputDir, string _outputDir, Details _details, out string _outMetadataFilePath)
+	public static bool GenerateResourceMetadataFile(string _inputDir, string _outputDir, string? _overrideFileName, Details _details, out string _outMetadataFilePath)
 	{
-		if (!GetOutputPathFromFileName(_details.relativeFilePath, _inputDir, _outputDir, out _, out string outputDataFilePath))
+		if (!GetOutputPathFromFileName(_details.relativeFilePath, _overrideFileName, _inputDir, _outputDir, out _, out string outputDataFilePath))
 		{
 			_outMetadataFilePath = string.Empty;
 			return false;
@@ -204,11 +210,11 @@ internal static class ShaderProcess
 		return resFileData.SerializeToFile(_outMetadataFilePath);
 	}
 
-	private static bool GetOutputPathFromFileName(string _fileName, string _inputDir, string _outputDir, out string _outAbsSourceFilePath, out string _outAbsOutputFilePath)
+	private static bool GetOutputPathFromFileName(string _relFilePath, string? _overrideFileName, string _inputDir, string _outputDir, out string _outAbsSourceFilePath, out string _outAbsOutputFilePath)
 	{
 		_outAbsSourceFilePath = string.Empty;
 
-		if (string.IsNullOrEmpty(_fileName))
+		if (string.IsNullOrEmpty(_relFilePath))
 		{
 			Program.PrintError($"Cannot determine exact source file path from null or blank shader file name!");
 			_outAbsOutputFilePath = string.Empty;
@@ -216,7 +222,7 @@ internal static class ShaderProcess
 		}
 
         // Get absolute path to source file:
-		_outAbsSourceFilePath = Path.Combine(_inputDir, _fileName);
+		_outAbsSourceFilePath = Path.Combine(_inputDir, _relFilePath);
 		if (!Path.IsPathRooted(_outAbsSourceFilePath))
         {
 			_outAbsSourceFilePath = Path.GetFullPath(_outAbsSourceFilePath);
@@ -236,17 +242,27 @@ internal static class ShaderProcess
 			}
 			if (!sourceFileExists)
 			{
-				Program.PrintError($"Cannot determine exact shader source file path! File name: '{_fileName}'");
+				Program.PrintError($"Cannot determine exact shader source file path! File name: '{_relFilePath}'");
 				_outAbsSourceFilePath = string.Empty;
 				_outAbsOutputFilePath = string.Empty;
 				return false;
 			}
 		}
 
+		// Use a different name for the ouput file, if provided:
+		string outputFileName = _relFilePath;
+		if (!string.IsNullOrEmpty(_overrideFileName))
+		{
+			string? relDirPath = Path.GetDirectoryName(_overrideFileName);
+			outputFileName = !string.IsNullOrEmpty(relDirPath)
+				? Path.Combine(relDirPath, _overrideFileName)
+				: _overrideFileName;
+		}
+
 		// Assemble absolute path to output data file in FSHA format:
-		string outputFileName = Path.HasExtension(_fileName)
-			? Path.ChangeExtension(_fileName, ".fsha")
-			: $"{_fileName}.fsha";
+		outputFileName = Path.HasExtension(outputFileName)
+			? Path.ChangeExtension(outputFileName, ".fsha")
+			: $"{outputFileName}.fsha";
 
 		_outAbsOutputFilePath = Path.GetFullPath(Path.Combine(_outputDir, outputFileName));
 		return true;

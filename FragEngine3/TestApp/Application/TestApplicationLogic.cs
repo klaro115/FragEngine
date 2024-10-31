@@ -176,6 +176,16 @@ public sealed class TestApplicationLogic : ApplicationLogic
 			light.LightIntensity = 7;
 		}
 
+		if (SceneSpawner.CreateStaticMeshRenderer(scene, out StaticMeshRendererComponent room))
+		{
+			room.node.Name = "Room";
+			room.node.LocalPosition = new Vector3(0, -1.5f, 4);
+			//room.node.SetEnabled(false);
+
+			room.SetMesh("LightingTestRoom.obj");
+			room.SetMaterial("Mtl_LightingTestRoom");
+		}
+
 		if (SceneSpawner.CreateStaticMeshRenderer(scene, out StaticMeshRendererComponent rabbit))
 		{
 			rabbit.node.Name = "Rabbit";
@@ -196,7 +206,7 @@ public sealed class TestApplicationLogic : ApplicationLogic
 			cube.node.LocalPosition = new Vector3(2.5f, -0.5f, 2);
 			//cube.node.SetRotationFromYawPitchRoll(45, 45, 0, true, true);
 			cube.node.LocalScale = Vector3.One;
-			//cube.node.SetEnabled(false);
+			cube.node.SetEnabled(false);
 
 			cube.SetMesh(cubeHandle);
 			//cube.SetMaterial("Mtl_DiffuseImage");
@@ -210,7 +220,7 @@ public sealed class TestApplicationLogic : ApplicationLogic
 			cylinder.node.LocalPosition = new Vector3(-2.5f, 0, 2);
 			cylinder.node.LocalRotation = Quaternion.Identity;
 			cylinder.node.LocalScale = Vector3.One;
-			//cylinder.node.SetEnabled(false);
+			cylinder.node.SetEnabled(false);
 
 			cylinder.SetMesh(cylinderHandle);
 			cylinder.SetMaterial("Mtl_DefaultSurface");
@@ -249,7 +259,7 @@ public sealed class TestApplicationLogic : ApplicationLogic
 			plane.node.LocalPosition = new Vector3(0, -1.5f, 2);
 			plane.node.LocalRotation = Quaternion.Identity;
 			plane.node.LocalScale = Vector3.One;
-			//plane.node.SetEnabled(false);
+			plane.node.SetEnabled(false);
 
 			plane.SetMesh(planeHandle);
 			plane.SetMaterial("Mtl_BrickWall");
@@ -262,7 +272,7 @@ public sealed class TestApplicationLogic : ApplicationLogic
 			plane.node.LocalPosition = new Vector3(0, 1, 4.5f);
 			plane.node.SetRotationFromAxisAngle(Vector3.UnitX, -90, false, true);
 			plane.node.LocalScale = Vector3.One;
-			//plane.node.SetEnabled(false);
+			plane.node.SetEnabled(false);
 
 			plane.SetMesh(planeHandle);
 			plane.SetMaterial("Mtl_BrickWall");
@@ -275,7 +285,7 @@ public sealed class TestApplicationLogic : ApplicationLogic
 			plane.node.LocalPosition = new Vector3(-2.5f, 1, 2);
 			plane.node.SetRotationFromAxisAngle(Vector3.UnitZ, -90, false, true);
 			plane.node.LocalScale = Vector3.One;
-			//plane.node.SetEnabled(false);
+			plane.node.SetEnabled(false);
 
 			plane.SetMesh(planeHandle);
 			plane.SetMaterial("Mtl_BrickWall");
