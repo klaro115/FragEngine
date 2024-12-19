@@ -1,7 +1,7 @@
 ﻿using FragEngine3.EngineCore;
 using Veldrid;
 
-namespace FragEngine3.Graphics.Resources.Data.ShaderTypes;
+namespace FragAssetFormats.Shaders.ShaderTypes;
 
 public static class ShaderDataUtility
 {

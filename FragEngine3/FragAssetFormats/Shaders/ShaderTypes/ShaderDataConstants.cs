@@ -1,4 +1,4 @@
-﻿namespace FragEngine3.Graphics.Resources.Data.ShaderTypes;
+﻿namespace FragAssetFormats.Shaders.ShaderTypes;
 
 public static class ShaderDataConstants
 {

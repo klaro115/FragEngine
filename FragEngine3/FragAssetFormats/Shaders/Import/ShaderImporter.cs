@@ -1,11 +1,13 @@
-﻿using FragEngine3.EngineCore;
+﻿using FragAssetFormats.Shaders.Import.ShaderFormats;
+using FragEngine3.EngineCore;
+using FragEngine3.Graphics;
+using FragEngine3.Graphics.Resources;
 using FragEngine3.Graphics.Resources.Data;
-using FragEngine3.Graphics.Resources.Data.ShaderTypes;
 using FragEngine3.Graphics.Resources.Import.ShaderFormats;
 using FragEngine3.Resources;
 using Veldrid;
 
-namespace FragEngine3.Graphics.Resources.Import;
+namespace FragAssetFormats.Shaders.Import;
 
 /// <summary>
 /// Utility class for importing and creating shader resources.
@@ -277,9 +279,9 @@ public static class ShaderImporter
 			Array.Copy(byteCode, compiledVariant.RelativeByteOffset, variantBytes, 0, variantBytes.Length);
 			_dstVariantBytesDict.Add(compiledVariant.VariantFlags, variantBytes);
 		}
-		
+
 		return true;
 	}
 
-#endregion
+	#endregion
 }

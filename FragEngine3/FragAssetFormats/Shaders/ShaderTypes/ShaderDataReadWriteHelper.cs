@@ -1,4 +1,4 @@
-﻿namespace FragEngine3.Graphics.Resources.Data.ShaderTypes;
+﻿namespace FragAssetFormats.Shaders.ShaderTypes;
 
 internal static class ShaderDataReadWriteHelper
 {
@@ -9,8 +9,8 @@ internal static class ShaderDataReadWriteHelper
 		_reader.Read(_buffer, 0, 2);    // 2x uppercase hex characters (0-9, A-F)
 		_reader.ReadByte();             // trailing underscore ('_') or line break ('\n').
 		uint value =
-			(HexCharToValue(_buffer[0]) << 4) |
-			(HexCharToValue(_buffer[1]) << 0);
+			HexCharToValue(_buffer[0]) << 4 |
+			HexCharToValue(_buffer[1]) << 0;
 		return (byte)(value & 0xFF);
 	}
 
@@ -19,10 +19,10 @@ internal static class ShaderDataReadWriteHelper
 		_reader.Read(_buffer, 0, 4);    // 4x uppercase hex characters (0-9, A-F)
 		_reader.ReadByte();             // trailing underscore ('_') or line break ('\n').
 		uint value =
-			(HexCharToValue(_buffer[0]) << 12) |
-			(HexCharToValue(_buffer[1]) << 8) |
-			(HexCharToValue(_buffer[2]) << 4) |
-			(HexCharToValue(_buffer[3]) << 0);
+			HexCharToValue(_buffer[0]) << 12 |
+			HexCharToValue(_buffer[1]) << 8 |
+			HexCharToValue(_buffer[2]) << 4 |
+			HexCharToValue(_buffer[3]) << 0;
 		return (ushort)(value & 0xFFFF);
 	}
 
@@ -31,14 +31,14 @@ internal static class ShaderDataReadWriteHelper
 		_reader.Read(_buffer, 0, 8);    // 4x uppercase hex characters (0-9, A-F)
 		_reader.ReadByte();             // trailing underscore ('_') or line break ('\n').
 		uint value =
-			(HexCharToValue(_buffer[0]) << 28) |
-			(HexCharToValue(_buffer[1]) << 24) |
-			(HexCharToValue(_buffer[2]) << 20) |
-			(HexCharToValue(_buffer[3]) << 16) |
-			(HexCharToValue(_buffer[4]) << 12) |
-			(HexCharToValue(_buffer[5]) << 8) |
-			(HexCharToValue(_buffer[6]) << 4) |
-			(HexCharToValue(_buffer[7]) << 0);
+			HexCharToValue(_buffer[0]) << 28 |
+			HexCharToValue(_buffer[1]) << 24 |
+			HexCharToValue(_buffer[2]) << 20 |
+			HexCharToValue(_buffer[3]) << 16 |
+			HexCharToValue(_buffer[4]) << 12 |
+			HexCharToValue(_buffer[5]) << 8 |
+			HexCharToValue(_buffer[6]) << 4 |
+			HexCharToValue(_buffer[7]) << 0;
 		return (ushort)(value & 0xFFFF);
 	}
 

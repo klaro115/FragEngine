@@ -1,6 +1,6 @@
 ﻿using FragEngine3.EngineCore;
 
-namespace FragEngine3.Graphics.Resources.Data.ShaderTypes;
+namespace FragAssetFormats.Shaders.ShaderTypes;
 
 public struct ShaderDataFileHeader()
 {
@@ -8,22 +8,22 @@ public struct ShaderDataFileHeader()
 
 	// FORMAT IDENTIFIERS:
 
-	public string formatSpecifier = ShaderDataConstants.FHSA_FORMAT_SPECIFIER;	// 4 letter ASCII, file format specifier. Ex.: "FSHA" = 'Fragment Shader'
-	public ShaderDataVersion formatVersion = new();		// Version of the shader file format. Default: "10" (2x 4-bit number formatted as 2-digit hex)
+	public string formatSpecifier = ShaderDataConstants.FHSA_FORMAT_SPECIFIER;  // 4 letter ASCII, file format specifier. Ex.: "FSHA" = 'Fragment Shader'
+	public ShaderDataVersion formatVersion = new();     // Version of the shader file format. Default: "10" (2x 4-bit number formatted as 2-digit hex)
 
 	// CONTENT TABLE:
 
-	public ushort fileHeaderSize = minFileHeaderSize;	// Total byte size of this file header. Default: "001C" (16-bit format)
-	public ShaderDataOffsetAndSize jsonDescription;		// JSON-encoded shader description. (16-bit format)
-	public ShaderDataOffsetAndSize sourceCode;			// Optional shader source code, generally in HLSL, encoded as UTF-8 or ASCII. (16-bit format)
-	public byte shaderDataBlockCount;					// Number of shader variant blocks in shader data. (16-bit format)
-	public ShaderDataOffsetAndSize shaderData;			// Shader data, arranged as contiguous blocks of compiled variants. (32-bit format)
-	//...
+	public ushort fileHeaderSize = minFileHeaderSize;   // Total byte size of this file header. Default: "001C" (16-bit format)
+	public ShaderDataOffsetAndSize jsonDescription;     // JSON-encoded shader description. (16-bit format)
+	public ShaderDataOffsetAndSize sourceCode;          // Optional shader source code, generally in HLSL, encoded as UTF-8 or ASCII. (16-bit format)
+	public byte shaderDataBlockCount;                   // Number of shader variant blocks in shader data. (16-bit format)
+	public ShaderDataOffsetAndSize shaderData;          // Shader data, arranged as contiguous blocks of compiled variants. (32-bit format)
+														//...
 
 	#endregion
 	#region Constants
 
-	public const int minFileHeaderSize = 55;	// 0x37
+	public const int minFileHeaderSize = 55;    // 0x37
 
 	#endregion
 	#region Methods
@@ -98,14 +98,14 @@ public struct ShaderDataFileHeader()
 			// Format identifiers:
 
 			// File format specifier: (magic number)
-			_writer.Write((byte)formatSpecifier[0]);	// 'F'
+			_writer.Write((byte)formatSpecifier[0]);    // 'F'
 			_writer.Write((byte)formatSpecifier[1]);    // 'S'
 			_writer.Write((byte)formatSpecifier[2]);    // 'H'
 			_writer.Write((byte)formatSpecifier[3]);    // 'A'
 			_writer.Write((byte)'_');
 
-			_writer.Write(ShaderDataReadWriteHelper.ValueToHexChar(formatVersion.major));	// 0-9, A-F
-			_writer.Write(ShaderDataReadWriteHelper.ValueToHexChar(formatVersion.minor));	// 0-9, A-F
+			_writer.Write(ShaderDataReadWriteHelper.ValueToHexChar(formatVersion.major));   // 0-9, A-F
+			_writer.Write(ShaderDataReadWriteHelper.ValueToHexChar(formatVersion.minor));   // 0-9, A-F
 			_writer.Write((byte)'_');
 
 			// Content table:

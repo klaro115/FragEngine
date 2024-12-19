@@ -2,11 +2,11 @@
 using FragEngine3.EngineCore.Config;
 using FragEngine3.Graphics.Config;
 using FragEngine3.Graphics.Internal;
+using FragEngine3.Graphics.Resources.Data;
 using System.Diagnostics;
 using Veldrid.Sdl2;
 using Veldrid.StartupUtilities;
 using Veldrid;
-using FragEngine3.Graphics.Resources.Data.ShaderTypes;
 
 namespace FragEngine3.Graphics.Vulkan;
 

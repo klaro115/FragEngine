@@ -1,4 +1,6 @@
-﻿namespace FragEngine3.Graphics.Resources.Data.ShaderTypes;
+﻿using FragEngine3.Graphics.Resources;
+
+namespace FragAssetFormats.Shaders.ShaderTypes;
 
 [Serializable]
 public sealed class ShaderDescriptionVariantData

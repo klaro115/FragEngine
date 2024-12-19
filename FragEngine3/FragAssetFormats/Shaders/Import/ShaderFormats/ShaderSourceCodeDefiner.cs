@@ -1,7 +1,8 @@
 ﻿using FragEngine3.EngineCore;
+using FragEngine3.Graphics.Resources;
 using FragEngine3.Utility.Unicode;
 
-namespace FragEngine3.Graphics.Resources.Import.ShaderFormats;
+namespace FragAssetFormats.Shaders.Import.ShaderFormats;
 
 /// <summary>
 /// Utility class for setting or removing preprocessor '#define' macros in shader source code prior to compilation.
@@ -188,7 +189,7 @@ public static class ShaderSourceCodeDefiner
 			_sourceCodeUtf8Bytes = intermediateBuffer.Utf8ByteBuffer;
 			sourceCodeLength = intermediateBuffer.Length;
 		}
-		
+
 		// Insert variant defines first:
 		if (_variantFlags > MeshVertexDataFlags.BasicSurfaceData)
 		{

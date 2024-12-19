@@ -1,9 +1,10 @@
 ﻿using FragEngine3.EngineCore;
+using FragEngine3.Graphics.Resources;
 using FragEngine3.Utility.Serialization;
 using System.Text;
 using Veldrid;
 
-namespace FragEngine3.Graphics.Resources.Data.ShaderTypes;
+namespace FragAssetFormats.Shaders.ShaderTypes;
 
 [Serializable]
 public sealed class ShaderDescriptionData
@@ -84,7 +85,7 @@ public sealed class ShaderDescriptionData
 				}
 			}
 		}
-		
+
 		// Find the first compatible vertex variant based on vertex data flags: (lowest feature set is assumed to be listed first)
 		foreach (ShaderDescriptionVariantData variant in CompiledVariants)
 		{
@@ -114,7 +115,7 @@ public sealed class ShaderDescriptionData
 		}
 
 		HashSet<MeshVertexDataFlags> variantFlags = new(maxVariantCount);
-		
+
 		foreach (var compiledVariant in CompiledVariants)
 		{
 			if ((compiledVariant.Type & _type) != 0)
@@ -146,7 +147,7 @@ public sealed class ShaderDescriptionData
 			_outDesc = none;
 			return false;
 		}
-		
+
 		if (!DeserializeFromJson(jsonTxt, out _outDesc!))
 		{
 			_outDesc = none;
@@ -201,7 +202,7 @@ public sealed class ShaderDescriptionData
 			return false;
 		}
 
-		return Serializer.SerializeToJson(this, out  _outJsonTxt);
+		return Serializer.SerializeToJson(this, out _outJsonTxt);
 	}
 
 	#endregion

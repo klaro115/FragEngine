@@ -1,12 +1,14 @@
-﻿using FragEngine3.EngineCore;
+﻿using FragAssetFormats.Shaders.ShaderTypes;
+using FragEngine3.EngineCore;
+using FragEngine3.Graphics;
+using FragEngine3.Graphics.Resources;
 using FragEngine3.Graphics.Resources.Data;
-using FragEngine3.Graphics.Resources.Data.ShaderTypes;
 using FragEngine3.Resources;
 using FragEngine3.Utility.Unicode;
 using System.Text;
 using Veldrid;
 
-namespace FragEngine3.Graphics.Resources.Import.ShaderFormats;
+namespace FragAssetFormats.Shaders.Import.ShaderFormats;
 
 internal static class ShaderSourceCodeImporter
 {
@@ -52,7 +54,7 @@ internal static class ShaderSourceCodeImporter
 
 		if (language == ShaderLanguage.SPIRV)
 		{
-			variantEntryPoints = new()	//TEMP: We're currently just trying out the most important/basic one.
+			variantEntryPoints = new()  //TEMP: We're currently just trying out the most important/basic one.
 			{
 				[MeshVertexDataFlags.BasicSurfaceData] = entryPointNameBase,
 			};

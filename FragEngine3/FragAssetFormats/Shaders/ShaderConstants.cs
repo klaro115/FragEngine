@@ -1,7 +1,7 @@
-﻿using FragEngine3.Graphics.Resources.Data.ShaderTypes;
+﻿using FragEngine3.Graphics.Resources.Data;
 using System.Collections.Frozen;
 
-namespace FragEngine3.Graphics.Resources.Import.ShaderFormats;
+namespace FragAssetFormats.Shaders;
 
 public static class ShaderConstants
 {
