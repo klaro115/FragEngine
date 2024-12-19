@@ -3,6 +3,7 @@ using FragEngine3.EngineCore;
 using FragEngine3.Graphics.ConstantBuffers;
 using FragEngine3.Graphics.Contexts;
 using FragEngine3.Graphics.Internal;
+using FragEngine3.Graphics.Renderers.Internal;
 using FragEngine3.Graphics.Resources;
 using FragEngine3.Resources;
 using FragEngine3.Scenes;
@@ -11,18 +12,21 @@ using Veldrid;
 
 namespace FragEngine3.Graphics.Renderers;
 
+/// <summary>
+/// A renderer for drawing static polygonal geometry.
+/// </summary>
 public sealed class StaticMeshRenderer : IPhysicalRenderer
 {
 
 	#region Constructors
 	public StaticMeshRenderer(GraphicsCore _graphicsCore, string? _rendererName = null)
 	{
-		graphicsCore = _graphicsCore ?? throw new ArgumentNullException(nameof(_graphicsCore), "Graphics core may not be null!");
+		GraphicsCore = _graphicsCore ?? throw new ArgumentNullException(nameof(_graphicsCore), "Graphics core may not be null!");
 		name = !string.IsNullOrEmpty(_rendererName) ? _rendererName : "StaticMeshRendererInstance";
 
 		// Create object constant buffer immediately:
 		BufferDescription cbObjectDesc = new(CBObject.packedByteSize, BufferUsage.UniformBuffer | BufferUsage.Dynamic);
-		cbObject = graphicsCore.MainFactory.CreateBuffer(ref cbObjectDesc);
+		cbObject = GraphicsCore.MainFactory.CreateBuffer(ref cbObjectDesc);
 		cbObject.Name = $"CBObject_{name}";
 	}
 
@@ -39,10 +43,15 @@ public sealed class StaticMeshRenderer : IPhysicalRenderer
 	/// </summary>
 	public event Action<StaticMeshRenderer>? OnResourcesChanged = null;
 
+	/// <summary>
+	/// Event that is triggered whenever the '<see cref="RenderMode"/>' has been changed.
+	/// This happens when when the material is swapped, or possibly after material resources have finished loading asynchronously.
+	/// </summary>
+	public event Action<StaticMeshRenderer>? OnRenderModeChanged = null;
+
 	#endregion
 	#region Fields
 
-	public readonly GraphicsCore graphicsCore;
 	public readonly string name;
 
 	// Render data:
@@ -52,6 +61,7 @@ public sealed class StaticMeshRenderer : IPhysicalRenderer
 	private Mesh? mesh = null;
 	private Material? materialScene = null;
 	private Material? materialShadow = null;
+	private ResourceHandle shadowMaterialHandle = ResourceHandle.None;
 
 	// Graphics objects:
 	private readonly DeviceBuffer cbObject;
@@ -69,11 +79,15 @@ public sealed class StaticMeshRenderer : IPhysicalRenderer
 
 	public bool IsDisposed { get; private set; } = false;
 
-	public GraphicsCore GraphicsCore => graphicsCore;
+	public GraphicsCore GraphicsCore { get; private init; }
 
 	public ResourceHandle MeshHandle { get; private set; } = ResourceHandle.None;
 	public ResourceHandle MaterialHandle { get; private set; } = ResourceHandle.None;
-	public ResourceHandle ShadowMaterialHandle { get; private set; } = ResourceHandle.None;
+	public ResourceHandle ShadowMaterialHandle
+	{
+		get => shadowMaterialHandle;
+		private set => shadowMaterialHandle = value ?? ResourceHandle.None;
+	}
 
 	public bool AreResourcesAssigned { get; private set; } = false;
 	public bool AreShadowResourcesAssigned { get; private set; } = false;
@@ -87,7 +101,7 @@ public sealed class StaticMeshRenderer : IPhysicalRenderer
 	public Vector3 VisualCenterPoint => worldPose.position;
 	public float BoundingRadius => mesh is not null ? worldPose.scale.X * mesh.BoundingRadius : 0;
 
-	public Logger Logger => graphicsCore.graphicsSystem.engine.Logger ?? Logger.Instance!;
+	private Logger Logger => GraphicsCore.graphicsSystem.engine.Logger ?? Logger.Instance!;
 
 	#endregion
 	#region Methods
@@ -125,7 +139,7 @@ public sealed class StaticMeshRenderer : IPhysicalRenderer
 			return false;
 		}
 
-		ResourceManager resourceManager = graphicsCore.graphicsSystem.engine.ResourceManager;
+		ResourceManager resourceManager = GraphicsCore.graphicsSystem.engine.ResourceManager;
 
 		return resourceManager.GetResource(_resourceKey, out ResourceHandle handle) && SetMesh(handle);
 	}
@@ -179,7 +193,7 @@ public sealed class StaticMeshRenderer : IPhysicalRenderer
 			return false;
 		}
 
-		ResourceManager resourceManager = graphicsCore.graphicsSystem.engine.ResourceManager;
+		ResourceManager resourceManager = GraphicsCore.graphicsSystem.engine.ResourceManager;
 
 		return resourceManager.GetResource(_resourceKey, out ResourceHandle handle) && SetMaterial(handle);
 	}
@@ -199,6 +213,7 @@ public sealed class StaticMeshRenderer : IPhysicalRenderer
 			return false;
 		}
 
+		RenderMode prevRenderMode = RenderMode;
 		string prevSceneResourceKey = MaterialHandle.resourceKey ?? string.Empty;
 		string prevShadowResourceKey = ShadowMaterialHandle.resourceKey ?? string.Empty;
 		materialScene = null;
@@ -253,12 +268,17 @@ public sealed class StaticMeshRenderer : IPhysicalRenderer
 		// Notify any users that the renderer's resources have changed:
 		bool materialSceneChanged = prevSceneResourceKey != MaterialHandle!.resourceKey;
 		bool materialShadowChanged = prevShadowResourceKey != ShadowMaterialHandle.resourceKey;
+		bool renderModeChanged = prevRenderMode != RenderMode;
 		if (materialSceneChanged || materialShadowChanged)
 		{
 			if (materialSceneChanged) rendererVersionScene++;
 			if (materialShadowChanged) rendererVersionShadow++;
 
 			OnResourcesChanged?.Invoke(this);
+		}
+		if (renderModeChanged)
+		{
+			OnRenderModeChanged?.Invoke(this);
 		}
 		return true;
 	}
@@ -309,9 +329,20 @@ public sealed class StaticMeshRenderer : IPhysicalRenderer
 
 	public bool Draw(SceneContext _sceneCtx, CameraPassContext _cameraPassCtx)
 	{
-		if (!EnsureResourceIsLoaded(MaterialHandle, ref materialScene, out bool proceed))
+		RenderMode prevRenderMode = RenderMode;
+		if (!RendererResourceHelper.EnsureResourceIsLoaded(
+			MaterialHandle,
+			ref materialScene,
+			!DontDrawUnlessFullyLoaded,
+			out bool proceed,
+			out bool materialsChanged))
 		{
 			return false;
+		}
+
+		if (materialsChanged && RenderMode != prevRenderMode)
+		{
+			OnRenderModeChanged?.Invoke(this);
 		}
 
 		return !proceed || Draw_internal(
@@ -324,9 +355,22 @@ public sealed class StaticMeshRenderer : IPhysicalRenderer
 
 	public bool DrawShadowMap(SceneContext _sceneCtx, CameraPassContext _cameraPassCtx)
 	{
-		if (!EnsureShadowMaterialIsLoaded(out bool proceed))
+		RenderMode prevRenderMode = RenderMode;
+		if (!RendererResourceHelper.EnsureShadowMaterialIsLoaded(
+			MaterialHandle,
+			ref shadowMaterialHandle,
+			ref materialScene,
+			ref materialShadow,
+			!DontDrawUnlessFullyLoaded,
+			out bool proceed,
+			out bool materialsChanged))
 		{
 			return false;
+		}
+
+		if (materialsChanged && RenderMode != prevRenderMode)
+		{
+			OnRenderModeChanged?.Invoke(this);
 		}
 
 		return !proceed || Draw_internal(
@@ -353,7 +397,7 @@ public sealed class StaticMeshRenderer : IPhysicalRenderer
 		bool success = true;
 
 		// Ensure the mesh is laoded and ready to use:
-		success &= EnsureResourceIsLoaded(MeshHandle, ref mesh, out bool proceed);
+		success &= RendererResourceHelper.EnsureResourceIsLoaded(MeshHandle, ref mesh, !DontDrawUnlessFullyLoaded, out bool proceed, out _);
 		if (!success || !proceed)
 		{
 			return success;
@@ -401,69 +445,6 @@ public sealed class StaticMeshRenderer : IPhysicalRenderer
 		return success;
 	}
 
-	private bool EnsureResourceIsLoaded<T>(ResourceHandle _handle, ref T? _resource, out bool _outProceed) where T : Resource
-	{
-		bool success = true;
-		_outProceed = true;
-
-		if (_resource is null)
-		{
-			if (_handle is null || !_handle.IsValid)
-			{
-				Logger.LogError($"Resource handle of mesh renderer '{name}' is null or invalid!");
-				_outProceed = false;
-				return false;
-			}
-
-			bool loadImmediately = !DontDrawUnlessFullyLoaded;
-			_resource = _handle.GetResource<T>(loadImmediately);
-			_outProceed = _resource is not null;
-
-			if (loadImmediately && !_outProceed)
-			{
-				Logger.LogError($"Failed to load resource '{_handle.resourceKey}' for static mesh renderer!");
-				success = false;
-			}
-		}
-		return success;
-	}
-
-	private bool EnsureShadowMaterialIsLoaded(out bool _outProceed)
-	{
-		bool success = true;
-		_outProceed = true;
-
-		if (materialShadow is null)
-		{
-			if (ShadowMaterialHandle is null || !ShadowMaterialHandle.IsValid)
-			{
-				// Get shadow material from scene material:
-				if (!EnsureResourceIsLoaded(MaterialHandle, ref materialScene, out _outProceed))
-				{
-					return false;
-				}
-				if (!_outProceed || !materialScene!.HasShadowMapMaterialVersion)
-				{
-					_outProceed = false;
-					return true;
-				}
-
-				ShadowMaterialHandle = materialScene.ShadowMapMaterialVersion ?? ResourceHandle.None;
-			}
-
-			bool loadImmediately = !DontDrawUnlessFullyLoaded;
-			materialShadow = ShadowMaterialHandle.GetResource<Material>(loadImmediately);
-			_outProceed = materialShadow is not null;
-
-			if (loadImmediately && !_outProceed)
-			{
-				Logger.LogError($"Failed to load shadow material '{ShadowMaterialHandle.resourceKey}' for static mesh renderer!");
-				success = false;
-			}
-		}
-		return success;
-	}
-
 	private void UpdateCBObject(CommandList _cmdList, in ResourceLayout _resLayoutObject)
 	{
 		// Update data in the object's constant buffer:
@@ -483,7 +464,7 @@ public sealed class StaticMeshRenderer : IPhysicalRenderer
 				_resLayoutObject,
 				cbObject);
 
-			resSetObject = graphicsCore.MainFactory.CreateResourceSet(ref resSetObjectDesc);
+			resSetObject = GraphicsCore.MainFactory.CreateResourceSet(ref resSetObjectDesc);
 			resSetObject.Name = $"ResSetObject_{name}";
 
 			// Mark renderer as dirty since we have a new resource set:
