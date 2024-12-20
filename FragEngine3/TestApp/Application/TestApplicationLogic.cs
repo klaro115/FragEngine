@@ -1,4 +1,5 @@
 ﻿using FragEngine3.EngineCore;
+using FragEngine3.EngineCore.Health;
 using FragEngine3.EngineCore.Input;
 using FragEngine3.EngineCore.Jobs;
 using FragEngine3.Graphics;
@@ -46,6 +47,24 @@ public sealed class TestApplicationLogic : ApplicationLogic
 
 	protected override bool BeginLoadingState()
 	{
+		HealthCheck healthCheck = new(
+			666,
+			(engine) =>
+			{
+				HealthCheckRating rating = engine.GraphicsSystem.graphicsCore.IsInitialized
+					? HealthCheckRating.Nominal
+					: HealthCheckRating.Compromised;
+				Console.WriteLine($"Health check: {rating}");
+				return rating;
+			},
+			true)
+		{
+			Name = "GraphicsSystemInitializationCheck",
+			RepeatCheck = true,
+			RepetitionInterval = TimeSpan.FromSeconds(30),
+		};
+		Engine.HealthCheckSystem.AddCheck(healthCheck);
+
 		// Create an empty scene:
 		Scene scene = new(Engine, "Test")
 		{

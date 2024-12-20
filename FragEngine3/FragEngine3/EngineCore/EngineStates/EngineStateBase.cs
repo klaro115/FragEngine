@@ -158,6 +158,7 @@ internal abstract class EngineStateBase(Engine _engine, ApplicationLogic _applic
 		success &= sceneManager.UpdateAllScenes(SceneUpdateStage.Early, State);
 
 		// Main Update:
+		success &= engine.HealthCheckSystem.MainUpdate();
 		success &= sceneManager.UpdateAllScenes(SceneUpdateStage.Main, State);
 
 		// Late Update:

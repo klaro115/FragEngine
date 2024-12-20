@@ -40,6 +40,7 @@ internal sealed class EngineShutdownState(Engine _engine, ApplicationLogic _appl
 			return false;
 		}
 
+		engine.HealthCheckSystem.RemoveAllChecks();
 		return true;
 	}
 
