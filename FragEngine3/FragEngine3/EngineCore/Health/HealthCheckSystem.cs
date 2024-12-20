@@ -139,7 +139,7 @@ public sealed class HealthCheckSystem : IDisposable
 
 		bool removed = _check.executeOnMainThread
 			? mainThreadQueue.RemoveCheck(_check)
-            : checkThreadQueue.RemoveCheck(_check);
+			: checkThreadQueue.RemoveCheck(_check);
 		return removed;
 	}
 
