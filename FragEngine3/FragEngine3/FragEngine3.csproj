@@ -69,6 +69,7 @@
     <Folder Include="Graphics\Config\" />
     <Folder Include="EngineCore\Config\" />
     <Folder Include="EngineCore\Logging\" />
+    <Folder Include="UI\Bindings\" />
     <Folder Include="Utility\Unicode\" />
   </ItemGroup>
   <ItemGroup>
