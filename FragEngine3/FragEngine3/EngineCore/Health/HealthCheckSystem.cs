@@ -193,7 +193,8 @@ public sealed class HealthCheckSystem : IDisposable
 			return true;
 		}
 
-		if (!mainThreadQueue.PeekCheck(out HealthCheck? currentCheck))
+		if (!mainThreadQueue.PeekCheck(out HealthCheck? currentCheck) ||
+			DateTime.UtcNow < currentCheck!.nextCheckTime)
 		{
 			return true;
 		}
@@ -215,7 +216,7 @@ public sealed class HealthCheckSystem : IDisposable
 				break;
 			}
 
-			if (DateTime.UtcNow < currentCheck.nextCheckTime) //TODO: Use timestamps from TimeManager instead of DateTime.UtcNow!
+			if (DateTime.UtcNow < currentCheck!.nextCheckTime) //TODO: Use timestamps from TimeManager instead of DateTime.UtcNow!
 			{
 				// If the check is not yet due, wait up to 10 milliseconds before peeking again:
 				int sleepTimeMs = Math.Clamp((int)(currentCheck.nextCheckTime - DateTime.UtcNow).TotalMilliseconds, 1, 10);
