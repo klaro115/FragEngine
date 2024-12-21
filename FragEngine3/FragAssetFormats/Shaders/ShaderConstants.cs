@@ -1,4 +1,4 @@
-﻿using FragEngine3.Graphics.Resources.Data;
+﻿using FragEngine3.Graphics.Resources;
 using System.Collections.Frozen;
 
 namespace FragAssetFormats.Shaders;
