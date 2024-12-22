@@ -26,55 +26,246 @@ public sealed class ShaderData
 	//...
 
 	#endregion
-	#region Methods
+	#region Methods General
+
+	public static bool CheckHasSourceCode(in ShaderDataHeader _header, in ShaderDataDescription? _description)
+	{
+		if (_header is null)
+		{
+			return false;
+		}
+		if (_header.SourceCodeOffset == 0 || _header.SourceCodeSize == 0)
+		{
+			return false;
+		}
+		return _description is null || (_description.SourceCode is not null && _description.SourceCode.Length != 0);
+	}
+
+	public static bool CheckHasCompiledData(in ShaderDataHeader _header, in ShaderDataDescription? _description)
+	{
+		if (_header is null)
+		{
+			return false;
+		}
+		if (_header.CompiledDataBlockCount == 0 || _header.CompiledDataOffset == 0 || _header.CompiledDataSize == 0)
+		{
+			return false;
+		}
+		return _description is null || (_description.CompiledBlocks is not null && _description.CompiledBlocks.Length != 0);
+	}
+
+	#endregion
+	#region Methods Import
 
 	public static bool Read(in ImporterContext _importCtx, BinaryReader _reader, out ShaderData _outShaderData)
 	{
 		if (_importCtx is null)
 		{
 			Console.WriteLine("Error! Cannot read shader data using null import context!");
-			_outShaderData = null!;
-			return false;
+			goto abort;
 		}
 		if (_reader is null)
 		{
 			_importCtx.Logger.LogError("Cannot read shader data from null binary reader!");
-			_outShaderData = null!;
-			return false;
+			goto abort;
 		}
 		if (!_reader.BaseStream.CanRead)
 		{
 			_importCtx.Logger.LogError("Cannot read shader data from write-only stream!");
-			_outShaderData = null!;
-			return false;
+			goto abort;
 		}
+
+		long fileStartPosition = _reader.BaseStream.Position;
 
 		// Read header:
 		if (!ShaderDataHeader.Read(in _importCtx, _reader, out ShaderDataHeader header))
 		{
-			_outShaderData = null!;
-			return false;
+			goto abort;
+		}
+
+		long descriptionStartPosition = fileStartPosition + header.JsonOffset;
+		if (!AdvanceReader(in _importCtx, _reader, descriptionStartPosition))
+		{
+			goto abort;
 		}
 
 		// Read description JSON:
 		if (!ShaderDataDescription.Read(in _importCtx, in header, _reader, out ShaderDataDescription? description) || description is null)
 		{
-			_outShaderData = null!;
-			return false;
+			goto abort;
 		}
 
+		// Read source code:
+		Dictionary<ShaderLanguage, byte[]>? sourceCodeDict = null;
+		if (CheckHasSourceCode(in header, in description))
+		{
+			long sourceCodeStartPosition = fileStartPosition + header.SourceCodeOffset;
+			if (!AdvanceReader(in _importCtx, _reader, sourceCodeStartPosition))
+			{
+				goto abort;
+			}
 
-		//TODO
+			if (!ReadSourceCodeBlocks(in _importCtx, in header, in description, _reader, out sourceCodeDict))
+			{
+				goto abort;
+			}
+		}
 
+		// Read compiled shader data:
+		byte[]? bytesDxbc = null;
+		byte[]? bytesDxil = null;
+		byte[]? bytesSpirv = null;
+		byte[]? bytesMetal = null;
+		if (CheckHasCompiledData(in header, in description))
+		{
+			long compiledDataStartPosition = fileStartPosition + header.CompiledDataOffset;
+			if (!AdvanceReader(in _importCtx, _reader, compiledDataStartPosition))
+			{
+				goto abort;
+			}
 
+			if (!ReadCompiledDataBlocks(in _importCtx, in header, in description, _reader, out bytesDxbc, out bytesDxil, out bytesSpirv, out bytesMetal))
+			{
+				goto abort;
+			}
+		}
+
+		// Assemble fully read shader data object:
 		_outShaderData = new()
 		{
 			FileHeader = header,
 			Description = description,
-			//...
+
+			SourceCode = sourceCodeDict,
+			
+			ByteCodeDxbc = bytesDxbc,
+			ByteCodeDxil = bytesDxil,
+			ByteCodeSpirv = bytesSpirv,
+			ByteCodeMetal = bytesMetal,
 		};
 		return true;
+
+
+	abort:
+		_outShaderData = null!;
+		return false;
 	}
+
+	private static bool ReadSourceCodeBlocks(
+		in ImporterContext _importCtx,
+		in ShaderDataHeader _header,
+		in ShaderDataDescription _description,
+		BinaryReader _reader,
+		out Dictionary<ShaderLanguage, byte[]>? _outSourceCodeDict)
+	{
+		// Check if shader data includes source code:
+		if (_header is null)
+		{
+			_importCtx.Logger.LogError("Cannot read shader data source code blocks using null header!");
+			_outSourceCodeDict = null;
+			return false;
+		}
+		if (_header.SourceCodeOffset == 0 || _header.SourceCodeSize == 0)
+		{
+			_outSourceCodeDict = null;
+			return true;
+		}
+
+		// Check if description contains valid source code definitions:
+		if (_description is null)
+		{
+			_importCtx.Logger.LogError("Cannot read shader data source code blocks using null description!");
+			_outSourceCodeDict = null;
+			return false;
+		}
+		int sourceCodeBlockCount = _description.SourceCode is not null
+			? _description.SourceCode.Length
+			: 0;
+		if (sourceCodeBlockCount == 0)
+		{
+			_importCtx.Logger.LogWarning("Shader data contains source code data, but layout and type of source code blocks is not defined.");
+			_outSourceCodeDict = null;
+			return true;
+		}
+
+		long startPosition = _reader.BaseStream.Position;
+
+		// Select and read source code blocks:
+		_outSourceCodeDict = new(sourceCodeBlockCount);
+		foreach (ShaderDataSourceCodeDesc sourceCodeDesc in _description.SourceCode!)
+		{
+			// Skip any shader languages that are not supported on current platform:
+			if (!_importCtx.SupportedShaderLanguages.HasFlag(sourceCodeDesc.language))
+			{
+				continue;
+			}
+
+			long blockStartPosition = startPosition + sourceCodeDesc.offset;
+			if (!AdvanceReader(in _importCtx, _reader, blockStartPosition))
+			{
+				return false;
+			}
+
+			byte[] blockBytes = new byte[sourceCodeDesc.size];
+			int actualSize = _reader.Read(blockBytes, 0, blockBytes.Length);
+
+			if (actualSize != blockBytes.Length)
+			{
+				byte[] newBlockBytes = new byte[actualSize];
+				Array.Copy(blockBytes, newBlockBytes, actualSize);
+				blockBytes = newBlockBytes;
+			}
+
+			_outSourceCodeDict.Add(sourceCodeDesc.language, blockBytes);
+		}
+		return true;
+	}
+
+	private static bool ReadCompiledDataBlocks(in ImporterContext _importCtx,
+		in ShaderDataHeader _header,
+		in ShaderDataDescription _description,
+		BinaryReader _reader,
+		out byte[]? _outBytesDxbc,
+		out byte[]? _outBytesDxil,
+		out byte[]? _outBytesSpirv,
+		out byte[]? _outBytesMetal)
+	{
+		//TODO
+
+		_outBytesDxbc = null;
+		_outBytesDxil = null;   //TEMP
+		_outBytesSpirv = null;
+		_outBytesMetal = null;
+		return false;
+	}
+
+	private static bool AdvanceReader(in ImporterContext _importCtx, BinaryReader _reader, long _targetPosition)
+	{
+		if (_reader.BaseStream.Position == _targetPosition)
+		{
+			return true;
+		}
+		if (_reader.BaseStream.CanSeek)
+		{
+			_reader.BaseStream.Position = _targetPosition;
+			return true;
+		}
+		if (_targetPosition > _reader.BaseStream.Position)
+		{
+			int skipLength = (int)(_targetPosition - _reader.BaseStream.Position);
+			Span<byte> temp = stackalloc byte[skipLength];
+			_reader.Read(temp);
+			return true;
+		}
+		else
+		{
+			_importCtx.Logger.LogError("Unable to advance binary reader streamto target position!");
+			return false;
+		}
+	}
+
+	#endregion
+	#region Methods Export
 
 	public bool Write(in ImporterContext _importCtx, BinaryWriter _writer)
 	{
@@ -94,14 +285,19 @@ public sealed class ShaderData
 			return false;
 		}
 
-		// Write header:
-		if (!FileHeader.Write(in _importCtx, _writer))
+		//TODO 1: Track relative positions and sizes for each part!
+		//TODO 2: Add separator strings between parts! => "########\r\n"
+
+		// Write description JSON:
+		if (!Description.Write(in _importCtx, _writer, out byte[] descriptionJsonBytes))
 		{
 			return false;
 		}
 
-		// Write description JSON:
-		if (!Description.Write(in _importCtx, _writer, out byte[] descriptionJsonBytes))
+		//TODO: Calculate final offsets and sizes for all parts, then update header!
+
+		// Write header:
+		if (!FileHeader.Write(in _importCtx, _writer))
 		{
 			return false;
 		}
