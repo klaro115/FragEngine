@@ -1,4 +1,5 @@
-﻿using FragEngine3.EngineCore;
+﻿using FragAssetFormats.Geometry;
+using FragEngine3.EngineCore;
 using FragEngine3.EngineCore.Health;
 using FragEngine3.EngineCore.Input;
 using FragEngine3.EngineCore.Jobs;

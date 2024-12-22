@@ -1,5 +1,7 @@
 ﻿using FragEngine3.Graphics.Resources.Data.ShaderTypes;
 using FragEngine3.Graphics.Resources;
+using FragAssetFormats.Shaders.ShaderTypes;
+using FragAssetFormats.Geometry;
 
 namespace FragAssetPipeline.Resources.Shaders.FSHA;
 

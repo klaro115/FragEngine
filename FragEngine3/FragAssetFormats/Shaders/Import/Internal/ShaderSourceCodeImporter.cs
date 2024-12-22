@@ -1,14 +1,12 @@
 ﻿using FragAssetFormats.Shaders.ShaderTypes;
 using FragEngine3.EngineCore;
 using FragEngine3.Graphics;
-using FragEngine3.Graphics.Resources;
-using FragEngine3.Graphics.Resources.Data;
 using FragEngine3.Resources;
 using FragEngine3.Utility.Unicode;
 using System.Text;
 using Veldrid;
 
-namespace FragAssetFormats.Shaders.Import.ShaderFormats;
+namespace FragAssetFormats.Shaders.Import.Internal;
 
 internal static class ShaderSourceCodeImporter
 {

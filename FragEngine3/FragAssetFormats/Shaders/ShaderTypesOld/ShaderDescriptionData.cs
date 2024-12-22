@@ -1,5 +1,4 @@
 ﻿using FragEngine3.EngineCore;
-using FragEngine3.Graphics.Resources;
 using FragEngine3.Utility.Serialization;
 using System.Text;
 using Veldrid;

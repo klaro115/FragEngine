@@ -1,8 +1,9 @@
-﻿using FragEngine3.EngineCore.Logging;
+﻿using FragAssetFormats.Contexts;
+using FragEngine3.EngineCore.Logging;
 
 namespace FragEngine3.EngineCore;
 
-public sealed class Logger
+public sealed class Logger : ILogger
 {
 	#region Constructors
 

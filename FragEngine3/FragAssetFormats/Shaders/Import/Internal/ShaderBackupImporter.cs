@@ -1,7 +1,7 @@
 ﻿using FragEngine3.EngineCore;
 using FragEngine3.Resources;
 
-namespace FragAssetFormats.Shaders.Import.ShaderFormats;
+namespace FragAssetFormats.Shaders.Import.Internal;
 
 internal static class ShaderBackupImporter
 {

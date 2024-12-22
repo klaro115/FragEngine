@@ -1,4 +1,6 @@
-﻿using FragAssetPipeline.Processes;
+﻿using FragAssetFormats.Geometry;
+using FragAssetFormats.Shaders.ShaderTypes;
+using FragAssetPipeline.Processes;
 using FragEngine3.Graphics.Resources;
 using Veldrid;
 
