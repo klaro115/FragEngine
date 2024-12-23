@@ -221,7 +221,8 @@ public sealed class ShaderData
 		return true;
 	}
 
-	private static bool ReadCompiledDataBlocks(in ImporterContext _importCtx,
+	private static bool ReadCompiledDataBlocks(
+		in ImporterContext _importCtx,
 		in ShaderDataHeader _header,
 		in ShaderDataDescription _description,
 		BinaryReader _reader,
@@ -230,12 +231,82 @@ public sealed class ShaderData
 		out byte[]? _outBytesSpirv,
 		out byte[]? _outBytesMetal)
 	{
-		//TODO
-
 		_outBytesDxbc = null;
-		_outBytesDxil = null;   //TEMP
+		_outBytesDxil = null;
 		_outBytesSpirv = null;
 		_outBytesMetal = null;
+
+		// Check if shader data includes source code:
+		if (_header is null)
+		{
+			_importCtx.Logger.LogError("Cannot read shader data compiled blocks using null header!");
+			return false;
+		}
+		if (_header.CompiledDataBlockCount == 0 || _header.CompiledDataOffset == 0 || _header.CompiledDataSize == 0)
+		{
+			return false;
+		}
+
+		// Check if description contains valid source code definitions:
+		if (_description is null)
+		{
+			_importCtx.Logger.LogError("Cannot read shader data compiled blocks using null description!");
+			return false;
+		}
+		int compiledDataBlockCount = _description.CompiledBlocks is not null
+			? _description.CompiledBlocks.Length
+			: 0;
+		if (compiledDataBlockCount == 0)
+		{
+			_importCtx.Logger.LogWarning("Shader data contains compiled data, but layout and type of source compiled blocks is not defined.");
+			return false;
+		}
+
+		long startPosition = _reader.BaseStream.Position;
+
+		foreach (ShaderDataCompiledBlockDesc compiledDesc in _description.CompiledBlocks!)
+		{
+			// Skip any data types that are not supported on current platform:
+			if (!_importCtx.SupportedShaderDataTypes.HasFlag(compiledDesc.dataType))
+			{
+				continue;
+			}
+
+			long blockStartPosition = startPosition + compiledDesc.offset;
+			if (!AdvanceReader(in _importCtx, _reader, blockStartPosition))
+			{
+				return false;
+			}
+
+			byte[] blockBytes = new byte[compiledDesc.size];
+			int actualSize = _reader.Read(blockBytes, 0, blockBytes.Length);
+
+			if (actualSize != blockBytes.Length)
+			{
+				byte[] newBlockBytes = new byte[actualSize];
+				Array.Copy(blockBytes, newBlockBytes, actualSize);
+				blockBytes = newBlockBytes;
+			}
+
+			switch (compiledDesc.dataType)
+			{
+				case CompiledShaderDataType.DXBC:
+					_outBytesDxbc = blockBytes;
+					break;
+				case CompiledShaderDataType.DXIL:
+					_outBytesDxil = blockBytes;
+					break;
+				case CompiledShaderDataType.SPIRV:
+					_outBytesSpirv = blockBytes;
+					break;
+				case CompiledShaderDataType.MetalArchive:
+					_outBytesDxbc = blockBytes;
+					break;
+				default:
+					_importCtx.Logger.LogWarning($"Shader data contains unknown or unsupported compiled data type '{compiledDesc.dataType}'. Discarding...");
+					break;
+			}
+		}
 		return false;
 	}
 

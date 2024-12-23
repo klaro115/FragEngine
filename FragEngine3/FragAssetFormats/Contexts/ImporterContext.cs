@@ -12,6 +12,7 @@ public sealed class ImporterContext
 	public required JsonSerializerOptions? JsonOptions { get; init; }
 
 	public ShaderLanguage SupportedShaderLanguages { get; init; } = ShaderLanguage.ALL;
+	public CompiledShaderDataType SupportedShaderDataTypes { get; init; } = CompiledShaderDataType.ALL;
 
 	#endregion
 }
