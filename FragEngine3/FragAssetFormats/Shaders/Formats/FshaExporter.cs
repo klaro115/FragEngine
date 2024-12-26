@@ -34,7 +34,7 @@ public static class FshaExporter
 
 
 		//TODO 1: Track relative positions and sizes for each part!
-		//TODO 2: Add separator strings between parts! => "########\r\n"
+		//TODO 2: Add optional separator strings between parts! => "########\r\n"
 
 		// Serialize description to JSON:
 		if (!_shaderData.Description.Write(in _importCtx, _writer, out byte[] descriptionJsonBytes))
@@ -44,12 +44,6 @@ public static class FshaExporter
 
 		// Write file header:
 		if (!WriteHeaderAndCalculateSectionSizes(in _importCtx, _writer, _shaderData, descriptionJsonBytes, _addSectionSpacer))
-		{
-			return false;
-		}
-
-		// Write header:
-		if (!_shaderData.FileHeader.Write(in _importCtx, _writer))
 		{
 			return false;
 		}
@@ -145,7 +139,7 @@ public static class FshaExporter
 			CompiledDataSize = compiledDataSize,
 		};
 
-		bool success = header.Write(in _importCtx, _writer);
+		bool success = header.WriteFshaHeader(in _importCtx, _writer);
 		return success;
 	}
 

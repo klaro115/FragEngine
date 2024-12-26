@@ -28,7 +28,7 @@ public static class FshaImporter
 		long fileStartPosition = _reader.BaseStream.Position;
 
 		// Read header:
-		if (!ShaderDataHeader.Read(in _importCtx, _reader, out ShaderDataHeader header))
+		if (!ShaderDataHeader.ReadFshaHeader(in _importCtx, _reader, out ShaderDataHeader header))
 		{
 			goto abort;
 		}
