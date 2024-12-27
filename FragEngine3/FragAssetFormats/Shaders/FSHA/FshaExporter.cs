@@ -1,7 +1,7 @@
 ﻿using FragAssetFormats.Contexts;
 using FragAssetFormats.Shaders.ShaderTypes;
 
-namespace FragAssetFormats.Shaders.Formats;
+namespace FragAssetFormats.Shaders.FSHA;
 
 /// <summary>
 /// Exporter for the FSHA shader asset container format.
@@ -77,7 +77,7 @@ public static class FshaExporter
 			compiledDataBlockCount,
 			compiledDataSize,
 			_addSectionSpacer,
-			out ShaderDataHeader header))
+			out FshaFileHeader header))
 		{
 			return false;
 		}
@@ -224,10 +224,10 @@ public static class FshaExporter
 		byte _compiledDataBlockCount,
 		uint _compiledDataByteSize,
 		bool _addSectionSpacers,
-		out ShaderDataHeader _outHeader)
+		out FshaFileHeader _outHeader)
 	{
 		// File header:
-		uint headerSize = ShaderDataHeader.MINIMUM_HEADER_SIZE;
+		uint headerSize = FshaFileHeader.MINIMUM_HEADER_SIZE;
 
 		// JSON description:
 		ushort descriptionOffset = (ushort)headerSize;
@@ -265,9 +265,9 @@ public static class FshaExporter
 		}
 
 		// Assemble and write header section:
-		_outHeader = new ShaderDataHeader()
+		_outHeader = new FshaFileHeader()
 		{
-			FileVersion = ShaderDataHeader.Version.Current,
+			FileVersion = FshaFileHeader.Version.Current,
 			HeaderSize = headerSize,
 
 			JsonOffset = descriptionOffset,
@@ -296,7 +296,7 @@ public static class FshaExporter
 	private static bool WriteSourceCodeBlocks(
 		in ImporterContext _exportCtx,
 		BinaryWriter _writer,
-		ShaderDataHeader _header,
+		FshaFileHeader _header,
 		long _fileStartPosition,
 		List<Tuple<ShaderDataSourceCodeDesc, byte[]>> _blocks,
 		bool _addSectionSpacer)
@@ -329,7 +329,7 @@ public static class FshaExporter
 	private static bool WriteCompileDataBlocks(
 		in ImporterContext _exportCtx,
 		BinaryWriter _writer,
-		ShaderDataHeader _header,
+		FshaFileHeader _header,
 		long _fileStartPosition,
 		List<Tuple<ShaderDataCompiledBlockDesc, byte[]>> _blocks)
 	{

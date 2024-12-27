@@ -1,7 +1,7 @@
 ﻿using FragAssetFormats.Contexts;
 using FragAssetFormats.Shaders.ShaderTypes;
 
-namespace FragAssetFormats.Shaders.Formats;
+namespace FragAssetFormats.Shaders.FSHA;
 
 /// <summary>
 /// Importer for the FSHA shader asset container format.
@@ -38,7 +38,7 @@ public static class FshaImporter
 		long fileStartPosition = _reader.BaseStream.Position;
 
 		// Read header:
-		if (!ShaderDataHeader.ReadFshaHeader(in _importCtx, _reader, out ShaderDataHeader header))
+		if (!FshaFileHeader.ReadFshaHeader(in _importCtx, _reader, out FshaFileHeader header))
 		{
 			goto abort;
 		}
@@ -113,7 +113,7 @@ public static class FshaImporter
 
 	private static bool ReadSourceCodeBlocks(
 		in ImporterContext _importCtx,
-		in ShaderDataHeader _header,
+		in FshaFileHeader _header,
 		in ShaderDataDescription _description,
 		BinaryReader _reader,
 		out Dictionary<ShaderLanguage, byte[]>? _outSourceCodeDict)
@@ -183,7 +183,7 @@ public static class FshaImporter
 
 	private static bool ReadCompiledDataBlocks(
 		in ImporterContext _importCtx,
-		in ShaderDataHeader _header,
+		in FshaFileHeader _header,
 		in ShaderDataDescription _description,
 		BinaryReader _reader,
 		out byte[]? _outBytesDxbc,

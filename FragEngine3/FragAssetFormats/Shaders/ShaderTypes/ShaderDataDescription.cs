@@ -1,4 +1,5 @@
 ﻿using FragAssetFormats.Contexts;
+using FragAssetFormats.Shaders.FSHA;
 using System.Text.Json;
 using Veldrid;
 
@@ -20,7 +21,7 @@ public sealed class ShaderDataDescription
 	#endregion
 	#region Methods
 
-	public static bool DeserializeFromJson(in ImporterContext _importCtx, in ShaderDataHeader _header, BinaryReader _reader, out ShaderDataDescription? _outDescription)
+	public static bool DeserializeFromJson(in ImporterContext _importCtx, in FshaFileHeader _header, BinaryReader _reader, out ShaderDataDescription? _outDescription)
 	{
 		if (_reader is null)
 		{

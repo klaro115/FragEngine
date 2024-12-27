@@ -1,20 +1,35 @@
 ﻿using FragAssetFormats.Contexts;
 
-namespace FragAssetFormats.Shaders.ShaderTypes;
+namespace FragAssetFormats.Shaders.FSHA;
 
+/// <summary>
+/// Object representing the deserialized contents of an FSHA file header.<para/>
+/// Note: The header at the start of an FSHA file starts with the magic number "FSHA", which is ommitted in this representation,
+/// but required for identifying the format during import.
+/// </summary>
 [Serializable]
-public sealed class ShaderDataHeader
+public sealed class FshaFileHeader
 {
 	#region Types
 
+	/// <summary>
+	/// Structure representing the format version of an FSHA file.
+	/// </summary>
+	/// <param name="_packedVersion">Major and minor version parts, packed into an 8-bit byte, with 4 bits per part.</param>
 	[Serializable]
 	public readonly struct Version(byte _packedVersion)
 	{
 		public readonly byte major = (byte)((_packedVersion & 0xF0u) >> 4);
-		public readonly byte minor = (byte)(_packedVersion & 0x0Fu);
+		public readonly byte minor = (byte)( _packedVersion & 0x0Fu);
 
+		/// <summary>
+		/// Gets a packed version of the version number, with 4 bits each for the major and minor parts.
+		/// </summary>
 		public byte PackedVersion => (byte)((major << 4) | minor);
 
+		/// <summary>
+		/// Gets the most recent version of the FSHA format supported by this importer/exporter implementation.
+		/// </summary>
 		public static Version Current => new(CURRENT_VERSION);
 	}
 
@@ -23,7 +38,7 @@ public sealed class ShaderDataHeader
 
 	// FILE DATA:
 
-	public required uint HeaderSize { get; init; } = MINIMUM_HEADER_SIZE;
+	public required ushort HeaderSize { get; init; } = MINIMUM_HEADER_SIZE;
 	public required Version FileVersion { get; init; } = Version.Current;
 
 	// DESCRIPTION:
@@ -45,16 +60,17 @@ public sealed class ShaderDataHeader
 	#endregion
 	#region Constants
 
-	public const uint MINIMUM_HEADER_SIZE = 55;     // 0x37
+	public const ushort MINIMUM_HEADER_SIZE = 55;			// 0x37
 
-	public const uint MAGIC_NUMBERS = ((uint)'F' << 0) | ((uint)'S' << 8) | ((uint)'H' << 16) | ((uint)'A' << 24);
+	public const uint MAGIC_NUMBERS = ((byte)'F' << 0) | ((byte)'S' << 8) | ((byte)'H' << 16) | ((byte)'A' << 24);
 
-	public const byte CURRENT_VERSION = (0x00 << 4) | (0x02);
+	public const byte CURRENT_VERSION = (0x00 << 4) | 0x02; // v0.2
 
 	#endregion
 	#region Methods Binary
 
-	public static bool ReadBinary(in ImporterContext _importCtx, BinaryReader _reader, out ShaderDataHeader _outHeader)
+	[Obsolete("Not needed")]
+	public static bool ReadBinary(in ImporterContext _importCtx, BinaryReader _reader, out FshaFileHeader _outHeader)
 	{
 		if (_reader is null)
 		{
@@ -91,7 +107,7 @@ public sealed class ShaderDataHeader
 		uint compiledDataOffset = _reader.ReadUInt32();
 		uint compiledDataSize = _reader.ReadUInt32();
 
-		_outHeader = new ShaderDataHeader()
+		_outHeader = new FshaFileHeader()
 		{
 			FileVersion = version,
 			HeaderSize = headerSize,
@@ -109,6 +125,7 @@ public sealed class ShaderDataHeader
 		return true;
 	}
 
+	[Obsolete("Not needed")]
 	public bool WriteBinary(in ImporterContext _importCtx, BinaryWriter _writer)
 	{
 		if (_writer is null)
@@ -136,7 +153,14 @@ public sealed class ShaderDataHeader
 	#endregion
 	#region Methods FSHA
 
-	public static bool ReadFshaHeader(in ImporterContext _importCtx, BinaryReader _reader, out ShaderDataHeader _outHeader)
+	/// <summary>
+	/// Reads and parses the header of an FSHA shader file.
+	/// </summary>
+	/// <param name="_importCtx">A context object providing logging functionality.</param>
+	/// <param name="_reader">A binary reader for reading the ASCII-encoded file header from stream.</param>
+	/// <param name="_outHeader">Outputs a fully parsed header object, or null on failure.</param>
+	/// <returns>True if the header was read and parsed successfully, false otherwise.</returns>
+	public static bool ReadFshaHeader(in ImporterContext _importCtx, BinaryReader _reader, out FshaFileHeader _outHeader)
 	{
 		if (_reader is null)
 		{
@@ -174,7 +198,7 @@ public sealed class ShaderDataHeader
 		uint compiledDataOffset = ReadHexUint32(_reader);
 		uint compiledDataSize = ReadHexUint32(_reader, false);
 
-		_outHeader = new ShaderDataHeader()
+		_outHeader = new FshaFileHeader()
 		{
 			FileVersion = version,
 			HeaderSize = headerSize,
@@ -192,6 +216,13 @@ public sealed class ShaderDataHeader
 		return true;
 	}
 
+	/// <summary>
+	/// Writes the header to stream as an ASCII-encoded string of a fixed length.<para/>
+	/// All numeric values are written as hexadecimal digits, separated by underscores.
+	/// </summary>
+	/// <param name="_importCtx">A context object providing logging functionality.</param>
+	/// <param name="_writer">A binary writer for writing the ASCII-encoded file header to stream.</param>
+	/// <returns>True if the header was written successfully, false otherwise.</returns>
 	public bool WriteFshaHeader(in ImporterContext _importCtx, BinaryWriter _writer)
 	{
 		if (_writer is null)
