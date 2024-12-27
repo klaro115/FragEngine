@@ -20,7 +20,7 @@ public sealed class ShaderDataDescription
 	#endregion
 	#region Methods
 
-	public static bool Read(in ImporterContext _importCtx, in ShaderDataHeader _header, BinaryReader _reader, out ShaderDataDescription? _outDescription)
+	public static bool DeserializeFromJson(in ImporterContext _importCtx, in ShaderDataHeader _header, BinaryReader _reader, out ShaderDataDescription? _outDescription)
 	{
 		if (_reader is null)
 		{
@@ -46,7 +46,7 @@ public sealed class ShaderDataDescription
 		}
 	}
 
-	public bool Write(in ImporterContext _importCtx, BinaryWriter _writer, out byte[] _outUtf8JsonBytes)
+	public bool SerializeToJson(in ImporterContext _importCtx, BinaryWriter _writer, out byte[] _outUtf8JsonBytes)
 	{
 		if (_writer is null)
 		{

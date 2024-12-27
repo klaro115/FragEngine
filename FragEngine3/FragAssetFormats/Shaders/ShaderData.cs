@@ -53,5 +53,18 @@ public sealed class ShaderData
 		return _description is null || (_description.CompiledBlocks is not null && _description.CompiledBlocks.Length != 0);
 	}
 
+	public bool TryGetByteCode(CompiledShaderDataType _dataType, out byte[]? _outByteCode)
+	{
+		_outByteCode = _dataType switch
+		{
+			CompiledShaderDataType.DXBC => ByteCodeDxbc,
+			CompiledShaderDataType.DXIL => ByteCodeDxil,
+			CompiledShaderDataType.SPIRV => ByteCodeSpirv,
+			CompiledShaderDataType.MetalArchive => ByteCodeMetal,
+			_ => null,
+		};
+		return _outByteCode is not null && _outByteCode.Length != 0;
+	}
+
 	#endregion
 }

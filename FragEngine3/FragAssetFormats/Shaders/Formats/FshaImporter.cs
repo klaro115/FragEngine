@@ -3,10 +3,20 @@ using FragAssetFormats.Shaders.ShaderTypes;
 
 namespace FragAssetFormats.Shaders.Formats;
 
+/// <summary>
+/// Importer for the FSHA shader asset container format.
+/// </summary>
 public static class FshaImporter
 {
 	#region Methods Import
 
+	/// <summary>
+	/// Reads shader resource data from stream and deserializes it from FSHA format.
+	/// </summary>
+	/// <param name="_importCtx">The context object describing which data should be skipped when reading FSHA data.</param>
+	/// <param name="_reader">A binary reader used to read the FSHA shader data from stream.</param>
+	/// <param name="_outShaderData">Outputs an object of type <see cref="ShaderData"/> after import succeeded, or null, on failure.</param>
+	/// <returns>True if shader data was successfully read and parsed from FSHA format, otherwise false.</returns>
 	public static bool ImportFromFSHA(in ImporterContext _importCtx, BinaryReader _reader, out ShaderData _outShaderData)
 	{
 		if (_importCtx is null)
@@ -40,7 +50,7 @@ public static class FshaImporter
 		}
 
 		// Read description JSON:
-		if (!ShaderDataDescription.Read(in _importCtx, in header, _reader, out ShaderDataDescription? description) || description is null)
+		if (!ShaderDataDescription.DeserializeFromJson(in _importCtx, in header, _reader, out ShaderDataDescription? description) || description is null)
 		{
 			goto abort;
 		}
