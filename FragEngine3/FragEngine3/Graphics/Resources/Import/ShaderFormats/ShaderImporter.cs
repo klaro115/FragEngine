@@ -1,11 +1,12 @@
-﻿using FragAssetFormats.Shaders.Import.Internal;
+﻿using FragAssetFormats.Shaders;
+using FragAssetFormats.Shaders.Import.Internal;
 using FragAssetFormats.Shaders.ShaderTypes;
 using FragEngine3.EngineCore;
-using FragEngine3.Graphics;
+using FragEngine3.Graphics.Resources.Import.ShaderFormats.Internal;
 using FragEngine3.Resources;
 using Veldrid;
 
-namespace FragAssetFormats.Shaders.Import;
+namespace FragEngine3.Graphics.Resources.Import.ShaderFormats;
 
 /// <summary>
 /// Utility class for importing and creating shader resources.
@@ -161,7 +162,7 @@ public static class ShaderImporter
 			variantBytesDict,
 			_graphicsCore.CompiledShaderDataType);
 
-		ShaderStages stage = _shaderData.Description.ShaderStage;
+		ShaderStages stage = _shaderData.Description.Stage;
 		Dictionary<MeshVertexDataFlags, Shader> variants = [];
 		MeshVertexDataFlags supportedVariantFlags = MeshVertexDataFlags.BasicSurfaceData;
 		uint maxVariantIndex = 0;
@@ -199,9 +200,9 @@ public static class ShaderImporter
 		ShaderLanguage language = _graphicsCore.DefaultShaderLanguage;
 		byte[]? sanitizedSourceCodeBytes = null;
 
-		if (_shaderData.HasSourceCode())
+		if (ShaderData.CheckHasSourceCode(_shaderData.FileHeader, _shaderData.Description))
 		{
-			if (ShaderConfig.TryParseDescriptionTxt(_shaderData.Description.SourceCode!.MaximumCompiledFeaturesTxt, out ShaderConfig shaderConfig))
+			if (ShaderConfig.TryParseDescriptionTxt(_shaderData.Description.MaxCapabilities, out ShaderConfig shaderConfig))
 			{
 				supportedVariantFlags |= shaderConfig.GetVertexDataForVariantFlags();
 				uint supportedVariantIndex = supportedVariantFlags.GetVariantIndex();
@@ -252,14 +253,13 @@ public static class ShaderImporter
 		Dictionary<MeshVertexDataFlags, byte[]> _dstVariantBytesDict,
 		CompiledShaderDataType _compiledDataType)
 	{
-		if (_shaderData.Description.CompiledVariants is null ||
-			_shaderData.Description.CompiledVariants.Length == 0)
+		if (_shaderData.Description.CompiledBlocks is null ||
+			_shaderData.Description.CompiledBlocks.Length == 0)
 		{
 			return false;
 		}
 
-		byte[]? byteCode = _shaderData.GetByteCodeOfType(_compiledDataType);
-		if (byteCode is null)
+		if (_shaderData.TryGetByteCode(_compiledDataType, out byte[]? byteCode))
 		{
 			return false;
 		}

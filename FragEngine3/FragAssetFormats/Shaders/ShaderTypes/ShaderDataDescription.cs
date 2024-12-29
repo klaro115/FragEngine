@@ -5,23 +5,57 @@ using Veldrid;
 
 namespace FragAssetFormats.Shaders.ShaderTypes;
 
+/// <summary>
+/// A description of the contents and layout of a <see cref="ShaderData"/> object.
+/// </summary>
 [Serializable]
 public sealed class ShaderDataDescription
 {
 	#region Properties
 
+	/// <summary>
+	/// The shader stage that this resource can be bound to.
+	/// </summary>
 	public required ShaderStages Stage { get; init; }
 
+	/// <summary>
+	/// Description string of the minimum capabilities of this shader, relative to the engine's standard shader feature suite.
+	/// </summary>
 	public required string MinCapabilities { get; init; }
-	public required string MaxCapabilities { get; init; }
+    /// <summary>
+    /// Description string of the maximum capabilities of this shader, relative to the engine's standard shader feature suite.
+    /// </summary>
+    public required string MaxCapabilities { get; init; }
 
+	/// <summary>
+	/// Optional array of descriptions of the different source code blocks bundled with this shader data.
+	/// Each block may contain the shader's full source code in a different shader language, encoded as ASCII or UTF-8 plaintext.
+	/// </summary>
 	public ShaderDataSourceCodeDesc[]? SourceCode { get; init; } = null;
-	public ShaderDataCompiledBlockDesc[]? CompiledBlocks { get; init; } = null;
+    /// <summary>
+    /// Optional array of descriptions of the different compiled data blocks bundled with this shader data.
+    /// Each block may contain a different pre-compiled variant of a shader program for a specific graphics backend.
+    /// </summary>
+    public ShaderDataCompiledBlockDesc[]? CompiledBlocks { get; init; } = null;
 
 	#endregion
 	#region Methods
 
-	public static bool DeserializeFromJson(in ImporterContext _importCtx, in FshaFileHeader _header, BinaryReader _reader, out ShaderDataDescription? _outDescription)
+	/// <summary>
+	/// Checks whether the contents of this description object appear to be complete and ready for use.
+	/// </summary>
+	/// <returns>True if the description is valid, false otherwise.</returns>
+	public bool IsValid()
+	{
+		bool result =
+			Stage != ShaderStages.None &&
+			!string.IsNullOrEmpty(MinCapabilities) &&
+			!string.IsNullOrEmpty(MaxCapabilities) &&
+			(SourceCode is not null || CompiledBlocks is not null);
+		return result;
+	}
+
+    public static bool DeserializeFromJson(in ImporterContext _importCtx, in FshaFileHeader _header, BinaryReader _reader, out ShaderDataDescription? _outDescription)
 	{
 		if (_reader is null)
 		{

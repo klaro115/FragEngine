@@ -17,7 +17,7 @@ public sealed class ShaderData
 	/// <summary>
 	/// File header description with section sizes and offsets; only needed for FSHA import/export.
 	/// </summary>
-	internal FshaFileHeader? FileHeader { get; set; } = null;
+	public FshaFileHeader? FileHeader { get; set; } = null;
 	public required ShaderDataDescription Description { get; init; }
 
 	// SOURCE CODE:
@@ -26,14 +26,14 @@ public sealed class ShaderData
 
 	// COMPILED BYTE CODE:
 
-	public byte[]? ByteCodeDxbc { get; init; } = null;
+	public byte[]? ByteCodeDxbc { get; init; } = null;		//TODO: Convert these into a dictionary as well. Working with 4 arrays is kind of messy and verbose.
 	public byte[]? ByteCodeDxil { get; init; } = null;
 	public byte[]? ByteCodeSpirv { get; init; } = null;
 	public byte[]? ByteCodeMetal { get; init; } = null;
 	//...
 
 	#endregion
-	#region Methods General
+	#region Methods
 
 	/// <summary>
 	/// Checks whether a set of shader data contains usable source code definitions.
@@ -41,7 +41,7 @@ public sealed class ShaderData
 	/// <param name="_header">The FSHA header of the shader data instance.</param>
 	/// <param name="_description">A description of the bundled shader data. If null, the check will be based on the header only.</param>
 	/// <returns>True if source code information appears to be present and complete.</returns>
-	public static bool CheckHasSourceCode(in FshaFileHeader _header, in ShaderDataDescription? _description)
+	public static bool CheckHasSourceCode(in FshaFileHeader? _header, in ShaderDataDescription? _description)
 	{
 		if (_header is null)
 		{
@@ -60,7 +60,7 @@ public sealed class ShaderData
 	/// <param name="_header">The FSHA header of the shader data instance.</param>
 	/// <param name="_description">A description of the bundled shader data. If null, the check will be based on the header only.</param>
 	/// <returns>True if pre-compiled data information appears to be present and complete.</returns>
-	public static bool CheckHasCompiledData(in FshaFileHeader _header, in ShaderDataDescription? _description)
+	public static bool CheckHasCompiledData(in FshaFileHeader? _header, in ShaderDataDescription? _description)
 	{
 		if (_header is null)
 		{
@@ -90,6 +90,29 @@ public sealed class ShaderData
 			_ => null,
 		};
 		return _outByteCode is not null && _outByteCode.Length != 0;
+	}
+
+	/// <summary>
+	/// Checks whether the data is valid and complete enough to use.
+	/// </summary>
+	/// <returns>True if the necessary members are non-null and look to have valid contents.</returns>
+	public bool IsValid()
+	{
+		bool result =
+			Description is not null &&
+			Description.IsValid() &&
+			((SourceCode is not null && SourceCode.Count != 0) ||
+			IsArrayNotNullOrEmpty(ByteCodeDxbc) ||
+			IsArrayNotNullOrEmpty(ByteCodeDxil) ||
+			IsArrayNotNullOrEmpty(ByteCodeSpirv) ||
+			IsArrayNotNullOrEmpty(ByteCodeMetal));
+		return result;
+
+		// Local helper method for checking if an array is non-null and has elements:
+		static bool IsArrayNotNullOrEmpty(Array? _array)
+		{
+			return _array is not null && _array.Length > 0;
+		}
 	}
 
 	#endregion
