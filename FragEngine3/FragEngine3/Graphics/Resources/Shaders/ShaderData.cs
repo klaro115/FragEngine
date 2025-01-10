@@ -1,4 +1,5 @@
-﻿using FragEngine3.Graphics.Resources.Shaders;
+﻿using FragEngine3.Graphics.Resources;
+using FragEngine3.Graphics.Resources.Shaders;
 using FragEngine3.Graphics.Resources.Shaders.Internal;
 
 namespace FragAssetFormats.Shaders;
@@ -80,7 +81,7 @@ public sealed class ShaderData
 	/// <param name="_outSourceCodeBytes">Outputs a byte array containing source code encoded as either ASCII or UTF-8 plaintext.
 	/// Null if no source code in the requested language exists.</param>
 	/// <returns>True if source code was found, false otherwise.</returns>
-	public bool TryGetSourceCode(ShaderLanguage _language, out byte[]? _outSourceCodeBytes)
+	public bool TryGetFullSourceCode(ShaderLanguage _language, out byte[]? _outSourceCodeBytes)
 	{
 		if (SourceCode is not null && SourceCode.TryGetValue(_language, out _outSourceCodeBytes))
 		{
@@ -88,6 +89,34 @@ public sealed class ShaderData
 		}
 		_outSourceCodeBytes = null;
 		return false;
+	}
+
+	/// <summary>
+	/// Tries to retrieve a sub-section of the source code that pertains to a specific variant of the shader for a specific shading lamgauge.
+	/// </summary>
+	/// <param name="_language">The shading langugage that we want the source code to be in.</param>
+	/// <param name="_variantFlags">Vertex data flags identifying the exact variant we are looking for.</param>
+	/// <param name="_outVariantSourceCodeBytes">Outputs a region of memory within the source code byte data, that the requested variant's source code is defined in.</param>
+	/// <param name="_outEntryPoint">Outputs the name of the variant's entry point function.</param>
+	/// <returns>True if a variant in the requested language exists and was found, false otherwise.</returns>
+	public bool TryGetVariantSourceCode(ShaderLanguage _language, MeshVertexDataFlags _variantFlags, out ReadOnlySpan<byte> _outVariantSourceCodeBytes, out string _outEntryPoint)
+	{
+		if (!TryGetFullSourceCode(_language, out byte[]? fullSourceCodeBytes))
+		{
+			_outVariantSourceCodeBytes = [];
+			_outEntryPoint = string.Empty;
+			return false;
+		}
+		if (!Description.TryGetVariantSourceCode(_language, _variantFlags, out ShaderDataSourceCodeDesc blockDesc))
+		{
+			_outVariantSourceCodeBytes = [];
+			_outEntryPoint = string.Empty;
+			return false;
+		}
+
+		_outVariantSourceCodeBytes = new(fullSourceCodeBytes, blockDesc.offset, blockDesc.size);
+		_outEntryPoint = blockDesc.entryPoint;
+		return true;
 	}
 
 	/// <summary>

@@ -1,7 +1,7 @@
 ﻿namespace FragEngine3.Graphics.Resources.Shaders.Internal;
 
 [Serializable]
-public readonly struct ShaderDataCompiledBlockDesc(CompiledShaderDataType _dataType, MeshVertexDataFlags _variantFlags, string _capabilities, uint _offset, uint _size)
+public readonly struct ShaderDataCompiledBlockDesc(CompiledShaderDataType _dataType, MeshVertexDataFlags _variantFlags, string _capabilities, uint _offset, uint _size, string _entryPoint)
 {
 	#region Fields
 
@@ -10,6 +10,7 @@ public readonly struct ShaderDataCompiledBlockDesc(CompiledShaderDataType _dataT
 	public readonly string capabilities = _capabilities ?? string.Empty;
 	public readonly uint offset = _offset;
 	public readonly uint size = _size;
+	public readonly string entryPoint = _entryPoint;
 
 	#endregion
 }

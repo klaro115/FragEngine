@@ -26,7 +26,7 @@ public sealed class ShaderResource : Resource
 		MeshVertexDataFlags _supportedVariantFlags,
 		Shader?[] _variants,
 		ShaderLanguage _sourceCodeLanguage,
-		ShaderDataSourceCodeDesc[]? _sourceCodeData = null,
+		List<ShaderDataSourceCodeDesc>? _sourceCodeData = null,
 		byte[]? _sanitizedSourceCodeBytes = null)
 		: base(_resourceKey, _graphicsCore.graphicsSystem.engine)
 	{
@@ -65,7 +65,7 @@ public sealed class ShaderResource : Resource
 	public readonly bool canCompileFromSourceCode = false;
 	private readonly ShaderLanguage sourceCodeLanguage = 0;
 	private byte[]? sourceCodeBytes = null;
-	ShaderDataSourceCodeDesc[]? sourceCodeData = null;
+	List<ShaderDataSourceCodeDesc>? sourceCodeData = null;
 	private int compiledVariantCount = 0;
 	private readonly int totalVariantCount = 0;
 

@@ -55,6 +55,24 @@ public sealed class ShaderDataDescription
 		return result;
 	}
 
+	public bool TryGetVariantSourceCode(ShaderLanguage _language, MeshVertexDataFlags _variantFlags, out ShaderDataSourceCodeDesc _outSourceCodeBlock)
+	{
+		if (SourceCode is not null)
+		{
+			foreach (ShaderDataSourceCodeDesc block in SourceCode)
+			{
+				if (block.language == _language &&
+					block.variantFlags == _variantFlags)
+				{
+					_outSourceCodeBlock = block;
+					return true;
+				}
+			}
+		}
+		_outSourceCodeBlock = ShaderDataSourceCodeDesc.none;
+		return false;
+	}
+
 	public static bool DeserializeFromJson(in ImporterContext _importCtx, uint _jsonByteSize, BinaryReader _reader, out ShaderDataDescription? _outDescription)
 	{
 		if (_reader is null)

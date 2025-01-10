@@ -30,6 +30,13 @@ public sealed class ModelImporter(ResourceManager _resourceManager, GraphicsCore
 		out MeshSurfaceData? _outSurfaceData
 		/* out ... */)
 	{
+		if (IsDisposed)
+		{
+			logger.LogError($"Cannot import model data using disposed {nameof(ModelImporter)}!");
+			_outSurfaceData = null;
+			return false;
+		}
+
 		if (!TryGetResourceFile(_handle, out ResourceFileHandle fileHandle))
 		{
 			_outSurfaceData = null;
