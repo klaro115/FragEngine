@@ -1,8 +1,9 @@
-﻿using FragAssetFormats.Shaders.ShaderTypes;
+﻿using FragEngine3.Graphics.Resources.Shaders;
 using System.Collections.Frozen;
 
 namespace FragAssetFormats.Shaders;
 
+[Obsolete("might no longer be used")]
 public static class ShaderConstants
 {
 	#region Fields

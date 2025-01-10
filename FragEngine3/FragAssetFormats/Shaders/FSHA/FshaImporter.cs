@@ -1,14 +1,59 @@
-﻿using FragAssetFormats.Contexts;
-using FragAssetFormats.Shaders.ShaderTypes;
+﻿using FragEngine3.Graphics.Resources.Import;
+using FragEngine3.Graphics.Resources.Shaders;
+using FragEngine3.Graphics.Resources.Shaders.Internal;
+using FragEngine3.Resources;
 
 namespace FragAssetFormats.Shaders.FSHA;
 
 /// <summary>
 /// Importer for the FSHA shader asset container format.
 /// </summary>
-public static class FshaImporter
+public class FshaImporter : IShaderImporter
 {
+	#region Fields
+
+	private static readonly string[] supportedFileExtensions = [ ".fsha" ];
+
+	#endregion
+	#region Properties
+
+	public ShaderLanguage SupportedSourceCodeLanguages => 0;
+
+	public CompiledShaderDataType SupportedCompiledDataTypes => 0;
+
+	#endregion
+	#region Methods General
+
+	public IReadOnlyCollection<string> GetSupportedFileFormatExtensions() => supportedFileExtensions;
+
+	#endregion
 	#region Methods Import
+
+	public bool ImportShaderData(in ImporterContext _importCtx, Stream _resourceFileStream, out ShaderData? _outShaderData)
+	{
+		if (_importCtx is null)
+		{
+			Console.WriteLine("Error! Cannot read shader data using null import context!");
+			_outShaderData = null!;
+			return false;
+		}
+		if (_resourceFileStream is null)
+		{
+			_importCtx.Logger.LogError("Cannot read shader data from null file stream!");
+			_outShaderData = null!;
+			return false;
+		}
+		if (!_resourceFileStream.CanRead)
+		{
+			_importCtx.Logger.LogError("Cannot read shader data from write-only stream!");
+			_outShaderData = null!;
+			return false;
+		}
+
+		using BinaryReader reader = new(_resourceFileStream);
+
+		return ImportFromFSHA(in _importCtx, reader, out _outShaderData);
+	}
 
 	/// <summary>
 	/// Reads shader resource data from stream and deserializes it from FSHA format.
@@ -29,11 +74,6 @@ public static class FshaImporter
 			_importCtx.Logger.LogError("Cannot read shader data from null binary reader!");
 			goto abort;
 		}
-		if (!_reader.BaseStream.CanRead)
-		{
-			_importCtx.Logger.LogError("Cannot read shader data from write-only stream!");
-			goto abort;
-		}
 
 		long fileStartPosition = _reader.BaseStream.Position;
 
@@ -50,7 +90,7 @@ public static class FshaImporter
 		}
 
 		// Read description JSON:
-		if (!ShaderDataDescription.DeserializeFromJson(in _importCtx, in header, _reader, out ShaderDataDescription? description) || description is null)
+		if (!ShaderDataDescription.DeserializeFromJson(in _importCtx, header.JsonSize, _reader, out ShaderDataDescription? description) || description is null)
 		{
 			goto abort;
 		}
@@ -293,6 +333,11 @@ public static class FshaImporter
 			_importCtx.Logger.LogError("Unable to advance binary reader streamto target position!");
 			return false;
 		}
+	}
+
+	public IEnumerator<ResourceHandle> EnumerateSubresources(ImporterContext _importCtx, Stream _resourceFileStream)
+	{
+		yield break;	//TEMP
 	}
 
 	#endregion

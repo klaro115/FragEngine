@@ -2,7 +2,7 @@
 using FragEngine3.EngineCore.Config;
 using FragEngine3.Graphics.Config;
 using FragEngine3.Graphics.Internal;
-using FragEngine3.Graphics.Resources;
+using FragEngine3.Graphics.Resources.Shaders;
 using System.Diagnostics;
 using Veldrid;
 using Veldrid.MetalBindings;

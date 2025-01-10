@@ -1,4 +1,5 @@
 ﻿using FragEngine3.Graphics.Resources.Data.MaterialTypes;
+using FragEngine3.Graphics.Resources.Materials;
 using FragEngine3.Resources.Data;
 using Veldrid;
 

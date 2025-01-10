@@ -1,6 +1,6 @@
-﻿using FragAssetFormats.Contexts;
+﻿using FragEngine3.Graphics.Resources.Import;
 
-namespace FragAssetFormats.Shaders.FSHA;
+namespace FragEngine3.Graphics.Resources.Shaders.Internal;
 
 /// <summary>
 /// Object representing the deserialized contents of an FSHA file header.<para/>
@@ -20,12 +20,12 @@ public sealed class FshaFileHeader
 	public readonly struct Version(byte _packedVersion)
 	{
 		public readonly byte major = (byte)((_packedVersion & 0xF0u) >> 4);
-		public readonly byte minor = (byte)( _packedVersion & 0x0Fu);
+		public readonly byte minor = (byte)(_packedVersion & 0x0Fu);
 
 		/// <summary>
 		/// Gets a packed version of the version number, with 4 bits each for the major and minor parts.
 		/// </summary>
-		public byte PackedVersion => (byte)((major << 4) | minor);
+		public byte PackedVersion => (byte)(major << 4 | minor);
 
 		/// <summary>
 		/// Gets the most recent version of the FSHA format supported by this importer/exporter implementation.
@@ -60,11 +60,11 @@ public sealed class FshaFileHeader
 	#endregion
 	#region Constants
 
-	public const ushort MINIMUM_HEADER_SIZE = 55;			// 0x37
+	public const ushort MINIMUM_HEADER_SIZE = 55;           // 0x37
 
-	public const uint MAGIC_NUMBERS = ((byte)'F' << 0) | ((byte)'S' << 8) | ((byte)'H' << 16) | ((byte)'A' << 24);
+	public const uint MAGIC_NUMBERS = (byte)'F' << 0 | (byte)'S' << 8 | (byte)'H' << 16 | (byte)'A' << 24;
 
-	public const byte CURRENT_VERSION = (0x00 << 4) | 0x02; // v0.2
+	public const byte CURRENT_VERSION = 0x00 << 4 | 0x02; // v0.2
 
 	#endregion
 	#region Methods Binary
@@ -257,7 +257,7 @@ public sealed class FshaFileHeader
 		uint c0 = ConvertHexToValue(_reader.ReadByte());
 		uint c1 = ConvertHexToValue(_reader.ReadByte());
 		_reader.ReadByte();
-		return (byte)((c0 << 4) | c1);
+		return (byte)(c0 << 4 | c1);
 	}
 	private static ushort ReadHexUint16(BinaryReader _reader)
 	{
@@ -266,7 +266,7 @@ public sealed class FshaFileHeader
 		uint c2 = ConvertHexToValue(_reader.ReadByte());
 		uint c3 = ConvertHexToValue(_reader.ReadByte());
 		_reader.ReadByte();
-		return (ushort)((c0 << 12) | (c1 << 8) | (c2 << 4) | c3);
+		return (ushort)(c0 << 12 | c1 << 8 | c2 << 4 | c3);
 	}
 	private static uint ReadHexUint32(BinaryReader _reader, bool _skipTrailingUnderscore = true)
 	{
@@ -282,7 +282,7 @@ public sealed class FshaFileHeader
 		{
 			_reader.ReadByte();
 		}
-		return (c0 << 28) | (c1 << 24) | (c2 << 20) | (c3 << 16) | (c4 << 12) | (c5 << 8) | (c6 << 4) | c7;
+		return c0 << 28 | c1 << 24 | c2 << 20 | c3 << 16 | c4 << 12 | c5 << 8 | c6 << 4 | c7;
 	}
 
 	private static uint ConvertHexToValue(byte _hexChar)
@@ -295,7 +295,7 @@ public sealed class FshaFileHeader
 	private static void WriteUint8ToHex(BinaryWriter _writer, byte _value)
 	{
 		_writer.Write(ConvertNibbleToHex((_value & 0xF0u) >> 4));
-		_writer.Write(ConvertNibbleToHex( _value & 0x0Fu));
+		_writer.Write(ConvertNibbleToHex(_value & 0x0Fu));
 		_writer.Write((byte)'_');
 	}
 	private static void WriteUint16ToHex(BinaryWriter _writer, ushort _value)
@@ -303,7 +303,7 @@ public sealed class FshaFileHeader
 		_writer.Write(ConvertNibbleToHex((_value & 0xF000u) >> 12));
 		_writer.Write(ConvertNibbleToHex((_value & 0x0F00u) >> 8));
 		_writer.Write(ConvertNibbleToHex((_value & 0x00F0u) >> 4));
-		_writer.Write(ConvertNibbleToHex( _value & 0x000Fu));
+		_writer.Write(ConvertNibbleToHex(_value & 0x000Fu));
 		_writer.Write((byte)'_');
 	}
 	private static void WriteUint32ToHex(BinaryWriter _writer, uint _value, bool _addTrailingUnderscore = true)
@@ -315,7 +315,7 @@ public sealed class FshaFileHeader
 		_writer.Write(ConvertNibbleToHex((_value & 0x0000F000u) >> 12));
 		_writer.Write(ConvertNibbleToHex((_value & 0x00000F00u) >> 8));
 		_writer.Write(ConvertNibbleToHex((_value & 0x000000F0u) >> 4));
-		_writer.Write(ConvertNibbleToHex( _value & 0x0000000Fu));
+		_writer.Write(ConvertNibbleToHex(_value & 0x0000000Fu));
 		if (_addTrailingUnderscore)
 		{
 			_writer.Write((byte)'_');

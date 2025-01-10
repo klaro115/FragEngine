@@ -2,7 +2,7 @@
 using FragEngine3.Graphics.Contexts;
 using Veldrid;
 
-namespace FragEngine3.Graphics.Resources.Internal;
+namespace FragEngine3.Graphics.Resources.Materials.Internal;
 
 public abstract class MaterialResources(GraphicsCore _graphicsCore, ResourceLayout _resourceLayout) : IDisposable
 {
@@ -32,7 +32,7 @@ public abstract class MaterialResources(GraphicsCore _graphicsCore, ResourceLayo
 	protected ResourceSet? resourceSet = null;
 	protected DeviceBuffer? constantBuffer = null;
 
-	private readonly Dictionary<string, MaterialResourceMapping> valueNameMapping = [];	//TODO: Move this to default/generic child class implementation?
+	private readonly Dictionary<string, MaterialResourceMapping> valueNameMapping = []; //TODO: Move this to default/generic child class implementation?
 
 	#endregion
 	#region Properties

@@ -1,34 +1,75 @@
 ﻿using FragEngine3.Resources;
 using FragEngine3.EngineCore;
 using FragEngine3.Graphics.Resources.Data;
-using FragEngine3.Graphics.Resources.Import.ModelFormats;
 
 namespace FragEngine3.Graphics.Resources.Import;
 
-public static class ModelImporter
+public sealed class ModelImporter
 {
+	#region Constructors
+
+	public ModelImporter(ResourceManager _resourceManager, GraphicsCore _graphicsCore)
+	{
+		resourceManager = _resourceManager;
+		graphicsCore = _graphicsCore;
+		logger = resourceManager.Engine.Logger ?? Logger.Instance!;
+
+		importCtx = new()
+		{
+			Logger = logger,
+			JsonOptions = null,
+		};
+	}
+
+	#endregion
+	#region Fields
+
+	private readonly ResourceManager resourceManager;
+	private readonly GraphicsCore graphicsCore;
+	private readonly Logger logger;
+
+	private ImporterContext importCtx;
+
+	private readonly Dictionary<string, IModelImporter> importers = [];
+
+	#endregion
+	#region Properties
+
+	/// <summary>
+	/// Gets or sets context information for model import. Only non-null and valid values are accepted.
+	/// </summary>
+	public ImporterContext ImportCtx
+	{
+		get => importCtx;
+		set
+		{
+			if (value is not null && value.IsValid())
+			{
+				importCtx = value;
+			}
+		}
+	}
+
+	#endregion
 	#region Methods
 
-	public static bool ImportModelData(
-		ResourceManager _resourceManager,
+	public bool ImportModelData(
 		ResourceHandle _handle,
 		out MeshSurfaceData? _outSurfaceData
 		/* out ... */)
 	{
 		if (_handle is null || !_handle.IsValid)
 		{
-			Logger.Instance?.LogError("Resource handle for model import may not be null or invalid!");
+			logger.LogError("Resource handle for model import may not be null or invalid!");
 			_outSurfaceData = null;
 			return false;
 		}
 		if (_handle.resourceManager == null || _handle.resourceManager.IsDisposed)
 		{
-			Logger.Instance?.LogError("Cannot load model using null or disposed resource manager!");
+			logger.LogError("Cannot load model using null or disposed resource manager!");
 			_outSurfaceData = null;
 			return false;
 		}
-
-		Logger logger = _handle.resourceManager.engine.Logger ?? Logger.Instance!;
 
 		// Retrieve the file that this resource is loaded from:
 		ResourceFileHandle fileHandle;
@@ -55,7 +96,7 @@ public static class ModelImporter
 		try
 		{
 			// Open file stream:
-			if (!fileHandle.TryOpenDataStream(_resourceManager.engine, _handle.dataOffset, _handle.dataSize, out stream, out _))
+			if (!fileHandle.TryOpenDataStream(resourceManager.engine, _handle.dataOffset, _handle.dataSize, out stream, out _))
 			{
 				logger.LogError($"Failed to open file stream for resource handle '{_handle}'!");
 				_outSurfaceData = null;
@@ -98,7 +139,7 @@ public static class ModelImporter
 		return true;
 	}
 
-	public static bool ImportModelData(
+	public bool ImportModelData(
 		Stream _stream,
 		string _formatExt,
 		out MeshSurfaceData? _outSurfaceData
@@ -106,54 +147,45 @@ public static class ModelImporter
 	{
 		if (_stream is null || !_stream.CanRead)
 		{
-			Logger.Instance?.LogError("Cannot import model data from null or write-only stream!");
+			logger.LogError("Cannot import model data from null or write-only stream!");
 			_outSurfaceData = null;
 			return false;
 		}
 		if (string.IsNullOrWhiteSpace(_formatExt))
 		{
-			Logger.Instance?.LogError("Cannot import model data using unspecified 3D file format extension!");
+			logger.LogError("Cannot import model data using unspecified 3D file format extension!");
 			_outSurfaceData = null;
 			return false;
 		}
 
 		_formatExt = _formatExt.ToLowerInvariant();
 
-		if (_formatExt == ".obj")
+		if (!importers.TryGetValue(_formatExt, out IModelImporter? importer))
 		{
-			return ObjImporter.ImportModel(_stream, out _outSurfaceData);
-		}
-		else if (_formatExt == ".fbx")
-		{
-			return FbxImporter.ImportModel(_stream, out _outSurfaceData);
-		}
-		//...
-		else
-		{
-			Logger.Instance?.LogError($"Unknown 3D file format extension '{_formatExt}', cannot import model data!");
+			logger.LogError($"Unsupported 3D file format extension '{_formatExt}', cannot import model data!");
 			_outSurfaceData = null;
 			return false;
 		}
+
+		bool success = importer.ImportSurfaceData(in importCtx, _stream, out _outSurfaceData);
+		return success;
 	}
 
-	public static bool CreateMesh(
+	public bool CreateMesh(
 		in ResourceHandle _handle,
-		in GraphicsCore _core,
 		in MeshSurfaceData _surfaceData,
 		/* in ... */
 		out Mesh? _outMesh)
 	{
 		if (_handle == null || !_handle.IsValid)
 		{
-			Logger.Instance?.LogError("Resource handle for mesh creation may not be null or invalid!");
+			logger.LogError("Resource handle for mesh creation may not be null or invalid!");
 			_outMesh = null;
 			return false;
 		}
 
-		Logger logger = _handle.resourceManager.engine.Logger ?? Logger.Instance!;
-
 		// Create mesh instance:
-		_outMesh = new Mesh(_handle, _core);
+		_outMesh = new Mesh(_handle, graphicsCore);
 
 		bool success = true;
 

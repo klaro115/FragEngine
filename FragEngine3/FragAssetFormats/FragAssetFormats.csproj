@@ -10,4 +10,8 @@
     <PackageReference Include="Veldrid" Version="4.9.0" />
   </ItemGroup>
 
+  <ItemGroup>
+    <ProjectReference Include="..\FragEngine3\FragEngine3.csproj" />
+  </ItemGroup>
+
 </Project>

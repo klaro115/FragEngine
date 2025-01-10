@@ -1,9 +1,9 @@
-﻿using FragAssetFormats.Contexts;
-using FragAssetFormats.Shaders.FSHA;
+﻿using FragAssetFormats.Shaders;
+using FragEngine3.Graphics.Resources.Import;
 using System.Text.Json;
 using Veldrid;
 
-namespace FragAssetFormats.Shaders.ShaderTypes;
+namespace FragEngine3.Graphics.Resources.Shaders.Internal;
 
 /// <summary>
 /// A description of the contents and layout of a <see cref="ShaderData"/> object.
@@ -22,21 +22,21 @@ public sealed class ShaderDataDescription
 	/// Description string of the minimum capabilities of this shader, relative to the engine's standard shader feature suite.
 	/// </summary>
 	public required string MinCapabilities { get; init; }
-    /// <summary>
-    /// Description string of the maximum capabilities of this shader, relative to the engine's standard shader feature suite.
-    /// </summary>
-    public required string MaxCapabilities { get; init; }
+	/// <summary>
+	/// Description string of the maximum capabilities of this shader, relative to the engine's standard shader feature suite.
+	/// </summary>
+	public required string MaxCapabilities { get; init; }
 
 	/// <summary>
 	/// Optional array of descriptions of the different source code blocks bundled with this shader data.
 	/// Each block may contain the shader's full source code in a different shader language, encoded as ASCII or UTF-8 plaintext.
 	/// </summary>
 	public ShaderDataSourceCodeDesc[]? SourceCode { get; init; } = null;
-    /// <summary>
-    /// Optional array of descriptions of the different compiled data blocks bundled with this shader data.
-    /// Each block may contain a different pre-compiled variant of a shader program for a specific graphics backend.
-    /// </summary>
-    public ShaderDataCompiledBlockDesc[]? CompiledBlocks { get; init; } = null;
+	/// <summary>
+	/// Optional array of descriptions of the different compiled data blocks bundled with this shader data.
+	/// Each block may contain a different pre-compiled variant of a shader program for a specific graphics backend.
+	/// </summary>
+	public ShaderDataCompiledBlockDesc[]? CompiledBlocks { get; init; } = null;
 
 	#endregion
 	#region Methods
@@ -55,7 +55,7 @@ public sealed class ShaderDataDescription
 		return result;
 	}
 
-    public static bool DeserializeFromJson(in ImporterContext _importCtx, in FshaFileHeader _header, BinaryReader _reader, out ShaderDataDescription? _outDescription)
+	public static bool DeserializeFromJson(in ImporterContext _importCtx, uint _jsonByteSize, BinaryReader _reader, out ShaderDataDescription? _outDescription)
 	{
 		if (_reader is null)
 		{
@@ -64,7 +64,7 @@ public sealed class ShaderDataDescription
 			return false;
 		}
 
-		byte[] utf8JsonBytes = new byte[_header.JsonSize];
+		byte[] utf8JsonBytes = new byte[_jsonByteSize];
 		try
 		{
 			int actualJsonLength = _reader.Read(utf8JsonBytes, 0, utf8JsonBytes.Length);

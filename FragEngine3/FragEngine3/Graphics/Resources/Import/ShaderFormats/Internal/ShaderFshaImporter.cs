@@ -1,8 +1,6 @@
-﻿using FragAssetFormats.Contexts;
-using FragAssetFormats.Shaders;
-using FragAssetFormats.Shaders.FSHA;
-using FragAssetFormats.Shaders.ShaderTypes;
+﻿using FragAssetFormats.Shaders;
 using FragEngine3.EngineCore;
+using FragEngine3.Graphics.Resources.Shaders;
 using FragEngine3.Resources;
 
 namespace FragEngine3.Graphics.Resources.Import.ShaderFormats.Internal;

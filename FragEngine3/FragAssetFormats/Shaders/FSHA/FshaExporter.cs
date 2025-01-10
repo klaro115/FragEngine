@@ -1,5 +1,5 @@
-﻿using FragAssetFormats.Contexts;
-using FragAssetFormats.Shaders.ShaderTypes;
+﻿using FragEngine3.Graphics.Resources.Import;
+using FragEngine3.Graphics.Resources.Shaders.Internal;
 
 namespace FragAssetFormats.Shaders.FSHA;
 
@@ -227,10 +227,10 @@ public static class FshaExporter
 		out FshaFileHeader _outHeader)
 	{
 		// File header:
-		uint headerSize = FshaFileHeader.MINIMUM_HEADER_SIZE;
+		ushort headerSize = FshaFileHeader.MINIMUM_HEADER_SIZE;
 
 		// JSON description:
-		ushort descriptionOffset = (ushort)headerSize;
+		ushort descriptionOffset = headerSize;
 		if (_addSectionSpacers)
 		{
 			descriptionOffset += (ushort)SECTION_SPACER_LENGTH;

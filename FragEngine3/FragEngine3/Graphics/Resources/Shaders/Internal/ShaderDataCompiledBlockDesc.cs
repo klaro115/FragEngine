@@ -1,6 +1,4 @@
-﻿using FragAssetFormats.Geometry;
-
-namespace FragAssetFormats.Shaders.ShaderTypes;
+﻿namespace FragEngine3.Graphics.Resources.Shaders.Internal;
 
 [Serializable]
 public readonly struct ShaderDataCompiledBlockDesc(CompiledShaderDataType _dataType, MeshVertexDataFlags _variantFlags, string _capabilities, uint _offset, uint _size)

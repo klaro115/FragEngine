@@ -1,5 +1,5 @@
-﻿using FragAssetFormats.Shaders.FSHA;
-using FragAssetFormats.Shaders.ShaderTypes;
+﻿using FragEngine3.Graphics.Resources.Shaders;
+using FragEngine3.Graphics.Resources.Shaders.Internal;
 
 namespace FragAssetFormats.Shaders;
 
@@ -74,7 +74,24 @@ public sealed class ShaderData
 	}
 
 	/// <summary>
-	/// Tries to retrieve byte code for a specific type of compiled shader data.
+	/// Tries to retrieve the byte code containing source code in a specific language.
+	/// </summary>
+	/// <param name="_language">The shading langugage that we want the source code to be in.</param>
+	/// <param name="_outSourceCodeBytes">Outputs a byte array containing source code encoded as either ASCII or UTF-8 plaintext.
+	/// Null if no source code in the requested language exists.</param>
+	/// <returns>True if source code was found, false otherwise.</returns>
+	public bool TryGetSourceCode(ShaderLanguage _language, out byte[]? _outSourceCodeBytes)
+	{
+		if (SourceCode is not null && SourceCode.TryGetValue(_language, out _outSourceCodeBytes))
+		{
+			return true;
+		}
+		_outSourceCodeBytes = null;
+		return false;
+	}
+
+	/// <summary>
+	/// Tries to retrieve all byte code for a specific type of compiled shader data.
 	/// </summary>
 	/// <param name="_dataType">The type of compiled shader data we're looking for.</param>
 	/// <param name="_outByteCode">Outputs a byte array with the requested compiled data. Null if no data of that type was found.</param>

@@ -3,6 +3,7 @@ using FragAssetFormats.Shaders.ShaderTypes;
 using FragAssetPipeline.Resources.Shaders.FSHA;
 using FragEngine3.Graphics;
 using FragEngine3.Graphics.Resources;
+using FragEngine3.Graphics.Resources.Shaders;
 using System.Text;
 using Veldrid;
 

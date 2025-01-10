@@ -4,6 +4,8 @@ using FragEngine3.EngineCore;
 using FragEngine3.Graphics.Resources;
 using FragEngine3.Graphics.Resources.Data;
 using FragEngine3.Graphics.Resources.Import;
+using FragEngine3.Graphics.Resources.Materials;
+using FragEngine3.Graphics.Resources.Shaders;
 using FragEngine3.Resources.Management;
 
 namespace FragEngine3.Resources;
@@ -23,6 +25,9 @@ public sealed class ResourceManager : IEngineSystem
 		fileGatherer = new(this);
 		importer = new(this, LoadImmediately);
 
+		modelImporter = new(this, engine.GraphicsSystem.graphicsCore);
+		//...
+
 		stopwatch = new();
 		stopwatch.Start();
 	}
@@ -37,6 +42,9 @@ public sealed class ResourceManager : IEngineSystem
 	public readonly Engine engine;
 	public readonly ResourceFileGatherer fileGatherer;
 	private readonly ResourceImporter importer;
+
+	public readonly ModelImporter modelImporter;
+	//...
 
 	private readonly Stopwatch stopwatch;
 
@@ -520,8 +528,8 @@ public sealed class ResourceManager : IEngineSystem
 				}
 				break;
 			case ResourceType.Model:
-				if ((success = ModelImporter.ImportModelData(this, _handle, out MeshSurfaceData? surfaceData) && surfaceData is not null) &&
-					(success = ModelImporter.CreateMesh(_handle, engine.GraphicsSystem.graphicsCore, surfaceData!, out Mesh? mesh)))
+				if ((success = modelImporter.ImportModelData(_handle, out MeshSurfaceData? surfaceData) && surfaceData is not null) &&
+					(success = modelImporter.CreateMesh(_handle, surfaceData!, out Mesh? mesh)))
 				{
 					_assignResourceCallback(mesh);
 				}

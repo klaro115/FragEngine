@@ -6,7 +6,7 @@ using System.Diagnostics;
 using Veldrid.Sdl2;
 using Veldrid.StartupUtilities;
 using Veldrid;
-using FragEngine3.Graphics.Resources;
+using FragEngine3.Graphics.Resources.Shaders;
 
 namespace FragEngine3.Graphics.Vulkan;
 

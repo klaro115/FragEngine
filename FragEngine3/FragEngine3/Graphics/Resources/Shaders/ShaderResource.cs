@@ -1,10 +1,10 @@
 ﻿using FragAssetFormats.Shaders.Import.Internal;
-using FragAssetFormats.Shaders.ShaderTypes;
 using FragEngine3.EngineCore;
+using FragEngine3.Graphics.Resources.Shaders.Internal;
 using FragEngine3.Resources;
 using Veldrid;
 
-namespace FragEngine3.Graphics.Resources;
+namespace FragEngine3.Graphics.Resources.Shaders;
 
 /// <summary>
 /// A graphics resource representing all vertex variants of a same GPU shader program.<para/>
@@ -26,7 +26,7 @@ public sealed class ShaderResource : Resource
 		MeshVertexDataFlags _supportedVariantFlags,
 		Shader?[] _variants,
 		ShaderLanguage _sourceCodeLanguage,
-		ShaderDescriptionSourceCodeData? _sourceCodeData = null,
+		ShaderDataSourceCodeDesc[]? _sourceCodeData = null,
 		byte[]? _sanitizedSourceCodeBytes = null)
 		: base(_resourceKey, _graphicsCore.graphicsSystem.engine)
 	{
@@ -65,7 +65,7 @@ public sealed class ShaderResource : Resource
 	public readonly bool canCompileFromSourceCode = false;
 	private readonly ShaderLanguage sourceCodeLanguage = 0;
 	private byte[]? sourceCodeBytes = null;
-	ShaderDescriptionSourceCodeData? sourceCodeData = null;
+	ShaderDataSourceCodeDesc[]? sourceCodeData = null;
 	private int compiledVariantCount = 0;
 	private readonly int totalVariantCount = 0;
 
@@ -182,8 +182,9 @@ public sealed class ShaderResource : Resource
 		}
 
 		// Fetch the name of the variant's entry point function:
-		var entryPoint = sourceCodeData!.EntryPoints?.FirstOrDefault(o => o.VariantFlags == _variantFlags);
-		if (entryPoint is null)
+		var sourceCodeBlock = sourceCodeData!.FirstOrDefault(o => o.variantFlags == _variantFlags);
+		string entryPoint = sourceCodeBlock.entryPoint;
+		if (string.IsNullOrEmpty(entryPoint))
 		{
 			Logger?.LogError($"Cannot compile shader variants from source; missing entry point function name! Flags: '{_variantFlags}'");
 			return false;
@@ -216,7 +217,7 @@ public sealed class ShaderResource : Resource
 		try
 		{
 			// Compile variant from modified source code:
-			ShaderDescription shaderDesc = new(Stage, variantSourceCodeBytes, entryPoint.EntryPoint);
+			ShaderDescription shaderDesc = new(Stage, variantSourceCodeBytes, entryPoint);
 
 			shader = graphicsCore.MainFactory.CreateShader(ref shaderDesc);
 			shader.Name = $"{resourceKey}_{Stage}_V{(int)_variantFlags}";

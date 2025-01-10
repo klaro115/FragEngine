@@ -1,7 +1,7 @@
 ﻿using FragEngine3.Graphics.Lighting;
 using Veldrid;
 
-namespace FragEngine3.Graphics.Resources;
+namespace FragEngine3.Graphics.Resources.Shaders;
 
 /// <summary>
 /// Description structure for standard shader configurations. This type contains
@@ -43,7 +43,7 @@ public struct ShaderConfig
 
 	#endregion
 	#region Properties
-	
+
 	public static ShaderConfig ConfigMinimal => new()
 	{
 		albedoSource = ShaderAlbedoSource.Color,

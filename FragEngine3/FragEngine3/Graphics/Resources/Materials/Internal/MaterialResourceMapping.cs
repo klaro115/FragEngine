@@ -1,4 +1,4 @@
-﻿namespace FragEngine3.Graphics.Resources.Internal;
+﻿namespace FragEngine3.Graphics.Resources.Materials.Internal;
 
 internal enum MaterialResourceMappingType
 {
