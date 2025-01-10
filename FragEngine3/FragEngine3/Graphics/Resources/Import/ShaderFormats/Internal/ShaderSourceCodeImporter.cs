@@ -1,13 +1,15 @@
-﻿using FragEngine3.EngineCore;
+﻿using FragAssetFormats.Shaders;
+using FragEngine3.EngineCore;
 using FragEngine3.Graphics;
 using FragEngine3.Graphics.Resources;
 using FragEngine3.Graphics.Resources.Shaders;
+using FragEngine3.Graphics.Resources.Shaders.Internal;
 using FragEngine3.Resources;
 using FragEngine3.Utility.Unicode;
 using System.Text;
 using Veldrid;
 
-namespace FragAssetFormats.Shaders.Import.Internal;
+namespace FragEngine3.Graphics.Resources.Import.ShaderFormats.Internal;
 
 internal static class ShaderSourceCodeImporter
 {
@@ -88,51 +90,21 @@ internal static class ShaderSourceCodeImporter
 			};
 		}
 
-		var sourceCodeBlocks = new ShaderDescriptionSourceCodeData.SourceCodeBlock[1]
-		{
-			new()
-			{
-				Language = language,
-				ByteOffset = 0,
-				ByteSize = (uint)actualBytesCount,
-			},
-		};
+		ShaderDataSourceCodeDesc[] sourceCodeBlocks =
+		[
+			new(language, MeshVertexDataFlags.ALL, 0, (ushort)actualBytesCount, entryPointNameBase),
+		];
 
 		_outShaderData = new ShaderData()
 		{
-			FileHeader = new ShaderDataFileHeader()
+			FileHeader = null,
+			Description = new ShaderDataDescription()
 			{
-				fileHeaderSize = ShaderDataFileHeader.minFileHeaderSize,
-				jsonDescription = new()
-				{
-					byteOffset = ShaderDataFileHeader.minFileHeaderSize,
-					byteSize = 0,
-				},
-				sourceCode = new()
-				{
-					byteOffset = ShaderDataFileHeader.minFileHeaderSize,
-					byteSize = (uint)actualBytesCount,
-				},
-				shaderDataBlockCount = 0,
-				shaderData = new()
-				{
-					byteOffset = 0,
-					byteSize = 0,
-				}
-			},
-			Description = new ShaderDescriptionData()
-			{
-				ShaderStage = stage,
-				RequiredVariants = allVariantFlags,
-				SourceCode = new ShaderDescriptionSourceCodeData()
-				{
-					EntryPointNameBase = entryPointNameBase,
-					EntryPoints = entryPoints,
-					SupportedFeaturesTxt = descriptionText,
-					MaximumCompiledFeaturesTxt = descriptionText,
-					SourceCodeBlocks = sourceCodeBlocks,
-				},
-				CompiledVariants = [],
+				Stage = stage,
+				MinCapabilities = descriptionText,
+				MaxCapabilities = descriptionText,
+				SourceCode = sourceCodeBlocks,
+				CompiledBlocks = null,
 			},
 			SourceCode = new Dictionary<ShaderLanguage, byte[]>()
 			{

@@ -11,7 +11,8 @@ namespace FragEngine3.Graphics.Resources.Import.ShaderFormats;
 /// <summary>
 /// Utility class for importing and creating shader resources.
 /// </summary>
-public static class ShaderImporter
+[Obsolete("rewritten")]
+public static class ShaderImporterOld
 {
 	#region Methods
 

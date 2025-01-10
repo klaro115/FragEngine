@@ -1,5 +1,6 @@
 ﻿using System.Collections.Concurrent;
 using System.Diagnostics;
+using FragAssetFormats.Shaders;
 using FragEngine3.EngineCore;
 using FragEngine3.Graphics.Resources;
 using FragEngine3.Graphics.Resources.Data;
@@ -26,6 +27,7 @@ public sealed class ResourceManager : IEngineSystem
 		importer = new(this, LoadImmediately);
 
 		modelImporter = new(this, engine.GraphicsSystem.graphicsCore);
+		shaderImporter = new(engine.GraphicsSystem.graphicsCore);
 		//...
 
 		stopwatch = new();
@@ -44,6 +46,7 @@ public sealed class ResourceManager : IEngineSystem
 	private readonly ResourceImporter importer;
 
 	public readonly ModelImporter modelImporter;
+	public readonly ShaderImporter shaderImporter;
 	//...
 
 	private readonly Stopwatch stopwatch;
@@ -100,6 +103,10 @@ public sealed class ResourceManager : IEngineSystem
 		
 		importer.Dispose();
 		fileGatherer.Dispose();
+
+		modelImporter.Dispose();
+		shaderImporter.Dispose();
+		//...
 
 		DisposeAllResources();
 
@@ -515,8 +522,8 @@ public sealed class ResourceManager : IEngineSystem
 		switch (_handle.resourceType)
 		{
 			case ResourceType.Shader:
-				if ((success = ShaderImporter.ImportShaderData(this, _handle, out ShaderData? shaderData) && shaderData is not null) &&
-					(success = ShaderImporter.CreateShader(_handle.resourceKey, engine.GraphicsSystem.graphicsCore, shaderData!, out ShaderResource? shaderRes)))
+				if ((success = shaderImporter.ImportShaderData(_handle, out ShaderData? shaderData) && shaderData is not null) &&
+					(success = shaderImporter.CreateShader(_handle.resourceKey, shaderData!, out ShaderResource? shaderRes)))
 				{
 					_assignResourceCallback(shaderRes);
 				}

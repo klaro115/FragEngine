@@ -1,54 +1,26 @@
 ﻿using FragEngine3.Resources;
-using FragEngine3.EngineCore;
 using FragEngine3.Graphics.Resources.Data;
 
 namespace FragEngine3.Graphics.Resources.Import;
 
-public sealed class ModelImporter
+/// <summary>
+/// Hub instance for managing and delegating the import of 3D models through previously registered importers.
+/// </summary>
+/// <param name="_resourceManager">The engine's resource manager instance.</param>
+/// <param name="_graphicsCore">The graphics core through which's graphics device the 3D model resources shall be created.</param>
+public sealed class ModelImporter(ResourceManager _resourceManager, GraphicsCore _graphicsCore) : BaseResourceImporter<IModelImporter>(_graphicsCore)
 {
 	#region Constructors
 
-	public ModelImporter(ResourceManager _resourceManager, GraphicsCore _graphicsCore)
+	~ModelImporter()
 	{
-		resourceManager = _resourceManager;
-		graphicsCore = _graphicsCore;
-		logger = resourceManager.Engine.Logger ?? Logger.Instance!;
-
-		importCtx = new()
-		{
-			Logger = logger,
-			JsonOptions = null,
-		};
+		if (!IsDisposed) Dispose(false);
 	}
 
 	#endregion
 	#region Fields
 
-	private readonly ResourceManager resourceManager;
-	private readonly GraphicsCore graphicsCore;
-	private readonly Logger logger;
-
-	private ImporterContext importCtx;
-
-	private readonly Dictionary<string, IModelImporter> importers = [];
-
-	#endregion
-	#region Properties
-
-	/// <summary>
-	/// Gets or sets context information for model import. Only non-null and valid values are accepted.
-	/// </summary>
-	public ImporterContext ImportCtx
-	{
-		get => importCtx;
-		set
-		{
-			if (value is not null && value.IsValid())
-			{
-				importCtx = value;
-			}
-		}
-	}
+	private readonly ResourceManager resourceManager = _resourceManager;
 
 	#endregion
 	#region Methods
@@ -58,40 +30,12 @@ public sealed class ModelImporter
 		out MeshSurfaceData? _outSurfaceData
 		/* out ... */)
 	{
-		if (_handle is null || !_handle.IsValid)
+		if (!TryGetResourceFile(_handle, out ResourceFileHandle fileHandle))
 		{
-			logger.LogError("Resource handle for model import may not be null or invalid!");
 			_outSurfaceData = null;
 			return false;
 		}
-		if (_handle.resourceManager == null || _handle.resourceManager.IsDisposed)
-		{
-			logger.LogError("Cannot load model using null or disposed resource manager!");
-			_outSurfaceData = null;
-			return false;
-		}
-
-		// Retrieve the file that this resource is loaded from:
-		ResourceFileHandle fileHandle;
-		if (string.IsNullOrEmpty(_handle.fileKey))
-		{
-			if (!_handle.resourceManager.GetFileWithResource(_handle.fileKey, out fileHandle))
-			{
-				logger.LogError($"Could not find any resource data file containing resource handle '{_handle}'!");
-				_outSurfaceData = null;
-				return false;
-			}
-		}
-		else
-		{
-			if (!_handle.resourceManager.GetFile(_handle.fileKey, out fileHandle))
-			{
-				logger.LogError($"Resource data file for resource handle '{_handle}' does not exist!");
-				_outSurfaceData = null;
-				return false;
-			}
-		}
-
+		
 		Stream? stream = null;
 		try
 		{
@@ -160,7 +104,7 @@ public sealed class ModelImporter
 
 		_formatExt = _formatExt.ToLowerInvariant();
 
-		if (!importers.TryGetValue(_formatExt, out IModelImporter? importer))
+		if (!importerFormatDict.TryGetValue(_formatExt, out IModelImporter? importer))
 		{
 			logger.LogError($"Unsupported 3D file format extension '{_formatExt}', cannot import model data!");
 			_outSurfaceData = null;
@@ -177,7 +121,7 @@ public sealed class ModelImporter
 		/* in ... */
 		out Mesh? _outMesh)
 	{
-		if (_handle == null || !_handle.IsValid)
+		if (_handle is null || !_handle.IsValid)
 		{
 			logger.LogError("Resource handle for mesh creation may not be null or invalid!");
 			_outMesh = null;
