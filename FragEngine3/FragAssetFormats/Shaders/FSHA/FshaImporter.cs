@@ -112,10 +112,7 @@ public class FshaImporter : IShaderImporter
 		}
 
 		// Read compiled shader data:
-		byte[]? bytesDxbc = null;
-		byte[]? bytesDxil = null;
-		byte[]? bytesSpirv = null;
-		byte[]? bytesMetal = null;
+		Dictionary<CompiledShaderDataType, byte[]>? compiledDataDict = null;
 		if (ShaderData.CheckHasCompiledData(in header, in description))
 		{
 			long compiledDataStartPosition = fileStartPosition + header.CompiledDataOffset;
@@ -124,7 +121,7 @@ public class FshaImporter : IShaderImporter
 				goto abort;
 			}
 
-			if (!ReadCompiledDataBlocks(in _importCtx, in header, in description, _reader, out bytesDxbc, out bytesDxil, out bytesSpirv, out bytesMetal))
+			if (!ReadCompiledDataBlocks(in _importCtx, in header, in description, _reader, out compiledDataDict))
 			{
 				goto abort;
 			}
@@ -138,10 +135,7 @@ public class FshaImporter : IShaderImporter
 
 			SourceCode = sourceCodeDict,
 
-			ByteCodeDxbc = bytesDxbc,
-			ByteCodeDxil = bytesDxil,
-			ByteCodeSpirv = bytesSpirv,
-			ByteCodeMetal = bytesMetal,
+			CompiledData = compiledDataDict,
 		};
 		return true;
 
@@ -226,15 +220,9 @@ public class FshaImporter : IShaderImporter
 		in FshaFileHeader _header,
 		in ShaderDataDescription _description,
 		BinaryReader _reader,
-		out byte[]? _outBytesDxbc,
-		out byte[]? _outBytesDxil,
-		out byte[]? _outBytesSpirv,
-		out byte[]? _outBytesMetal)
+		out Dictionary<CompiledShaderDataType, byte[]>? _outCompiledDataDict)
 	{
-		_outBytesDxbc = null;
-		_outBytesDxil = null;
-		_outBytesSpirv = null;
-		_outBytesMetal = null;
+		_outCompiledDataDict = null;
 
 		// Check if shader data includes source code:
 		if (_header is null)
@@ -264,7 +252,9 @@ public class FshaImporter : IShaderImporter
 
 		long startPosition = _reader.BaseStream.Position;
 
-		foreach (ShaderDataCompiledBlockDesc compiledDesc in _description.CompiledBlocks!)
+		_outCompiledDataDict = new(_description.CompiledBlocks!.Length);
+
+		foreach (ShaderDataCompiledBlockDesc compiledDesc in _description.CompiledBlocks)
 		{
 			// Skip any data types that are not supported on current platform:
 			if (!_importCtx.SupportedShaderDataTypes.HasFlag(compiledDesc.dataType))
@@ -288,24 +278,7 @@ public class FshaImporter : IShaderImporter
 				blockBytes = newBlockBytes;
 			}
 
-			switch (compiledDesc.dataType)
-			{
-				case CompiledShaderDataType.DXBC:
-					_outBytesDxbc = blockBytes;
-					break;
-				case CompiledShaderDataType.DXIL:
-					_outBytesDxil = blockBytes;
-					break;
-				case CompiledShaderDataType.SPIRV:
-					_outBytesSpirv = blockBytes;
-					break;
-				case CompiledShaderDataType.MetalArchive:
-					_outBytesDxbc = blockBytes;
-					break;
-				default:
-					_importCtx.Logger.LogWarning($"Shader data contains unknown or unsupported compiled data type '{compiledDesc.dataType}'. Discarding...");
-					break;
-			}
+			_outCompiledDataDict.Add(compiledDesc.dataType, blockBytes);
 		}
 		return false;
 	}

@@ -32,11 +32,10 @@ public sealed class ShaderData
 
 	// COMPILED BYTE CODE:
 
-	public byte[]? ByteCodeDxbc { get; init; } = null;      //TODO: Convert these into a dictionary as well. Working with 4 arrays is kind of messy and verbose.
-	public byte[]? ByteCodeDxil { get; init; } = null;
-	public byte[]? ByteCodeSpirv { get; init; } = null;
-	public byte[]? ByteCodeMetal { get; init; } = null;
-	//...
+	/// <summary>
+	/// Dictionary containing pre-compiled shader data of different types.
+	/// </summary>
+	public Dictionary<CompiledShaderDataType, byte[]>? CompiledData { get; init; } = null;
 
 	#endregion
 	#region Methods
@@ -132,15 +131,12 @@ public sealed class ShaderData
 	/// <returns>True if the shader data includes compiled data of the requested type, false otherwise.</returns>
 	public bool TryGetByteCode(CompiledShaderDataType _dataType, out byte[]? _outByteCode)
 	{
-		_outByteCode = _dataType switch
+		if (CompiledData is not null && CompiledData.TryGetValue(_dataType, out _outByteCode))
 		{
-			CompiledShaderDataType.DXBC => ByteCodeDxbc,
-			CompiledShaderDataType.DXIL => ByteCodeDxil,
-			CompiledShaderDataType.SPIRV => ByteCodeSpirv,
-			CompiledShaderDataType.MetalArchive => ByteCodeMetal,
-			_ => null,
-		};
-		return _outByteCode is not null && _outByteCode.Length != 0;
+			return _outByteCode.Length != 0;
+		}
+		_outByteCode = null;
+		return false;
 	}
 
 	/// <summary>
@@ -151,19 +147,21 @@ public sealed class ShaderData
 	{
 		bool result =
 			Description is not null &&
-			Description.IsValid() &&
-			(SourceCode is not null && SourceCode.Count != 0 ||
-			IsArrayNotNullOrEmpty(ByteCodeDxbc) ||
-			IsArrayNotNullOrEmpty(ByteCodeDxil) ||
-			IsArrayNotNullOrEmpty(ByteCodeSpirv) ||
-			IsArrayNotNullOrEmpty(ByteCodeMetal));
-		return result;
-
-		// Local helper method for checking if an array is non-null and has elements:
-		static bool IsArrayNotNullOrEmpty(Array? _array)
+			Description.IsValid();
+		if (!result)
 		{
-			return _array is not null && _array.Length > 0;
+			return false;
 		}
+
+		if (SourceCode is not null && SourceCode.Count != 0)
+		{
+			return true;
+		}
+		else if (CompiledData is not null && CompiledData.Count != 0)
+		{
+			return true;
+		}
+		return false;
 	}
 
 	#endregion
