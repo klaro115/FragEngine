@@ -82,7 +82,7 @@ internal static class ShaderProcess
 		}
 
 		// Prepare export in FSHA-compliant format:
-		FshaExportOptions options = new()
+		ShaderExportOptions options = new()
 		{
 			bundleOnlySourceIfCompilationFails = true,
 			shaderStage = _details.stage,
@@ -95,7 +95,7 @@ internal static class ShaderProcess
 		return CompileShaderToFSHA(_details.relativeFilePath, _details.resourceKey, _inputDir, _outputDir, options, out _outDataFilePath);
 	}
 
-	public static bool CompileShaderToFSHA(string _hlslFileRelativePath, string? _overrideFileName, string _inputDir, string _outputDir, FshaExportOptions _exportOptions, out string _outDataFilePath)
+	public static bool CompileShaderToFSHA(string _hlslFileRelativePath, string? _overrideFileName, string _inputDir, string _outputDir, ShaderExportOptions _exportOptions, out string _outDataFilePath)
 	{
 		if (string.IsNullOrEmpty(_hlslFileRelativePath))
 		{

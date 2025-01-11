@@ -2,6 +2,7 @@
 using FragEngine3.Graphics;
 using FragEngine3.Graphics.Resources;
 using FragEngine3.Graphics.Resources.Shaders;
+using FragEngine3.Graphics.Resources.Shaders.Internal;
 using System.Text;
 using Veldrid;
 
@@ -10,7 +11,7 @@ namespace FragAssetPipeline.Resources.Shaders;
 /// <summary>
 /// Exporter for the FSHA shader asset format.
 /// </summary>
-public static class FshaExporter
+public static class FshaExporter									//TODO [CRITICAL]: Rewrite/Refactor and rename this to only create a ShaderData object for later export/processing!
 {
 	#region Fields
 
@@ -38,7 +39,7 @@ public static class FshaExporter
 	#endregion
 	#region Methods
 
-	public static bool ExportShaderFromHlslFile(string _filePath, FshaExportOptions _options, out ShaderData? _outFshaShaderData)
+	public static bool ExportShaderFromHlslFile(string _filePath, ShaderExportOptions _options, out ShaderData? _outFshaShaderData)
 	{
 		if (_options is null)
 		{
@@ -153,7 +154,7 @@ public static class FshaExporter
 		}
 
 		// If source code should be included:
-		ShaderDescriptionSourceCodeData? sourceCodeData = null;
+		List<ShaderDataSourceCodeDesc>? sourceCodeData = null;
 		Dictionary<ShaderLanguage, byte[]>? sourceCodeUtf8Blocks = null;
 		uint sourceCodeTotalByteSize = 0u;
 
@@ -178,7 +179,8 @@ public static class FshaExporter
 
 			// Read source code from files:
 			sourceCodeUtf8Blocks = [];
-			List<ShaderDescriptionSourceCodeData.SourceCodeBlock> sourceCodeBlocks = [];
+			sourceCodeData = [];
+
 			uint sourceCodeCurrentOffset = 0u;
 			foreach (ShaderLanguage language in sourceCodeLanguages)
 			{
@@ -191,15 +193,16 @@ public static class FshaExporter
 					// Read and add source code byte data for this shader language:
 					byte[] sourceCodeUtf8Bytes = File.ReadAllBytes(sourceCodeFilePath);
 
-					ShaderDescriptionSourceCodeData.SourceCodeBlock block = new()
-					{
-						Language = language,
-						ByteOffset = sourceCodeCurrentOffset,
-						ByteSize = (uint)sourceCodeUtf8Bytes.Length,
-					};
+					ShaderDataSourceCodeDesc block = new(
+						language,
+						0,												//TODO
+						(ushort)sourceCodeCurrentOffset,
+						(ushort)sourceCodeUtf8Bytes.Length,
+						entryPointBase);								//TODO
+
 					sourceCodeUtf8Blocks.Add(language, sourceCodeUtf8Bytes);
-					sourceCodeBlocks.Add(block);
-					sourceCodeCurrentOffset += block.ByteSize;
+					sourceCodeData.Add(block);
+					sourceCodeCurrentOffset += block.size;
 				}
 			}
 
@@ -211,45 +214,20 @@ public static class FshaExporter
 			supportedConfig.SetVariantFlagsFromMeshVertexData(supportedVariantFlags);
 
 			// Assemble source code data:
-			sourceCodeData = new()
-			{
-				EntryPointNameBase = entryPointBase,
-				EntryPoints = entryPointData,
-				SupportedFeaturesTxt = supportedConfig.CreateDescriptionTxt(),
-				MaximumCompiledFeaturesTxt = maxCompiledConfig.CreateDescriptionTxt(),
-				SourceCodeBlocks = sourceCodeBlocks.ToArray(),
-			};
 			sourceCodeTotalByteSize = sourceCodeCurrentOffset;
 		}
 
 		// Assemble shader data:
 		_outFshaShaderData = new()
 		{
-			FileHeader = new ShaderDataFileHeader()
+			FileHeader = null,
+			Description = new ShaderDataDescription()
 			{
-				formatSpecifier = ShaderDataConstants.FHSA_FORMAT_SPECIFIER,
-				formatVersion = new()
-				{
-					major = ShaderDataConstants.FSHA_CURRENT_MAJOR_VERSION,
-					minor = ShaderDataConstants.FSHA_CURRENT_MINOR_VERSION,
-				},
-				fileHeaderSize = ShaderDataFileHeader.minFileHeaderSize,
-				sourceCode = new()
-				{
-					byteSize = sourceCodeTotalByteSize,
-				},
-				shaderDataBlockCount = (byte)outputDetails.variantCount,
-				shaderData = new()
-				{
-					byteOffset = 0, // actual offset calculated later.
-					byteSize = outputDetails.totalByteSize,
-				}
-			},
-			Description = new ShaderDescriptionData()
-			{
-				ShaderStage = _options.shaderStage,
-				SourceCode = sourceCodeData,
-				CompiledVariants = compiledVariantData,
+				Stage = _options.shaderStage,
+				MinCapabilities = /* TODO */ "TODO",
+				MaxCapabilities = /* TODO */ "TODO",
+				SourceCode = sourceCodeData?.ToArray(),
+				CompiledBlocks = compiledVariantData.ToArray(),
 			},
 			SourceCode = sourceCodeUtf8Blocks,
 			ByteCodeDxbc = allByteCodeDxbc,
@@ -266,7 +244,7 @@ public static class FshaExporter
 		return isValid;
 	}
 
-	private static bool TryFindEntryPoints(string _filePath, FshaExportOptions _options)
+	private static bool TryFindEntryPoints(string _filePath, ShaderExportOptions _options)
 	{
 		if (_options is null)
 		{

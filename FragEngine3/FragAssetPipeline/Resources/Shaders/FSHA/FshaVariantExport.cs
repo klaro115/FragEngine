@@ -26,7 +26,7 @@ internal static class FshaVariantExport
 
 	public static bool CompileVariants(
 		string _filePath,
-		FshaExportOptions _options,
+		ShaderExportOptions _options,
 		List<FshaCompiledVariant> _compiledVariants,
 		out OutputDetails _outOutputDetails)
 	{
@@ -57,7 +57,7 @@ internal static class FshaVariantExport
 
 	public static bool CompileVariants_DXBC(
 		string _filePath,
-		FshaExportOptions _options,
+		ShaderExportOptions _options,
 		List<FshaCompiledVariant> _compiledVariants,
 		OutputDetails _outputDetails)
 	{
@@ -101,7 +101,7 @@ internal static class FshaVariantExport
 
 	public static bool CompileVariants_DXIL(
 		string _filePath,
-		FshaExportOptions _options,
+		ShaderExportOptions _options,
 		List<FshaCompiledVariant> _compiledVariants,
 		OutputDetails _outputDetails)
 	{
@@ -111,7 +111,7 @@ internal static class FshaVariantExport
 
 	public static bool CompileVariants_SPIRV(
 		string _filePath,
-		FshaExportOptions _options,
+		ShaderExportOptions _options,
 		List<FshaCompiledVariant> _compiledVariants,
 		OutputDetails _outputDetails)
 	{
