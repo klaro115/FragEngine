@@ -25,10 +25,6 @@ public sealed class ResourceManager : IEngineSystem
 		fileGatherer = new(this);
 		importer = new(this, LoadImmediately);
 
-		modelImporter = new(this, engine.GraphicsSystem.graphicsCore);
-		shaderImporter = new(this, engine.GraphicsSystem.graphicsCore);
-		//...
-
 		stopwatch = new();
 		stopwatch.Start();
 	}
@@ -43,10 +39,6 @@ public sealed class ResourceManager : IEngineSystem
 	public readonly Engine engine;
 	public readonly ResourceFileGatherer fileGatherer;
 	private readonly ResourceImporter importer;
-
-	public readonly ModelImporter modelImporter;
-	public readonly ShaderImporter shaderImporter;
-	//...
 
 	private readonly Stopwatch stopwatch;
 
@@ -103,9 +95,7 @@ public sealed class ResourceManager : IEngineSystem
 		importer.Dispose();
 		fileGatherer.Dispose();
 
-		modelImporter.Dispose();
-		shaderImporter.Dispose();
-		//...
+		
 
 		DisposeAllResources();
 
@@ -521,6 +511,8 @@ public sealed class ResourceManager : IEngineSystem
 		switch (_handle.resourceType)
 		{
 			case ResourceType.Shader:
+				ShaderImporter shaderImporter = engine.GraphicsResourceLoader.shaderImporter;
+
 				if ((success = shaderImporter.ImportShaderData(_handle, out ShaderData? shaderData) && shaderData is not null) &&
 					(success = shaderImporter.CreateShader(_handle.resourceKey, shaderData!, out ShaderResource? shaderRes)))
 				{
@@ -534,6 +526,8 @@ public sealed class ResourceManager : IEngineSystem
 				}
 				break;
 			case ResourceType.Model:
+				ModelImporter modelImporter = engine.GraphicsResourceLoader.modelImporter;
+
 				if ((success = modelImporter.ImportModelData(_handle, out MeshSurfaceData? surfaceData) && surfaceData is not null) &&
 					(success = modelImporter.CreateMesh(_handle, surfaceData!, out Mesh? mesh)))
 				{

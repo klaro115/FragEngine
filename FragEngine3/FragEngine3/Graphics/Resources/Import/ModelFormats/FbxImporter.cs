@@ -1,6 +1,6 @@
-﻿using FragEngine3.EngineCore;
-using FragEngine3.Graphics.Resources.Data;
+﻿using FragEngine3.Graphics.Resources.Data;
 using FragEngine3.Graphics.Resources.Import.ModelFormats.FBX;
+using FragEngine3.Resources;
 using System.Numerics;
 
 namespace FragEngine3.Graphics.Resources.Import.ModelFormats;
@@ -8,33 +8,49 @@ namespace FragEngine3.Graphics.Resources.Import.ModelFormats;
 /// <summary>
 /// Importer for the FBX 3D file format.
 /// </summary>
-public static class FbxImporter
+public class FbxImporter : IModelImporter
 {
+	#region Fields
+
+	private static readonly string[] supportedFormatExtensions = [ ".fbx" ];
+
+	#endregion
+	#region Properties
+
+	public MeshVertexDataFlags SupportedVertexData => MeshVertexDataFlags.BasicSurfaceData | MeshVertexDataFlags.ExtendedSurfaceData;
+
+	public bool CanImportAnimations => false;
+	public bool CanImportMaterials => false;
+	public bool CanImportTextures => false;
+
+	#endregion
 	#region Methods
 
-	public static bool ImportModel(Stream _streamBytes, out MeshSurfaceData? _outMeshData)		// INCOMPLETE!
+	public IReadOnlyCollection<string> GetSupportedFileFormatExtensions() => supportedFormatExtensions;
+
+	public bool ImportSurfaceData(in ImporterContext _importCtx, Stream _resourceFileStream, out MeshSurfaceData? _outSurfaceData)  // INCOMPLETE!	
 	{
-		if (_streamBytes is null || !_streamBytes.CanRead)
+		if (_resourceFileStream is null || !_resourceFileStream.CanRead)
 		{
-			Logger.Instance?.LogError("Cannot import FBX document from null or write-only stream!");
-			_outMeshData = null;
+			_importCtx.Logger.LogError("Cannot import FBX document from null or write-only stream!");
+			_outSurfaceData = null;
 			return false;
 		}
 
-		using BinaryReader reader = new(_streamBytes);
+		using BinaryReader reader = new(_resourceFileStream);
 
 		// Try reading the FBX file's full data structure as-is:
 		if (!FbxDocument.ReadFbxDocument(reader, out FbxDocument? document) || document is null)
 		{
-			Logger.Instance?.LogError("Failed to import FBX document, aborting model import!");
-			_outMeshData = null;
+			_importCtx.Logger.LogError("Failed to import FBX document, aborting model import!");
+			_outSurfaceData = null;
 			return false;
 		}
 
 		// First, parse only static mesh surface geometry (basic & extended vertex data) from the document:
-		if (!ParseSurfaceGeometry(document, out _outMeshData))
+		if (!ParseSurfaceGeometry(in _importCtx, document, out _outSurfaceData))
 		{
-			Logger.Instance?.LogError("Failed to parse surface geometry from FBX document!");
+			_importCtx.Logger.LogError("Failed to parse surface geometry from FBX document!");
 			return false;
 		}
 
@@ -43,18 +59,18 @@ public static class FbxImporter
 		return true;
 	}
 
-	private static bool ParseSurfaceGeometry(FbxDocument _document, out MeshSurfaceData? _outMeshData)
+	private static bool ParseSurfaceGeometry(in ImporterContext _importCtx, FbxDocument _document, out MeshSurfaceData? _outMeshData)
 	{
 		// Navigate through node hierarchy, skipping straight to polygonal geometry nodes:
 		if (!_document.FindNode(FbxConstants.NODE_NAME_OBJECTS, out FbxNode? objectsNode) || objectsNode is null)
 		{
-			Logger.Instance?.LogError("Could not find objects node in FBX document!");
+			_importCtx.Logger.LogError("Could not find objects node in FBX document!");
 			_outMeshData = null;
 			return false;
 		}
 		if (!objectsNode.FindChildNode(FbxConstants.NODE_NAME_GEOMETRY, out FbxNode? geometryNode) || geometryNode is null)
 		{
-			Logger.Instance?.LogError("Could not find geometry node in FBX document!");
+			_importCtx.Logger.LogError("Could not find geometry node in FBX document!");
 			_outMeshData = null;
 			return false;
 		}
@@ -99,6 +115,11 @@ public static class FbxImporter
 			indices32 = indices16 is not null ? indices32.ToArray() : null,
 		};
 		return true;
+	}
+
+	public IEnumerator<ResourceHandle> EnumerateSubresources(ImporterContext _importCtx, Stream _resourceFileStream)
+	{
+		yield break;
 	}
 
 	#endregion

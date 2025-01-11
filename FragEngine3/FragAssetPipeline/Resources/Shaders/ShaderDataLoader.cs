@@ -87,8 +87,10 @@ public static class ShaderDataLoader
 			minVariantFlags = (MeshVertexDataFlags)Math.Min((int)minVariantFlags, (int)kvp.Key);
 			maxVariantFlags |= kvp.Key;
 		}
-		ShaderConfig minConfig = new();	// TODO
-		ShaderConfig maxConfig = new(); // TODO
+		ShaderConfig minConfig = _options.supportedFeatures;
+		ShaderConfig maxConfig = _options.supportedFeatures;
+		minConfig.SetVariantFlagsFromMeshVertexData(minVariantFlags);
+		maxConfig.SetVariantFlagsFromMeshVertexData(maxVariantFlags);
 
 		if (!BundleSourceCodeBlocks(
 			_sourceCodeFilePath,
