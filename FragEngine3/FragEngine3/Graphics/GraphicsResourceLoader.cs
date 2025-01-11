@@ -10,6 +10,10 @@ public sealed class GraphicsResourceLoader : IDisposable
 {
 	#region Constructors
 
+	/// <summary>
+	/// Creates a new container service for managing import of graphics resources.
+	/// </summary>
+	/// <param name="_engine">The engine that this service is created for.</param>
 	public GraphicsResourceLoader(Engine _engine)
 	{
 		engine = _engine;
@@ -29,8 +33,14 @@ public sealed class GraphicsResourceLoader : IDisposable
 
 	private readonly Engine engine;
 
-	public readonly ModelImporter modelImporter;
-	public readonly ShaderImporter shaderImporter;
+	/// <summary>
+	/// The service responsible for managing 3D model import.
+	/// </summary>
+	internal readonly ModelImporter modelImporter;
+	/// <summary>
+	/// The service responsible for managing shader import.
+	/// </summary>
+	internal readonly ShaderImporter shaderImporter;
 	//...
 
 	#endregion
@@ -54,6 +64,26 @@ public sealed class GraphicsResourceLoader : IDisposable
 		modelImporter.Dispose();
 		shaderImporter.Dispose();
 		//...
+	}
+
+	/// <summary>
+	/// Tries to register a new shader importer.
+	/// </summary>
+	/// <param name="_newImporter">The new importer instance.</param>
+	/// <returns>True if the importer was registered successfully, false otherwise.</returns>
+	public bool RegisterShaderImporter(IShaderImporter _newImporter)
+	{
+		return !IsDisposed && shaderImporter.RegisterImporter(_newImporter);
+	}
+
+	/// <summary>
+	/// Tries to register a new 3D model importer.
+	/// </summary>
+	/// <param name="_newImporter">The new importer instance.</param>
+	/// <returns>True if the importer was registered successfully, false otherwise.</returns>
+	public bool RegisterModelImporter(IModelImporter _newImporter)
+	{
+		return !IsDisposed && modelImporter.RegisterImporter(_newImporter);
 	}
 
 	#endregion

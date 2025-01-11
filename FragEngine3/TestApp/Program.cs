@@ -19,11 +19,11 @@ try
 	// Register services and importers:
 	{
 		// 3D formats:
-		engine.GraphicsResourceLoader.modelImporter.RegisterImporter(new ObjImporter());
-		engine.GraphicsResourceLoader.modelImporter.RegisterImporter(new FbxImporter());
+		engine.GraphicsResourceLoader.RegisterModelImporter(new ObjImporter());
+		engine.GraphicsResourceLoader.RegisterModelImporter(new FbxImporter());
 
 		// Shader formats:
-		engine.GraphicsResourceLoader.shaderImporter.RegisterImporter(new FshaImporter());
+		engine.GraphicsResourceLoader.RegisterShaderImporter(new FshaImporter());
 	}
 
 	engine.Run();
