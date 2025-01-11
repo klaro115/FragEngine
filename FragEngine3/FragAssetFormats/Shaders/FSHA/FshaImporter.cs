@@ -252,8 +252,57 @@ public class FshaImporter : IShaderImporter
 
 		long startPosition = _reader.BaseStream.Position;
 
-		_outCompiledDataDict = new(_description.CompiledBlocks!.Length);
+		Dictionary<CompiledShaderDataType, List<byte>> dataTypeBuffers = new(4);
 
+		for (int i = 0; i < _description.CompiledBlocks!.Length; ++i)
+		{
+			ShaderDataCompiledBlockDesc compiledDesc = _description.CompiledBlocks[i];
+
+			// Skip any data types that are not supported on current platform:
+			if (!_importCtx.SupportedShaderDataTypes.HasFlag(compiledDesc.DataType))
+			{
+				continue;
+			}
+
+			// Get a byte buffer list for this data type:
+			if (!dataTypeBuffers.TryGetValue(compiledDesc.DataType, out List<byte>? byteBuffer))
+			{
+				byteBuffer = new((int)compiledDesc.Size * 2);
+				dataTypeBuffers.Add(compiledDesc.DataType, byteBuffer);
+			}
+
+			long blockStartPosition = startPosition + compiledDesc.Offset;
+			if (!AdvanceReader(in _importCtx, _reader, blockStartPosition))
+			{
+				return false;
+			}
+
+			// Append block's compiled data to byte buffer:
+			byte[] blockBytes = new byte[compiledDesc.Size];
+			int actualSize = _reader.Read(blockBytes, 0, blockBytes.Length);
+			int newOffset = byteBuffer.Count;
+			byteBuffer.AddRange(blockBytes.AsSpan(0, actualSize));
+
+			// Write updated offsets and sizes back to block descriptions array:
+			ShaderDataCompiledBlockDesc adjustedDesc = new(
+				compiledDesc.DataType,
+				compiledDesc.VariantFlags,
+				compiledDesc.Capabilities,
+				(uint)newOffset,
+				(uint)actualSize,
+				compiledDesc.EntryPoint);
+			_description.CompiledBlocks[i] = adjustedDesc;
+		}
+
+		_outCompiledDataDict = new(dataTypeBuffers.Count);
+		foreach (var kvp in dataTypeBuffers)
+		{
+			_outCompiledDataDict.Add(kvp.Key, kvp.Value.ToArray());
+		}
+
+		return _outCompiledDataDict.Count != 0;
+
+		/*
 		foreach (ShaderDataCompiledBlockDesc compiledDesc in _description.CompiledBlocks)
 		{
 			// Skip any data types that are not supported on current platform:
@@ -280,7 +329,7 @@ public class FshaImporter : IShaderImporter
 
 			_outCompiledDataDict.Add(compiledDesc.DataType, blockBytes);
 		}
-		return false;
+		*/
 	}
 
 	private static bool AdvanceReader(in ImporterContext _importCtx, BinaryReader _reader, long _targetPosition)

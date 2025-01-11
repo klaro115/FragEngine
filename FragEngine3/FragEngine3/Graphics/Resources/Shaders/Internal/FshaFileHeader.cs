@@ -96,15 +96,13 @@ public sealed class FshaFileHeader
 
 		Version version = new(ReadHexUint8(_reader));
 
-		ushort headerSize = ReadHexUint16(_reader);
-		if (headerSize < MINIMUM_HEADER_SIZE)
+		ushort jsonOffset = ReadHexUint16(_reader);
+		if (jsonOffset < MINIMUM_HEADER_SIZE)
 		{
-			_importCtx.Logger.LogError($"Invalid shader data header size! ({headerSize} bytes vs. {MINIMUM_HEADER_SIZE} bytes)");
+			_importCtx.Logger.LogError($"Invalid shader data header size! ({jsonOffset} bytes vs. {MINIMUM_HEADER_SIZE} bytes)");
 			_outHeader = null!;
 			return false;
 		}
-
-		ushort jsonOffset = ReadHexUint16(_reader);
 		ushort jsonSize = ReadHexUint16(_reader);
 
 		ushort sourceCodeOffset = ReadHexUint16(_reader);
@@ -117,7 +115,7 @@ public sealed class FshaFileHeader
 		_outHeader = new FshaFileHeader()
 		{
 			FileVersion = version,
-			HeaderSize = headerSize,
+			HeaderSize = jsonOffset,
 
 			JsonOffset = jsonOffset,
 			JsonSize = jsonSize,
