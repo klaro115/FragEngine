@@ -1,8 +1,6 @@
-﻿using FragEngine3.Graphics.Resources;
-using FragEngine3.Graphics.Resources.Shaders;
-using FragEngine3.Graphics.Resources.Shaders.Internal;
+﻿using FragEngine3.Graphics.Resources.Shaders.Internal;
 
-namespace FragAssetFormats.Shaders;
+namespace FragEngine3.Graphics.Resources.Shaders;
 
 /// <summary>
 /// Serializable object representing a shader resource/asset.
@@ -19,15 +17,22 @@ public sealed class ShaderData
 	/// File header description with section sizes and offsets; only needed for FSHA import/export.
 	/// </summary>
 	public FshaFileHeader? FileHeader { get; set; } = null;
+
+	/// <summary>
+	/// A full description of the capabilities, data, and source code of this shader resource.
+	/// </summary>
 	public required ShaderDataDescription Description { get; init; }
 
 	// SOURCE CODE:
 
+	/// <summary>
+	/// Dictionary containing shader source code in different languages.
+	/// </summary>
 	public Dictionary<ShaderLanguage, byte[]>? SourceCode { get; init; } = null;
 
 	// COMPILED BYTE CODE:
 
-	public byte[]? ByteCodeDxbc { get; init; } = null;		//TODO: Convert these into a dictionary as well. Working with 4 arrays is kind of messy and verbose.
+	public byte[]? ByteCodeDxbc { get; init; } = null;      //TODO: Convert these into a dictionary as well. Working with 4 arrays is kind of messy and verbose.
 	public byte[]? ByteCodeDxil { get; init; } = null;
 	public byte[]? ByteCodeSpirv { get; init; } = null;
 	public byte[]? ByteCodeMetal { get; init; } = null;
@@ -52,7 +57,7 @@ public sealed class ShaderData
 		{
 			return false;
 		}
-		return _description is null || (_description.SourceCode is not null && _description.SourceCode.Length != 0);
+		return _description is null || _description.SourceCode is not null && _description.SourceCode.Length != 0;
 	}
 
 	/// <summary>
@@ -71,7 +76,7 @@ public sealed class ShaderData
 		{
 			return false;
 		}
-		return _description is null || (_description.CompiledBlocks is not null && _description.CompiledBlocks.Length != 0);
+		return _description is null || _description.CompiledBlocks is not null && _description.CompiledBlocks.Length != 0;
 	}
 
 	/// <summary>
@@ -147,7 +152,7 @@ public sealed class ShaderData
 		bool result =
 			Description is not null &&
 			Description.IsValid() &&
-			((SourceCode is not null && SourceCode.Count != 0) ||
+			(SourceCode is not null && SourceCode.Count != 0 ||
 			IsArrayNotNullOrEmpty(ByteCodeDxbc) ||
 			IsArrayNotNullOrEmpty(ByteCodeDxil) ||
 			IsArrayNotNullOrEmpty(ByteCodeSpirv) ||

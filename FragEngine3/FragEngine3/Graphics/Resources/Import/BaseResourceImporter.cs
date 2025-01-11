@@ -18,10 +18,11 @@ public abstract class BaseResourceImporter<TImporter> : IDisposable
 	/// </summary>
 	/// <param name="_resourceManager">The engine's resource manager instance.</param>
 	/// <param name="_graphicsCore">The graphics core through which's graphics device the 3D model resources shall be created.</param>
-	protected BaseResourceImporter(GraphicsCore _graphicsCore)
+	protected BaseResourceImporter(ResourceManager _resourceManager, GraphicsCore _graphicsCore)
 	{
+		resourceManager = _resourceManager;
 		graphicsCore = _graphicsCore;
-		logger = graphicsCore.graphicsSystem.Engine.Logger ?? Logger.Instance!;
+		logger = resourceManager.Engine.Logger ?? Logger.Instance!;
 
 		importCtx = new()
 		{
@@ -33,6 +34,7 @@ public abstract class BaseResourceImporter<TImporter> : IDisposable
 	#endregion
 	#region Fields
 
+	protected readonly ResourceManager resourceManager;
 	protected readonly GraphicsCore graphicsCore;
 	protected readonly Logger logger;
 

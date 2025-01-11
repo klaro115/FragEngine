@@ -1,4 +1,4 @@
-﻿using FragEngine3.EngineCore;
+﻿using FragEngine3.EngineCore.Logging;
 using FragEngine3.Graphics.Resources.Shaders;
 using System.Globalization;
 using System.Text.Json;
@@ -16,7 +16,7 @@ public sealed class ImporterContext
 	/// <summary>
 	/// A logger instance to use for outputting error and warning messages during import or export.
 	/// </summary>
-	public required Logger Logger { get; init; }
+	public required ILogger Logger { get; init; }
 
 	/// <summary>
 	/// Options for JSON serialization. If null, default options will be used.
@@ -42,6 +42,10 @@ public sealed class ImporterContext
 	#endregion
 	#region Methods
 
+	/// <summary>
+	/// Checks whether all values and states of this context object are complete and valid.
+	/// </summary>
+	/// <returns>True if the context is ready to use, false otherwise.</returns>
 	public bool IsValid()
 	{
 		bool result =

@@ -1,11 +1,8 @@
-﻿using FragAssetFormats.Shaders;
-using FragAssetFormats.Shaders.Import.Internal;
-using FragEngine3.EngineCore;
+﻿using FragEngine3.Graphics.Resources.Import.ShaderFormats.Internal;
 using FragEngine3.Graphics.Resources.Shaders;
 using FragEngine3.Graphics.Resources.Shaders.Internal;
 using FragEngine3.Resources;
 using Veldrid;
-using Vortice.DXGI;
 
 namespace FragEngine3.Graphics.Resources.Import;
 
@@ -13,7 +10,7 @@ namespace FragEngine3.Graphics.Resources.Import;
 /// Hub instance for managing and delegating the import of shader programs through previously registered importers.
 /// </summary>
 /// <param name="_graphicsCore">The graphics core through which's graphics device the shaders shall be created and executed.</param>
-public sealed class ShaderImporter(ResourceManager _resourceManager, GraphicsCore _graphicsCore) : BaseResourceImporter<IShaderImporter>(_graphicsCore)
+public sealed class ShaderImporter(ResourceManager _resourceManager, GraphicsCore _graphicsCore) : BaseResourceImporter<IShaderImporter>(_resourceManager, _graphicsCore)
 {
 	#region Constructors
 
@@ -21,11 +18,6 @@ public sealed class ShaderImporter(ResourceManager _resourceManager, GraphicsCor
 	{
 		if (!IsDisposed) Dispose(false);
 	}
-
-	#endregion
-	#region Fields
-
-	private readonly ResourceManager resourceManager = _resourceManager;
 
 	#endregion
 	#region Methods
@@ -103,7 +95,6 @@ public sealed class ShaderImporter(ResourceManager _resourceManager, GraphicsCor
 			return false;
 		}
 
-		PlatformSystem platformSystem = resourceManager.engine.PlatformSystem;
 		ShaderLanguage sourceCodeLanguage = graphicsCore.DefaultShaderLanguage;
 		ShaderStages stage = _shaderData.Description.Stage;
 

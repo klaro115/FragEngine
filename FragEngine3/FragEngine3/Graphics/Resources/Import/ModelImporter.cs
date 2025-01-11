@@ -8,7 +8,7 @@ namespace FragEngine3.Graphics.Resources.Import;
 /// </summary>
 /// <param name="_resourceManager">The engine's resource manager instance.</param>
 /// <param name="_graphicsCore">The graphics core through which's graphics device the 3D model resources shall be created.</param>
-public sealed class ModelImporter(ResourceManager _resourceManager, GraphicsCore _graphicsCore) : BaseResourceImporter<IModelImporter>(_graphicsCore)
+public sealed class ModelImporter(ResourceManager _resourceManager, GraphicsCore _graphicsCore) : BaseResourceImporter<IModelImporter>(_resourceManager, _graphicsCore)
 {
 	#region Constructors
 
@@ -16,11 +16,6 @@ public sealed class ModelImporter(ResourceManager _resourceManager, GraphicsCore
 	{
 		if (!IsDisposed) Dispose(false);
 	}
-
-	#endregion
-	#region Fields
-
-	private readonly ResourceManager resourceManager = _resourceManager;
 
 	#endregion
 	#region Methods

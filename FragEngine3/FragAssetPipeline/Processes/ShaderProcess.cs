@@ -1,10 +1,7 @@
-﻿using FragAssetFormats.Geometry;
-using FragAssetFormats.Shaders;
-using FragAssetFormats.Shaders.ShaderTypes;
+﻿using FragAssetPipeline.Common;
 using FragAssetPipeline.Resources.Shaders;
 using FragEngine3.Graphics.Resources;
-using FragEngine3.Graphics.Resources.Data;
-using FragEngine3.Graphics.Resources.Data.ShaderTypes;
+using FragEngine3.Graphics.Resources.Import;
 using FragEngine3.Graphics.Resources.Shaders;
 using FragEngine3.Resources;
 using FragEngine3.Resources.Data;
@@ -56,6 +53,12 @@ internal static class ShaderProcess
 		".metal",
 		".glsl",
 	];
+
+	private static readonly ImporterContext exportCtx = new()
+	{
+		Logger = new ConsoleLogger(),
+		JsonOptions = null,
+	};
 
 	#endregion
 	#region Methods
@@ -128,7 +131,7 @@ internal static class ShaderProcess
 			using FileStream stream = new(_outDataFilePath, FileMode.Create);
 			using BinaryWriter writer = new(stream);
 
-			success &= shaderData.Write(writer, true);
+			success &= FragAssetFormats.Shaders.FSHA.FshaExporter.ExportToFSHA(in exportCtx, writer, shaderData, true);
 			stream.Close();
 		}
 

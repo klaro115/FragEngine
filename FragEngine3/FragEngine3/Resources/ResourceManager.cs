@@ -1,6 +1,5 @@
 ﻿using System.Collections.Concurrent;
 using System.Diagnostics;
-using FragAssetFormats.Shaders;
 using FragEngine3.EngineCore;
 using FragEngine3.Graphics.Resources;
 using FragEngine3.Graphics.Resources.Data;
@@ -27,7 +26,7 @@ public sealed class ResourceManager : IEngineSystem
 		importer = new(this, LoadImmediately);
 
 		modelImporter = new(this, engine.GraphicsSystem.graphicsCore);
-		shaderImporter = new(engine.GraphicsSystem.graphicsCore);
+		shaderImporter = new(this, engine.GraphicsSystem.graphicsCore);
 		//...
 
 		stopwatch = new();

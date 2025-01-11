@@ -1,5 +1,4 @@
-﻿using FragAssetFormats.Shaders;
-using FragEngine3.Graphics.Resources.Shaders;
+﻿using FragEngine3.Graphics.Resources.Shaders;
 
 namespace FragEngine3.Graphics.Resources.Import;
 

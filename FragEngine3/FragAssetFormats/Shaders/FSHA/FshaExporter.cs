@@ -1,4 +1,5 @@
 ﻿using FragEngine3.Graphics.Resources.Import;
+using FragEngine3.Graphics.Resources.Shaders;
 using FragEngine3.Graphics.Resources.Shaders.Internal;
 
 namespace FragAssetFormats.Shaders.FSHA;
@@ -146,7 +147,8 @@ public static class FshaExporter
 				sourceCodeDesc.language,
 				sourceCodeDesc.variantFlags,
 				_outSourceCodeByteSize,
-				(ushort)sourceCodeBytes.Length);
+				(ushort)sourceCodeBytes.Length,
+				sourceCodeDesc.entryPoint);
 
 			sourceCodeBlockCount++;
 			_outSourceCodeByteSize += (ushort)sourceCodeBytes.Length;
@@ -197,7 +199,8 @@ public static class FshaExporter
 				compiledDataDesc.variantFlags,
 				compiledDataDesc.capabilities,
 				_outCompiledDataByteSize,
-				(uint)byteCode!.Length);
+				(uint)byteCode!.Length,
+				compiledDataDesc.entryPoint);
 
 			_outCompiledDataBlockCount++;
 			_outCompiledDataByteSize += (ushort)byteCode!.Length;

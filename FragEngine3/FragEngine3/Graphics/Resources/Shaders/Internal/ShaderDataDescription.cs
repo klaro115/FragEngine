@@ -1,5 +1,4 @@
-﻿using FragAssetFormats.Shaders;
-using FragEngine3.Graphics.Resources.Import;
+﻿using FragEngine3.Graphics.Resources.Import;
 using System.Text.Json;
 using Veldrid;
 

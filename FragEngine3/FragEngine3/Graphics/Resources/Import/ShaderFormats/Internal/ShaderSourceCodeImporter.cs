@@ -1,7 +1,4 @@
-﻿using FragAssetFormats.Shaders;
-using FragEngine3.EngineCore;
-using FragEngine3.Graphics;
-using FragEngine3.Graphics.Resources;
+﻿using FragEngine3.EngineCore;
 using FragEngine3.Graphics.Resources.Shaders;
 using FragEngine3.Graphics.Resources.Shaders.Internal;
 using FragEngine3.Resources;
@@ -11,6 +8,7 @@ using Veldrid;
 
 namespace FragEngine3.Graphics.Resources.Import.ShaderFormats.Internal;
 
+[Obsolete("Probably not needed anymore")]
 internal static class ShaderSourceCodeImporter
 {
 	#region Methods
@@ -79,16 +77,16 @@ internal static class ShaderSourceCodeImporter
 		string descriptionText = shaderConfig.CreateDescriptionTxt();
 
 		// Assemble shader data description object:
-		var entryPoints = new ShaderDescriptionSourceCodeData.VariantEntryPoint[variantEntryPoints.Count];
-		int i = 0;
-		foreach (var kvp in variantEntryPoints)
-		{
-			entryPoints[i++] = new()
-			{
-				VariantFlags = kvp.Key,
-				EntryPoint = kvp.Value,
-			};
-		}
+		//var entryPoints = new ShaderDescriptionSourceCodeData.VariantEntryPoint[variantEntryPoints.Count];
+		//int i = 0;
+		//foreach (var kvp in variantEntryPoints)
+		//{
+		//	entryPoints[i++] = new()
+		//	{
+		//		VariantFlags = kvp.Key,
+		//		EntryPoint = kvp.Value,
+		//	};
+		//}
 
 		ShaderDataSourceCodeDesc[] sourceCodeBlocks =
 		[
