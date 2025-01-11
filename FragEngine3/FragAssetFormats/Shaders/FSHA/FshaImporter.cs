@@ -189,18 +189,18 @@ public class FshaImporter : IShaderImporter
 		foreach (ShaderDataSourceCodeDesc sourceCodeDesc in _description.SourceCode!)
 		{
 			// Skip any shader languages that are not supported on current platform:
-			if (!_importCtx.SupportedShaderLanguages.HasFlag(sourceCodeDesc.language))
+			if (!_importCtx.SupportedShaderLanguages.HasFlag(sourceCodeDesc.Language))
 			{
 				continue;
 			}
 
-			long blockStartPosition = startPosition + sourceCodeDesc.offset;
+			long blockStartPosition = startPosition + sourceCodeDesc.Offset;
 			if (!AdvanceReader(in _importCtx, _reader, blockStartPosition))
 			{
 				return false;
 			}
 
-			byte[] blockBytes = new byte[sourceCodeDesc.size];
+			byte[] blockBytes = new byte[sourceCodeDesc.Size];
 			int actualSize = _reader.Read(blockBytes, 0, blockBytes.Length);
 
 			if (actualSize != blockBytes.Length)
@@ -210,7 +210,7 @@ public class FshaImporter : IShaderImporter
 				blockBytes = newBlockBytes;
 			}
 
-			_outSourceCodeDict.Add(sourceCodeDesc.language, blockBytes);
+			_outSourceCodeDict.Add(sourceCodeDesc.Language, blockBytes);
 		}
 		return true;
 	}
@@ -257,18 +257,18 @@ public class FshaImporter : IShaderImporter
 		foreach (ShaderDataCompiledBlockDesc compiledDesc in _description.CompiledBlocks)
 		{
 			// Skip any data types that are not supported on current platform:
-			if (!_importCtx.SupportedShaderDataTypes.HasFlag(compiledDesc.dataType))
+			if (!_importCtx.SupportedShaderDataTypes.HasFlag(compiledDesc.DataType))
 			{
 				continue;
 			}
 
-			long blockStartPosition = startPosition + compiledDesc.offset;
+			long blockStartPosition = startPosition + compiledDesc.Offset;
 			if (!AdvanceReader(in _importCtx, _reader, blockStartPosition))
 			{
 				return false;
 			}
 
-			byte[] blockBytes = new byte[compiledDesc.size];
+			byte[] blockBytes = new byte[compiledDesc.Size];
 			int actualSize = _reader.Read(blockBytes, 0, blockBytes.Length);
 
 			if (actualSize != blockBytes.Length)
@@ -278,7 +278,7 @@ public class FshaImporter : IShaderImporter
 				blockBytes = newBlockBytes;
 			}
 
-			_outCompiledDataDict.Add(compiledDesc.dataType, blockBytes);
+			_outCompiledDataDict.Add(compiledDesc.DataType, blockBytes);
 		}
 		return false;
 	}

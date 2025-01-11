@@ -16,11 +16,11 @@ public readonly struct ShaderDataSourceCodeDesc(ShaderLanguage _language, MeshVe
 {
 	#region Fields
 
-	public readonly ShaderLanguage language = _language;
-	public readonly MeshVertexDataFlags variantFlags = _variantFlags;
-	public readonly ushort offset = _offset;
-	public readonly ushort size = _size;
-	public readonly string entryPoint = _entryPoint;
+	public ShaderLanguage Language { get; init; } = _language;
+	public MeshVertexDataFlags VariantFlags { get; init; } = _variantFlags;
+	public ushort Offset { get; init; } = _offset;
+	public ushort Size { get; init; } = _size;
+	public string EntryPoint { get; init; } = _entryPoint;
 
 	/// <summary>
 	/// Represents an empty and invalid block of source code.

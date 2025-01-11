@@ -60,8 +60,8 @@ public sealed class ShaderDataDescription
 		{
 			foreach (ShaderDataSourceCodeDesc block in SourceCode)
 			{
-				if (block.language == _language &&
-					block.variantFlags == _variantFlags)
+				if (block.Language == _language &&
+					block.VariantFlags == _variantFlags)
 				{
 					_outSourceCodeBlock = block;
 					return true;

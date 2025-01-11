@@ -134,12 +134,12 @@ public sealed class ShaderImporter(ResourceManager _resourceManager, GraphicsCor
 			{
 				uint variantIndex = kvp.Key.GetVariantIndex();
 
-				byte[] variantBytes = new byte[kvp.Value.size];
-				Array.Copy(compiledShaderData!, kvp.Value.offset, variantBytes, 0, kvp.Value.size);
+				byte[] variantBytes = new byte[kvp.Value.Size];
+				Array.Copy(compiledShaderData!, kvp.Value.Offset, variantBytes, 0, kvp.Value.Size);
 
 				try
 				{
-					ShaderDescription variantDesc = new(stage, variantBytes, kvp.Value.entryPoint);
+					ShaderDescription variantDesc = new(stage, variantBytes, kvp.Value.EntryPoint);
 
 					Shader variant = graphicsCore.MainFactory.CreateShader(ref variantDesc);
 					variant.Name = $"{stage}Shader_{_resourceKey}_{kvp.Key}";
@@ -208,18 +208,18 @@ public sealed class ShaderImporter(ResourceManager _resourceManager, GraphicsCor
 		_outCompiledBlocks = [];
 		foreach (var block in _shaderData.Description.CompiledBlocks)
 		{
-			if (block.dataType != compiledDataType)
+			if (block.DataType != compiledDataType)
 			{
 				continue;
 			}
-			if (!ShaderConfig.TryParseDescriptionTxt(block.capabilities, out ShaderConfig variantConfig))
+			if (!ShaderConfig.TryParseDescriptionTxt(block.Capabilities, out ShaderConfig variantConfig))
 			{
 				continue;
 			}
 
 			MeshVertexDataFlags variantFlags = variantConfig.GetVertexDataForVariantFlags();
 
-			_maxSupportedVariantFlags |= block.variantFlags;
+			_maxSupportedVariantFlags |= block.VariantFlags;
 			_outCompiledBlocks.Add(variantFlags, block);
 		}
 
@@ -250,9 +250,9 @@ public sealed class ShaderImporter(ResourceManager _resourceManager, GraphicsCor
 		_outSourceCodeData = new(_shaderData.Description.SourceCode.Length);
 		foreach (ShaderDataSourceCodeDesc blockDesc in _shaderData.Description.SourceCode)
 		{
-			if (blockDesc.language == _language)
+			if (blockDesc.Language == _language)
 			{
-				_maxSupportedVariantFlags |= blockDesc.variantFlags;
+				_maxSupportedVariantFlags |= blockDesc.VariantFlags;
 				_outSourceCodeData.Add(blockDesc);
 			}
 		}

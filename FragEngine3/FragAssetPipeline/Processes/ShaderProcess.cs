@@ -57,7 +57,10 @@ internal static class ShaderProcess
 	private static readonly ImporterContext exportCtx = new()
 	{
 		Logger = new ConsoleLogger(),
-		JsonOptions = null,
+		JsonOptions = new()
+		{
+			WriteIndented = true,
+		},
 	};
 
 	#endregion
@@ -123,7 +126,7 @@ internal static class ShaderProcess
 		}
 
 		// Export shader data:
-		bool success = FshaExporter.CreateShaderDataFromSourceCode(sourceDataFilePath, _exportOptions, out ShaderData? shaderData);
+		bool success = ShaderDataLoader.CreateShaderDataFromSourceCode(sourceDataFilePath, _exportOptions, out ShaderData? shaderData);
 
 		// Write shader data file:
 		if (success && shaderData is not null)

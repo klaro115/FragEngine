@@ -118,8 +118,8 @@ public sealed class ShaderData
 			return false;
 		}
 
-		_outVariantSourceCodeBytes = new(fullSourceCodeBytes, blockDesc.offset, blockDesc.size);
-		_outEntryPoint = blockDesc.entryPoint;
+		_outVariantSourceCodeBytes = new(fullSourceCodeBytes, blockDesc.Offset, blockDesc.Size);
+		_outEntryPoint = blockDesc.EntryPoint;
 		return true;
 	}
 

@@ -138,17 +138,17 @@ public static class FshaExporter
 
 		foreach (var sourceCodeDesc in _shaderData.Description.SourceCode)
 		{
-			if (!_exportCtx.SupportedShaderLanguages.HasFlag(sourceCodeDesc.language))
+			if (!_exportCtx.SupportedShaderLanguages.HasFlag(sourceCodeDesc.Language))
 				continue;
-			if (!_shaderData.SourceCode.TryGetValue(sourceCodeDesc.language, out byte[]? sourceCodeBytes))
+			if (!_shaderData.SourceCode.TryGetValue(sourceCodeDesc.Language, out byte[]? sourceCodeBytes))
 				continue;
 
 			ShaderDataSourceCodeDesc adjustedDesc = new(
-				sourceCodeDesc.language,
-				sourceCodeDesc.variantFlags,
+				sourceCodeDesc.Language,
+				sourceCodeDesc.VariantFlags,
 				_outSourceCodeByteSize,
 				(ushort)sourceCodeBytes.Length,
-				sourceCodeDesc.entryPoint);
+				sourceCodeDesc.EntryPoint);
 
 			sourceCodeBlockCount++;
 			_outSourceCodeByteSize += (ushort)sourceCodeBytes.Length;
@@ -189,18 +189,18 @@ public static class FshaExporter
 
 		foreach (var compiledDataDesc in _shaderData.Description.CompiledBlocks)
 		{
-			if (!_exportCtx.SupportedShaderDataTypes.HasFlag(compiledDataDesc.dataType))
+			if (!_exportCtx.SupportedShaderDataTypes.HasFlag(compiledDataDesc.DataType))
 				continue;
-			if (!_shaderData.TryGetByteCode(compiledDataDesc.dataType, out byte[]? byteCode))
+			if (!_shaderData.TryGetByteCode(compiledDataDesc.DataType, out byte[]? byteCode))
 				continue;
 
 			ShaderDataCompiledBlockDesc adjustedDesc = new(
-				compiledDataDesc.dataType,
-				compiledDataDesc.variantFlags,
-				compiledDataDesc.capabilities,
+				compiledDataDesc.DataType,
+				compiledDataDesc.VariantFlags,
+				compiledDataDesc.Capabilities,
 				_outCompiledDataByteSize,
 				(uint)byteCode!.Length,
-				compiledDataDesc.entryPoint);
+				compiledDataDesc.EntryPoint);
 
 			_outCompiledDataBlockCount++;
 			_outCompiledDataByteSize += (ushort)byteCode!.Length;

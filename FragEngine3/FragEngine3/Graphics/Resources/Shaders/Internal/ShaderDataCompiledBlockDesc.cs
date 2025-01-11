@@ -5,12 +5,12 @@ public readonly struct ShaderDataCompiledBlockDesc(CompiledShaderDataType _dataT
 {
 	#region Fields
 
-	public readonly CompiledShaderDataType dataType = _dataType;
-	public readonly MeshVertexDataFlags variantFlags = _variantFlags;
-	public readonly string capabilities = _capabilities ?? string.Empty;
-	public readonly uint offset = _offset;
-	public readonly uint size = _size;
-	public readonly string entryPoint = _entryPoint;
+	public CompiledShaderDataType DataType { get; init; } = _dataType;
+	public MeshVertexDataFlags VariantFlags { get; init; } = _variantFlags;
+	public string Capabilities { get; init; } = _capabilities ?? string.Empty;
+	public uint Offset { get; init; } = _offset;
+	public uint Size { get; init; } = _size;
+	public string EntryPoint { get; init; } = _entryPoint;
 
 	#endregion
 }

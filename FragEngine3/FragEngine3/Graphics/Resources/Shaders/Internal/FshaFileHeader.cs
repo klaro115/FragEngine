@@ -211,7 +211,7 @@ public sealed class FshaFileHeader
 	private static void WriteUint8ToHex(BinaryWriter _writer, byte _value)
 	{
 		_writer.Write(ConvertNibbleToHex((_value & 0xF0u) >> 4));
-		_writer.Write(ConvertNibbleToHex(_value & 0x0Fu));
+		_writer.Write(ConvertNibbleToHex( _value & 0x0Fu));
 		_writer.Write((byte)'_');
 	}
 	private static void WriteUint16ToHex(BinaryWriter _writer, ushort _value)
@@ -219,7 +219,7 @@ public sealed class FshaFileHeader
 		_writer.Write(ConvertNibbleToHex((_value & 0xF000u) >> 12));
 		_writer.Write(ConvertNibbleToHex((_value & 0x0F00u) >> 8));
 		_writer.Write(ConvertNibbleToHex((_value & 0x00F0u) >> 4));
-		_writer.Write(ConvertNibbleToHex(_value & 0x000Fu));
+		_writer.Write(ConvertNibbleToHex( _value & 0x000Fu));
 		_writer.Write((byte)'_');
 	}
 	private static void WriteUint32ToHex(BinaryWriter _writer, uint _value, bool _addTrailingUnderscore = true)
@@ -231,7 +231,7 @@ public sealed class FshaFileHeader
 		_writer.Write(ConvertNibbleToHex((_value & 0x0000F000u) >> 12));
 		_writer.Write(ConvertNibbleToHex((_value & 0x00000F00u) >> 8));
 		_writer.Write(ConvertNibbleToHex((_value & 0x000000F0u) >> 4));
-		_writer.Write(ConvertNibbleToHex(_value & 0x0000000Fu));
+		_writer.Write(ConvertNibbleToHex( _value & 0x0000000Fu));
 		if (_addTrailingUnderscore)
 		{
 			_writer.Write((byte)'_');
@@ -240,7 +240,7 @@ public sealed class FshaFileHeader
 
 	private static byte ConvertNibbleToHex(uint _uint4)
 	{
-		return _uint4 > 10
+		return _uint4 >= 10
 			? (byte)(_uint4 + 'A' - 10)
 			: (byte)(_uint4 + '0');
 	}

@@ -5,7 +5,7 @@ using Veldrid;
 namespace FragAssetPipeline.Resources.Shaders;
 
 /// <summary>
-/// Options for compiling, exporting and bundling shader data by the <see cref="FshaExporter"/>.
+/// Options for compiling, exporting and bundling shader data by the <see cref="ShaderDataLoader"/>.
 /// </summary>
 public sealed class ShaderExportOptions
 {

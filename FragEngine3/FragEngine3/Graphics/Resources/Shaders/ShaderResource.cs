@@ -181,8 +181,8 @@ public sealed class ShaderResource : Resource
 		}
 
 		// Fetch the name of the variant's entry point function:
-		var sourceCodeBlock = sourceCodeData!.FirstOrDefault(o => o.variantFlags == _variantFlags);
-		string entryPoint = sourceCodeBlock.entryPoint;
+		var sourceCodeBlock = sourceCodeData!.FirstOrDefault(o => o.VariantFlags == _variantFlags);
+		string entryPoint = sourceCodeBlock.EntryPoint;
 		if (string.IsNullOrEmpty(entryPoint))
 		{
 			Logger?.LogError($"Cannot compile shader variants from source; missing entry point function name! Flags: '{_variantFlags}'");
