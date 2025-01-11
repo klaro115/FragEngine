@@ -123,7 +123,7 @@ internal static class ShaderProcess
 		}
 
 		// Export shader data:
-		bool success = FshaExporter.ExportShaderFromHlslFile(sourceDataFilePath, _exportOptions, out ShaderData? shaderData);
+		bool success = FshaExporter.CreateShaderDataFromSourceCode(sourceDataFilePath, _exportOptions, out ShaderData? shaderData);
 
 		// Write shader data file:
 		if (success && shaderData is not null)

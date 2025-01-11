@@ -1,7 +1,7 @@
 ﻿using FragEngine3.EngineCore;
 using FragEngine3.Utility.Unicode;
 
-namespace FragEngine3.Graphics.Resources.Import.ShaderFormats.Internal;
+namespace FragEngine3.Graphics.Resources.Shaders.Internal;
 
 /// <summary>
 /// Utility class for setting or removing preprocessor '#define' macros in shader source code prior to compilation.

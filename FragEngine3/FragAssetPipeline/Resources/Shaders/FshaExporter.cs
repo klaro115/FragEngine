@@ -11,7 +11,7 @@ namespace FragAssetPipeline.Resources.Shaders;
 /// <summary>
 /// Exporter for the FSHA shader asset format.
 /// </summary>
-public static class FshaExporter									//TODO [CRITICAL]: Rewrite/Refactor and rename this to only create a ShaderData object for later export/processing!
+public static class FshaExporter	//TODO: Rename this to something more sensible. This is not really related to the FSHA format.
 {
 	#region Fields
 
@@ -39,6 +39,110 @@ public static class FshaExporter									//TODO [CRITICAL]: Rewrite/Refactor and
 	#endregion
 	#region Methods
 
+	public static bool CreateShaderDataFromSourceCode(string _sourceCodeFilePath, ShaderExportOptions _options, out ShaderData? _outFshaShaderData)
+	{
+		// Check input parameters:
+		if (_options is null)
+		{
+			Console.WriteLine("Error! Cannot create shader data without export options!");
+			_outFshaShaderData = null;
+			return false;
+		}
+		if (!FshaExportUtility.CheckIfFileExists(_sourceCodeFilePath))
+		{
+			Console.WriteLine($"Error! Cannot create shader data, source file path is null or incorrect! File path: '{_sourceCodeFilePath}'");
+			_outFshaShaderData = null;
+			return false;
+		}
+
+		// Check which shader stage we're working with:
+		if (_options.shaderStage == ShaderStages.None && !FshaExportUtility.GetShaderStageFromFileNameSuffix(_sourceCodeFilePath, out _options.shaderStage))
+		{
+			Console.WriteLine($"Error! Cannot create shader data, unable to determine shader stage from source file path! File path: '{_sourceCodeFilePath}'");
+			_outFshaShaderData = null;
+			return false;
+		}
+
+		// Identify entry point functions:
+		if (!TryFindEntryPoints(_sourceCodeFilePath, _options))
+		{
+			Console.WriteLine($"Error! Cannot create shader data, unable to determine entry points! File path: '{_sourceCodeFilePath}'");
+			_outFshaShaderData = null;
+			return false;
+		}
+
+		MeshVertexDataFlags minVariantFlags = MeshVertexDataFlags.ALL;
+		MeshVertexDataFlags maxVariantFlags = 0;
+		foreach (var kvp in _options.entryPoints!)
+		{
+			minVariantFlags = (MeshVertexDataFlags)Math.Min((int)minVariantFlags, (int)kvp.Key);
+			maxVariantFlags |= kvp.Key;
+		}
+		ShaderConfig minConfig = new();	// TODO
+		ShaderConfig maxConfig = new(); // TODO
+
+		if (!BundleSourceCodeBlocks(
+			_sourceCodeFilePath,
+			_options,
+			out ShaderDataSourceCodeDesc[]? sourceCodeBlocks,
+			out Dictionary<ShaderLanguage, byte[]>? sourceCodeDict))
+		{
+			Console.WriteLine($"Error! Cannot create shader data, failed to bundle source code data! File path: '{_sourceCodeFilePath}'");
+			_outFshaShaderData = null;
+			return false;
+		}
+
+		if (!BundleCompiledDataBlocks(
+			_sourceCodeFilePath,
+			_options,
+			out ShaderDataCompiledBlockDesc[]? compiledDataBlocks,
+			out Dictionary<CompiledShaderDataType, byte[]>? compiledDataDict))
+		{
+			Console.WriteLine($"Error! Cannot create shader data, failed to bundle pre-compiled shader data! File path: '{_sourceCodeFilePath}'");
+			_outFshaShaderData = null;
+			return false;
+		}
+
+		_outFshaShaderData = new()
+		{
+			FileHeader = null,
+			Description = new()
+			{
+				Stage = _options.shaderStage,
+				MinCapabilities = minConfig.CreateDescriptionTxt(),
+				MaxCapabilities = maxConfig.CreateDescriptionTxt(),
+				SourceCode = sourceCodeBlocks,
+				CompiledBlocks = compiledDataBlocks,
+			},
+			SourceCode = sourceCodeDict,
+			//TODO
+		};
+		return true;
+	}
+
+	private static bool BundleSourceCodeBlocks(
+		string _sourceCodeFilePath,
+		ShaderExportOptions _options,
+		out ShaderDataSourceCodeDesc[]? _outSourceCodeBlocks,
+		out Dictionary<ShaderLanguage, byte[]>? _outSourceCodeDict)
+	{
+		throw new NotImplementedException("TODO");
+	}
+
+	private static bool BundleCompiledDataBlocks(
+		string _sourceCodeFilePath,
+		ShaderExportOptions _options,
+		out ShaderDataCompiledBlockDesc[]? _outCompiledDataBlocks,
+		out Dictionary<CompiledShaderDataType, byte[]>? _outCompiledDataDict)
+	{
+		throw new NotImplementedException("TODO");
+	}
+
+
+
+
+	/*
+	[Obsolete("rewritten")]
 	public static bool ExportShaderFromHlslFile(string _filePath, ShaderExportOptions _options, out ShaderData? _outFshaShaderData)
 	{
 		if (_options is null)
@@ -224,8 +328,8 @@ public static class FshaExporter									//TODO [CRITICAL]: Rewrite/Refactor and
 			Description = new ShaderDataDescription()
 			{
 				Stage = _options.shaderStage,
-				MinCapabilities = /* TODO */ "TODO",
-				MaxCapabilities = /* TODO */ "TODO",
+				MinCapabilities = "TODO",
+				MaxCapabilities = "TODO",
 				SourceCode = sourceCodeData?.ToArray(),
 				CompiledBlocks = compiledVariantData.ToArray(),
 			},
@@ -243,6 +347,7 @@ public static class FshaExporter									//TODO [CRITICAL]: Rewrite/Refactor and
 		}
 		return isValid;
 	}
+	*/
 
 	private static bool TryFindEntryPoints(string _filePath, ShaderExportOptions _options)
 	{

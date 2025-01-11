@@ -1,5 +1,4 @@
-﻿using FragEngine3.Graphics.Resources.Import.ShaderFormats.Internal;
-using FragEngine3.Graphics.Resources.Shaders;
+﻿using FragEngine3.Graphics.Resources.Shaders;
 using FragEngine3.Graphics.Resources.Shaders.Internal;
 using FragEngine3.Resources;
 using Veldrid;
