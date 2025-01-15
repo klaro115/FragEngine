@@ -181,7 +181,7 @@ public sealed class ShaderResource : Resource
 		}
 
 		// Fetch the name of the variant's entry point function:
-		var sourceCodeBlock = sourceCodeData!.FirstOrDefault(o => o.VariantFlags == _variantFlags);
+		var sourceCodeBlock = sourceCodeData!.FirstOrDefault(o => o.VariantFlags.HasFlag(_variantFlags));
 		string entryPoint = sourceCodeBlock.EntryPoint;
 		if (string.IsNullOrEmpty(entryPoint))
 		{

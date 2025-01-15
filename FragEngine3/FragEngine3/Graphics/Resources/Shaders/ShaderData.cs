@@ -9,6 +9,11 @@ namespace FragEngine3.Graphics.Resources.Shaders;
 [Serializable]
 public sealed class ShaderData
 {
+	#region Types
+
+	public sealed record CompiledDataKey(CompiledShaderDataType DataType, MeshVertexDataFlags VariantFlags);
+
+	#endregion
 	#region Properties
 
 	// GENERAL:
@@ -35,7 +40,7 @@ public sealed class ShaderData
 	/// <summary>
 	/// Dictionary containing pre-compiled shader data of different types.
 	/// </summary>
-	public Dictionary<CompiledShaderDataType, byte[]>? CompiledData { get; init; } = null;
+	public Dictionary<CompiledDataKey, byte[]>? CompiledData { get; init; } = null;
 
 	#endregion
 	#region Methods
@@ -129,9 +134,10 @@ public sealed class ShaderData
 	/// <param name="_dataType">The type of compiled shader data we're looking for.</param>
 	/// <param name="_outByteCode">Outputs a byte array with the requested compiled data. Null if no data of that type was found.</param>
 	/// <returns>True if the shader data includes compiled data of the requested type, false otherwise.</returns>
-	public bool TryGetByteCode(CompiledShaderDataType _dataType, out byte[]? _outByteCode)
+	public bool TryGetByteCode(CompiledShaderDataType _dataType, MeshVertexDataFlags _variantFlags, out byte[]? _outByteCode)
 	{
-		if (CompiledData is not null && CompiledData.TryGetValue(_dataType, out _outByteCode))
+		CompiledDataKey key = new(_dataType, _variantFlags);
+		if (CompiledData is not null && CompiledData.TryGetValue(key, out _outByteCode))
 		{
 			return _outByteCode.Length != 0;
 		}

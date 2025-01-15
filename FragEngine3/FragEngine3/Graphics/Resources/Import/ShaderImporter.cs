@@ -11,6 +11,15 @@ namespace FragEngine3.Graphics.Resources.Import;
 /// <param name="_graphicsCore">The graphics core through which's graphics device the shaders shall be created and executed.</param>
 public sealed class ShaderImporter(ResourceManager _resourceManager, GraphicsCore _graphicsCore) : BaseResourceImporter<IShaderImporter>(_resourceManager, _graphicsCore)
 {
+	#region Types
+
+	private sealed class CompiledData
+	{
+		public required ShaderDataCompiledBlockDesc BlockDesc { get; init; }
+		public required byte[] ByteData { get; init; }
+	}
+
+	#endregion
 	#region Constructors
 
 	~ShaderImporter()
@@ -111,8 +120,7 @@ public sealed class ShaderImporter(ResourceManager _resourceManager, GraphicsCor
 		bool hasCompiledVariants = GetCompiledVariants(
 			_shaderData,
 			ref maxSupportedVariantFlags,
-			out byte[]? compiledShaderData,
-			out Dictionary<MeshVertexDataFlags, ShaderDataCompiledBlockDesc>? compiledBlocks);
+			out List<CompiledData>? compiledBlocks);
 
 		// Select all source code variants:
 		_ = GetSourceCodeVariants(
@@ -130,24 +138,22 @@ public sealed class ShaderImporter(ResourceManager _resourceManager, GraphicsCor
 		// Upload compiled data to GPU as ready variants:
 		if (hasCompiledVariants)
 		{
-			foreach (var kvp in compiledBlocks!)
+			foreach (CompiledData compiledData in compiledBlocks!)
 			{
-				uint variantIndex = kvp.Key.GetVariantIndex();
-
-				byte[] variantBytes = new byte[kvp.Value.Size];
-				Array.Copy(compiledShaderData!, kvp.Value.Offset, variantBytes, 0, kvp.Value.Size);
+				MeshVertexDataFlags variantFlags = compiledData.BlockDesc.VariantFlags;
+				uint variantIndex = variantFlags.GetVariantIndex();
 
 				try
 				{
-					ShaderDescription variantDesc = new(stage, variantBytes, kvp.Value.EntryPoint);
+					ShaderDescription variantDesc = new(stage, compiledData.ByteData, compiledData.BlockDesc.EntryPoint);
 
 					Shader variant = graphicsCore.MainFactory.CreateShader(ref variantDesc);
-					variant.Name = $"{stage}Shader_{_resourceKey}_{kvp.Key}";
+					variant.Name = $"{stage}Shader_{_resourceKey}_{variantFlags}";
 					precompiledVariants[variantIndex] = variant;
 				}
 				catch (Exception ex)
 				{
-					logger.LogException($"Failed to create shader program for pre-compiled variant '{kvp.Key}' of shader resource '{_resourceKey}'!", ex);
+					logger.LogException($"Failed to create shader program for pre-compiled variant '{variantFlags}' of shader resource '{_resourceKey}'!", ex);
 					continue;
 				}
 			}
@@ -178,10 +184,8 @@ public sealed class ShaderImporter(ResourceManager _resourceManager, GraphicsCor
 	private bool GetCompiledVariants(
 		ShaderData _shaderData,
 		ref MeshVertexDataFlags _maxSupportedVariantFlags,
-		out byte[]? _outCompiledShaderData,
-		out Dictionary<MeshVertexDataFlags, ShaderDataCompiledBlockDesc>? _outCompiledBlocks)
+		out List<CompiledData>? _outCompiledBlocks)
 	{
-		_outCompiledShaderData = null;
 		if (_shaderData.Description.CompiledBlocks is null)
 		{
 			_outCompiledBlocks = null;
@@ -189,17 +193,7 @@ public sealed class ShaderImporter(ResourceManager _resourceManager, GraphicsCor
 		}
 
 		CompiledShaderDataType compiledDataType = graphicsCore.CompiledShaderDataType;
-		for (int i = 1; i <= (int)compiledDataType; ++i)
-		{
-			CompiledShaderDataType currentDataType = (CompiledShaderDataType)i;
-			if (_shaderData.TryGetByteCode(currentDataType, out _outCompiledShaderData))
-			{
-				compiledDataType = currentDataType;
-				break;
-			}
-		}
-
-		if (_outCompiledShaderData is null || _outCompiledShaderData.Length == 0)
+		if (!importCtx.SupportedShaderDataTypes.HasFlag(compiledDataType))
 		{
 			_outCompiledBlocks = null;
 			return false;
@@ -212,15 +206,19 @@ public sealed class ShaderImporter(ResourceManager _resourceManager, GraphicsCor
 			{
 				continue;
 			}
-			if (!ShaderConfig.TryParseDescriptionTxt(block.Capabilities, out ShaderConfig variantConfig))
+			if (!_shaderData.TryGetByteCode(compiledDataType, block.VariantFlags, out byte[]? byteCode))
 			{
 				continue;
 			}
 
-			MeshVertexDataFlags variantFlags = variantConfig.GetVertexDataForVariantFlags();
+			CompiledData compiledData = new()
+			{
+				BlockDesc = block,
+				ByteData = byteCode!,
+			};
 
 			_maxSupportedVariantFlags |= block.VariantFlags;
-			_outCompiledBlocks.Add(variantFlags, block);
+			_outCompiledBlocks.Add(compiledData);
 		}
 
 		return _outCompiledBlocks.Count != 0;

@@ -1,5 +1,9 @@
-﻿using FragAssetPipeline.Processes;
+﻿using FragAssetFormats.Shaders.FSHA;
+using FragAssetPipeline.Common;
+using FragAssetPipeline.Processes;
+using FragAssetPipeline.Resources.Shaders;
 using FragEngine3.Graphics.Resources;
+using FragEngine3.Graphics.Resources.Import;
 using FragEngine3.Graphics.Resources.Shaders;
 using Veldrid;
 
@@ -99,6 +103,46 @@ internal static class Program
 			PrintStatus("\n## CLEARING DESTINATIONS:");
 			ClearDestinationFolders(outputAssetsAbsDir, buildAssetsAbsDir);
 		}
+
+		//TEST
+		ImporterContext importCtx = new()
+		{
+			Logger = new ConsoleLogger(),
+			JsonOptions = new()
+			{
+				WriteIndented = true,
+			},
+			SupportedShaderLanguages = ShaderLanguage.HLSL,
+			SupportedShaderDataTypes = CompiledShaderDataType.DXBC,
+		};
+		ShaderProcess.Details testDetails = details[0];
+		ShaderExportOptions testOptions = new()
+		{
+			bundleOnlySourceIfCompilationFails = true,
+			shaderStage = testDetails.stage,
+			entryPointBase = testDetails.entryPointNameBase,
+			maxVertexVariantFlags = testDetails.maxVertexFlags,
+			bundledSourceCodeLanguages = importCtx.SupportedShaderLanguages,
+			compiledDataTypeFlags = importCtx.SupportedShaderDataTypes,
+			supportedFeatures = shaderConfig,
+		};
+		string srcPath = Path.Combine(inputAssetsAbsDir, "shaders", testDetails.relativeFilePath);
+		if (ShaderDataLoader.CreateShaderDataFromSourceCode(srcPath, testOptions, out ShaderData? testShaderData))
+		{
+			using MemoryStream stream = new();
+			using BinaryWriter writer = new(stream);
+
+			bool written = FshaExporter.ExportToFSHA(in importCtx, writer, testShaderData!, false);
+
+			if (written)
+			{
+				stream.Position = 0;
+				using BinaryReader reader = new(stream);
+
+				FshaImporter.ImportFromFSHA(in importCtx, reader, out ShaderData readShaderData);
+			}
+		}
+		//TEST
 
 		List<string> resourceFilePaths = [];
 

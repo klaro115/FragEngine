@@ -92,6 +92,7 @@ internal static class ShaderProcess
 			entryPointBase = _details.entryPointNameBase,
 			maxVertexVariantFlags = _details.maxVertexFlags,
 			compiledDataTypeFlags = CompiledShaderDataType.ALL,
+			bundledSourceCodeLanguages = _details.bundleSourceCode ? ShaderLanguage.ALL : 0,
 			supportedFeatures = _shaderConfig,
 		};
 

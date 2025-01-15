@@ -191,7 +191,7 @@ public static class FshaExporter
 		{
 			if (!_exportCtx.SupportedShaderDataTypes.HasFlag(compiledDataDesc.DataType))
 				continue;
-			if (!_shaderData.TryGetByteCode(compiledDataDesc.DataType, out byte[]? byteCode))
+			if (!_shaderData.TryGetByteCode(compiledDataDesc.DataType, compiledDataDesc.VariantFlags, out byte[]? byteCode))
 				continue;
 
 			ShaderDataCompiledBlockDesc adjustedDesc = new(
