@@ -192,8 +192,8 @@ public sealed class ShaderImporter(ResourceManager _resourceManager, GraphicsCor
 			return false;
 		}
 
-		CompiledShaderDataType compiledDataType = graphicsCore.CompiledShaderDataType;
-		if (!importCtx.SupportedShaderDataTypes.HasFlag(compiledDataType))
+		CompiledShaderDataType supportedDataTypes = graphicsCore.CompiledShaderDataType;
+		if ((importCtx.SupportedShaderDataTypes & supportedDataTypes) == 0)
 		{
 			_outCompiledBlocks = null;
 			return false;
@@ -202,11 +202,11 @@ public sealed class ShaderImporter(ResourceManager _resourceManager, GraphicsCor
 		_outCompiledBlocks = [];
 		foreach (var block in _shaderData.Description.CompiledBlocks)
 		{
-			if (block.DataType != compiledDataType)
+			if (!supportedDataTypes.HasFlag(block.DataType))
 			{
 				continue;
 			}
-			if (!_shaderData.TryGetByteCode(compiledDataType, block.VariantFlags, out byte[]? byteCode))
+			if (!_shaderData.TryGetByteCode(block.DataType, block.VariantFlags, out byte[]? byteCode))
 			{
 				continue;
 			}
