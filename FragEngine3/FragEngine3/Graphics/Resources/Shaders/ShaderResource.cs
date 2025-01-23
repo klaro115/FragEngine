@@ -25,6 +25,7 @@ public sealed class ShaderResource : Resource
 		MeshVertexDataFlags _supportedVariantFlags,
 		Shader?[] _variants,
 		ShaderLanguage _sourceCodeLanguage,
+		ShaderConfig _maxFeatureConfig,
 		List<ShaderDataSourceCodeDesc>? _sourceCodeData = null,
 		byte[]? _sanitizedSourceCodeBytes = null)
 		: base(_resourceKey, _graphicsCore.graphicsSystem.engine)
@@ -35,6 +36,9 @@ public sealed class ShaderResource : Resource
 		supportedVariantFlags = _supportedVariantFlags;
 		unsupportedVariantFlags = ~(supportedVariantFlags | MeshVertexDataFlags.BasicSurfaceData);
 		shaderVariants = _variants ?? throw new ArgumentNullException(nameof(_variants), "Shader variants array may not be null!");
+
+		maxFeatureConfig = _maxFeatureConfig;
+		maxFeatureConfig.SetVariantFlagsFromMeshVertexData(supportedVariantFlags);
 
 		compiledVariantCount = shaderVariants.Count(o => o is not null && !o.IsDisposed);
 		totalVariantCount = shaderVariants.Length;
@@ -57,6 +61,7 @@ public sealed class ShaderResource : Resource
 
 	private readonly MeshVertexDataFlags supportedVariantFlags = 0;
 	private readonly MeshVertexDataFlags unsupportedVariantFlags = 0;
+	private readonly ShaderConfig maxFeatureConfig;
 	private Shader?[] shaderVariants = [];      // array of variant shader programs, indexed via 'MeshVertexDataFlags.GetVariantIndex()'.
 
 	// Source code:
@@ -195,10 +200,15 @@ public sealed class ShaderResource : Resource
 		{
 			sourceCodeBuffer = new(sourceCodeBytes!, sourceCodeBytes!.Length);
 		}
-		else if (!ShaderSourceCodeDefiner.SetVariantDefines(sourceCodeBytes!, _variantFlags, false, out sourceCodeBuffer))
+		else
 		{
-			Logger?.LogError($"Cannot compile shader variants from source; failed to set '#define' macros fro vertex flags! Flags: '{_variantFlags}'");
-			return false;
+			List<string> featureDefinesTxts = maxFeatureConfig.GetFeatureDefineStrings(true);
+
+			if (!ShaderSourceCodeDefiner.SetFeatureDefines(sourceCodeBytes!, featureDefinesTxts, false, out sourceCodeBuffer))
+			{
+				Logger?.LogError($"Cannot compile shader variants from source; failed to set feature and variant '#define' macros! Flags: '{_variantFlags}'");
+				return false;
+			}
 		}
 
 		// Trim source code buffer to size, if needed:

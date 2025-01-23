@@ -169,6 +169,7 @@ public sealed class ShaderImporter(ResourceManager _resourceManager, GraphicsCor
 				maxSupportedVariantFlags,
 				precompiledVariants,
 				sourceCodeLanguage,
+				maxConfig,
 				sourceCodeData,
 				sanitizedSourceCodeBytes);
 			return true;

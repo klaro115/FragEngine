@@ -204,10 +204,6 @@ public static class FshaExporter
 
 			_outCompiledDataBlockCount++;
 			_outCompiledDataByteSize += (ushort)byteCode!.Length;
-			if (_addSectionSpacers)
-			{
-				_outCompiledDataByteSize += (ushort)SECTION_SPACER_LENGTH;
-			}
 			_outBlocks.Add(new(adjustedDesc, byteCode));
 		}
 		if (_outCompiledDataBlockCount == 0)
