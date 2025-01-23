@@ -343,6 +343,13 @@ public static class FshaExporter
 			foreach (var block in _blocks)
 			{
 				_writer.Write(block.Item2);
+
+				//TEST TEST TEST TEST
+				for (int i = 0; i < 32; ++i)
+				{
+					_writer.Write((byte)':');
+				}
+				//TEST TEST TEST TEST
 			}
 			return true;
 		}

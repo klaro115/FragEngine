@@ -104,6 +104,7 @@ internal static class Program
 			ClearDestinationFolders(outputAssetsAbsDir, buildAssetsAbsDir);
 		}
 
+		/*
 		//TEST
 		ImporterContext importCtx = new()
 		{
@@ -143,6 +144,7 @@ internal static class Program
 			}
 		}
 		//TEST
+		*/
 
 		List<string> resourceFilePaths = [];
 
