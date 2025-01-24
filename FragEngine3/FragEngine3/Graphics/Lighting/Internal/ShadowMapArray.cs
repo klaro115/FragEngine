@@ -225,7 +225,7 @@ public sealed class ShadowMapArray : IDisposable
 	{
 		if (IsDisposed)
 		{
-			Logger.LogError("Cannot finalize preparing disposed light data buffers for use!");
+			Logger.LogError("Cannot finalize preparing disposed shadow matrix buffers for use!");
 			return false;
 		}
 
@@ -246,7 +246,7 @@ public sealed class ShadowMapArray : IDisposable
 		}
 		catch (Exception ex)
 		{
-			Logger.LogException("Failed to upload light data to GPU buffer!", ex);
+			Logger.LogException("Failed to upload shadow matrices to GPU buffer!", ex);
 			return false;
 		}
 	}
