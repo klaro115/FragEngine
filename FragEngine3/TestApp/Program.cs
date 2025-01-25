@@ -14,8 +14,8 @@ EngineConfig config = new();
 Engine? engine = null;
 try
 {
-	//engine = new(new TestApplicationLogic(), config);
-	engine = new(new TestEmptyAppLogic(), config);
+	engine = new(new TestApplicationLogic(), config);
+	//engine = new(new TestEmptyAppLogic(), config);
 
 	// Register services and importers:
 	{

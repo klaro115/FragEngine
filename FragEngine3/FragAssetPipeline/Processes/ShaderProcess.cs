@@ -25,7 +25,7 @@ internal static class ShaderProcess
 	/// <param name="_stage">The shader stage within the rasterized pipeline that this resource's shader programs will be bound to.</param>
 	/// <param name="_maxVertexFlags">Maximum vertex flags that should be pre-compiled; variants with other flags may still be compiled from source code at run-time.</param>
 	/// <param name="_bundleSourceCode">Whether to include original source code in the exported FSHA file. If false, run-time compilation of additional variants won't be possible.</param>
-	public sealed class Details(string _resourceKey, string _relativeFilePath, string _entryPointNameBase, ShaderStages _stage, MeshVertexDataFlags _maxVertexFlags, bool _bundleSourceCode = true)
+	public sealed class Details(string _resourceKey, string _relativeFilePath, string _entryPointNameBase, ShaderStages _stage, MeshVertexDataFlags _maxVertexFlags, bool _bundleSourceCode = true, bool _bundlePrecompiledData = true)
 	{
 		public readonly string resourceKey = _resourceKey;
 		public readonly string relativeFilePath = _relativeFilePath;
@@ -34,6 +34,7 @@ internal static class ShaderProcess
 		public readonly MeshVertexDataFlags maxVertexFlags = _maxVertexFlags;
 		public string descriptionTxt = "At_Nyn0_Ly101p140_V100";
 		public bool bundleSourceCode = _bundleSourceCode;
+		public bool bundlePrecompiledData = _bundlePrecompiledData;
 
 		public ShaderConfig Config
 		{
@@ -87,11 +88,11 @@ internal static class ShaderProcess
 		// Prepare export in FSHA-compliant format:
 		ShaderExportOptions options = new()
 		{
-			bundleOnlySourceIfCompilationFails = true,
+			bundleOnlySourceIfCompilationFails = false,
 			shaderStage = _details.stage,
 			entryPointBase = _details.entryPointNameBase,
-			maxVertexVariantFlags = MeshVertexDataFlags.BasicSurfaceData,// _details.maxVertexFlags,
-			compiledDataTypeFlags = CompiledShaderDataType.DXBC | CompiledShaderDataType.SPIRV,
+			maxVertexVariantFlags = _details.maxVertexFlags,
+			compiledDataTypeFlags = _details.bundlePrecompiledData ? CompiledShaderDataType.ALL : 0,
 			bundledSourceCodeLanguages = _details.bundleSourceCode ? ShaderLanguage.ALL : 0,
 			supportedFeatures = _shaderConfig,
 		};

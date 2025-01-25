@@ -4,8 +4,6 @@ using FragEngine3.Graphics;
 using FragEngine3.Graphics.Resources;
 using FragEngine3.Graphics.Resources.Shaders;
 using FragEngine3.Graphics.Resources.Shaders.Internal;
-using SharpGen.Runtime;
-using System.ComponentModel.DataAnnotations;
 using System.Text;
 using Veldrid;
 
@@ -117,6 +115,10 @@ public static class ShaderDataLoader
 			return false;
 		}
 
+		bool bundleSourceCode =
+			!_options.bundleOnlySourceIfCompilationFails ||
+			(compiledDataBlocks is not null && compiledDataDict is not null && compiledDataBlocks.Length != 0);
+
 		_outFshaShaderData = new()
 		{
 			FileHeader = null,
@@ -125,10 +127,10 @@ public static class ShaderDataLoader
 				Stage = _options.shaderStage,
 				MinCapabilities = minConfig.CreateDescriptionTxt(),
 				MaxCapabilities = maxConfig.CreateDescriptionTxt(),
-				SourceCode = sourceCodeBlocks,
+				SourceCode = bundleSourceCode ? sourceCodeBlocks : null,
 				CompiledBlocks = compiledDataBlocks,
 			},
-			SourceCode = sourceCodeDict,
+			SourceCode = bundleSourceCode ? sourceCodeDict : null,
 			CompiledData = compiledDataDict,
 		};
 		return true;
@@ -249,13 +251,9 @@ public static class ShaderDataLoader
 		List<ShaderDataCompiledBlockDesc> compiledDataBlocks = new(4);
 		uint dataOffset = 0u;
 
-		if (requiresDxCompiler && _options.compiledDataTypeFlags.HasFlag(CompiledShaderDataType.DXBC))
+		if (requiresDxCompiler && ((_options.compiledDataTypeFlags & (CompiledShaderDataType.DXBC | CompiledShaderDataType.DXIL)) != 0))
 		{
 			CompileUsingDxCompiler(_sourceCodeFilePath, _options, ref dataOffset, compiledDataBlocks, _outCompiledDataDict, false);
-		}
-		if (requiresDxCompiler && _options.compiledDataTypeFlags.HasFlag(CompiledShaderDataType.DXIL))
-		{
-			//TODO
 		}
 		if (requiresDxCompiler && _options.compiledDataTypeFlags.HasFlag(CompiledShaderDataType.SPIRV))
 		{
@@ -263,7 +261,7 @@ public static class ShaderDataLoader
 		}
 		if (requiresMacOsCompiler && _options.compiledDataTypeFlags.HasFlag(CompiledShaderDataType.MetalArchive))
 		{
-			//TODO [later]
+			//TODO [later]: Add support for Metal shader compilation once I start caring for MacOS again.
 		}
 
 		_outCompiledDataBlocks = compiledDataBlocks.ToArray();
@@ -278,6 +276,8 @@ public static class ShaderDataLoader
 		Dictionary<ShaderData.CompiledDataKey, byte[]> _compiledDataDict,
 		bool _targetIsSpirv)
 	{
+		bool success = false;
+
 		foreach (var kvp in _options.entryPoints!)
 		{
 			MeshVertexDataFlags variantFlags = kvp.Key;
@@ -285,15 +285,15 @@ public static class ShaderDataLoader
 
 			if (_targetIsSpirv)
 			{
-				CompileSpirv(_sourceCodeFilePath, _options, variantFlags, entryPoint, ref _dataOffset, _compiledDataBlocks, _compiledDataDict);
+				success |= CompileSpirv(_sourceCodeFilePath, _options, variantFlags, entryPoint, ref _dataOffset, _compiledDataBlocks, _compiledDataDict);
 			}
 			else
 			{
-				CompileDxbcAndDxil(_sourceCodeFilePath, _options, variantFlags, entryPoint, ref _dataOffset, _compiledDataBlocks, _compiledDataDict);
+				success |= CompileDxbcAndDxil(_sourceCodeFilePath, _options, variantFlags, entryPoint, ref _dataOffset, _compiledDataBlocks, _compiledDataDict);
 			}
 		}
 
-		return true;
+		return success;
 	}
 
 	private static bool CompileSpirv(
