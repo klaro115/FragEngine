@@ -4,6 +4,8 @@ using FragEngine3.Graphics;
 using FragEngine3.Graphics.Resources;
 using FragEngine3.Graphics.Resources.Shaders;
 using FragEngine3.Graphics.Resources.Shaders.Internal;
+using SharpGen.Runtime;
+using System.ComponentModel.DataAnnotations;
 using System.Text;
 using Veldrid;
 
@@ -276,37 +278,110 @@ public static class ShaderDataLoader
 		Dictionary<ShaderData.CompiledDataKey, byte[]> _compiledDataDict,
 		bool _targetIsSpirv)
 	{
-		CompiledShaderDataType dataType = _targetIsSpirv
-			? CompiledShaderDataType.SPIRV
-			: CompiledShaderDataType.DXBC;
-
 		foreach (var kvp in _options.entryPoints!)
 		{
 			MeshVertexDataFlags variantFlags = kvp.Key;
 			string entryPoint = kvp.Value;
 
-			DxCompiler.DxcResult result = _targetIsSpirv
-				? DxCompiler.CompileShaderToSPIRV(_sourceCodeFilePath, _options.shaderStage, entryPoint)
-				: DxCompiler.CompileShaderToDXBC(_sourceCodeFilePath, _options.shaderStage, entryPoint);
-			if (!result.isSuccess)
+			if (_targetIsSpirv)
 			{
-				continue;
+				CompileSpirv(_sourceCodeFilePath, _options, variantFlags, entryPoint, ref _dataOffset, _compiledDataBlocks, _compiledDataDict);
 			}
+			else
+			{
+				CompileDxbcAndDxil(_sourceCodeFilePath, _options, variantFlags, entryPoint, ref _dataOffset, _compiledDataBlocks, _compiledDataDict);
+			}
+		}
 
-			ShaderConfig config = _options.supportedFeatures;
-			config.SetVariantFlagsFromMeshVertexData(variantFlags);
+		return true;
+	}
 
+	private static bool CompileSpirv(
+		string _sourceCodeFilePath,
+		ShaderExportOptions _options,
+		MeshVertexDataFlags _variantFlags,
+		string _entryPoint,
+		ref uint _dataOffset,
+		List<ShaderDataCompiledBlockDesc> _compiledDataBlocks,
+		Dictionary<ShaderData.CompiledDataKey, byte[]> _compiledDataDict)
+	{
+		DxCompiler.DxcResult result = DxCompiler.CompileShaderToSPIRV(
+			_sourceCodeFilePath,
+			_options.shaderStage,
+			_entryPoint);
+		if (!result.isSuccess)
+		{
+			return false;
+		}
+
+		ShaderConfig config = _options.supportedFeatures;
+		config.SetVariantFlagsFromMeshVertexData(_variantFlags);
+
+		ShaderDataCompiledBlockDesc compiledDataBlock = new(
+			CompiledShaderDataType.SPIRV,
+			_variantFlags,
+			config.CreateDescriptionTxt(),
+			_dataOffset,
+			(uint)result.compiledShader.Length,
+			_entryPoint);
+
+		_dataOffset += (uint)result.compiledShader.Length;
+		_compiledDataBlocks.Add(compiledDataBlock);
+		_compiledDataDict.Add(new(CompiledShaderDataType.SPIRV, _variantFlags), result.compiledShader);
+
+		return true;
+	}
+
+	private static bool CompileDxbcAndDxil(
+		string _sourceCodeFilePath,
+		ShaderExportOptions _options,
+		MeshVertexDataFlags _variantFlags,
+		string _entryPoint,
+		ref uint _dataOffset,
+		List<ShaderDataCompiledBlockDesc> _compiledDataBlocks,
+		Dictionary<ShaderData.CompiledDataKey, byte[]> _compiledDataDict)
+	{
+		if (!DxCompiler.CompileShaderToDXBCAndDXIL(
+			_sourceCodeFilePath,
+			_options.shaderStage,
+			_entryPoint,
+			out DxCompiler.DxcResult resultDxbc,
+			out DxCompiler.DxcResult resultDxil))
+		{
+			return false;
+		}
+
+		ShaderConfig config = _options.supportedFeatures;
+		config.SetVariantFlagsFromMeshVertexData(_variantFlags);
+
+		if (resultDxbc.isSuccess && _options.compiledDataTypeFlags.HasFlag(CompiledShaderDataType.DXBC))
+		{
 			ShaderDataCompiledBlockDesc compiledDataBlock = new(
-				dataType,
-				variantFlags,
-				config.CreateDescriptionTxt(),
-				_dataOffset,
-				(uint)result.compiledShader.Length,
-				entryPoint);
+			CompiledShaderDataType.DXBC,
+			_variantFlags,
+			config.CreateDescriptionTxt(),
+			_dataOffset,
+			(uint)resultDxbc.compiledShader.Length,
+			_entryPoint);
 
-			_dataOffset += (uint)result.compiledShader.Length;
+			_dataOffset += (uint)resultDxbc.compiledShader.Length;
 			_compiledDataBlocks.Add(compiledDataBlock);
-			_compiledDataDict.Add(new(dataType, variantFlags), result.compiledShader);
+			_compiledDataDict.Add(new(CompiledShaderDataType.DXBC, _variantFlags), resultDxbc.compiledShader);
+		}
+
+		if (resultDxil.isSuccess && _options.compiledDataTypeFlags.HasFlag(CompiledShaderDataType.DXIL))
+		{
+			ShaderDataCompiledBlockDesc compiledDataBlock = new(
+			CompiledShaderDataType.DXIL,
+			_variantFlags,
+			config.CreateDescriptionTxt(),
+			_dataOffset,
+			(uint)resultDxil.compiledShader.Length,
+			_entryPoint);
+
+			_dataOffset += (uint)resultDxil.compiledShader.Length;
+			_compiledDataBlocks.Add(compiledDataBlock);
+			_compiledDataDict.Add(new(CompiledShaderDataType.DXIL, _variantFlags), resultDxil.compiledShader);
 		}
 
 		return true;

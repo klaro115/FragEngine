@@ -1,21 +1,58 @@
-﻿using FragEngine3.Graphics.Resources.Import;
+﻿using FragEngine3.Graphics.Resources.Export;
+using FragEngine3.Graphics.Resources.Import;
 using FragEngine3.Graphics.Resources.Shaders;
 using FragEngine3.Graphics.Resources.Shaders.Internal;
+using FragEngine3.Resources;
 
 namespace FragAssetFormats.Shaders.FSHA;
 
 /// <summary>
 /// Exporter for the FSHA shader asset container format.
 /// </summary>
-public static class FshaExporter
+public class FshaExporter : IShaderExporter
 {
 	#region Fields
+
+	private static readonly string[] supportedFileExtensions = [ ".fsha" ];
 
 	private static readonly byte[] SECTION_SPACER = [ (byte)'\r', (byte)'\n', (byte)'#', (byte)'#', (byte)'#', (byte)'#', (byte)'#', (byte)'#', (byte)'\r', (byte)'\n' ];
 	private static readonly uint SECTION_SPACER_LENGTH = (uint)SECTION_SPACER.Length * sizeof(byte);
 
 	#endregion
-	#region Methods Export
+	#region Properties
+
+	public ShaderLanguage SupportedSourceCodeLanguages => ShaderLanguage.ALL;
+
+	public CompiledShaderDataType SupportedCompiledDataTypes => CompiledShaderDataType.ALL;
+
+	#endregion
+	#region Methods
+
+	public IReadOnlyCollection<string> GetSupportedFileFormatExtensions() => supportedFileExtensions;
+
+	public bool ExportShaderData(in ImporterContext _exportCtx, ShaderData _shaderData, Stream _outputResourceStream)
+	{
+		if (_exportCtx is null)
+		{
+			Console.WriteLine("Error! Cannot write shader data using null export context!");
+			return false;
+		}
+		if (_outputResourceStream is null)
+		{
+			_exportCtx.Logger.LogError("Cannot write shader data to null output stream!");
+			return false;
+		}
+		if (!_outputResourceStream.CanWrite)
+		{
+			_exportCtx.Logger.LogError("Cannot write shader data to read-only stream!");
+			return false;
+		}
+
+		using BinaryWriter writer = new(_outputResourceStream);
+
+		bool success = ExportToFSHA(in _exportCtx, writer, _shaderData, _exportCtx.PreferNiceFormatting);
+		return success;
+	}
 
 	/// <summary>
 	/// Serializes shader resource data and writes it to stream in FSHA format.
@@ -56,7 +93,6 @@ public static class FshaExporter
 		bool hasCompiledData = GatherCompiledDataBlocks(
 			in _exportCtx,
 			_shaderData,
-			_addSectionSpacer,
 			out var compiledDataBlocks,
 			out byte compiledDataBlockCount,
 			out ushort compiledDataSize);
@@ -168,7 +204,6 @@ public static class FshaExporter
 	private static bool GatherCompiledDataBlocks(
 		in ImporterContext _exportCtx,
 		ShaderData _shaderData,
-		bool _addSectionSpacers,
 		out List<Tuple<ShaderDataCompiledBlockDesc, byte[]>>? _outBlocks,
 		out byte _outCompiledDataBlockCount,
 		out ushort _outCompiledDataByteSize)
@@ -343,13 +378,6 @@ public static class FshaExporter
 			foreach (var block in _blocks)
 			{
 				_writer.Write(block.Item2);
-
-				//TEST TEST TEST TEST
-				for (int i = 0; i < 32; ++i)
-				{
-					_writer.Write((byte)':');
-				}
-				//TEST TEST TEST TEST
 			}
 			return true;
 		}
@@ -386,6 +414,11 @@ public static class FshaExporter
 			_exportCtx.Logger.LogException("Failed to advance binary writer to target position!", ex);
 			return false;
 		}
+	}
+
+	public IEnumerator<ResourceHandle> EnumerateSubresources(ImporterContext _importCtx, Stream _resourceFileStream)
+	{
+		yield break;
 	}
 
 	#endregion

@@ -24,6 +24,11 @@ public sealed class ImporterContext
 	public required JsonSerializerOptions? JsonOptions { get; init; }
 
 	/// <summary>
+	/// Whether to use human-readable, clean formatting and data layouts over more dense representations, if available.
+	/// </summary>
+	public bool PreferNiceFormatting { get; init; } = true;
+
+	/// <summary>
 	/// The culture to use for parsing text-based formats and encodings. English or invariant culture should be used if possible.
 	/// </summary>
 	public CultureInfo CultureInfo { get; init; } = CultureInfo.InvariantCulture;

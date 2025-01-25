@@ -22,6 +22,8 @@ internal static class Program
 	#endregion
 	#region Fields
 
+	private static readonly ShaderConfig shaderConfig = ShaderConfig.ConfigMinimal;
+	/*
 	private static readonly ShaderConfig shaderConfig = new()
 	{
 		albedoSource = ShaderAlbedoSource.SampleTexMain,
@@ -37,8 +39,11 @@ internal static class Program
 		shadowSamplingCount = 4,
 		alwaysCreateExtendedVariant = true,
 	};
+	*/
 	private static readonly string shaderDescriptionTxt = shaderConfig.CreateDescriptionTxt();
 
+	private static readonly ShaderConfig shaderConfigTexLit = ShaderConfig.ConfigMinimal;
+	/*
 	private static readonly ShaderConfig shaderConfigTexLit = new()
 	{
 		albedoSource = ShaderAlbedoSource.SampleTexMain,
@@ -54,6 +59,7 @@ internal static class Program
 		shadowSamplingCount = 8,
 		alwaysCreateExtendedVariant = true,
 	};
+	*/
 	private static readonly string shaderDescriptionTxtTexList = shaderConfigTexLit.CreateDescriptionTxt();
 
 	private static readonly ShaderProcess.Details[] details =

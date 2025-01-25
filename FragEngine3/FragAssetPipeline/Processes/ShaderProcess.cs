@@ -90,8 +90,8 @@ internal static class ShaderProcess
 			bundleOnlySourceIfCompilationFails = true,
 			shaderStage = _details.stage,
 			entryPointBase = _details.entryPointNameBase,
-			maxVertexVariantFlags = _details.maxVertexFlags,
-			compiledDataTypeFlags = CompiledShaderDataType.ALL,
+			maxVertexVariantFlags = MeshVertexDataFlags.BasicSurfaceData,// _details.maxVertexFlags,
+			compiledDataTypeFlags = CompiledShaderDataType.DXBC | CompiledShaderDataType.SPIRV,
 			bundledSourceCodeLanguages = _details.bundleSourceCode ? ShaderLanguage.ALL : 0,
 			supportedFeatures = _shaderConfig,
 		};
