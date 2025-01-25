@@ -1,71 +1,55 @@
-﻿using FragEngine3.EngineCore;
-using FragEngine3.Graphics.Resources.Data;
-using FragEngine3.Graphics.Resources.Data.ShaderTypes;
-using FragEngine3.Graphics.Resources.Import.ShaderFormats;
+﻿using FragEngine3.Graphics.Resources.Shaders;
+using FragEngine3.Graphics.Resources.Shaders.Internal;
 using FragEngine3.Resources;
 using Veldrid;
 
 namespace FragEngine3.Graphics.Resources.Import;
 
 /// <summary>
-/// Utility class for importing and creating shader resources.
+/// Hub instance for managing and delegating the import of shader programs through previously registered importers.
 /// </summary>
-public static class ShaderImporter
+/// <param name="_graphicsCore">The graphics core through which's graphics device the shaders shall be created and executed.</param>
+public sealed class ShaderImporter(ResourceManager _resourceManager, GraphicsCore _graphicsCore) : BaseResourceImporter<IShaderImporter>(_resourceManager, _graphicsCore)
 {
+	#region Types
+
+	private sealed class CompiledData
+	{
+		public required ShaderDataCompiledBlockDesc BlockDesc { get; init; }
+		public required byte[] ByteData { get; init; }
+	}
+
+	#endregion
+	#region Constructors
+
+	~ShaderImporter()
+	{
+		if (!IsDisposed) Dispose(false);
+	}
+
+	#endregion
 	#region Methods
 
-	/// <summary>
-	/// Imports shader data from a resource file.
-	/// </summary>
-	/// <param name="_resourceManager">The engine's resource manager, through which we want to load the resource data file.</param>
-	/// <param name="_handle">A resource handle identifying the shader resource we wish to import.</param>
-	/// <param name="_outShaderData">Outputs a shader data instance describing the shader resource, and containing source code and
-	/// pre-compiled shader programs.</param>
-	/// <returns>True if shader data could be generated or read for the given resource handle, or false, if the import failed.</returns>
-	public static bool ImportShaderData(ResourceManager _resourceManager, ResourceHandle _handle, out ShaderData? _outShaderData)
+	public bool ImportShaderData(ResourceHandle _handle, out ShaderData? _outShaderData)
 	{
-		// Check input parameters:
-		if (_handle is null || !_handle.IsValid)
+		if (IsDisposed)
 		{
-			Logger.Instance?.LogError("Cannot import shader data using null or invalid resource handle!");
-			_outShaderData = null;
-			return false;
-		}
-		if (_resourceManager is null || _resourceManager.IsDisposed)
-		{
-			Logger.Instance?.LogError("Cannot import shader data using null or disposed resource manager!");
+			logger.LogError($"Cannot import shader data using disposed {nameof(ShaderImporter)}!");
 			_outShaderData = null;
 			return false;
 		}
 
-		Logger logger = _handle.resourceManager.engine.Logger ?? Logger.Instance!;
-
-		// Retrieve the file that this resource is loaded from:
-		ResourceFileHandle fileHandle;
-		if (string.IsNullOrEmpty(_handle.fileKey))
+		if (!TryGetResourceFile(_handle, out ResourceFileHandle fileHandle))
 		{
-			if (!_handle.resourceManager.GetFileWithResource(_handle.fileKey, out fileHandle))
-			{
-				logger.LogError($"Could not find any resource data file containing resource handle '{_handle}'!");
-				_outShaderData = null;
-				return false;
-			}
-		}
-		else
-		{
-			if (!_handle.resourceManager.GetFile(_handle.fileKey, out fileHandle))
-			{
-				logger.LogError($"Resource data file for resource handle '{_handle}' does not exist!");
-				_outShaderData = null;
-				return false;
-			}
+			_outShaderData = null;
+			return false;
 		}
 
 		Stream? stream = null;
 		try
 		{
 			// Open file stream:
-			if (!fileHandle.TryOpenDataStream(_resourceManager.engine, _handle.dataOffset, _handle.dataSize, out stream, out _))
+			if (!fileHandle.TryOpenDataStream(resourceManager.engine, _handle.dataOffset, _handle.dataSize, out stream, out _))
 			{
 				logger.LogError($"Failed to open file stream for resource handle '{_handle}'!");
 				_outShaderData = null;
@@ -73,42 +57,27 @@ public static class ShaderImporter
 			}
 
 			// Import from stream, identifying file format from extension:
-			string formatExt = Path.GetExtension(fileHandle.dataFilePath).ToLowerInvariant();
-
-			switch (formatExt)
+			string formatExt = Path.GetExtension(fileHandle.dataFilePath);
+			if (string.IsNullOrEmpty(formatExt))
 			{
-				// A) FSHA shader asset file format:
-				case ".fsha":
-					if (!ShaderFshaImporter.ImportShaderData(stream, _handle, fileHandle, out _outShaderData))
-					{
-						_outShaderData = null;
-						return false;
-					}
-					break;
-				// B) Full source code file:
-				case ".hlsl":
-				case ".glsl":
-				case ".metal":
-				case ".spv":
-					if (!ShaderSourceCodeImporter.ImportShaderData(stream, _handle, fileHandle, formatExt, out _outShaderData))
-					{
-						_outShaderData = null;
-						return false;
-					}
-					break;
-				// C) Compressed or batched resource data file:
-				default:
-					if (!ShaderBackupImporter.ImportShaderData(stream, _handle, fileHandle, out _outShaderData))
-					{
-						_outShaderData = null;
-						return false;
-					}
-					break;
+				_outShaderData = null;
+				return false;
 			}
+			formatExt = formatExt.ToLowerInvariant();
+
+			if (!importerFormatDict.TryGetValue(formatExt, out IShaderImporter? importer))
+			{
+				logger.LogError($"Failed to import shader data for resource handle '{_handle}'!");
+				_outShaderData = null;
+				return false;
+			}
+
+			bool success = importer.ImportShaderData(importCtx, stream, out _outShaderData); 
+			return success;
 		}
 		catch (Exception ex)
 		{
-			logger.LogException($"Failed to import shader data for resource handle '{_handle}'!", ex);
+			logger.LogException($"Failed to import model data for resource handle '{_handle}'!", ex);
 			_outShaderData = null;
 			return false;
 		}
@@ -116,170 +85,196 @@ public static class ShaderImporter
 		{
 			stream?.Close();
 		}
-
-		return true;
 	}
 
-	/// <summary>
-	/// Creates a shader resource from shader data for a given resource handle.
-	/// </summary>
-	/// <param name="_resourceKey">The identifier key of the resource we're creating this shader for.</param>
-	/// <param name="_graphicsCore">The graphics core using which we want to upload and bind the resulting shader programs.</param>
-	/// <param name="_shaderData">A shader data object describing the shader resource, and providing source code or pre-compiled shader
-	/// programs for it.</param>
-	/// <param name="_outShaderRes">Outputs a new shader resource that is ready for use by the rendering pipeline.</param>
-	/// <returns>True if a shader resource could be created successfully, false if creating has failed.</returns>
-	public static bool CreateShader(string _resourceKey, GraphicsCore _graphicsCore, ShaderData _shaderData, out ShaderResource? _outShaderRes)
+	public bool CreateShader(string _resourceKey, ShaderData _shaderData, out ShaderResource? _outShaderResource)
 	{
 		// Check input parameters:
-		if (_graphicsCore is null || _graphicsCore.IsDisposed)
-		{
-			Logger.Instance?.LogError("Cannot create shader resource using null or disposed graphics core!");
-			_outShaderRes = null;
-			return false;
-		}
-		Logger? logger = _graphicsCore.graphicsSystem.engine.Logger ?? Logger.Instance;
-
 		if (string.IsNullOrEmpty(_resourceKey))
 		{
-			logger?.LogError("Cannot create shader resource for null or empty resource key!");
-			_outShaderRes = null;
+			logger.LogError("Cannot create shader resource for null or empty resource key!");
+			_outShaderResource = null;
 			return false;
 		}
 		if (_shaderData is null || !_shaderData.IsValid())
 		{
-			logger?.LogError("Cannot create shader resource data using null or invalid shader data!");
-			_outShaderRes = null;
+			logger.LogError("Cannot create shader resource data using null or invalid shader data!");
+			_outShaderResource = null;
 			return false;
 		}
 
-		Dictionary<MeshVertexDataFlags, byte[]> variantBytesDict = [];
+		ShaderLanguage sourceCodeLanguage = graphicsCore.DefaultShaderLanguage;
+		ShaderStages stage = _shaderData.Description.Stage;
 
-		// Prepare lookup table for all supported variants:
-		bool hasPrecompiledVariants = GatherPrecompiledVariants(
-			_shaderData,
-			variantBytesDict,
-			_graphicsCore.CompiledShaderDataType);
-
-		ShaderStages stage = _shaderData.Description.ShaderStage;
-		Dictionary<MeshVertexDataFlags, Shader> variants = [];
-		MeshVertexDataFlags supportedVariantFlags = MeshVertexDataFlags.BasicSurfaceData;
-		uint maxVariantIndex = 0;
-
-		// Compile or upload any pre-compiled shader programs immediately:
-		if (hasPrecompiledVariants)
+		if (!ShaderConfig.TryParseDescriptionTxt(_shaderData.Description.MinCapabilities, out ShaderConfig minConfig) ||
+			!ShaderConfig.TryParseDescriptionTxt(_shaderData.Description.MaxCapabilities, out ShaderConfig maxConfig))
 		{
-			foreach (var kvp in variantBytesDict)
+			logger.LogError("Failed to parse the minimum and maximum capabilities descriptions from shader data!");
+			_outShaderResource = null;
+			return false;
+		}
+
+		MeshVertexDataFlags maxSupportedVariantFlags = minConfig.GetVertexDataForVariantFlags() | maxConfig.GetVertexDataForVariantFlags();
+
+		// Identify all pre-compiled variants:
+		bool hasCompiledVariants = GetCompiledVariants(
+			_shaderData,
+			ref maxSupportedVariantFlags,
+			out List<CompiledData>? compiledBlocks);
+
+		// Select all source code variants:
+		_ = GetSourceCodeVariants(
+			_shaderData,
+			sourceCodeLanguage,
+			ref maxSupportedVariantFlags,
+			out List<ShaderDataSourceCodeDesc>? sourceCodeData,
+			out byte[]? sanitizedSourceCodeBytes);
+
+		// Allocate array of shader programs that will fit a matrix of all possible variants:
+		uint maxVariantIndex = maxSupportedVariantFlags.GetVariantIndex();
+		uint maxVariantCount = maxVariantIndex + 1;
+		Shader?[] precompiledVariants = new Shader[maxVariantCount];
+
+		// Upload compiled data to GPU as ready variants:
+		if (hasCompiledVariants)
+		{
+			foreach (CompiledData compiledData in compiledBlocks!)
 			{
-				if (!_shaderData.Description.GetCompiledShaderVariantData(_graphicsCore.CompiledShaderDataType, kvp.Key, string.Empty, out var data))
-				{
-					continue;
-				}
+				MeshVertexDataFlags variantFlags = compiledData.BlockDesc.VariantFlags;
+				uint variantIndex = variantFlags.GetVariantIndex();
 
 				try
 				{
-					ShaderDescription desc = new(stage, kvp.Value, data.EntryPoint);
+					ShaderDescription variantDesc = new(stage, compiledData.ByteData, compiledData.BlockDesc.EntryPoint);
 
-					Shader variant = _graphicsCore.MainFactory.CreateShader(ref desc);
-					variant.Name = $"{_resourceKey}_{stage}_V{(int)kvp.Key}";
-
-					variants.Add(kvp.Key, variant);
-
-					uint variantIndex = kvp.Key.GetVariantIndex();
-					maxVariantIndex = Math.Max(variantIndex, maxVariantIndex);
-					supportedVariantFlags |= kvp.Key;
+					Shader variant = graphicsCore.MainFactory.CreateShader(ref variantDesc);
+					variant.Name = $"{stage}Shader_{_resourceKey}_{variantFlags}";
+					precompiledVariants[variantIndex] = variant;
 				}
 				catch (Exception ex)
 				{
-					logger?.LogException($"Failed to load pre-compiled shader variant '{kvp.Key}' for shader resource '{_resourceKey}'!", ex);
+					logger.LogException($"Failed to create shader program for pre-compiled variant '{variantFlags}' of shader resource '{_resourceKey}'!", ex);
+					continue;
 				}
 			}
 		}
 
-		ShaderLanguage language = _graphicsCore.DefaultShaderLanguage;
-		byte[]? sanitizedSourceCodeBytes = null;
-
-		if (_shaderData.HasSourceCode())
+		// Try creating the actual shader resource object:
+		try
 		{
-			if (ShaderConfig.TryParseDescriptionTxt(_shaderData.Description.SourceCode!.MaximumCompiledFeaturesTxt, out ShaderConfig shaderConfig))
-			{
-				supportedVariantFlags |= shaderConfig.GetVertexDataForVariantFlags();
-				uint supportedVariantIndex = supportedVariantFlags.GetVariantIndex();
-				maxVariantIndex = Math.Max(supportedVariantIndex, maxVariantIndex);
-			}
-
-			// Remove all vertex variants flags and feature defines from source code, so we can quickly prepend them later:
-			if (_shaderData.SourceCode!.TryGetValue(language, out sanitizedSourceCodeBytes) && language != ShaderLanguage.SPIRV)
-			{
-				if (ShaderSourceCodeDefiner.SetVariantDefines(sanitizedSourceCodeBytes!, 0, true, out var buffer))
-				{
-					sanitizedSourceCodeBytes = new byte[buffer!.Length];
-					Array.Copy(buffer.Utf8ByteBuffer, 0, sanitizedSourceCodeBytes, 0, buffer.Length);
-					buffer!.ReleaseBuffer();
-				}
-				if (ShaderSourceCodeDefiner.SetFeatureDefines(sanitizedSourceCodeBytes!, shaderConfig.GetFeatureDefineStrings(false), true, out buffer))
-				{
-					sanitizedSourceCodeBytes = new byte[buffer!.Length];
-					Array.Copy(buffer.Utf8ByteBuffer, 0, sanitizedSourceCodeBytes, 0, buffer.Length);
-					buffer!.ReleaseBuffer();
-				}
-			}
+			_outShaderResource = new(
+				_resourceKey,
+				graphicsCore,
+				_shaderData.Description.Stage,
+				maxSupportedVariantFlags,
+				precompiledVariants,
+				sourceCodeLanguage,
+				maxConfig,
+				sourceCodeData,
+				sanitizedSourceCodeBytes);
+			return true;
 		}
-
-		uint maxVariantCount = Math.Max(maxVariantIndex + 1, 1);
-		Shader?[] variantLookupTable = new Shader?[maxVariantCount];
-		foreach (var kvp in variants)
+		catch (Exception ex)
 		{
-			uint variantIndex = kvp.Key.GetVariantIndex();
-			variantLookupTable[variantIndex] = kvp.Value;
+			logger.LogException($"Failed to create shader resource instance for resource key '{_resourceKey}'!", ex);
+			_outShaderResource = null;
+			return false;
 		}
-
-		// Try creating the shader resource:
-		_outShaderRes = new(
-			_resourceKey,
-			_graphicsCore,
-			stage,
-			supportedVariantFlags,
-			variantLookupTable,
-			language,
-			_shaderData.Description.SourceCode,
-			sanitizedSourceCodeBytes);
-		return true;
 	}
 
-	private static bool GatherPrecompiledVariants(
+	private bool GetCompiledVariants(
 		ShaderData _shaderData,
-		Dictionary<MeshVertexDataFlags, byte[]> _dstVariantBytesDict,
-		CompiledShaderDataType _compiledDataType)
+		ref MeshVertexDataFlags _maxSupportedVariantFlags,
+		out List<CompiledData>? _outCompiledBlocks)
 	{
-		if (_shaderData.Description.CompiledVariants is null ||
-			_shaderData.Description.CompiledVariants.Length == 0)
+		if (_shaderData.Description.CompiledBlocks is null)
 		{
+			_outCompiledBlocks = null;
 			return false;
 		}
 
-		byte[]? byteCode = _shaderData.GetByteCodeOfType(_compiledDataType);
-		if (byteCode is null)
+		CompiledShaderDataType supportedDataTypes = graphicsCore.CompiledShaderDataType;
+		if ((importCtx.SupportedShaderDataTypes & supportedDataTypes) == 0)
 		{
+			_outCompiledBlocks = null;
 			return false;
 		}
 
-		MeshVertexDataFlags ignoredVariantFlags = ~(_shaderData.Description.RequiredVariants | MeshVertexDataFlags.BasicSurfaceData);
-
-		foreach (ShaderDescriptionVariantData compiledVariant in _shaderData.Description.CompiledVariants)
+		_outCompiledBlocks = [];
+		foreach (var block in _shaderData.Description.CompiledBlocks)
 		{
-			// Skip unsupported types and unnecessary variants:
-			if (!_compiledDataType.HasFlag(compiledVariant.Type)) continue;
-			if ((compiledVariant.VariantFlags & ignoredVariantFlags) != 0) continue;
+			if (!supportedDataTypes.HasFlag(block.DataType))
+			{
+				continue;
+			}
+			if (!_shaderData.TryGetByteCode(block.DataType, block.VariantFlags, out byte[]? byteCode))
+			{
+				continue;
+			}
 
-			// Gather variants' pre-compiled byte data:
-			byte[] variantBytes = new byte[compiledVariant.ByteSize];
-			Array.Copy(byteCode, compiledVariant.RelativeByteOffset, variantBytes, 0, variantBytes.Length);
-			_dstVariantBytesDict.Add(compiledVariant.VariantFlags, variantBytes);
+			CompiledData compiledData = new()
+			{
+				BlockDesc = block,
+				ByteData = byteCode!,
+			};
+
+			_maxSupportedVariantFlags |= block.VariantFlags;
+			_outCompiledBlocks.Add(compiledData);
 		}
-		
+
+		return _outCompiledBlocks.Count != 0;
+	}
+
+	private static bool GetSourceCodeVariants(
+		ShaderData _shaderData,
+		ShaderLanguage _language,
+		ref MeshVertexDataFlags _maxSupportedVariantFlags,
+		out List<ShaderDataSourceCodeDesc>? _outSourceCodeData,
+		out byte[]? _outSanitizedSourceCodeBytes)
+	{
+		if (_shaderData.Description.SourceCode is null)
+		{
+			_outSourceCodeData = null;
+			_outSanitizedSourceCodeBytes = null;
+			return false;
+		}
+
+		if (!_shaderData.TryGetFullSourceCode(_language, out byte[]? fullSourceCodeBytes))
+		{
+			_outSourceCodeData = null;
+			_outSanitizedSourceCodeBytes = null;
+			return false;
+		}
+
+		_outSourceCodeData = new(_shaderData.Description.SourceCode.Length);
+		foreach (ShaderDataSourceCodeDesc blockDesc in _shaderData.Description.SourceCode)
+		{
+			if (blockDesc.Language == _language)
+			{
+				_maxSupportedVariantFlags |= blockDesc.VariantFlags;
+				_outSourceCodeData.Add(blockDesc);
+			}
+		}
+		if (_outSourceCodeData.Count == 0)
+		{
+			_outSanitizedSourceCodeBytes = null;
+			return false;
+		}
+
+		if (!ShaderSourceCodeDefiner.RemoveAllFeatureDefines(fullSourceCodeBytes!, out var sanitizedCodeBuffer))
+		{
+			sanitizedCodeBuffer?.ReleaseBuffer();
+			_outSourceCodeData = null;
+			_outSanitizedSourceCodeBytes = null;
+			return false;
+		}
+
+		_outSanitizedSourceCodeBytes = new byte[sanitizedCodeBuffer!.Length];
+		Array.Copy(sanitizedCodeBuffer.Utf8ByteBuffer, _outSanitizedSourceCodeBytes, sanitizedCodeBuffer.Length);
+
+		sanitizedCodeBuffer.ReleaseBuffer();
 		return true;
 	}
 
-#endregion
+	#endregion
 }

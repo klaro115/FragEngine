@@ -13,8 +13,8 @@ public sealed class AsciiIterator : IEnumerator<char>
 	#region Types
 
 	public readonly struct Position(int _utf8Position, int _codepointPosition, int _utf16Position)
-		{
-			public readonly int asciiPosition = _utf8Position;
+	{
+		public readonly int asciiPosition = _utf8Position;
 		public readonly int codepointPosition = _codepointPosition;
 		public readonly int utf16Position = _utf16Position;
 
@@ -214,11 +214,11 @@ public sealed class AsciiIterator : IEnumerator<char>
 		return Position.Invalid;
 	}
 
-		public override string ToString()
-		{
-			return $"ASCII Iterator {CurrentPosition} (ASCII Length: {asciiLength})";
-		}
-
-		#endregion
+	public override string ToString()
+	{
+		return $"ASCII Iterator {CurrentPosition} (ASCII Length: {asciiLength})";
 	}
+
+	#endregion
+}
 

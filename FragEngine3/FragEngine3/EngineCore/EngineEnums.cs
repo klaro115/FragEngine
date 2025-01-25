@@ -1,4 +1,5 @@
-﻿using Veldrid;
+﻿using FragEngine3.Graphics.Resources.Shaders;
+using Veldrid;
 
 namespace FragEngine3.EngineCore;
 
@@ -124,6 +125,81 @@ public static class EngineEnumsExt
 			EnginePlatformFlag.GraphicsAPI_Vulkan => GraphicsBackend.Vulkan,
 			EnginePlatformFlag.GraphicsAPI_Metal => GraphicsBackend.Metal,
 			_ => GraphicsBackend.OpenGL,
+		};
+	}
+
+	/// <summary>
+	/// Tries to get a graphics backend enum value corresponding to the platform flags.
+	/// </summary>
+	/// <param name="_platformFlags">These platform flags, typically drawn straight from <see cref="PlatformSystem.PlatformFlags"/>.</param>
+	/// <param name="_outBackend">Outputs the most likely graphics backend type for the given platform flag permutation.
+	/// This value should be discarded if the method returns false.</param>
+	/// <returns>True if the platform flags make sense and a graphics backend was identified, false otherwise.</returns>
+	public static bool GetGraphicsBackend(this EnginePlatformFlag _platformFlags, out GraphicsBackend _outBackend)
+	{
+		const EnginePlatformFlag vulkanPlatforms = EnginePlatformFlag.OS_Windows | EnginePlatformFlag.OS_Linux | EnginePlatformFlag.OS_FreeBSD;
+		const EnginePlatformFlag d3dFlags = EnginePlatformFlag.OS_Windows | EnginePlatformFlag.GraphicsAPI_D3D;
+		const EnginePlatformFlag metalFlags = EnginePlatformFlag.OS_MacOS | EnginePlatformFlag.GraphicsAPI_Metal;
+		
+		if ((_platformFlags & vulkanPlatforms) != 0 && _platformFlags.HasFlag(EnginePlatformFlag.GraphicsAPI_Vulkan))
+		{
+			_outBackend = GraphicsBackend.Vulkan;
+			return true;
+		}
+		if (_platformFlags.HasFlag(d3dFlags))
+		{
+			_outBackend = GraphicsBackend.Direct3D11;
+			return true;
+		}
+		if (_platformFlags.HasFlag(metalFlags))
+		{
+			_outBackend = GraphicsBackend.Metal;
+			return true;
+		}
+
+		_outBackend = GraphicsBackend.OpenGL;
+		return false;
+	}
+
+	/// <summary>
+	/// Gets the bit flags of all types of pre-compiled shader data that are supported on a set of platform flags.
+	/// </summary>
+	/// <param name="_platformFlags">These platform flags, typically drawn straight from <see cref="PlatformSystem.PlatformFlags"/>.</param>
+	/// <returns>Bit flags for supported compiled data types. More than one flag may be raised, depending on graphics API.</returns>
+	public static CompiledShaderDataType GetCompiledShaderDataTypeFlags(this EnginePlatformFlag _platformFlags)
+	{
+		if (!GetGraphicsBackend(_platformFlags, out GraphicsBackend backend))
+		{
+			return 0;
+		}
+
+		return backend switch
+		{
+			GraphicsBackend.Direct3D11 => CompiledShaderDataType.DXBC | CompiledShaderDataType.DXIL,
+			GraphicsBackend.Vulkan => CompiledShaderDataType.SPIRV,
+			GraphicsBackend.Metal => CompiledShaderDataType.MetalArchive,
+			_ => 0,
+		};
+	}
+
+	/// <summary>
+	/// Gets the preferred shader language for compiling shader programs from source code on the current platform.
+	/// </summary>
+	/// <param name="_platformFlags">These platform flags, typically drawn straight from <see cref="PlatformSystem.PlatformFlags"/>.</param>
+	/// <returns>A shader language that is most likely to work on the given platform flag permutation, or zero, if no fitting language was found.</returns>
+	public static ShaderLanguage GetPreferredShaderLanguage(this EnginePlatformFlag _platformFlags)
+	{
+		if (!GetGraphicsBackend(_platformFlags, out GraphicsBackend backend))
+		{
+			return 0;
+		}
+
+		return backend switch
+		{
+			GraphicsBackend.Direct3D11 => ShaderLanguage.HLSL,
+			GraphicsBackend.Vulkan => ShaderLanguage.HLSL,
+			GraphicsBackend.Metal => ShaderLanguage.Metal,
+			_ => ShaderLanguage.GLSL,
 		};
 	}
 

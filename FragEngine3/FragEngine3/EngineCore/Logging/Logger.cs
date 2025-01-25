@@ -2,7 +2,7 @@
 
 namespace FragEngine3.EngineCore;
 
-public sealed class Logger
+public sealed class Logger : ILogger
 {
 	#region Constructors
 

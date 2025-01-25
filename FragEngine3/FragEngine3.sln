@@ -9,6 +9,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TestApp", "TestApp\TestApp.
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "FragAssetPipeline", "FragAssetPipeline\FragAssetPipeline.csproj", "{BFCF2ABD-1D12-4529-AECE-BEBE61DBEF03}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "FragAssetFormats", "FragAssetFormats\FragAssetFormats.csproj", "{0B756598-DB2D-4BD9-9357-4B3D35E98557}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug_MacOS|Any CPU = Debug_MacOS|Any CPU
@@ -41,6 +43,14 @@ Global
 		{BFCF2ABD-1D12-4529-AECE-BEBE61DBEF03}.Release_MacOS|Any CPU.Build.0 = Release|Any CPU
 		{BFCF2ABD-1D12-4529-AECE-BEBE61DBEF03}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{BFCF2ABD-1D12-4529-AECE-BEBE61DBEF03}.Release|Any CPU.Build.0 = Release|Any CPU
+		{0B756598-DB2D-4BD9-9357-4B3D35E98557}.Debug_MacOS|Any CPU.ActiveCfg = Debug|Any CPU
+		{0B756598-DB2D-4BD9-9357-4B3D35E98557}.Debug_MacOS|Any CPU.Build.0 = Debug|Any CPU
+		{0B756598-DB2D-4BD9-9357-4B3D35E98557}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{0B756598-DB2D-4BD9-9357-4B3D35E98557}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{0B756598-DB2D-4BD9-9357-4B3D35E98557}.Release_MacOS|Any CPU.ActiveCfg = Release|Any CPU
+		{0B756598-DB2D-4BD9-9357-4B3D35E98557}.Release_MacOS|Any CPU.Build.0 = Release|Any CPU
+		{0B756598-DB2D-4BD9-9357-4B3D35E98557}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{0B756598-DB2D-4BD9-9357-4B3D35E98557}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

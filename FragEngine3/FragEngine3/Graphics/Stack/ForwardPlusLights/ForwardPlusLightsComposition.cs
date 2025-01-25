@@ -3,6 +3,7 @@ using FragEngine3.Graphics.Components;
 using FragEngine3.Graphics.Components.Internal;
 using FragEngine3.Graphics.Contexts;
 using FragEngine3.Graphics.Resources;
+using FragEngine3.Graphics.Resources.Materials;
 using FragEngine3.Resources;
 using FragEngine3.Scenes;
 using Veldrid;

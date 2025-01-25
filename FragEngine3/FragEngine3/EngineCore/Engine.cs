@@ -1,5 +1,6 @@
 ﻿using FragEngine3.EngineCore.Config;
 using FragEngine3.EngineCore.EngineStates;
+using FragEngine3.EngineCore.Health;
 using FragEngine3.EngineCore.Input;
 using FragEngine3.EngineCore.Jobs;
 using FragEngine3.EngineCore.Logging;
@@ -31,10 +32,12 @@ public sealed class Engine : IDisposable
 		ResourceManager = new ResourceManager(this);
 		InputManager = new InputManager(this);
 		GraphicsSystem = new GraphicsSystem(this);
+		GraphicsResourceLoader = new GraphicsResourceLoader(this);
 		SceneManager = new SceneManager(this);
 		JobManager = new JobManager(this);
+		HealthCheckSystem = new HealthCheckSystem(this);
 		//...
-		
+
 		// Create all engine state instances:
 		startupState = new(this, applicationLogic);
 		loadingState = new(this, applicationLogic);
@@ -84,8 +87,10 @@ public sealed class Engine : IDisposable
 	public ResourceManager ResourceManager { get; init; } = null!;
 	public InputManager InputManager { get; init; } = null!;
 	public GraphicsSystem GraphicsSystem { get; init; } = null!;
+	public GraphicsResourceLoader GraphicsResourceLoader { get; init; } = null!;
 	public SceneManager SceneManager { get; init; } = null!;
 	public JobManager JobManager { get; init; } = null!;
+	public HealthCheckSystem HealthCheckSystem { get; init; } = null!;
 	//...
 
 	public static Engine? Instance { get; private set; } = null;
@@ -104,8 +109,10 @@ public sealed class Engine : IDisposable
 
 		IsDisposed = true;
 
+		HealthCheckSystem?.Dispose();
 		JobManager?.Dispose();
 		SceneManager?.Dispose();
+		GraphicsResourceLoader?.Dispose();
 		GraphicsSystem?.Dispose();
 		InputManager?.Dispose();
 		ResourceManager?.Dispose();

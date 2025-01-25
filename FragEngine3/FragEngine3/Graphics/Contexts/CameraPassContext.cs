@@ -14,23 +14,23 @@ public sealed class CameraPassContext
 	#region Fields
 
 	// References:
-	public CameraInstance CameraInstance { get; init; } = null!;
-	public CommandList CmdList { get; init; } = null!;
+	public required CameraInstance CameraInstance { get; init; } = null!;
+	public required CommandList CmdList { get; init; } = null!;
 
 	// Camera resources:
-	public Framebuffer Framebuffer { get; init; } = null!;
-	public ResourceSet ResSetCamera { get; init; } = null!;
-	public DeviceBuffer CbCamera { get; init; } = null!;
-	public LightDataBuffer LightDataBuffer { get; init; } = null!;
-	public ushort CameraResourceVersion { get; init; }
+	public required Framebuffer Framebuffer { get; init; } = null!;
+	public required ResourceSet ResSetCamera { get; init; } = null!;
+	public required DeviceBuffer CbCamera { get; init; } = null!;
+	public required LightDataBuffer LightDataBuffer { get; init; } = null!;
+	public required ushort CameraResourceVersion { get; init; }
 
 	// Parameters:
-	public uint FrameIdx { get; init; }
-	public uint PassIdx { get; init; }
-	public uint LightCountShadowMapped { get; init; }
-	public Matrix4x4 MtxWorld2Clip { get; init; }
-	public OutputDescription OutputDesc { get; init; }
-	public bool MirrorY { get; init; }
+	public required uint FrameIdx { get; init; }
+	public required uint PassIdx { get; init; }
+	public required uint LightCountShadowMapped { get; init; }
+	public required Matrix4x4 MtxWorld2Clip { get; init; }
+	public required OutputDescription OutputDesc { get; init; }
+	public required bool MirrorY { get; init; }
 	
 	#endregion
 }

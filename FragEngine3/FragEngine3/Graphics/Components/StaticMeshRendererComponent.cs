@@ -2,7 +2,7 @@
 using FragEngine3.Graphics.Components.Data;
 using FragEngine3.Graphics.Contexts;
 using FragEngine3.Graphics.Renderers;
-using FragEngine3.Graphics.Resources;
+using FragEngine3.Graphics.Resources.Materials;
 using FragEngine3.Resources;
 using FragEngine3.Scenes;
 using FragEngine3.Scenes.Data;

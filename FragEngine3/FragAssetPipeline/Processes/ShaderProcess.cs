@@ -1,7 +1,8 @@
-﻿using FragAssetPipeline.Resources.Shaders;
+﻿using FragAssetPipeline.Common;
+using FragAssetPipeline.Resources.Shaders;
 using FragEngine3.Graphics.Resources;
-using FragEngine3.Graphics.Resources.Data;
-using FragEngine3.Graphics.Resources.Data.ShaderTypes;
+using FragEngine3.Graphics.Resources.Import;
+using FragEngine3.Graphics.Resources.Shaders;
 using FragEngine3.Resources;
 using FragEngine3.Resources.Data;
 using Veldrid;
@@ -24,7 +25,7 @@ internal static class ShaderProcess
 	/// <param name="_stage">The shader stage within the rasterized pipeline that this resource's shader programs will be bound to.</param>
 	/// <param name="_maxVertexFlags">Maximum vertex flags that should be pre-compiled; variants with other flags may still be compiled from source code at run-time.</param>
 	/// <param name="_bundleSourceCode">Whether to include original source code in the exported FSHA file. If false, run-time compilation of additional variants won't be possible.</param>
-	public sealed class Details(string _resourceKey, string _relativeFilePath, string _entryPointNameBase, ShaderStages _stage, MeshVertexDataFlags _maxVertexFlags, bool _bundleSourceCode = true)
+	public sealed class Details(string _resourceKey, string _relativeFilePath, string _entryPointNameBase, ShaderStages _stage, MeshVertexDataFlags _maxVertexFlags, bool _bundleSourceCode = true, bool _bundlePrecompiledData = true)
 	{
 		public readonly string resourceKey = _resourceKey;
 		public readonly string relativeFilePath = _relativeFilePath;
@@ -33,6 +34,7 @@ internal static class ShaderProcess
 		public readonly MeshVertexDataFlags maxVertexFlags = _maxVertexFlags;
 		public string descriptionTxt = "At_Nyn0_Ly101p140_V100";
 		public bool bundleSourceCode = _bundleSourceCode;
+		public bool bundlePrecompiledData = _bundlePrecompiledData;
 
 		public ShaderConfig Config
 		{
@@ -52,6 +54,15 @@ internal static class ShaderProcess
 		".metal",
 		".glsl",
 	];
+
+	private static readonly ImporterContext exportCtx = new()
+	{
+		Logger = new ConsoleLogger(),
+		JsonOptions = new()
+		{
+			WriteIndented = true,
+		},
+	};
 
 	#endregion
 	#region Methods
@@ -75,20 +86,21 @@ internal static class ShaderProcess
 		}
 
 		// Prepare export in FSHA-compliant format:
-		FshaExportOptions options = new()
+		ShaderExportOptions options = new()
 		{
-			bundleOnlySourceIfCompilationFails = true,
+			bundleOnlySourceIfCompilationFails = false,
 			shaderStage = _details.stage,
 			entryPointBase = _details.entryPointNameBase,
 			maxVertexVariantFlags = _details.maxVertexFlags,
-			compiledDataTypeFlags = CompiledShaderDataType.ALL,
+			compiledDataTypeFlags = _details.bundlePrecompiledData ? CompiledShaderDataType.ALL : 0,
+			bundledSourceCodeLanguages = _details.bundleSourceCode ? ShaderLanguage.ALL : 0,
 			supportedFeatures = _shaderConfig,
 		};
 
 		return CompileShaderToFSHA(_details.relativeFilePath, _details.resourceKey, _inputDir, _outputDir, options, out _outDataFilePath);
 	}
 
-	public static bool CompileShaderToFSHA(string _hlslFileRelativePath, string? _overrideFileName, string _inputDir, string _outputDir, FshaExportOptions _exportOptions, out string _outDataFilePath)
+	public static bool CompileShaderToFSHA(string _hlslFileRelativePath, string? _overrideFileName, string _inputDir, string _outputDir, ShaderExportOptions _exportOptions, out string _outDataFilePath)
 	{
 		if (string.IsNullOrEmpty(_hlslFileRelativePath))
 		{
@@ -116,7 +128,7 @@ internal static class ShaderProcess
 		}
 
 		// Export shader data:
-		bool success = FshaExporter.ExportShaderFromHlslFile(sourceDataFilePath, _exportOptions, out ShaderData? shaderData);
+		bool success = ShaderDataLoader.CreateShaderDataFromSourceCode(sourceDataFilePath, _exportOptions, out ShaderData? shaderData);
 
 		// Write shader data file:
 		if (success && shaderData is not null)
@@ -124,7 +136,7 @@ internal static class ShaderProcess
 			using FileStream stream = new(_outDataFilePath, FileMode.Create);
 			using BinaryWriter writer = new(stream);
 
-			success &= shaderData.Write(writer, true);
+			success &= FragAssetFormats.Shaders.FSHA.FshaExporter.ExportToFSHA(in exportCtx, writer, shaderData, true);
 			stream.Close();
 		}
 
