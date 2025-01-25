@@ -1,5 +1,6 @@
 ﻿using FragAssetFormats.Geometry;
 using FragAssetFormats.Geometry.OBJ;
+using FragAssetFormats.Images;
 using FragAssetFormats.Shaders.FSHA;
 using FragEngine3.EngineCore;
 using FragEngine3.EngineCore.Config;
@@ -25,6 +26,12 @@ try
 
 		// Shader formats:
 		engine.GraphicsResourceLoader.RegisterShaderImporter(new FshaImporter());
+
+		// Image formats:
+		engine.GraphicsResourceLoader.RegisterImageImporter(new BitmapImporter());
+		engine.GraphicsResourceLoader.RegisterImageImporter(new QoiImporter());
+		//...
+		engine.GraphicsResourceLoader.RegisterImageImporter(new MagickImporter()); //fallback
 	}
 
 	engine.Run();

@@ -21,7 +21,7 @@ public interface IImageImporter : IGraphicsResourceImporter
 	#endregion
 	#region Methods
 
-	bool ImportImage(in ImporterContext _importCtx, Stream _byteStream, out RawImageData? _outRawImage);
+	bool ImportImageData(in ImporterContext _importCtx, Stream _byteStream, out RawImageData? _outRawImage);
 
 	#endregion
 }

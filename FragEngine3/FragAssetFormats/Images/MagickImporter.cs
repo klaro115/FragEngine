@@ -101,7 +101,7 @@ public sealed class MagickImporter : IImageImporter
 		return flags;
 	}
 
-	public bool ImportImage(in ImporterContext _importCtx, Stream _stream, out RawImageData _outRawImage)
+	public bool ImportImageData(in ImporterContext _importCtx, Stream _stream, out RawImageData _outRawImage)
 	{
 		ImportFlags hdrFlags = _importCtx.PreferHDR ? ImportFlags.HDR : ImportFlags.SDR;
 

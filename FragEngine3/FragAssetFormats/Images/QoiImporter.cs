@@ -49,7 +49,7 @@ public sealed class QoiImporter : IImageImporter
 
 	public IReadOnlyCollection<string> GetSupportedFileFormatExtensions() => supportedFormatExtensions;
 
-	public bool ImportImage(in ImporterContext _, Stream _byteStream, out RawImageData? _outRawImage)
+	public bool ImportImageData(in ImporterContext _, Stream _byteStream, out RawImageData? _outRawImage)
 	{
 		// Link with format reference: https://qoiformat.org/
 		// Link to reference implementation: https://github.com/phoboslab/qoi/blob/master/qoi.h

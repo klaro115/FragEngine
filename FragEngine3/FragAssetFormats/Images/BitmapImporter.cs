@@ -81,7 +81,7 @@ public sealed class BitmapImporter : IImageImporter
 
 	public IReadOnlyCollection<string> GetSupportedFileFormatExtensions() => supportedFormatExtensions;
 
-	public bool ImportImage(in ImporterContext _, Stream _byteStream, out RawImageData? _outRawImage)
+	public bool ImportImageData(in ImporterContext _, Stream _byteStream, out RawImageData? _outRawImage)
 	{
 		// Link with format reference: https://de.wikipedia.org/wiki/Windows_Bitmap
 		if (_byteStream == null)

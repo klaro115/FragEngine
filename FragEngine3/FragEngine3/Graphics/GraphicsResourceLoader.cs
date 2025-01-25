@@ -20,6 +20,7 @@ public sealed class GraphicsResourceLoader : IDisposable
 
 		modelImporter = new(engine.ResourceManager, engine.GraphicsSystem.graphicsCore);
 		shaderImporter = new(engine.ResourceManager, engine.GraphicsSystem.graphicsCore);
+		imageImporter = new(engine.ResourceManager, engine.GraphicsSystem.graphicsCore);
 		//...
 	}
 
@@ -41,6 +42,10 @@ public sealed class GraphicsResourceLoader : IDisposable
 	/// The service responsible for managing shader import.
 	/// </summary>
 	internal readonly ShaderImporter shaderImporter;
+	/// <summary>
+	/// The service responsible for managing image and texture import.
+	/// </summary>
+	internal readonly ImageImporter imageImporter;
 	//...
 
 	#endregion
@@ -84,6 +89,16 @@ public sealed class GraphicsResourceLoader : IDisposable
 	public bool RegisterModelImporter(IModelImporter _newImporter)
 	{
 		return !IsDisposed && modelImporter.RegisterImporter(_newImporter);
+	}
+
+	/// <summary>
+	/// Tries to register a new image or texture importer.
+	/// </summary>
+	/// <param name="_newImporter">The new importer instance.</param>
+	/// <returns>True if the importer was registered successfully, false otherwise.</returns>
+	public bool RegisterImageImporter(IImageImporter _newImporter)
+	{
+		return !IsDisposed && imageImporter.RegisterImporter(_newImporter);
 	}
 
 	#endregion
