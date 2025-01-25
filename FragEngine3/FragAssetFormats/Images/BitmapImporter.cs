@@ -1,23 +1,24 @@
 ﻿using FragEngine3.EngineCore;
 using FragEngine3.Graphics.Resources.Data;
+using FragEngine3.Graphics.Resources.Import;
+using FragEngine3.Resources;
 using Veldrid;
 
-namespace FragEngine3.Graphics.Resources.Import.ImageFormats;
+namespace FragAssetFormats.Images;
 
 /// <summary>
 /// Importer for the Microsoft Bitmap image file format.
 /// </summary>
-[Obsolete("Replaced in FragAssetFormats project")]
-public static class BitmapImporter
+public sealed class BitmapImporter : IImageImporter
 {
 	#region Types
 
 	private enum BiCompression : uint
 	{
-		BI_RGB = 0,							// uncompressed
-		BI_RLE8 = 1,						// running length encoding, requires: biBitCount=8, biHeight>0
-		BI_RLE4 = 2,						// running length encoding, requires: biBitCount=4, biHeight>0
-		BI_BITFIELDS = 3,					// uncompressed, but using bit masks, requires: biBitCount=16 or 32.
+		BI_RGB = 0,                         // uncompressed
+		BI_RLE8 = 1,                        // running length encoding, requires: biBitCount=8, biHeight>0
+		BI_RLE4 = 2,                        // running length encoding, requires: biBitCount=4, biHeight>0
+		BI_BITFIELDS = 3,                   // uncompressed, but using bit masks, requires: biBitCount=16 or 32.
 	}
 
 	private struct BmpHeader
@@ -60,14 +61,27 @@ public static class BitmapImporter
 	}
 
 	#endregion
+	#region Fields
+
+	private static readonly string[] supportedFormatExtensions = [ ".bmp" ];
+
+	#endregion
 	#region Constants
 
 	private const float PPM2DPI = 0.0254f;
 
 	#endregion
+	#region Properties
+
+	public uint MinimumBitDepth => 1;
+	public uint MaximumBitDepth => 8;
+
+	#endregion
 	#region Methods
 
-	public static bool ImportImage(Stream _byteStream, out RawImageData? _outRawImage)
+	public IReadOnlyCollection<string> GetSupportedFileFormatExtensions() => supportedFormatExtensions;
+
+	public bool ImportImage(in ImporterContext _, Stream _byteStream, out RawImageData? _outRawImage)
 	{
 		// Link with format reference: https://de.wikipedia.org/wiki/Windows_Bitmap
 		if (_byteStream == null)
@@ -162,10 +176,10 @@ public static class BitmapImporter
 		{
 			_outHeader = new BmpHeader()
 			{
-				bfType			= _reader.ReadUInt16(),  // ASCII "BM"
-				bfSize			= _reader.ReadUInt32(),  // File size in bytes
-				bfReserved		= _reader.ReadUInt32(),  // Reserved, should be 0
-				bfOffBits		= _reader.ReadUInt32(),   // Byte offset where image data starts, usually 54
+				bfType = _reader.ReadUInt16(),  // ASCII "BM"
+				bfSize = _reader.ReadUInt32(),  // File size in bytes
+				bfReserved = _reader.ReadUInt32(),  // Reserved, should be 0
+				bfOffBits = _reader.ReadUInt32(),   // Byte offset where image data starts, usually 54
 			};
 			return true;
 		}
@@ -183,17 +197,17 @@ public static class BitmapImporter
 		{
 			_outInfoBlock = new BmpInfoBlock()
 			{
-				biSize			= _reader.ReadUInt32(),
-				biWidth			= _reader.ReadInt32(),
-				biHeight		= _reader.ReadInt32(),
-				biPlanes		= _reader.ReadUInt16(),
-				biBitCount		= _reader.ReadUInt16(),
-				biCompression	= (BiCompression)_reader.ReadUInt32(),
-				biSizeImage		= _reader.ReadUInt32(),
-				biXPelsPerMeter	= _reader.ReadInt32(),
-				biYPelsPerMeter	= _reader.ReadInt32(),
-				biClrUsed		= _reader.ReadUInt16(),
-				biClrImportant	= _reader.ReadUInt16(),
+				biSize = _reader.ReadUInt32(),
+				biWidth = _reader.ReadInt32(),
+				biHeight = _reader.ReadInt32(),
+				biPlanes = _reader.ReadUInt16(),
+				biBitCount = _reader.ReadUInt16(),
+				biCompression = (BiCompression)_reader.ReadUInt32(),
+				biSizeImage = _reader.ReadUInt32(),
+				biXPelsPerMeter = _reader.ReadInt32(),
+				biYPelsPerMeter = _reader.ReadInt32(),
+				biClrUsed = _reader.ReadUInt16(),
+				biClrImportant = _reader.ReadUInt16(),
 			};
 			return true;
 		}
@@ -423,8 +437,8 @@ public static class BitmapImporter
 			for (int x = 0; x < halfWidth; ++x)
 			{
 				byte doubleIdx = _reader.ReadByte();
-				int srcIdx0 = (doubleIdx >> 4) & 0x0F;
-				int srcIdx1 = (doubleIdx >> 0) & 0x0F;
+				int srcIdx0 = doubleIdx >> 4 & 0x0F;
+				int srcIdx1 = doubleIdx >> 0 & 0x0F;
 				int dstIdxStart = dstRowStartIdx + 2 * x;
 
 				_pixelData[dstIdxStart + 0] = _colorTable.colors[srcIdx0];
@@ -491,9 +505,9 @@ public static class BitmapImporter
 			for (int x = 0; x < width; ++x)
 			{
 				ushort packed = _reader.ReadUInt16();   // RGB555, 1st bit is unused
-				byte r = (byte)((packed >> 10) & 0x1F);
-				byte g = (byte)((packed >>  5) & 0x1F);
-				byte b = (byte)((packed >>  0) & 0x1F);
+				byte r = (byte)(packed >> 10 & 0x1F);
+				byte g = (byte)(packed >> 5 & 0x1F);
+				byte b = (byte)(packed >> 0 & 0x1F);
 
 				_pixelData[dstRowStartIdx + x] = new(r, g, b, 0xFF);
 			}
@@ -560,10 +574,10 @@ public static class BitmapImporter
 			for (int x = 0; x < width; ++x)
 			{
 				uint packed = _reader.ReadUInt32();
-				byte a = (byte)((packed >> 24) & 0xFF);
-				byte r = (byte)((packed >> 16) & 0xFF);
-				byte g = (byte)((packed >>  8) & 0xFF);
-				byte b = (byte)((packed >>  0) & 0xFF);
+				byte a = (byte)(packed >> 24 & 0xFF);
+				byte r = (byte)(packed >> 16 & 0xFF);
+				byte g = (byte)(packed >> 8 & 0xFF);
+				byte b = (byte)(packed >> 0 & 0xFF);
 
 				_pixelData[dstRowStartIdx + x] = new(r, g, b, a);
 			}
@@ -653,6 +667,11 @@ public static class BitmapImporter
 		}
 
 		return true;
+	}
+
+	public IEnumerator<ResourceHandle> EnumerateSubresources(ImporterContext _importCtx, Stream _resourceFileStream)
+	{
+		yield break;
 	}
 
 	#endregion

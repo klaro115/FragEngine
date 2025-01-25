@@ -44,6 +44,15 @@ public sealed class ImporterContext
 	/// </summary>
 	public CompiledShaderDataType SupportedShaderDataTypes { get; init; } = CompiledShaderDataType.ALL;
 
+	/// <summary>
+	/// Whether to prefer bit depths of more than 8 bits per color channel per pixel for image and video import.
+	/// </summary>
+	public bool PreferHighBitDepth { get; init; } = true;
+	/// <summary>
+	/// Whether to prefer HDR images or videos over SDR.
+	/// </summary>
+	public bool PreferHDR { get; init; } = true;
+
 	#endregion
 	#region Methods
 

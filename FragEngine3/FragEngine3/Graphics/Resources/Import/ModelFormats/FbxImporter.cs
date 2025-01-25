@@ -8,6 +8,7 @@ namespace FragEngine3.Graphics.Resources.Import.ModelFormats;
 /// <summary>
 /// Importer for the FBX 3D file format.
 /// </summary>
+[Obsolete("Moved to FragAssetFormats project")]
 public class FbxImporter : IModelImporter
 {
 	#region Fields

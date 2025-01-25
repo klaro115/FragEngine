@@ -1,16 +1,17 @@
 ﻿using FragEngine3.EngineCore;
 using FragEngine3.Graphics.Resources.Data;
+using FragEngine3.Graphics.Resources.Import;
+using FragEngine3.Resources;
 using ImageMagick;
 using Veldrid;
 
-namespace FragEngine3.Graphics.Resources.Import.ImageFormats;
+namespace FragAssetFormats.Images;
 
 /// <summary>
 /// Importer for the various image file formats.<para/>
 /// NOTE: This is used as a backup for any image formats not implemented directly be the engine.
 /// </summary>
-[Obsolete("Replaced in FragAssetFormats project")]
-public static class MagickImporter
+public sealed class MagickImporter : IImageImporter
 {
 	#region Types
 
@@ -48,7 +49,15 @@ public static class MagickImporter
 	private const float PPCm2DPI = 2.54f;
 
 	#endregion
+	#region Properties
+
+	public uint MinimumBitDepth => 1;
+	public uint MaximumBitDepth => 16;
+
+	#endregion
 	#region Methods
+
+	public IReadOnlyCollection<string> GetSupportedFileFormatExtensions() => supportedFormatExtensions;
 
 	/// <summary>
 	/// Checks whether a given file format is at all supported.
@@ -92,6 +101,14 @@ public static class MagickImporter
 		return flags;
 	}
 
+	public bool ImportImage(in ImporterContext _importCtx, Stream _stream, out RawImageData _outRawImage)
+	{
+		ImportFlags hdrFlags = _importCtx.PreferHDR ? ImportFlags.HDR : ImportFlags.SDR;
+
+		bool success = ImportImage(_stream, hdrFlags, out _outRawImage);
+		return success;
+	}
+
 	public static bool ImportImage(Stream _stream, ImportFlags _importFlags, out RawImageData _outRawImage)
 	{
 		if (_stream == null)
@@ -125,8 +142,8 @@ public static class MagickImporter
 			}
 
 			// Create and initialize raw image data object:
-			_outRawImage.width = (uint)img.Width;
-			_outRawImage.height = (uint)img.Height;
+			_outRawImage.width = img.Width;
+			_outRawImage.height = img.Height;
 			{
 				Density density = img.Density;
 				_outRawImage.dpi = density.Units switch
@@ -136,7 +153,7 @@ public static class MagickImporter
 					_ => 0,
 				};
 			}
-			_outRawImage.channelCount = (uint)img.ChannelCount;
+			_outRawImage.channelCount = img.ChannelCount;
 			_outRawImage.isSRgb = false;// img.ColorSpace == ColorSpace.sRGB;		// note: ignoring sRGB appears to be right, pixels seem to be converted on read.
 
 			// Get a collection of all image pixels:
@@ -269,6 +286,11 @@ public static class MagickImporter
 			}
 		}
 		return true;
+	}
+
+	public IEnumerator<ResourceHandle> EnumerateSubresources(ImporterContext _importCtx, Stream _resourceFileStream)
+	{
+		yield break;
 	}
 
 	#endregion

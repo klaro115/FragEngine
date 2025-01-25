@@ -1,8 +1,8 @@
-﻿using FragAssetFormats.Geometry.OBJ;
+﻿using FragAssetFormats.Geometry;
+using FragAssetFormats.Geometry.OBJ;
 using FragAssetFormats.Shaders.FSHA;
 using FragEngine3.EngineCore;
 using FragEngine3.EngineCore.Config;
-using FragEngine3.Graphics.Resources.Import.ModelFormats;
 using TestApp.Application;
 
 Console.WriteLine("### Starting...\n");

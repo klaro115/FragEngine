@@ -1,41 +1,55 @@
 ﻿using System.Runtime.CompilerServices;
 using FragEngine3.EngineCore;
 using FragEngine3.Graphics.Resources.Data;
+using FragEngine3.Graphics.Resources.Import;
+using FragEngine3.Resources;
 using Veldrid;
 
-namespace FragEngine3.Graphics.Resources.Import.ImageFormats;
+namespace FragAssetFormats.Images;
 
 /// <summary>
 /// Importer for the QOI (Quite Okay Image) file format.
 /// </summary>
-[Obsolete("Replaced in FragAssetFormats project")]
-public static class QoiImporter
+public sealed class QoiImporter : IImageImporter
 {
 	#region Types
 
 	private struct QoiHeader
 	{
-		public uint magicNumbers;	// ASCII 'qoif'
-		public uint width;			// Image width
-		public uint height;			// Image height
-		public byte channels;		// 3=RGB, 4=RGBA
-		public bool isLinear;		// 0=sRGB with linear Alpha, 1=RGBA linear
+		public uint magicNumbers;   // ASCII 'qoif'
+		public uint width;          // Image width
+		public uint height;         // Image height
+		public byte channels;       // 3=RGB, 4=RGBA
+		public bool isLinear;       // 0=sRGB with linear Alpha, 1=RGBA linear
 	}
+
+	#endregion
+	#region Fields
+
+	private static readonly string[] supportedFormatExtensions = [ ".qoi" ];
 
 	#endregion
 	#region Constants
 
-	private const byte TAG_QOI_OP_RGB = 0xFE;
-	private const byte TAG_QOI_OP_RGBA = 0xFF;
+	private const byte TAG_QOI_OP_RGB   = 0xFE;
+	private const byte TAG_QOI_OP_RGBA  = 0xFF;
 	private const byte TAG_QOI_OP_INDEX = 0x00;
-	private const byte TAG_QOI_OP_DIFF = 0x40;
-	private const byte TAG_QOI_OP_LUMA = 0x80;
-	private const byte TAG_QOI_OP_RUN = 0xC0;
+	private const byte TAG_QOI_OP_DIFF  = 0x40;
+	private const byte TAG_QOI_OP_LUMA  = 0x80;
+	private const byte TAG_QOI_OP_RUN   = 0xC0;
+
+	#endregion
+	#region Properties
+
+	public uint MinimumBitDepth => 8;
+	public uint MaximumBitDepth => 8;
 
 	#endregion
 	#region Methods
 
-	public static bool ImportImage(Stream _byteStream, out RawImageData? _outRawImage)
+	public IReadOnlyCollection<string> GetSupportedFileFormatExtensions() => supportedFormatExtensions;
+
+	public bool ImportImage(in ImporterContext _, Stream _byteStream, out RawImageData? _outRawImage)
 	{
 		// Link with format reference: https://qoiformat.org/
 		// Link to reference implementation: https://github.com/phoboslab/qoi/blob/master/qoi.h
@@ -121,9 +135,9 @@ public static class QoiImporter
 			{
 				// Apply minor difference to color:
 				curColor = new(
-					(byte)(curColor.R + ((x >> 4) & 0x3) - 2),
-					(byte)(curColor.G + ((x >> 2) & 0x3) - 2),
-					(byte)(curColor.B + ((x >> 0) & 0x3) - 2),
+					(byte)(curColor.R + (x >> 4 & 0x3) - 2),
+					(byte)(curColor.G + (x >> 2 & 0x3) - 2),
+					(byte)(curColor.B + (x >> 0 & 0x3) - 2),
 					curColor.A);
 				pixels[pixelIndex++] = curColor;
 			}
@@ -132,7 +146,7 @@ public static class QoiImporter
 				byte y = reader.ReadByte();
 
 				int vg = (x & 0x3F) - 32;
-				byte r = (byte)(curColor.R + vg - 8 + ((y >> 4) & 0x0F));
+				byte r = (byte)(curColor.R + vg - 8 + (y >> 4 & 0x0F));
 				byte g = (byte)(curColor.G + vg);
 				byte b = (byte)(curColor.B + vg - 8 + (y & 0x0F));
 
@@ -161,10 +175,10 @@ public static class QoiImporter
 	private static uint BigToLittleEndian(uint _valueBE)
 	{
 		return
-			((_valueBE >> 24) & 0x000000FFu) |
-			((_valueBE >>  8) & 0x0000FF00u) |
-			((_valueBE <<  8) & 0x00FF0000u) |
-			((_valueBE >> 24) & 0xFF000000u);
+			_valueBE >> 24 & 0x000000FFu |
+			_valueBE >> 8 & 0x0000FF00u |
+			_valueBE << 8 & 0x00FF0000u |
+			_valueBE >> 24 & 0xFF000000u;
 	}
 
 	[MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -195,6 +209,10 @@ public static class QoiImporter
 		}
 	}
 
+	public IEnumerator<ResourceHandle> EnumerateSubresources(ImporterContext _importCtx, Stream _resourceFileStream)
+	{
+		yield break;
+	}
+
 	#endregion
 }
-
