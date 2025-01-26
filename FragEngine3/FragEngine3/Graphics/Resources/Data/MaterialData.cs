@@ -1,16 +1,28 @@
-﻿using FragEngine3.Graphics.Resources.Data.MaterialTypes;
+﻿using FragEngine3.EngineCore;
+using FragEngine3.Graphics.Resources.Data.MaterialTypes;
+using FragEngine3.Graphics.Resources.Materials;
 using FragEngine3.Resources.Data;
 using Veldrid;
 
 namespace FragEngine3.Graphics.Resources.Data;
 
+/// <summary>
+/// Serializable resource data that is used to serialize or describe a material resource.
+/// </summary>
 [Serializable]
 [ResourceDataType(typeof(Material))]
 public sealed class MaterialData
 {
 	#region Properties
 
-	public string Key { get; set; } = string.Empty;
+	/// <summary>
+	/// The resource key identifying this material.
+	/// </summary>
+	public required string Key { get; init; } = string.Empty;
+	/// <summary>
+	/// The name of a type inheriting from <see cref="Material"/>, that this data shall be deserialized into. If null or empty, the base type is used instead.
+	/// </summary>
+	public string? TypeName { get; init; } = null;
 
 	public MaterialStateData States { get; set; } = new();
 	public MaterialShaderData Shaders { get; set; } = new();
@@ -21,6 +33,9 @@ public sealed class MaterialData
 	#endregion
 	#region Methods
 
+	/// <summary>
+	/// Checks whether this material data appears to be complete and valid.
+	/// </summary>
 	public bool IsValid()
 	{
 		if (string.IsNullOrEmpty(Key)) return false;
@@ -69,20 +84,34 @@ public sealed class MaterialData
 		return true;
 	}
 
+	/// <summary>
+	/// Tries to create a description object for the resource layout required by this material.
+	/// </summary>
+	/// <param name="_outLayoutDesc">Outputs a description of resources that need to be bound to the pipeline for this material to work.
+	/// This can be used to create <see cref="ResourceLayout"/> for rendering.</param>
+	/// <param name="_outResourceKeysAndIndices">Outputs an array of keys for binding resources. These keys may be used to directly index
+	/// and identify resource bindings and which slot a graphics resource (i.e. textures, device buffers, constant buffers, samplers) are
+	/// bound to.</param>
+	/// <param name="_outUseExternalBoundResources">Outputs whether this material uses any user-bound resources. If false, the material
+	/// relies entirely on system-bound and internally managed resources.<para/>
+	/// TODO: This is likely incorrect, or poorly named. Needs fixing!</param>
+	/// <returns>True if creating resource layout descriptions and keys succeeded, false otherwise.</returns>
 	public bool GetBoundResourceLayoutDesc(out ResourceLayoutDescription _outLayoutDesc, out MaterialBoundResourceKeys[] _outResourceKeysAndIndices, out bool _outUseExternalBoundResources)
 	{
 		_outUseExternalBoundResources = false;
-		if (Resources == null)
+		if (Resources is null)
 		{
+			Logger.Instance?.LogError("Cannot create resource layout description using null resources array!");
 			_outLayoutDesc = default;
 			_outResourceKeysAndIndices = null!;
 			return false;
 		}
 
- 		int resourceCount = Resources is not null ? Resources.Length : 0;
+ 		int resourceCount = Resources is not null ? Resources.Length : 0;	//TODO: This is confusing. Why is `Resources` nullable, if that only leads to errors here?
 
 		if (resourceCount == 0)
 		{
+			Logger.Instance?.LogError("Cannot create resource layout description using empty resources array!");
 			_outLayoutDesc = default;
 			_outResourceKeysAndIndices = null!;
 			return false;

@@ -121,8 +121,6 @@ public sealed class HealthCheckSystem : IDisposable
 			// Queue up check on the check thread:
 			return checkThreadQueue.AddCheck(_newCheck);
 		}
-
-		return true;
 	}
 
 	/// <summary>

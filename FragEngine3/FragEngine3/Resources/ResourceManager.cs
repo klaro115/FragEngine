@@ -4,6 +4,8 @@ using FragEngine3.EngineCore;
 using FragEngine3.Graphics.Resources;
 using FragEngine3.Graphics.Resources.Data;
 using FragEngine3.Graphics.Resources.Import;
+using FragEngine3.Graphics.Resources.Materials;
+using FragEngine3.Graphics.Resources.Shaders;
 using FragEngine3.Resources.Management;
 
 namespace FragEngine3.Resources;
@@ -92,6 +94,8 @@ public sealed class ResourceManager : IEngineSystem
 		
 		importer.Dispose();
 		fileGatherer.Dispose();
+
+		
 
 		DisposeAllResources();
 
@@ -507,27 +511,34 @@ public sealed class ResourceManager : IEngineSystem
 		switch (_handle.resourceType)
 		{
 			case ResourceType.Shader:
-				if ((success = ShaderImporter.ImportShaderData(this, _handle, out ShaderData? shaderData) && shaderData is not null) &&
-					(success = ShaderImporter.CreateShader(_handle.resourceKey, engine.GraphicsSystem.graphicsCore, shaderData!, out ShaderResource? shaderRes)))
+				ShaderImporter shaderImporter = engine.GraphicsResourceLoader.shaderImporter;
+
+				if ((success = shaderImporter.ImportShaderData(_handle, out ShaderData? shaderData) && shaderData is not null) &&
+					(success = shaderImporter.CreateShader(_handle.resourceKey, shaderData!, out ShaderResource? shaderRes)))
 				{
 					_assignResourceCallback(shaderRes);
 				}
 				break;
 			case ResourceType.Material:
-				if (success = Material.CreateMaterial(_handle, engine.GraphicsSystem.graphicsCore, out Material? material))
+				if ((success = MaterialImporter.ImportMaterialData(_handle, engine.Logger, out MaterialData? materialData) && materialData is not null) &&
+					(success = Material.CreateMaterial(_handle, materialData!, engine.GraphicsSystem.graphicsCore, out Material? material)))
 				{
 					_assignResourceCallback(material);
 				}
 				break;
 			case ResourceType.Model:
-				if ((success = ModelImporter.ImportModelData(this, _handle, out MeshSurfaceData? surfaceData) && surfaceData is not null) &&
-					(success = ModelImporter.CreateMesh(_handle, engine.GraphicsSystem.graphicsCore, surfaceData!, out Mesh? mesh)))
+				ModelImporter modelImporter = engine.GraphicsResourceLoader.modelImporter;
+
+				if ((success = modelImporter.ImportModelData(_handle, out MeshSurfaceData? surfaceData) && surfaceData is not null) &&
+					(success = modelImporter.CreateMesh(_handle, surfaceData!, out Mesh? mesh)))
 				{
 					_assignResourceCallback(mesh);
 				}
 				break;
 			case ResourceType.Texture:
-				if ((success = ImageImporter.ImportImageData(this, _handle, out RawImageData? rawImageData) && rawImageData is not null) &&
+				ImageImporter imageImporter = engine.GraphicsResourceLoader.imageImporter;
+
+				if ((success = imageImporter.ImportImageData(this, _handle, out RawImageData? rawImageData) && rawImageData is not null) &&
 					(success = TextureResource.CreateTexture(_handle, engine.GraphicsSystem.graphicsCore, rawImageData!, out TextureResource? texture)))
 				{
 					_assignResourceCallback(texture);
