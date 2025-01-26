@@ -6,7 +6,6 @@ using FragEngine3.Graphics.Resources.Data;
 using FragEngine3.Graphics.Resources.Data.MaterialTypes;
 using FragEngine3.Graphics.Resources.Shaders;
 using FragEngine3.Resources;
-using FragEngine3.Utility.Serialization;
 using Veldrid;
 
 namespace FragEngine3.Graphics.Resources.Materials;
@@ -59,6 +58,7 @@ public class Material(GraphicsCore _core, ResourceHandle _handle) : Resource(_ha
 	#region Fields
 
 	public readonly GraphicsCore core = _core ?? throw new ArgumentNullException(nameof(_core), "Graphics core may not be null!");
+	private readonly Logger logger = _core.graphicsSystem.engine.Logger;
 
 	private uint materialVersion = 1000;
 
@@ -133,8 +133,6 @@ public class Material(GraphicsCore _core, ResourceHandle _handle) : Resource(_ha
 	/// </summary>
 	public ResourceHandle? ShadowMapMaterialVersion { get; set; } = null;
 
-	private Logger Logger => core.graphicsSystem.engine.Logger;
-
 	#endregion
 	#region Methods
 
@@ -190,7 +188,7 @@ public class Material(GraphicsCore _core, ResourceHandle _handle) : Resource(_ha
 
 		if (_handle.GetResource(true, true) is not ShaderResource shaderRes)
 		{
-			Logger.LogWarning($"Shader resource '{_handle}' could not be found! (Stage: {_stageFlag}");
+			logger.LogWarning($"Shader resource '{_handle}' could not be found! (Stage: {_stageFlag}");
 			_outShader = null;
 			return false;
 		}
@@ -199,7 +197,7 @@ public class Material(GraphicsCore _core, ResourceHandle _handle) : Resource(_ha
 			// If allowed, try falling back to basic variant, see if that can be loaded:
 			if (!_fallbackToBasicVariant || !shaderRes.GetShaderProgram(MeshVertexDataFlags.BasicSurfaceData, out _outShader) || _outShader is null)
 			{
-				Logger.LogWarning($"Shader variant program '{_vertexDataFlags}' of shader resource '{_handle.resourceKey}' could not be loaded! (Stage: {_stageFlag}");
+				logger.LogWarning($"Shader variant program '{_vertexDataFlags}' of shader resource '{_handle.resourceKey}' could not be loaded! (Stage: {_stageFlag}");
 				_outShader = null!;
 				return false;
 			}
@@ -271,7 +269,7 @@ public class Material(GraphicsCore _core, ResourceHandle _handle) : Resource(_ha
 
 			if (!success || errorStages != 0)
 			{
-				Logger.LogError($"One or more shader programs could not be loaded for material '{resourceKey}', variant '{_vertexDataFlags}'. Error stages: '{errorStages}'");
+				logger.LogError($"One or more shader programs could not be loaded for material '{resourceKey}', variant '{_vertexDataFlags}'. Error stages: '{errorStages}'");
 				return false;
 			}
 
@@ -299,7 +297,7 @@ public class Material(GraphicsCore _core, ResourceHandle _handle) : Resource(_ha
 		}
 		catch (Exception ex)
 		{
-			Logger.LogException($"Failed to create shader set description for material '{resourceKey}' and variant '{_vertexDataFlags}'!", ex);
+			logger.LogException($"Failed to create shader set description for material '{resourceKey}' and variant '{_vertexDataFlags}'!", ex);
 			shaderSetDescs[variantIdx].DisposeValue();
 			return false;
 		}
@@ -309,7 +307,7 @@ public class Material(GraphicsCore _core, ResourceHandle _handle) : Resource(_ha
 	{
 		if (string.IsNullOrEmpty(_resourceDescription))
 		{
-			Logger.LogError($"Cannot create sampler for bound resources of material '{resourceKey}' using null or empty description!");
+			logger.LogError($"Cannot create sampler for bound resources of material '{resourceKey}' using null or empty description!");
 			_outSampler = null!;
 			return false;
 		}
@@ -317,7 +315,7 @@ public class Material(GraphicsCore _core, ResourceHandle _handle) : Resource(_ha
 		// Get or create a sampler from the graphics core's centralized sampler registry:
 		if (!core.SamplerManager.GetSampler(_resourceDescription, out _outSampler))
 		{
-			Logger.LogError($"Failed to create sampler for bound resources of material '{resourceKey}'!");
+			logger.LogError($"Failed to create sampler for bound resources of material '{resourceKey}'!");
 			return false;
 		}
 		return true;
@@ -328,12 +326,12 @@ public class Material(GraphicsCore _core, ResourceHandle _handle) : Resource(_ha
 		if (string.IsNullOrEmpty(_resourceKeys.resourceKey) || !resourceManager.GetResource(_resourceKeys.resourceKey, out ResourceHandle handle))
 		{
 			handle = core.graphicsSystem.TexPlaceholderMagenta;
-			Logger.LogWarning($"Texture resource key '{_resourceKeys.resourceKey}' could not be found; Reverting to placeholder resource in slot {_resourceKeys.slotIdx} of material '{resourceKey}'");
+			logger.LogWarning($"Texture resource key '{_resourceKeys.resourceKey}' could not be found; Reverting to placeholder resource in slot {_resourceKeys.slotIdx} of material '{resourceKey}'");
 		}
 		if (handle.resourceType != ResourceType.Texture)
 		{
 			handle = core.graphicsSystem.TexPlaceholderMagenta;
-			Logger.LogWarning($"Resource '{_resourceKeys.resourceKey}' is not a texture; Reverting to placeholder resource in slot {_resourceKeys.slotIdx} of material '{resourceKey}'");
+			logger.LogWarning($"Resource '{_resourceKeys.resourceKey}' is not a texture; Reverting to placeholder resource in slot {_resourceKeys.slotIdx} of material '{resourceKey}'");
 		}
 
 		TextureResource? resource = handle.GetResource(true, true) as TextureResource;
@@ -364,7 +362,7 @@ public class Material(GraphicsCore _core, ResourceHandle _handle) : Resource(_ha
 			{
 				case ResourceKind.StructuredBufferReadOnly:
 					{
-						Logger.LogError($"Structured buffers are not supported yet for use in bound resources! (Material: '{resourceKey}', Slot: {resourceKeys.slotIdx})");
+						logger.LogError($"Structured buffers are not supported yet for use in bound resources! (Material: '{resourceKey}', Slot: {resourceKeys.slotIdx})");
 						success = false;    // TODO [later]: Implement import and management of structured buffer data, then bind them as resource here.
 					}
 					break;
@@ -382,13 +380,13 @@ public class Material(GraphicsCore _core, ResourceHandle _handle) : Resource(_ha
 					break;
 				default:
 					success = false;
-					Logger.LogError($"Unsupported or unknown resource kind '{resourceKeys.resourceKind}' for bound resource slot '{resourceKeys.slotIdx}'!");
+					logger.LogError($"Unsupported or unknown resource kind '{resourceKeys.resourceKind}' for bound resource slot '{resourceKeys.slotIdx}'!");
 					break;
 			}
 		}
 		if (!success)
 		{
-			Logger.LogError($"Failed to load resources or fallbacks for bound resource set of material '{resourceKey}'!");
+			logger.LogError($"Failed to load resources or fallbacks for bound resource set of material '{resourceKey}'!");
 			return false;
 		}
 
@@ -405,7 +403,7 @@ public class Material(GraphicsCore _core, ResourceHandle _handle) : Resource(_ha
 		}
 		catch (Exception ex)
 		{
-			Logger.LogException("Failed to create resource layout for material's bound textures and buffers!", ex);
+			logger.LogException("Failed to create resource layout for material's bound textures and buffers!", ex);
 			return false;
 		}
 	}
@@ -518,7 +516,7 @@ public class Material(GraphicsCore _core, ResourceHandle _handle) : Resource(_ha
 		}
 		catch (Exception ex)
 		{
-			Logger.LogException($"Failed to create pipeline for material '{resourceKey}' and variant '{_vertexDataFlags}'!", ex);
+			logger.LogException($"Failed to create pipeline for material '{resourceKey}' and variant '{_vertexDataFlags}'!", ex);
 			_outPipeline = null!;
 			return false;
 		}
@@ -545,83 +543,34 @@ public class Material(GraphicsCore _core, ResourceHandle _handle) : Resource(_ha
 		}
 	}
 
-	public static bool CreateMaterial(ResourceHandle _handle, GraphicsCore _graphicsCore, out Material? _outMaterial)
+	public static bool CreateMaterial(ResourceHandle _resourceHandle, MaterialData _data, GraphicsCore _graphicsCore, out Material? _outMaterial)
 	{
-		if (_handle is null || !_handle.IsValid)
-		{
-			Logger.Instance?.LogError("Cannot create material from null or invalid resource handle!");
-			_outMaterial = null;
-			return false;
-		}
-		if (_handle.resourceManager is null || _handle.resourceManager.IsDisposed)
-		{
-			Logger.Instance?.LogError("Cannot create material using null or disposed resource manager!");
-			_outMaterial = null;
-			return false;
-		}
 		if (_graphicsCore is null || !_graphicsCore.IsInitialized)
 		{
-			_handle.resourceManager.engine.Logger.LogError("Cannot create material using null or uninitialized graphics core!");
+			Logger.Instance?.LogError("Cannot create material using null or uninitialized graphics core!");
 			_outMaterial = null;
 			return false;
-		}
-
-		// Don't do anything if the resource has already been loaded:
-		if (_handle.IsLoaded)
-		{
-			_outMaterial = _handle.GetResource(false, false) as Material;
-			return true;
 		}
 
 		Logger logger = _graphicsCore.graphicsSystem.engine.Logger ?? Logger.Instance!;
 
-		// Retrieve the file that this resource is loaded from:
-		if (!_handle.resourceManager.GetFileWithResource(_handle.resourceKey, out ResourceFileHandle? fileHandle) || fileHandle is null)
+		if (_resourceHandle is null || !_resourceHandle.IsValid)
 		{
-			logger.LogError($"Could not find source file for resource handle '{_handle}'!");
+			logger.LogError("Cannot create material from null or invalid resource handle!");
 			_outMaterial = null;
 			return false;
 		}
-
-		// Try reading raw byte data from file:
-		if (!fileHandle.TryReadResourceBytes(_handle, out byte[] bytes, out int byteCount))
-		{
-			logger.LogError($"Failed to read material JSON for resource '{_handle}'!");
-			_outMaterial = null;
-			return false;
-		}
-
-		// Try converting byte data to string containing JSON-encoded material data:
-		string jsonTxt;
-		try
-		{
-			jsonTxt = System.Text.Encoding.UTF8.GetString(bytes, 0, byteCount);
-		}
-		catch (Exception ex)
-		{
-			logger.LogException($"Failed to decode JSON for resource '{_handle}'!", ex);
-			_outMaterial = null;
-			return false;
-		}
-
-		// Try deserializing material description data from JSON:
-		if (!Serializer.DeserializeFromJson(jsonTxt, out MaterialData? data) || data is null)
-		{
-			_outMaterial = null;
-			return false;
-		}
-
 		// Double-check if the data actually makes any sense:
-		if (!data.IsValid())
+		if (_data is null || !_data.IsValid())
 		{
-			logger.LogError($"Material data for resource '{_handle}' is incomplete or invalid!");
+			logger.LogError($"Material data for resource '{_resourceHandle}' is null, incomplete or invalid!");
 			_outMaterial = null;
 			return false;
 		}
 
 		// Assemble layout descriptions for bound resources:
 		ResourceLayout? boundResourceLayout = null;
-		if (data.GetBoundResourceLayoutDesc(
+		if (_data.GetBoundResourceLayoutDesc(
 			out ResourceLayoutDescription boundResourceLayoutDesc,
 			out MaterialBoundResourceKeys[]? boundResourceKeys,
 			out bool useExternalBoundResources))
@@ -629,11 +578,11 @@ public class Material(GraphicsCore _core, ResourceHandle _handle) : Resource(_ha
 			try
 			{
 				boundResourceLayout = _graphicsCore.MainFactory.CreateResourceLayout(boundResourceLayoutDesc);
-				boundResourceLayout.Name = $"ResLayout_Bound_{_handle.resourceKey}";
+				boundResourceLayout.Name = $"ResLayout_Bound_{_resourceHandle.resourceKey}";
 			}
 			catch (Exception ex)
 			{
-				logger.LogException($"Failed to create resource layout for material resource '{_handle}'!", ex);
+				logger.LogException($"Failed to create resource layout for material resource '{_resourceHandle}'!", ex);
 				boundResourceLayout?.Dispose();
 				_outMaterial = null;
 				return false;
@@ -642,23 +591,23 @@ public class Material(GraphicsCore _core, ResourceHandle _handle) : Resource(_ha
 
 		// Assemble stencil description, if required and available:
 		StencilBehaviourDesc stencilDesc;
-		if (data.States.StencilFront is not null && data.States.StencilBack is not null)
+		if (_data.States.StencilFront is not null && _data.States.StencilBack is not null)
 		{
 			stencilDesc = new()
 			{
 				stencilFront = new(
-					data.States.StencilFront.Fail,
-					data.States.StencilFront.Pass,
-					data.States.StencilFront.DepthFail,
-					data.States.StencilFront.ComparisonKind),
+					_data.States.StencilFront.Fail,
+					_data.States.StencilFront.Pass,
+					_data.States.StencilFront.DepthFail,
+					_data.States.StencilFront.ComparisonKind),
 				stencilBack = new(
-					data.States.StencilBack.Fail,
-					data.States.StencilBack.Pass,
-					data.States.StencilBack.DepthFail,
-					data.States.StencilBack.ComparisonKind),
-				readMask = data.States.StencilReadMask,
-				writeMask = data.States.StencilWriteMask,
-				referenceValue = data.States.StencilReferenceValue,
+					_data.States.StencilBack.Fail,
+					_data.States.StencilBack.Pass,
+					_data.States.StencilBack.DepthFail,
+					_data.States.StencilBack.ComparisonKind),
+				readMask = _data.States.StencilReadMask,
+				writeMask = _data.States.StencilWriteMask,
+				referenceValue = _data.States.StencilReferenceValue,
 			};
 		}
 		else
@@ -667,29 +616,29 @@ public class Material(GraphicsCore _core, ResourceHandle _handle) : Resource(_ha
 		}
 
 		// Create and initialize material instance from data.
-		_outMaterial = new(_graphicsCore, _handle)
+		_outMaterial = new(_graphicsCore, _resourceHandle)
 		{
 			materialVersion = 1,
 
-			vertexShader = GetResourceHandle(data.Shaders.Vertex) ?? ResourceHandle.None,
-			geometryShader = GetResourceHandle(data.Shaders.Geometry),
-			tesselationShaderCtrl = GetResourceHandle(data.Shaders.TesselationCtrl),
-			tesselationShaderEval = GetResourceHandle(data.Shaders.TesselationEval),
-			pixelShader = GetResourceHandle(data.Shaders.Pixel) ?? ResourceHandle.None,
+			vertexShader = GetResourceHandle(_data.Shaders.Vertex) ?? ResourceHandle.None,
+			geometryShader = GetResourceHandle(_data.Shaders.Geometry),
+			tesselationShaderCtrl = GetResourceHandle(_data.Shaders.TesselationCtrl),
+			tesselationShaderEval = GetResourceHandle(_data.Shaders.TesselationEval),
+			pixelShader = GetResourceHandle(_data.Shaders.Pixel) ?? ResourceHandle.None,
 
 			depthStencilDesc = new(new()
 			{
-				enableDepthRead = data.States!.EnableDepthTest,
-				enableDepthWrite = data.States.EnableDepthWrite,
-				enableStencil = data.States.EnableStencil,
+				enableDepthRead = _data.States!.EnableDepthTest,
+				enableDepthWrite = _data.States.EnableDepthWrite,
+				enableStencil = _data.States.EnableStencil,
 				stencilBehaviour = stencilDesc,
-				enableCulling = data.States.EnableCulling,
+				enableCulling = _data.States.EnableCulling,
 			}, 0),
 
 			renderModeDesc = new(new()
 			{
-				renderMode = data.States.RenderMode,
-				zSortingBias = data.States.ZSortingBias,
+				renderMode = _data.States.RenderMode,
+				zSortingBias = _data.States.ZSortingBias,
 			}, 0),
 
 			UseExternalBoundResources = useExternalBoundResources,
@@ -697,8 +646,8 @@ public class Material(GraphicsCore _core, ResourceHandle _handle) : Resource(_ha
 			boundResourceKeys = boundResourceKeys,
 			boundResourceSet = new(null!, 0),
 
-			SimplifiedMaterialVersion = GetResourceHandle(data.Replacements?.SimplifiedVersion),
-			ShadowMapMaterialVersion = GetResourceHandle(data.Replacements?.ShadowMap),
+			SimplifiedMaterialVersion = GetResourceHandle(_data.Replacements?.SimplifiedVersion),
+			ShadowMapMaterialVersion = GetResourceHandle(_data.Replacements?.ShadowMap),
 		};
 		return true;
 
@@ -706,7 +655,7 @@ public class Material(GraphicsCore _core, ResourceHandle _handle) : Resource(_ha
 		// Local helper methods for getching shader handles:
 		ResourceHandle? GetResourceHandle(string? _resourceKey)
 		{
-			return !string.IsNullOrEmpty(_resourceKey) && _handle.resourceManager.GetResource(_resourceKey, out ResourceHandle handle)
+			return !string.IsNullOrEmpty(_resourceKey) && _resourceHandle.resourceManager.GetResource(_resourceKey, out ResourceHandle handle)
 				? handle
 				: null;
 		}
@@ -716,7 +665,7 @@ public class Material(GraphicsCore _core, ResourceHandle _handle) : Resource(_ha
 	{
 		if (IsDisposed)
 		{
-			Logger.LogError("Cannot create material data for disposed material resource!");
+			logger.LogError("Cannot create material data for disposed material resource!");
 			_outData = null!;
 			return false;
 		}
