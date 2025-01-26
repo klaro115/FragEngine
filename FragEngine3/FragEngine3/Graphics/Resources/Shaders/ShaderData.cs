@@ -1,4 +1,5 @@
 ﻿using FragEngine3.Graphics.Resources.Shaders.Internal;
+using FragEngine3.Resources.Data;
 
 namespace FragEngine3.Graphics.Resources.Shaders;
 
@@ -7,6 +8,7 @@ namespace FragEngine3.Graphics.Resources.Shaders;
 /// This type can contain both source code and pre-compiled shader variants.
 /// </summary>
 [Serializable]
+[ResourceDataType(typeof(ShaderResource))]
 public sealed class ShaderData
 {
 	#region Types

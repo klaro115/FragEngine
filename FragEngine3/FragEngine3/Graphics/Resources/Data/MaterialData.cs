@@ -5,13 +5,23 @@ using Veldrid;
 
 namespace FragEngine3.Graphics.Resources.Data;
 
+/// <summary>
+/// Serializable resource data that is used to serialize or describe a material resource.
+/// </summary>
 [Serializable]
 [ResourceDataType(typeof(Material))]
 public sealed class MaterialData
 {
 	#region Properties
 
-	public string Key { get; set; } = string.Empty;
+	/// <summary>
+	/// The resource key identifying this material.
+	/// </summary>
+	public required string Key { get; init; } = string.Empty;
+	/// <summary>
+	/// The name of a type inheriting from <see cref="Material"/>, that this data shall be deserialized into. If null or empty, the base type is used instead.
+	/// </summary>
+	public string? TypeName { get; init; } = null;
 
 	public MaterialStateData States { get; set; } = new();
 	public MaterialShaderData Shaders { get; set; } = new();
@@ -22,6 +32,9 @@ public sealed class MaterialData
 	#endregion
 	#region Methods
 
+	/// <summary>
+	/// Checks whether this material data appears to be complete and valid.
+	/// </summary>
 	public bool IsValid()
 	{
 		if (string.IsNullOrEmpty(Key)) return false;
