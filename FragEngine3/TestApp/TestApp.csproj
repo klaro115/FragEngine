@@ -8,6 +8,7 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\FragAssetFormats\FragAssetFormats.csproj" />
     <ProjectReference Include="..\FragEngine3\FragEngine3.csproj" />
   </ItemGroup>
 

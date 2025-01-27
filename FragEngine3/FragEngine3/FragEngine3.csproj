@@ -14,7 +14,7 @@
 	<!-- Version: -->
 	
 	<PropertyGroup>
-		<VersionPrefix>0.0.1</VersionPrefix>
+		<VersionPrefix>0.0.2</VersionPrefix>
 		<VersionSuffix>dev</VersionSuffix>
 	</PropertyGroup>
 	
@@ -63,7 +63,6 @@
     <None Remove="Graphics\Resources\Import\" />
     <None Remove="EngineCore\Logging\" />
     <None Remove="Utility\Unicode\" />
-    <None Remove="Graphics\Resources\Import\ModelFormats\FBX\" />
   </ItemGroup>
   <ItemGroup>
     <Folder Include="Graphics\Config\" />

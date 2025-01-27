@@ -1,7 +1,8 @@
-﻿using FragAssetPipeline.Resources.Shaders;
+﻿using FragAssetPipeline.Common;
+using FragAssetPipeline.Resources.Shaders;
 using FragEngine3.Graphics.Resources;
-using FragEngine3.Graphics.Resources.Data;
-using FragEngine3.Graphics.Resources.Data.ShaderTypes;
+using FragEngine3.Graphics.Resources.Import;
+using FragEngine3.Graphics.Resources.Shaders;
 using FragEngine3.Resources;
 using FragEngine3.Resources.Data;
 using Veldrid;
@@ -24,7 +25,7 @@ internal static class ShaderProcess
 	/// <param name="_stage">The shader stage within the rasterized pipeline that this resource's shader programs will be bound to.</param>
 	/// <param name="_maxVertexFlags">Maximum vertex flags that should be pre-compiled; variants with other flags may still be compiled from source code at run-time.</param>
 	/// <param name="_bundleSourceCode">Whether to include original source code in the exported FSHA file. If false, run-time compilation of additional variants won't be possible.</param>
-	public sealed class Details(string _resourceKey, string _relativeFilePath, string _entryPointNameBase, ShaderStages _stage, MeshVertexDataFlags _maxVertexFlags, bool _bundleSourceCode = true)
+	public sealed class Details(string _resourceKey, string _relativeFilePath, string _entryPointNameBase, ShaderStages _stage, MeshVertexDataFlags _maxVertexFlags, bool _bundleSourceCode = true, bool _bundlePrecompiledData = true)
 	{
 		public readonly string resourceKey = _resourceKey;
 		public readonly string relativeFilePath = _relativeFilePath;
@@ -33,6 +34,13 @@ internal static class ShaderProcess
 		public readonly MeshVertexDataFlags maxVertexFlags = _maxVertexFlags;
 		public string descriptionTxt = "At_Nyn0_Ly101p140_V100";
 		public bool bundleSourceCode = _bundleSourceCode;
+		public bool bundlePrecompiledData = _bundlePrecompiledData;
+
+		public ShaderConfig Config
+		{
+			get => ShaderConfig.TryParseDescriptionTxt(descriptionTxt, out ShaderConfig config) ? config : default;
+			set => descriptionTxt = value.CreateDescriptionTxt();
+		}
 	}
 
 	#endregion
@@ -46,6 +54,15 @@ internal static class ShaderProcess
 		".metal",
 		".glsl",
 	];
+
+	private static readonly ImporterContext exportCtx = new()
+	{
+		Logger = new ConsoleLogger(),
+		JsonOptions = new()
+		{
+			WriteIndented = true,
+		},
+	};
 
 	#endregion
 	#region Methods
@@ -69,20 +86,21 @@ internal static class ShaderProcess
 		}
 
 		// Prepare export in FSHA-compliant format:
-		FshaExportOptions options = new()
+		ShaderExportOptions options = new()
 		{
-			bundleOnlySourceIfCompilationFails = true,
+			bundleOnlySourceIfCompilationFails = false,
 			shaderStage = _details.stage,
 			entryPointBase = _details.entryPointNameBase,
 			maxVertexVariantFlags = _details.maxVertexFlags,
-			compiledDataTypeFlags = CompiledShaderDataType.ALL,
+			compiledDataTypeFlags = _details.bundlePrecompiledData ? CompiledShaderDataType.ALL : 0,
+			bundledSourceCodeLanguages = _details.bundleSourceCode ? ShaderLanguage.ALL : 0,
 			supportedFeatures = _shaderConfig,
 		};
 
-		return CompileShaderToFSHA(_details.relativeFilePath, _inputDir, _outputDir, options, out _outDataFilePath);
+		return CompileShaderToFSHA(_details.relativeFilePath, _details.resourceKey, _inputDir, _outputDir, options, out _outDataFilePath);
 	}
 
-	public static bool CompileShaderToFSHA(string _hlslFileRelativePath, string _inputDir, string _outputDir, FshaExportOptions _exportOptions, out string _outDataFilePath)
+	public static bool CompileShaderToFSHA(string _hlslFileRelativePath, string? _overrideFileName, string _inputDir, string _outputDir, ShaderExportOptions _exportOptions, out string _outDataFilePath)
 	{
 		if (string.IsNullOrEmpty(_hlslFileRelativePath))
 		{
@@ -97,7 +115,7 @@ internal static class ShaderProcess
 			return false;
 		}
 
-		if (!GetOutputPathFromFileName(_hlslFileRelativePath, _inputDir, _outputDir, out string sourceDataFilePath, out _outDataFilePath))
+		if (!GetOutputPathFromFileName(_hlslFileRelativePath, _overrideFileName, _inputDir, _outputDir, out string sourceDataFilePath, out _outDataFilePath))
 		{
 			_outDataFilePath = string.Empty;
 			return false;
@@ -110,7 +128,7 @@ internal static class ShaderProcess
 		}
 
 		// Export shader data:
-		bool success = FshaExporter.ExportShaderFromHlslFile(sourceDataFilePath, _exportOptions, out ShaderData? shaderData);
+		bool success = ShaderDataLoader.CreateShaderDataFromSourceCode(sourceDataFilePath, _exportOptions, out ShaderData? shaderData);
 
 		// Write shader data file:
 		if (success && shaderData is not null)
@@ -118,7 +136,7 @@ internal static class ShaderProcess
 			using FileStream stream = new(_outDataFilePath, FileMode.Create);
 			using BinaryWriter writer = new(stream);
 
-			success &= shaderData.Write(writer, true);
+			success &= FragAssetFormats.Shaders.FSHA.FshaExporter.ExportToFSHA(in exportCtx, writer, shaderData, true);
 			stream.Close();
 		}
 
@@ -143,9 +161,9 @@ internal static class ShaderProcess
 	/// <param name="_details">Details and compiler instructions for processing this shader resource.</param>
 	/// <param name="_outMetadataFilePath">Outputs the file path to the metadata file that was created, located within the output directory.</param>
 	/// <returns>True if metadata file creation succeeded, false otherwise.</returns>
-	public static bool GenerateResourceMetadataFile(string _inputDir, string _outputDir, Details _details, out string _outMetadataFilePath)
+	public static bool GenerateResourceMetadataFile(string _inputDir, string _outputDir, string? _overrideFileName, Details _details, out string _outMetadataFilePath)
 	{
-		if (!GetOutputPathFromFileName(_details.relativeFilePath, _inputDir, _outputDir, out _, out string outputDataFilePath))
+		if (!GetOutputPathFromFileName(_details.relativeFilePath, _overrideFileName, _inputDir, _outputDir, out _, out string outputDataFilePath))
 		{
 			_outMetadataFilePath = string.Empty;
 			return false;
@@ -204,11 +222,11 @@ internal static class ShaderProcess
 		return resFileData.SerializeToFile(_outMetadataFilePath);
 	}
 
-	private static bool GetOutputPathFromFileName(string _fileName, string _inputDir, string _outputDir, out string _outAbsSourceFilePath, out string _outAbsOutputFilePath)
+	private static bool GetOutputPathFromFileName(string _relFilePath, string? _overrideFileName, string _inputDir, string _outputDir, out string _outAbsSourceFilePath, out string _outAbsOutputFilePath)
 	{
 		_outAbsSourceFilePath = string.Empty;
 
-		if (string.IsNullOrEmpty(_fileName))
+		if (string.IsNullOrEmpty(_relFilePath))
 		{
 			Program.PrintError($"Cannot determine exact source file path from null or blank shader file name!");
 			_outAbsOutputFilePath = string.Empty;
@@ -216,7 +234,7 @@ internal static class ShaderProcess
 		}
 
         // Get absolute path to source file:
-		_outAbsSourceFilePath = Path.Combine(_inputDir, _fileName);
+		_outAbsSourceFilePath = Path.Combine(_inputDir, _relFilePath);
 		if (!Path.IsPathRooted(_outAbsSourceFilePath))
         {
 			_outAbsSourceFilePath = Path.GetFullPath(_outAbsSourceFilePath);
@@ -236,17 +254,27 @@ internal static class ShaderProcess
 			}
 			if (!sourceFileExists)
 			{
-				Program.PrintError($"Cannot determine exact shader source file path! File name: '{_fileName}'");
+				Program.PrintError($"Cannot determine exact shader source file path! File name: '{_relFilePath}'");
 				_outAbsSourceFilePath = string.Empty;
 				_outAbsOutputFilePath = string.Empty;
 				return false;
 			}
 		}
 
+		// Use a different name for the ouput file, if provided:
+		string outputFileName = _relFilePath;
+		if (!string.IsNullOrEmpty(_overrideFileName))
+		{
+			string? relDirPath = Path.GetDirectoryName(_overrideFileName);
+			outputFileName = !string.IsNullOrEmpty(relDirPath)
+				? Path.Combine(relDirPath, _overrideFileName)
+				: _overrideFileName;
+		}
+
 		// Assemble absolute path to output data file in FSHA format:
-		string outputFileName = Path.HasExtension(_fileName)
-			? Path.ChangeExtension(_fileName, ".fsha")
-			: $"{_fileName}.fsha";
+		outputFileName = Path.HasExtension(outputFileName)
+			? Path.ChangeExtension(outputFileName, ".fsha")
+			: $"{outputFileName}.fsha";
 
 		_outAbsOutputFilePath = Path.GetFullPath(Path.Combine(_outputDir, outputFileName));
 		return true;

@@ -96,6 +96,11 @@ No support is planned for the foreseeable future. Android will have to wait unti
 
 ## Work In Progress
 
+- Refactor graphics architecture:
+    - Rework materials:
+        - Split material type into standard/user variants
+        - Support for user-supplied constant buffers
+        - Standard shader constant buffer _(i.e. CBDefaultSurface)_
 - Linux support:
     - SPIR-V shader support **[Pipeline creation fails]**
 
@@ -114,12 +119,14 @@ No support is planned for the foreseeable future. Android will have to wait unti
 
 The following is a rough and very short-sighted roadmap of features that are going to be added in the near future. The order of implementation may be subject to change.
 
+- Maintenance:
+    - Upgrade to .NET 9
 - Refactor graphics architecture:
+    - Add tiled/partial shadow map projection to support lower shadow resolutions
     - Add rendering groups for auto-parallelizing draw call creation
-    - Rework materials:
-        - Standard shader constant buffer _(i.e. CBDefaultSurface)_
-        - Support for user-supplied constant buffers
-        - Split material type into standard/user variants
+    - Constant buffer data:
+        - Add timestamps to CBScene
+        - Add focal positions to CBCamera
 - UI:
     - Text rendering
     - Basic UI controls _(labels, buttons, etc.)_

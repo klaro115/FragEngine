@@ -1,11 +1,12 @@
 ﻿using FragAssetPipeline.Resources.Shaders.Compilers;
-using FragEngine3.Graphics.Resources.Data.ShaderTypes;
+using FragEngine3.Graphics.Resources.Shaders;
 
 namespace FragAssetPipeline.Resources.Shaders.FSHA;
 
 /// <summary>
 /// Helper class for compiling shader variants for FSHA format export.
 /// </summary>
+[Obsolete($"Replaced by {nameof(ShaderDataLoader)}")]
 internal static class FshaVariantExport
 {
 	#region Types
@@ -26,7 +27,7 @@ internal static class FshaVariantExport
 
 	public static bool CompileVariants(
 		string _filePath,
-		FshaExportOptions _options,
+		ShaderExportOptions _options,
 		List<FshaCompiledVariant> _compiledVariants,
 		out OutputDetails _outOutputDetails)
 	{
@@ -57,7 +58,7 @@ internal static class FshaVariantExport
 
 	public static bool CompileVariants_DXBC(
 		string _filePath,
-		FshaExportOptions _options,
+		ShaderExportOptions _options,
 		List<FshaCompiledVariant> _compiledVariants,
 		OutputDetails _outputDetails)
 	{
@@ -71,12 +72,15 @@ internal static class FshaVariantExport
 
 		foreach (var kvp in _options.entryPoints!)
 		{
-			var dxcResult = DxCompiler.CompileShaderToDXBC(_filePath, _options.shaderStage, kvp.Value);
-			success &= dxcResult.isSuccess;
-			if (!dxcResult.isSuccess)
+			if (!DxCompiler.CompileShaderToDXBCAndDXIL(
+			_filePath,
+			_options.shaderStage,
+			kvp.Value,
+			out DxCompiler.DxcResult resultDxbc,
+			out DxCompiler.DxcResult resultDxil))
 			{
-				Console.WriteLine($"Warning! Failed to compile DXBC shader variant for entry point '{kvp.Value}' ({kvp.Key})! File path: '{_filePath}'");
-				continue;
+				Console.WriteLine($"Warning: Failed to compile DXBC shader variant for entry point '{kvp.Value}' ({kvp.Key})! File path: '{_filePath}'");
+				return false;
 			}
 
 			FshaCompiledVariant compiledVariant = new()
@@ -84,13 +88,13 @@ internal static class FshaVariantExport
 				shaderType = CompiledShaderDataType.DXBC,
 				vertexDataFlags = kvp.Key,
 				entryPoint = kvp.Value,
-				compiledData = dxcResult.compiledShader,
+				compiledData = resultDxbc.compiledShader,
 				relativeByteOffset = _outputDetails.dxbcByteSize,
 				totalByteOffset = _outputDetails.totalByteSize,
 			};
 			_compiledVariants.Add(compiledVariant);
 
-			uint variantSize = (uint)dxcResult.compiledShader.Length;
+			uint variantSize = (uint)resultDxbc.compiledShader.Length;
 			_outputDetails.totalByteSize += variantSize;
 			_outputDetails.dxbcByteSize += variantSize;
 			_outputDetails.variantCount++;
@@ -101,7 +105,7 @@ internal static class FshaVariantExport
 
 	public static bool CompileVariants_DXIL(
 		string _filePath,
-		FshaExportOptions _options,
+		ShaderExportOptions _options,
 		List<FshaCompiledVariant> _compiledVariants,
 		OutputDetails _outputDetails)
 	{
@@ -111,7 +115,7 @@ internal static class FshaVariantExport
 
 	public static bool CompileVariants_SPIRV(
 		string _filePath,
-		FshaExportOptions _options,
+		ShaderExportOptions _options,
 		List<FshaCompiledVariant> _compiledVariants,
 		OutputDetails _outputDetails)
 	{

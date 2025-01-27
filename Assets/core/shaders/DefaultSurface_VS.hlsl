@@ -1,16 +1,13 @@
 #pragma pack_matrix( column_major )
 
-/****************** CONSTANTS: *****************/
+/******************* DEFINES: ******************/
 
-// Constant buffer containing all scene-wide settings:
-cbuffer CBScene : register(b0)
-{
-    // Scene lighting:
-    float4 ambientLightLow;         // Ambient light color and intensity coming from bottom-up.
-    float4 ambientLightMid;         // Ambient light color and intensity coming from all sides.
-    float4 ambientLightHigh;        // Ambient light color and intensity coming from top-down.
-    float shadowFadeStart;          // Percentage of the shadow distance in projection space where they start fading out.
-};
+// Variants:
+#define VARIANT_EXTENDED            // Whether to always create a shader variant using extended surface data
+#define VARIANT_BLENDSHAPES         // Whether to always create a shader variant using blend shape data
+#define VARIANT_ANIMATED            // Whether to always create a shader variant using bone animation data
+
+/****************** CONSTANTS: *****************/
 
 // Constant buffer containing all settings that apply for everything drawn by currently active camera:
 cbuffer CBCamera : register(b1)
@@ -50,23 +47,29 @@ struct VertexInput_Basic
     float2 uv : TEXCOORD0;
 };
 
+#ifdef VARIANT_EXTENDED
 struct VertexInput_Extended
 {
     float3 tangent : NORMAL1;
     float2 uv2 : TEXCOORD1;
 };
+#endif //VARIANT_EXTENDED
 
+#ifdef VARIANT_BLENDSHAPES
 struct VertexInput_BlendShapes
 {
     uint4 blendIndices : NORMAL2;
     float4 blendWeights : TEXCOORD2;
 };
+#endif //VARIANT_BLENDSHAPES
 
+#ifdef VARIANT_ANIMATED
 struct VertexInput_BoneWeights
 {
     uint4 blendIndices : NORMAL3;
     float4 blendWeights : TEXCOORD3;
 };
+#endif //VARIANT_ANIMATED
 
 /**************** VERTEX OUTPUT: ***************/
 
@@ -78,12 +81,14 @@ struct VertexOutput_Basic
     float2 uv : TEXCOORD0;
 };
 
+#ifdef VARIANT_EXTENDED
 struct VertexOutput_Extended
 {
     float3 tangent : TANGENT0;
     float3 binormal : NORMAL1;
     float2 uv2 : TEXCOORD1;
 };
+#endif //VARIANT_EXTENDED
 
 /******************* SHADERS: ******************/
 
@@ -100,6 +105,7 @@ void Main_Vertex(
     outputBasic.uv = inputBasic.uv;
 }
 
+#ifdef VARIANT_EXTENDED
 void Main_Vertex_Ext(
     in VertexInput_Basic inputBasic,
     in VertexInput_Extended inputExt,
@@ -118,5 +124,6 @@ void Main_Vertex_Ext(
     outputExt.binormal = cross(outputBasic.normal, outputExt.tangent);
     outputExt.uv2 = inputExt.uv2;
 }
+#endif //VARIANT_EXTENDED
 
 //TODO [later]: Add blendshape and bone animation variant entrypoints.

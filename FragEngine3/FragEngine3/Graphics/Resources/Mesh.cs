@@ -142,7 +142,7 @@ public sealed class Mesh : Resource
 		{
 			Vector3 position = _verticesBasic[i].position;
 			float originDistSq = position.LengthSquared();
-			newBoundingRadiusSq = MathF.Min(originDistSq, newBoundingRadiusSq);
+			newBoundingRadiusSq = MathF.Max(originDistSq, newBoundingRadiusSq);
 		}
 
 		bool success = true;

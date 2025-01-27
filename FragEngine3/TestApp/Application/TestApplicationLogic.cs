@@ -195,6 +195,16 @@ public sealed class TestApplicationLogic : ApplicationLogic
 			light.LightIntensity = 7;
 		}
 
+		if (SceneSpawner.CreateStaticMeshRenderer(scene, out StaticMeshRendererComponent room))
+		{
+			room.node.Name = "Room";
+			room.node.LocalPosition = new Vector3(0, -1.5f, 4);
+			//room.node.SetEnabled(false);
+
+			room.SetMesh("LightingTestRoom.obj");
+			room.SetMaterial("Mtl_LightingTestRoom");
+		}
+
 		if (SceneSpawner.CreateStaticMeshRenderer(scene, out StaticMeshRendererComponent rabbit))
 		{
 			rabbit.node.Name = "Rabbit";
@@ -215,7 +225,7 @@ public sealed class TestApplicationLogic : ApplicationLogic
 			cube.node.LocalPosition = new Vector3(2.5f, -0.5f, 2);
 			//cube.node.SetRotationFromYawPitchRoll(45, 45, 0, true, true);
 			cube.node.LocalScale = Vector3.One;
-			//cube.node.SetEnabled(false);
+			cube.node.SetEnabled(false);
 
 			cube.SetMesh(cubeHandle);
 			//cube.SetMaterial("Mtl_DiffuseImage");
@@ -229,7 +239,7 @@ public sealed class TestApplicationLogic : ApplicationLogic
 			cylinder.node.LocalPosition = new Vector3(-2.5f, 0, 2);
 			cylinder.node.LocalRotation = Quaternion.Identity;
 			cylinder.node.LocalScale = Vector3.One;
-			//cylinder.node.SetEnabled(false);
+			cylinder.node.SetEnabled(false);
 
 			cylinder.SetMesh(cylinderHandle);
 			cylinder.SetMaterial("Mtl_DefaultSurface");
@@ -261,14 +271,14 @@ public sealed class TestApplicationLogic : ApplicationLogic
 			d20.SetMaterial("Mtl_DefaultSurface");
 		}
 
-		MeshPrimitiveFactory.CreatePlaneMesh("Plane", Engine, new Vector2(5, 5), 6, true, out _, out _, out ResourceHandle planeHandle);
+		MeshPrimitiveFactory.CreatePlaneMesh("Plane", Engine, new Vector2(5, 5), 1, true, out _, out _, out ResourceHandle planeHandle);
 		if (SceneSpawner.CreateStaticMeshRenderer(scene, out StaticMeshRendererComponent plane))
 		{
 			plane.node.Name = "Ground";
 			plane.node.LocalPosition = new Vector3(0, -1.5f, 2);
 			plane.node.LocalRotation = Quaternion.Identity;
 			plane.node.LocalScale = Vector3.One;
-			//plane.node.SetEnabled(false);
+			plane.node.SetEnabled(false);
 
 			plane.SetMesh(planeHandle);
 			plane.SetMaterial("Mtl_BrickWall");
@@ -281,7 +291,7 @@ public sealed class TestApplicationLogic : ApplicationLogic
 			plane.node.LocalPosition = new Vector3(0, 1, 4.5f);
 			plane.node.SetRotationFromAxisAngle(Vector3.UnitX, -90, false, true);
 			plane.node.LocalScale = Vector3.One;
-			//plane.node.SetEnabled(false);
+			plane.node.SetEnabled(false);
 
 			plane.SetMesh(planeHandle);
 			plane.SetMaterial("Mtl_BrickWall");
@@ -294,11 +304,25 @@ public sealed class TestApplicationLogic : ApplicationLogic
 			plane.node.LocalPosition = new Vector3(-2.5f, 1, 2);
 			plane.node.SetRotationFromAxisAngle(Vector3.UnitZ, -90, false, true);
 			plane.node.LocalScale = Vector3.One;
-			//plane.node.SetEnabled(false);
+			plane.node.SetEnabled(false);
 
 			plane.SetMesh(planeHandle);
 			plane.SetMaterial("Mtl_BrickWall");
 			plane.DontDrawUnlessFullyLoaded = true;
+		}
+
+		MeshPrimitiveFactory.CreatePlaneMesh("Heightmap", Engine, new Vector2(2, 2), 30, true, out _, out _, out ResourceHandle heightmapHandle);
+		if (SceneSpawner.CreateStaticMeshRenderer(scene, out StaticMeshRendererComponent heightmap))
+		{
+			heightmap.node.Name = "Heightmap";
+			heightmap.node.LocalPosition = new Vector3(0, -1, -1);
+			heightmap.node.LocalRotation = Quaternion.Identity;
+			heightmap.node.LocalScale = Vector3.One;
+			//heightmap.node.SetEnabled(false);
+
+			heightmap.SetMesh(heightmapHandle);
+			heightmap.SetMaterial("Mtl_Heightmap");
+			heightmap.DontDrawUnlessFullyLoaded = true;
 		}
 
 		if (SceneSpawner.CreateStaticMeshRenderer(scene, out StaticMeshRendererComponent fbxRenderer))
@@ -307,7 +331,7 @@ public sealed class TestApplicationLogic : ApplicationLogic
 			fbxRenderer.node.LocalPosition = new(0, 0, 1);
 			fbxRenderer.node.SetRotationFromYawPitchRoll(0, 0, 0, false, true);
 			fbxRenderer.node.LocalScale = Vector3.One * 0.5f;
-			//fbxRenderer.node.SetEnabled(false);
+			fbxRenderer.node.SetEnabled(false);
 		
 			fbxRenderer.SetMesh("Cube.obj");
 			//fbxRenderer.SetMesh("Plane.fbx");

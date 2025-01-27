@@ -14,15 +14,15 @@ public sealed class SceneContext(uint _lightCount, uint _lightCountShadowMapped)
 	#region Fields
 
 	// References:
-	public Scene Scene { get; init; } = null!;
+	public required Scene Scene { get; init; } = null!;
 
 	// Scene resources:
-	public ResourceLayout ResLayoutCamera { get; init; } = null!;
-	public ResourceLayout ResLayoutObject { get; init; } = null!;
-	public DeviceBuffer CbScene { get; init; } = null!;
-	public LightDataBuffer DummyLightDataBuffer { get; init; } = null!;
-	public ShadowMapArray ShadowMapArray { get; init; } = null!;
-	public ushort SceneResourceVersion { get; init; }
+	public required ResourceLayout ResLayoutCamera { get; init; } = null!;
+	public required ResourceLayout ResLayoutObject { get; init; } = null!;
+	public required DeviceBuffer CbScene { get; init; } = null!;
+	public required LightDataBuffer DummyLightDataBuffer { get; init; } = null!;
+	public required ShadowMapArray ShadowMapArray { get; init; } = null!;
+	public required ushort SceneResourceVersion { get; init; }
 
 	// Parameters:
 	public readonly uint lightCount = _lightCount;

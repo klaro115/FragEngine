@@ -1,5 +1,6 @@
 ﻿using System.Text;
 using FragAssetPipeline.Resources.Shaders.FSHA;
+using FragEngine3.Utility.Unicode;
 using Veldrid;
 using Vortice.Dxc;
 
@@ -39,6 +40,9 @@ public static class DxCompiler
 		VkUseDXPositionW = true,
 	};
 
+	private static readonly byte[] magicNumbersDXBC = [ (byte)'D', (byte)'X', (byte)'B', (byte)'C' ];
+	private static readonly byte[] magicNumbersDXIL = [ (byte)'D', (byte)'X', (byte)'I', (byte)'L' ];
+
 	#endregion
 	#region Constants
 
@@ -58,9 +62,42 @@ public static class DxCompiler
 		return OperatingSystem.IsWindows();
 	}
 
-	public static DxcResult CompileShaderToDXBC(string _hlslFilePath, ShaderStages _shaderStage, string? _entryPoint)
+	public static bool CompileShaderToDXBCAndDXIL(string _hlslFilePath, ShaderStages _shaderStage, string? _entryPoint, out DxcResult _outDxbc, out DxcResult _outDxil)
 	{
-		return CompileShader(_hlslFilePath, _shaderStage, _entryPoint, compilerOptionsDXBC);
+		_outDxbc = DxcResult.Failure;
+		_outDxil = DxcResult.Failure;
+
+		DxcResult combinedResult = CompileShader(_hlslFilePath, _shaderStage, _entryPoint, compilerOptionsDXBC);
+		if (!combinedResult.isSuccess)
+		{
+			return false;
+		}
+
+		bool hasDxbc = TryFindAsciiStringInByteArray(combinedResult.compiledShader, "DXBC", 0, out int startIdxDxbc);
+		bool hasDxil = TryFindAsciiStringInByteArray(combinedResult.compiledShader, "DXIL", Math.Max(startIdxDxbc, 0), out int startIdxDxil);
+
+		if (hasDxbc)
+		{
+			int length = hasDxil
+				? startIdxDxil - startIdxDxbc
+				: combinedResult.compiledShader.Length;
+
+			byte[] compiledShaderDxbc = new byte[length];
+			Array.Copy(combinedResult.compiledShader, startIdxDxbc, compiledShaderDxbc, 0, length);
+
+			_outDxbc = new(true, compiledShaderDxbc);
+		}
+		if (hasDxil)
+		{
+			int length = combinedResult.compiledShader.Length - startIdxDxil;
+
+			byte[] compiledShaderDxil = new byte[length];
+			Array.Copy(combinedResult.compiledShader, startIdxDxil, compiledShaderDxil, 0, length);
+
+			_outDxil = new(true, compiledShaderDxil);
+		}
+
+		return _outDxbc.isSuccess || _outDxil.isSuccess;
 	}
 
 	public static DxcResult CompileShaderToSPIRV(string _hlslFilePath, ShaderStages _shaderStage, string? _entryPoint)
@@ -162,6 +199,31 @@ public static class DxCompiler
 			ShaderStages.Compute => DxcShaderStage.Compute,
 			_ => 0,
 		};
+	}
+
+	private static bool TryFindAsciiStringInByteArray(byte[] _bytes, string _query, int _startIdx, out int _outResultIdx)
+	{
+		for (int i = _startIdx; i < _bytes.Length; i++)
+		{
+			int j;
+			for (j = 0; j < _query.Length; ++j)
+			{
+				byte a = _bytes[i + j];
+				byte b = (byte)_query[j];
+				if (a != b)
+				{
+					break;
+				}
+			}
+			if (j >= _query.Length)
+			{
+				_outResultIdx = i;
+				return true;
+			}
+		}
+
+		_outResultIdx = -1;
+		return false;
 	}
 
 	#endregion

@@ -1,5 +1,6 @@
 ﻿using FragAssetPipeline.Processes;
 using FragEngine3.Graphics.Resources;
+using FragEngine3.Graphics.Resources.Shaders;
 using Veldrid;
 
 namespace FragAssetPipeline;
@@ -8,25 +9,14 @@ internal static class Program
 {
 	#region Constants
 
-	private static bool clearBuildDirFirst = true;
-	private static bool autoGenerateFresFiles = true;
+	private static readonly bool clearBuildDirFirst = true;
+	private static readonly bool autoGenerateFresFiles = true;
 
 	private const MeshVertexDataFlags flagsBasic = MeshVertexDataFlags.BasicSurfaceData;
 	private const MeshVertexDataFlags flagsExt = MeshVertexDataFlags.BasicSurfaceData | MeshVertexDataFlags.ExtendedSurfaceData;
 
 	#endregion
 	#region Fields
-
-	private static readonly ShaderProcess.Details[] details =
-	[
-		new("Basic_VS",                           "Basic_VS.hlsl",                                       "Main_Vertex", ShaderStages.Vertex,   flagsExt),
-		new("DefaultSurface_VS",                  "DefaultSurface_VS.hlsl",                              "Main_Vertex", ShaderStages.Vertex,   flagsExt),
-		new("DefaultSurface_PS",                  "DefaultSurface_modular_PS.hlsl",                      "Main_Pixel",  ShaderStages.Fragment, flagsExt),
-		new("AlphaShadow_PS",                     "shadows/AlphaShadow_PS.hlsl",                         "Main_Pixel",  ShaderStages.Fragment, flagsExt),
-		new("DefaultShadow_PS",                   "shadows/DefaultShadow_PS.hlsl",                       "Main_Pixel",  ShaderStages.Fragment, flagsExt),
-		new("ForwardPlusLight_CompositeScene_PS", "composition/ForwardPlusLight_CompositeScene_PS.hlsl", "Main_Pixel",  ShaderStages.Fragment, flagsBasic),
-		new("ForwardPlusLight_CompositeUI_PS",    "composition/ForwardPlusLight_CompositeUI_PS.hlsl",    "Main_Pixel",  ShaderStages.Fragment, flagsBasic),
-	];
 
 	private static readonly ShaderConfig shaderConfig = new()
 	{
@@ -43,11 +33,42 @@ internal static class Program
 		shadowSamplingCount = 4,
 		alwaysCreateExtendedVariant = true,
 	};
+	private static readonly string shaderDescriptionTxt = shaderConfig.CreateDescriptionTxt();
+
+	private static readonly ShaderConfig shaderConfigTexLit = new()
+	{
+		albedoSource = ShaderAlbedoSource.SampleTexMain,
+		albedoColor = RgbaFloat.White,
+		useNormalMap = false,
+		useParallaxMap = false,
+		useParallaxMapFull = false,
+		applyLighting = true,
+		useAmbientLight = true,
+		useLightSources = true,
+		lightingModel = ShaderLightingModel.Phong,
+		useShadowMaps = true,
+		shadowSamplingCount = 8,
+		alwaysCreateExtendedVariant = true,
+	};
+	private static readonly string shaderDescriptionTxtTexList = shaderConfigTexLit.CreateDescriptionTxt();
+
+	private static readonly ShaderProcess.Details[] details =
+	[
+		new("Basic_VS",                           "Basic_VS.hlsl",                                       "Main_Vertex", ShaderStages.Vertex,   flagsExt,   _bundlePrecompiledData: false) { descriptionTxt = shaderDescriptionTxt },
+		new("DefaultSurface_VS",                  "DefaultSurface_VS.hlsl",                              "Main_Vertex", ShaderStages.Vertex,   flagsExt,   _bundlePrecompiledData: false) { descriptionTxt = shaderDescriptionTxt },
+		new("DefaultSurface_PS",                  "DefaultSurface_modular_PS.hlsl",                      "Main_Pixel",  ShaderStages.Fragment, flagsExt,   _bundlePrecompiledData: false) { descriptionTxt = shaderDescriptionTxt },
+		new("TexturedLit_PS",                     "DefaultSurface_modular_PS.hlsl",                      "Main_Pixel",  ShaderStages.Fragment, flagsExt,   _bundlePrecompiledData: false) { descriptionTxt = shaderDescriptionTxtTexList },
+		new("Heightmap_VS",                       "Heightmap_VS.hlsl",                                   "Main_Vertex", ShaderStages.Vertex,   flagsExt,   _bundlePrecompiledData: false) { descriptionTxt = shaderDescriptionTxt },
+		new("AlphaShadow_PS",                     "shadows/AlphaShadow_PS.hlsl",                         "Main_Pixel",  ShaderStages.Fragment, flagsExt,   _bundlePrecompiledData: false) { descriptionTxt = shaderDescriptionTxt },
+		new("DefaultShadow_PS",                   "shadows/DefaultShadow_PS.hlsl",                       "Main_Pixel",  ShaderStages.Fragment, flagsExt,   _bundlePrecompiledData: false) { descriptionTxt = shaderDescriptionTxt },
+		new("ForwardPlusLight_CompositeScene_PS", "composition/ForwardPlusLight_CompositeScene_PS.hlsl", "Main_Pixel",  ShaderStages.Fragment, flagsBasic, _bundlePrecompiledData: false) { descriptionTxt = shaderDescriptionTxt },
+		new("ForwardPlusLight_CompositeUI_PS",    "composition/ForwardPlusLight_CompositeUI_PS.hlsl",    "Main_Pixel",  ShaderStages.Fragment, flagsBasic, _bundlePrecompiledData: false) { descriptionTxt = shaderDescriptionTxt },
+	];
 
 	#endregion
 	#region Methods
 
-	private static void Main(string[] args)
+	private static void Main(string[] _)
 	{
 		Console.WriteLine("### BEGIN ###");
 
@@ -148,14 +169,14 @@ internal static class Program
 		foreach (ShaderProcess.Details detail in details)
 		{
 			// Compile and bundle shader data file in FSHA format:
-			if (!ShaderProcess.CompileShaderToFSHA(inputShaderDir, outputShaderDir, detail, in shaderConfig, out string dataFilePath))
+			if (!ShaderProcess.CompileShaderToFSHA(inputShaderDir, outputShaderDir, detail, detail.Config, out string dataFilePath))
 			{
 				continue;
 			}
 			// Optionally, generate a metadata file to go with the data file:
 			if (autoGenerateFresFiles)
 			{
-				if (!ShaderProcess.GenerateResourceMetadataFile(inputShaderDir, outputShaderDir, detail, out string metadataFilePath))
+				if (!ShaderProcess.GenerateResourceMetadataFile(inputShaderDir, outputShaderDir, detail.resourceKey, detail, out string metadataFilePath))
 				{
 					continue;
 				}

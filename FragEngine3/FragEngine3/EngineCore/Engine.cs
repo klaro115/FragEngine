@@ -32,6 +32,7 @@ public sealed class Engine : IDisposable
 		ResourceManager = new ResourceManager(this);
 		InputManager = new InputManager(this);
 		GraphicsSystem = new GraphicsSystem(this);
+		GraphicsResourceLoader = new GraphicsResourceLoader(this);
 		SceneManager = new SceneManager(this);
 		JobManager = new JobManager(this);
 		HealthCheckSystem = new HealthCheckSystem(this);
@@ -86,6 +87,7 @@ public sealed class Engine : IDisposable
 	public ResourceManager ResourceManager { get; init; } = null!;
 	public InputManager InputManager { get; init; } = null!;
 	public GraphicsSystem GraphicsSystem { get; init; } = null!;
+	public GraphicsResourceLoader GraphicsResourceLoader { get; init; } = null!;
 	public SceneManager SceneManager { get; init; } = null!;
 	public JobManager JobManager { get; init; } = null!;
 	public HealthCheckSystem HealthCheckSystem { get; init; } = null!;
@@ -110,6 +112,7 @@ public sealed class Engine : IDisposable
 		HealthCheckSystem?.Dispose();
 		JobManager?.Dispose();
 		SceneManager?.Dispose();
+		GraphicsResourceLoader?.Dispose();
 		GraphicsSystem?.Dispose();
 		InputManager?.Dispose();
 		ResourceManager?.Dispose();
