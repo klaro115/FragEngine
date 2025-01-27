@@ -10,10 +10,22 @@ using FragEngine3.Scenes;
 
 namespace FragEngine3.EngineCore;
 
+/// <summary>
+/// An instance of the Fragment game engine. Each engine object represents a game/app session, with its own resource management and graphics.
+/// </summary>
 public sealed class Engine : IDisposable
 {
 	#region Constructors
 
+	/// <summary>
+	/// Creates a new instance of the game engine.
+	/// </summary>
+	/// <param name="_applicationLogic">The application logic module that shall drive the core logic of this engine.
+	/// This is the instance that really controls what's going on in the app, and initializes all app states.</param>
+	/// <param name="_config">A configuration that specifies with what settings to initialize the engine. These settings
+	/// are immutable over the entire lifetime of the engine.</param>
+	/// <exception cref="ArgumentNullException">Thrown if the application logic or config parameters are null.</exception>
+	/// <exception cref="ApplicationException">Thrown if the engine's main <see cref="Logger"/> instance failed to initialize.</exception>
 	public Engine(ApplicationLogic _applicationLogic, EngineConfig _config)
 	{
 		applicationLogic = _applicationLogic ?? throw new ArgumentNullException(nameof(_applicationLogic), "Application logic may not be null!");
@@ -77,8 +89,17 @@ public sealed class Engine : IDisposable
 	#endregion
 	#region Properties
 
+	/// <summary>
+	/// Gets whether this engine has already been disposed.
+	/// </summary>
 	public bool IsDisposed { get; private set; } = false;
+	/// <summary>
+	/// Gets whether the engine is currently running.
+	/// </summary>
 	public bool IsRunning => !IsDisposed && State == EngineState.Running;
+	/// <summary>
+	/// Gets the current lifecycle state that the engine is in.
+	/// </summary>
 	public EngineState State { get; private set; } = EngineState.None;
 
 	public Logger Logger { get; init; } = null!;
@@ -139,7 +160,7 @@ public sealed class Engine : IDisposable
 
 	/// <summary>
 	/// Request the engine to stop the main loop and quit.<para/>
-	/// This will end the program, make sure to save your progress before calling this ;)
+	/// This will end the program - make sure to save your progress before calling this ;)
 	/// </summary>
 	public void Exit()
 	{
