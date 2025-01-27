@@ -8,16 +8,16 @@ public sealed class ResourceHandleData
 {
 	#region Properties
 
-	public string ResourceKey { get; set; } = string.Empty;
-	public ResourceType ResourceType { get; set; } = ResourceType.Unknown;
-	public EnginePlatformFlag PlatformFlags { get; set; } = EnginePlatformFlag.None;
-	public string? ImportFlags { get; set; } = null;
+	public string ResourceKey { get; init; } = string.Empty;
+	public ResourceType ResourceType { get; init; } = ResourceType.Unknown;
+	public EnginePlatformFlag PlatformFlags { get; init; } = EnginePlatformFlag.None;
+	public string? ImportFlags { get; init; } = null;
 
 	public ulong DataOffset { get; set; } = 0;
 	public ulong DataSize { get; set; } = 0;
 
-	public uint DependencyCount { get; set; } = 0;
-	public string[]? Dependencies { get; set; } = null;
+	public uint DependencyCount { get; init; } = 0;
+	public string[]? Dependencies { get; init; } = null;
 
 	#endregion
 	#region Methods
