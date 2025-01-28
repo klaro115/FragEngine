@@ -18,8 +18,8 @@ namespace FragEngine3.Graphics.Renderers;
 /// </summary>
 public sealed class StaticMeshRenderer : IPhysicalRenderer
 {
-
 	#region Constructors
+
 	public StaticMeshRenderer(GraphicsCore _graphicsCore, string? _rendererName = null)
 	{
 		GraphicsCore = _graphicsCore ?? throw new ArgumentNullException(nameof(_graphicsCore), "Graphics core may not be null!");
@@ -403,7 +403,7 @@ public sealed class StaticMeshRenderer : IPhysicalRenderer
 		{
 			return success;
 		}
-		if (!mesh!.Prepare(out DeviceBuffer[] bufVertices, out DeviceBuffer bufIndices))
+		if (!mesh!.Prepare(out DeviceBuffer[]? bufVertices, out DeviceBuffer? bufIndices))
 		{
 			return false;
 		}
@@ -434,11 +434,11 @@ public sealed class StaticMeshRenderer : IPhysicalRenderer
 		}
 
 		// Bind geometry buffers:
-		for (uint i = 0; i < bufVertices.Length; i++)
+		for (uint i = 0; i < bufVertices!.Length; i++)
 		{
 			_cameraPassCtx.CmdList.SetVertexBuffer(i, bufVertices[i]);
 		}
-		_cameraPassCtx.CmdList.SetIndexBuffer(bufIndices, mesh.IndexFormat);
+		_cameraPassCtx.CmdList.SetIndexBuffer(bufIndices!, mesh.IndexFormat);
 
 		// Issue draw call:
 		_cameraPassCtx.CmdList.DrawIndexed(mesh.IndexCount);

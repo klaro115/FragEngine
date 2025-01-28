@@ -33,12 +33,12 @@ internal sealed class MetalGraphicsCore(GraphicsSystem _graphicsSystem, EngineCo
 	{
 		if (IsDisposed)
 		{
-			Logger.LogError("Cannot initialize disposed metal graphics devices!");
+			logger.LogError("Cannot initialize disposed metal graphics devices!");
 			return false;
 		}
 		if (IsInitialized)
 		{
-			Logger.LogError("Metal graphics devices are already initialized!");
+			logger.LogError("Metal graphics devices are already initialized!");
 			return true;
 		}
 
@@ -113,13 +113,13 @@ internal sealed class MetalGraphicsCore(GraphicsSystem _graphicsSystem, EngineCo
 			Device.MainSwapchain.Name = "Swapchain_Main";
 
 			Console.WriteLine("done.");
-			Logger.LogMessage("# Initializing D3D graphics device... done.", true);
+			logger.LogMessage("# Initializing D3D graphics device... done.", true);
 		}
 		catch (Exception ex)
 		{
 			Console.WriteLine("FAIL.");
-			Logger.LogMessage("# Initializing D3D graphics device... FAIL.", true);
-			Logger.LogException("Failed to create system default metal graphics device!", ex);
+			logger.LogMessage("# Initializing D3D graphics device... FAIL.", true);
+			logger.LogException("Failed to create system default metal graphics device!", ex);
 			Shutdown();
 			stopwatch.Stop();
 			return false;
@@ -128,21 +128,21 @@ internal sealed class MetalGraphicsCore(GraphicsSystem _graphicsSystem, EngineCo
 		if (Device != null)
 		{
 			// Log general GPU information:
-			Logger.LogMessage("+ Graphics device details:");
-			Logger.LogMessage($"  - Name: {Device.DeviceName}");
-			Logger.LogMessage($"  - Vendor: {Device.VendorName}");
-			Logger.LogMessage($"  - Backend: {Device.BackendType}");
-			Logger.LogMessage($"  - API version: {Device.ApiVersion}");
+			logger.LogMessage("+ Graphics device details:");
+			logger.LogMessage($"  - Name: {Device.DeviceName}");
+			logger.LogMessage($"  - Vendor: {Device.VendorName}");
+			logger.LogMessage($"  - Backend: {Device.BackendType}");
+			logger.LogMessage($"  - API version: {Device.ApiVersion}");
 
 			// Log GPU features:
 			GraphicsDeviceFeatures features = Device.Features;
-			Logger.LogMessage("+ Graphics device features:");
-			Logger.LogMessage($"  - Compute shader: {features.ComputeShader}");
-			Logger.LogMessage($"  - Geometry shader: {features.GeometryShader}");
-			Logger.LogMessage($"  - Tesselation: {features.TessellationShaders}");
-			Logger.LogMessage($"  - Structured buffers: {features.StructuredBuffer}");
-			Logger.LogMessage($"  - 1D textures: {features.Texture1D}");
-			Logger.LogMessage($"  - Float64 in shaders: {features.ShaderFloat64}");
+			logger.LogMessage("+ Graphics device features:");
+			logger.LogMessage($"  - Compute shader: {features.ComputeShader}");
+			logger.LogMessage($"  - Geometry shader: {features.GeometryShader}");
+			logger.LogMessage($"  - Tesselation: {features.TessellationShaders}");
+			logger.LogMessage($"  - Structured buffers: {features.StructuredBuffer}");
+			logger.LogMessage($"  - 1D textures: {features.Texture1D}");
+			logger.LogMessage($"  - Float64 in shaders: {features.ShaderFloat64}");
 			{
 				capabilities.computeShaders = features.ComputeShader;
 				capabilities.geometryShaders = features.GeometryShader;
@@ -153,15 +153,15 @@ internal sealed class MetalGraphicsCore(GraphicsSystem _graphicsSystem, EngineCo
 			// Log Metal specific information:
 			if (Device.GetMetalInfo(out BackendInfoMetal mtlInfo))
 			{
-				Logger.LogMessage("+ Metal feature sets:");
+				logger.LogMessage("+ Metal feature sets:");
 				foreach (MTLFeatureSet featureSet in mtlInfo.FeatureSet)
 				{
-					Logger.LogMessage($"  - {featureSet}");
+					logger.LogMessage($"  - {featureSet}");
 				}
 			}
 			else
 			{
-				Logger.LogError("Could not query Metal feature sets!");
+				logger.LogError("Could not query Metal feature sets!");
 			}
 		}
 
@@ -172,7 +172,7 @@ internal sealed class MetalGraphicsCore(GraphicsSystem _graphicsSystem, EngineCo
 		isInitialized = Device != null && Window != null;
 		if (isInitialized)
 		{
-			Logger.LogMessage($"# Finished initializing Metal graphics device. ({stopwatch.ElapsedMilliseconds} ms)\n");
+			logger.LogMessage($"# Finished initializing Metal graphics device. ({stopwatch.ElapsedMilliseconds} ms)\n");
 		}
 
 		quitMessageReceived = false;
