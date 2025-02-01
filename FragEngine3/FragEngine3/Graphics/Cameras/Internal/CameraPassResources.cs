@@ -1,7 +1,7 @@
 ﻿using FragEngine3.Graphics.ConstantBuffers;
 using Veldrid;
 
-namespace FragEngine3.Graphics.Components.Internal;
+namespace FragEngine3.Graphics.Cameras.Internal;
 
 internal sealed class CameraPassResources : IDisposable
 {
@@ -39,12 +39,12 @@ internal sealed class CameraPassResources : IDisposable
 		cbCamera?.Dispose();
 		resSetCamera?.Dispose();
 
-		if (_disposing )
+		if (_disposing)
 		{
 			cbCamera = null;
 			resSetCamera = null;
 		}
 	}
-	
+
 	#endregion
 }

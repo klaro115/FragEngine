@@ -1,6 +1,6 @@
 ﻿using FragEngine3.EngineCore;
+using FragEngine3.Graphics.Cameras.Internal;
 using FragEngine3.Graphics.Components;
-using FragEngine3.Graphics.Components.Internal;
 using FragEngine3.Graphics.Contexts;
 using FragEngine3.Graphics.Resources;
 using FragEngine3.Graphics.Resources.Materials;

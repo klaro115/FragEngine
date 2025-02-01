@@ -171,9 +171,9 @@ public class Material(GraphicsCore _core, ResourceHandle _handle) : Resource(_ha
 			shaderSetDescs = new VersionedMember<ShaderSetDescription>[minVariantCount];
 
 			oldShaderSetDescs?.CopyTo(shaderSetDescs, 0);
-			for (int j = oldShaderSetDescCount; j < shaderSetDescs.Length; ++j)
+			for (int i = oldShaderSetDescCount; i < shaderSetDescs.Length; ++i)
 			{
-				shaderSetDescs[j] = new(default, 0);
+				shaderSetDescs[i] = new(default, 0);
 			}
 		}
 	}

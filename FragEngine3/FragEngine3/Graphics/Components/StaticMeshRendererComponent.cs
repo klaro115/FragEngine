@@ -11,6 +11,7 @@ using Veldrid;
 
 namespace FragEngine3.Graphics.Components;
 
+[ComponentBackingType(typeof(StaticMeshRenderer))]
 public sealed class StaticMeshRendererComponent : Component, IPhysicalRenderer
 {
 	#region Constructors

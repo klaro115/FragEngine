@@ -7,7 +7,7 @@ using FragEngine3.Scenes;
 using System.Numerics;
 using Veldrid;
 
-namespace FragEngine3.Graphics.Components.Internal;
+namespace FragEngine3.Graphics.Lighting.Internal;
 
 internal sealed class ShadowCascadeResources(LightInstance _light, uint _shadowCascadeIdx) : IDisposable
 {
