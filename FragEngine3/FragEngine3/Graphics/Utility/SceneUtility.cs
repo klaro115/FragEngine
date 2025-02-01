@@ -20,7 +20,7 @@ public static class SceneUtility
 		}
 		catch (Exception ex)
 		{
-			_graphicsCore.graphicsSystem.engine.Logger.LogException($"Failed to create default object resource layout!", ex);
+			_graphicsCore.graphicsSystem.Engine.Logger.LogException($"Failed to create default object resource layout!", ex);
 			_outResLayoutObject = null!;
 			return false;
 		}

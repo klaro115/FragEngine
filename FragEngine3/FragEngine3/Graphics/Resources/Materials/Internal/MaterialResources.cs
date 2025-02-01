@@ -4,6 +4,7 @@ using Veldrid;
 
 namespace FragEngine3.Graphics.Resources.Materials.Internal;
 
+[Obsolete("Unfinished or dead code?")]
 public abstract class MaterialResources(GraphicsCore _graphicsCore, ResourceLayout _resourceLayout) : IDisposable
 {
 	#region Constructors
@@ -39,7 +40,7 @@ public abstract class MaterialResources(GraphicsCore _graphicsCore, ResourceLayo
 
 	public bool IsDisposed { get; private set; } = false;
 
-	private Logger? Logger => graphicsCore.graphicsSystem.engine.Logger ?? Logger.Instance;
+	private Logger? Logger => graphicsCore.graphicsSystem.Engine.Logger ?? Logger.Instance;
 
 	#endregion
 	#region Methods

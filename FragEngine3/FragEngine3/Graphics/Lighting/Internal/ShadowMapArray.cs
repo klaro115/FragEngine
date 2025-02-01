@@ -23,6 +23,7 @@ public sealed class ShadowMapArray : IDisposable
 	public ShadowMapArray(GraphicsCore _core, uint _initialCount = 1)
 	{
 		core = _core ?? throw new ArgumentNullException(nameof(_core), "Graphics core may not be null!");
+		logger = core.graphicsSystem.Engine.Logger;
 
 		Capacity = Math.Max(_initialCount, 1);
 
@@ -55,6 +56,7 @@ public sealed class ShadowMapArray : IDisposable
 	#region Fields
 
 	public readonly GraphicsCore core;
+	private readonly Logger logger;
 
 	private readonly List<Framebuffer> framebuffers = [];
 	private Matrix4x4[] shadowMatrixBuffer;
@@ -83,8 +85,6 @@ public sealed class ShadowMapArray : IDisposable
 	/// There are always 2 matrices for each shadow map.
 	/// </summary>
 	public uint MatrixCapacity => Capacity * 2;
-
-	private Logger Logger => core.graphicsSystem.engine.Logger;
 
 	#endregion
 	#region Methods
@@ -118,7 +118,7 @@ public sealed class ShadowMapArray : IDisposable
 		_outRecreatedShadowMaps = false;
 		if (IsDisposed)
 		{
-			Logger.LogError("Cannot prepare disposed shadow map array for use!");
+			logger.LogError("Cannot prepare disposed shadow map array for use!");
 			return false;
 		}
 
@@ -129,14 +129,14 @@ public sealed class ShadowMapArray : IDisposable
 			// Texture arrays
 			if (!ResizeTextureArrays())
 			{
-				Logger.LogError("Failed to prepare shadow map texture arrays!");
+				logger.LogError("Failed to prepare shadow map texture arrays!");
 				return false;
 			}
 
 			// Projection matrices:
 			if (!ResizeShadowMatrixBuffers())
 			{
-				Logger.LogError("Failed to prepare BufShadowMatrices!");
+				logger.LogError("Failed to prepare BufShadowMatrices!");
 				return false;
 			}
 
@@ -166,7 +166,7 @@ public sealed class ShadowMapArray : IDisposable
 
 		if (_shadowMapArrayIdx >= Capacity)     //Note: 'Count' would be more correct here, but 'Capacity' is safer against crashes and aborts.
 		{
-			Logger.LogError($"Shadow map index {_shadowMapArrayIdx} is out of range! Make sure you call 'Prepare()' with the right number of array elements!");
+			logger.LogError($"Shadow map index {_shadowMapArrayIdx} is out of range! Make sure you call 'Prepare()' with the right number of array elements!");
 			_outFramebuffer = null!;
 			return false;
 		}
@@ -225,7 +225,7 @@ public sealed class ShadowMapArray : IDisposable
 	{
 		if (IsDisposed)
 		{
-			Logger.LogError("Cannot finalize preparing disposed shadow matrix buffers for use!");
+			logger.LogError("Cannot finalize preparing disposed shadow matrix buffers for use!");
 			return false;
 		}
 
@@ -246,7 +246,7 @@ public sealed class ShadowMapArray : IDisposable
 		}
 		catch (Exception ex)
 		{
-			Logger.LogException("Failed to upload shadow matrices to GPU buffer!", ex);
+			logger.LogException("Failed to upload shadow matrices to GPU buffer!", ex);
 			return false;
 		}
 	}
@@ -280,7 +280,7 @@ public sealed class ShadowMapArray : IDisposable
 		}
 		catch (Exception ex)
 		{
-			Logger.LogException($"Failed to create shadow maps' normal map texture array!", ex);
+			logger.LogException($"Failed to create shadow maps' normal map texture array!", ex);
 			return false;
 		}
 
@@ -303,7 +303,7 @@ public sealed class ShadowMapArray : IDisposable
 		}
 		catch (Exception ex)
 		{
-			Logger.LogException($"Failed to create shadow maps' depth map texture array!", ex);
+			logger.LogException($"Failed to create shadow maps' depth map texture array!", ex);
 			return false;
 		}
 
@@ -330,7 +330,7 @@ public sealed class ShadowMapArray : IDisposable
 		}
 		catch (Exception ex)
 		{
-			Logger.LogException("Failed to create framebuffers for shadow map texture arrays!", ex);
+			logger.LogException("Failed to create framebuffers for shadow map texture arrays!", ex);
 			return false;
 		}
 
@@ -366,7 +366,7 @@ public sealed class ShadowMapArray : IDisposable
 		}
 		catch (Exception ex)
 		{
-			Logger.LogException("Failed to create shadow projection matrix buffer!", ex);
+			logger.LogException("Failed to create shadow projection matrix buffer!", ex);
 			return false;
 		}
 	}
@@ -387,7 +387,7 @@ public sealed class ShadowMapArray : IDisposable
 
 		if (!core.SamplerManager.GetSampler(ref samplerDesc, out Sampler samplerShadowMaps))
 		{
-			Logger.LogError("Failed to create sampler for shadow map texture array!");
+			logger.LogError("Failed to create sampler for shadow map texture array!");
 			return false;
 		}
 		SamplerShadowMaps = samplerShadowMaps;

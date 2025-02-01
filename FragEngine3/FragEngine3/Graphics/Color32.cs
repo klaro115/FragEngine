@@ -53,7 +53,7 @@ public struct Color32 : IEquatable<Color32>
 	/// <summary>
 	/// Creates a new color structure.
 	/// </summary>
-	/// <param name="_vectorRgba">A 4-dimensional vector where components XYZW map to RGBA respectively.
+	/// <param name="_vectorRgba">A 4-dimensional vector where components XYZ map to RGB respectively.
 	/// All values are expected to be in the range of [0, 1], component values exceeding this will be clamped to the permissive range.</param>
 	public Color32(Vector3 _vectorRgb)
 	{
@@ -63,11 +63,19 @@ public struct Color32 : IEquatable<Color32>
 		packedValue = (r << 24) | (g << 16) | (b << 8) | 0xFF;
 	}
 
+	/// <summary>
+	/// Creates a new color structure.
+	/// </summary>
+	/// <param name="_color">A color in Veldrid's byte color type.</param>
 	public Color32(RgbaByte _color)
 	{
 		packedValue = ((uint)_color.R << 24) | ((uint)_color.G << 16) | ((uint)_color.B << 8) | ((uint)_color.A << 0);
 	}
 
+	/// <summary>
+	/// Creates a new color structure.
+	/// </summary>
+	/// <param name="_color">A color in Veldrid's float color type.</param>
 	public Color32(RgbaFloat _color)
 	{
 		uint r = (uint)Math.Clamp(_color.R * 255, 0, 0xFF);
@@ -80,6 +88,9 @@ public struct Color32 : IEquatable<Color32>
 	#endregion
 	#region Fields
 
+	/// <summary>
+	/// A packed 32-bit integer encoding a 4-component color value.
+	/// </summary>
 	public uint packedValue;
 
 	#endregion
@@ -135,6 +146,9 @@ public struct Color32 : IEquatable<Color32>
 	#endregion
 	#region Constants
 
+	/// <summary>
+	/// The size of this color structure, in bytes.
+	/// </summary>
 	public const int byteSize = sizeof(uint);
 
 	private const float inv255 = 1.0f / 255.0f;
@@ -142,6 +156,13 @@ public struct Color32 : IEquatable<Color32>
 	#endregion
 	#region Methods
 
+	/// <summary>
+	/// Unpacks the 32-bit integer <see cref="packedValue"/> field into 4 color components.
+	/// </summary>
+	/// <param name="_outR">Outputs the color's red component</param>
+	/// <param name="_outG">Outputs the color's green component</param>
+	/// <param name="_outB">Outputs the color's blue component</param>
+	/// <param name="_outA">Outputs the color's alpha component</param>
 	public readonly void Unpack(out byte _outR, out byte _outG, out byte _outB, out byte _outA)
 	{
 		_outR = (byte)((packedValue >> 24) & 0xFF);
@@ -149,6 +170,14 @@ public struct Color32 : IEquatable<Color32>
 		_outB = (byte)((packedValue >> 8) & 0xFF);
 		_outA = (byte)((packedValue >> 0) & 0xFF);
 	}
+	/// <summary>
+	/// Unpacks the 32-bit integer <see cref="packedValue"/> field into 4 bytes, in the order as bytes appear in memory.<para/>
+	/// Note: This method assumes a little-endian CPU/OS architecture.
+	/// </summary>
+	/// <param name="_outByte0">Outputs the 1st byte of the packed color value.</param>
+	/// <param name="_outByte1">Outputs the 2nd byte of the packed color value.</param>
+	/// <param name="_outByte2">Outputs the 3rd byte of the packed color value.</param>
+	/// <param name="_outByte3">Outputs the 4th byte of the packed color value.</param>
 	public readonly void GetByteOrder(out byte _outByte0, out byte _outByte1, out byte _outByte2, out byte _outByte3)
 	{
 		_outByte0 = (byte)((packedValue >> 0) & 0xFF);
@@ -211,6 +240,13 @@ public struct Color32 : IEquatable<Color32>
 		return new(R, G, B, A);
 	}
 
+	/// <summary>
+	/// Linear interpolation from one color to another.
+	/// </summary>
+	/// <param name="_a">The first color, at k=0.</param>
+	/// <param name="_b">The second color, at k=1.</param>
+	/// <param name="_k">Interpolation factor, in the range from 0.0f to 1.0f.</param>
+	/// <returns></returns>
 	public static Color32 Lerp(Color32 _a, Color32 _b, float _k)
 	{
 		uint t = (uint)Math.Clamp(_k * 255, 0, 255);
@@ -221,6 +257,13 @@ public struct Color32 : IEquatable<Color32>
 			(byte)((_a.B * it + _b.B * t) >> 8),
 			(byte)((_a.A * it + _b.A * t) >> 8));
 	}
+	/// <summary>
+	/// Linear interpolation from one color to another.
+	/// </summary>
+	/// <param name="_a">The first color, at k=0.</param>
+	/// <param name="_b">The second color, at k=255.</param>
+	/// <param name="_k">Interpolation factor, in the range from 0 (0x00) to 255 (0xFF).</param>
+	/// <returns></returns>
 	public static Color32 Lerp(Color32 _a, Color32 _b, byte _k)
 	{
 		uint it = 255 - (uint)_k;
@@ -231,6 +274,12 @@ public struct Color32 : IEquatable<Color32>
 			(byte)((_a.A * it + _b.A * _k) >> 8));
 	}
 
+	/// <summary>
+	/// Component-wise addition of one color's values onto another.
+	/// </summary>
+	/// <param name="left">The first color.</param>
+	/// <param name="right">The second color.</param>
+	/// <returns>A new color with added component values; values cannot exceed 255.</returns>
 	public static Color32 operator +(Color32 left, Color32 right)
 	{
 		return new Color32(
@@ -239,6 +288,12 @@ public struct Color32 : IEquatable<Color32>
 			(byte)Math.Min(left.B + right.B, 0xFF),
 			(byte)Math.Min(left.A + right.A, 0xFF));
 	}
+	/// <summary>
+	/// Component-wise subtraction of one color's values from another.
+	/// </summary>
+	/// <param name="left">The first color.</param>
+	/// <param name="right">The second color.</param>
+	/// <returns>A new color with subtracted component values; values cannot drop below 0.</returns>
 	public static Color32 operator -(Color32 left, Color32 right)
 	{
 		return new Color32(
@@ -248,6 +303,13 @@ public struct Color32 : IEquatable<Color32>
 			(byte)Math.Max(left.A - right.A, 0));
 	}
 
+	/// <summary>
+	/// Component-wise multiplication of one color's saturation with another.<para/>
+	/// This multiplication treats color component values as percentages, normalized to a 0..255 value range.
+	/// </summary>
+	/// <param name="left">The first color.</param>
+	/// <param name="right">The second color.</param>
+	/// <returns>A new color with multiplied component values.</returns>
 	public static Color32 operator *(Color32 left, Color32 right)
 	{
 		return new Color32(
@@ -256,6 +318,12 @@ public struct Color32 : IEquatable<Color32>
 			(byte)((left.B * right.B) >> 8),
 			(byte)((left.A * right.A) >> 8));
 	}
+	/// <summary>
+	/// Multiplies all component value with a scalar value.
+	/// </summary>
+	/// <param name="_color32">A color.</param>
+	/// <param name="_multiplier">The factor that all components are multiplied with.</param>
+	/// <returns>A new color with multiplied component value; values are clamped to the 0..255 range.</returns>
 	public static Color32 operator *(Color32 _color32, float _multiplier)
 	{
 		return new Color32(

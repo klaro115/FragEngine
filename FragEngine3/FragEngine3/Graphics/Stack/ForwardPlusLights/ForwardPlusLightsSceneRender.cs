@@ -11,14 +11,11 @@ internal sealed class ForwardPlusLightsSceneRender(ForwardPlusLightsStack _stack
 	#region Fields
 
 	private readonly GraphicsCore core = _stack.Core;
+	private readonly Logger logger = _stack.Core.graphicsSystem.Engine.Logger;
+
 	private readonly ForwardPlusLightsStack stack = _stack;
 	private readonly ForwardPlusLightsSceneObjects sceneObjects = _sceneObjects;
 	private readonly ForwardPlusLightsComposition composition = _composition;
-
-	#endregion
-	#region Properties
-
-	private Logger Logger => core.graphicsSystem.engine.Logger ?? Logger.Instance!;
 
 	#endregion
 	#region Methods
@@ -140,7 +137,7 @@ internal sealed class ForwardPlusLightsSceneRender(ForwardPlusLightsStack _stack
 			}
 			catch (Exception ex)
 			{
-				Logger.LogException($"An unhandled exception was caught while drawing scene camera {i}!", ex);
+				logger.LogException($"An unhandled exception was caught while drawing scene camera {i}!", ex);
 				success = false;
 				break;
 			}
@@ -230,7 +227,7 @@ internal sealed class ForwardPlusLightsSceneRender(ForwardPlusLightsStack _stack
 			Framebuffer backbuffer = core.Device.SwapchainFramebuffer;
 			if (!_camera.SetOverrideCameraTarget(backbuffer, false))
 			{
-				Logger.LogError("Failed to set override render targets for graphics stack's scene composition pass!");
+				logger.LogError("Failed to set override render targets for graphics stack's scene composition pass!");
 				_outResultFramebuffer = _inputFramebuffer;
 				return false;
 			}

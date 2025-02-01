@@ -35,7 +35,7 @@ namespace FragEngine3.Graphics.Cameras
 				}
 				catch (Exception ex)
 				{
-					_graphicsCore.graphicsSystem.engine.Logger.LogException("Failed to create scene constant buffer (CBScene)!", ex);
+					_graphicsCore.graphicsSystem.Engine.Logger.LogException("Failed to create scene constant buffer (CBScene)!", ex);
 					return false;
 				}
 			}
@@ -82,7 +82,7 @@ namespace FragEngine3.Graphics.Cameras
 				}
 				catch (Exception ex)
 				{
-					_cameraInstance.graphicsCore.graphicsSystem.engine.Logger.LogException("Failed to create camera constant buffer (CBCamera)!", ex);
+					_cameraInstance.graphicsCore.graphicsSystem.Engine.Logger.LogException("Failed to create camera constant buffer (CBCamera)!", ex);
 					_cbCamera = null;
 					return false;
 				}
@@ -127,7 +127,7 @@ namespace FragEngine3.Graphics.Cameras
 			}
 			catch (Exception ex)
 			{
-				_graphicsCore.graphicsSystem.engine.Logger.LogException("Failed to crate default camera resource layout!", ex);
+				_graphicsCore.graphicsSystem.Engine.Logger.LogException("Failed to crate default camera resource layout!", ex);
 				_resLayoutCamera = null!;
 				return false;
 			}
@@ -167,7 +167,7 @@ namespace FragEngine3.Graphics.Cameras
 				}
 				catch (Exception ex)
 				{
-					_graphicsCore.graphicsSystem.engine.Logger.LogException("Failed to crate default camera resource set!", ex);
+					_graphicsCore.graphicsSystem.Engine.Logger.LogException("Failed to crate default camera resource set!", ex);
 					_resSetCamera = null;
 					return false;
 				}

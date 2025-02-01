@@ -158,7 +158,7 @@ public sealed class StaticMeshRendererComponent : Component, IPhysicalRenderer
 			return false;
 		}
 
-		ResourceManager resourceManager = graphicsCore.graphicsSystem.engine.ResourceManager;
+		ResourceManager resourceManager = graphicsCore.graphicsSystem.Engine.ResourceManager;
 
 		// Reset all resource references:
 		instance.SetMesh(ResourceHandle.None);

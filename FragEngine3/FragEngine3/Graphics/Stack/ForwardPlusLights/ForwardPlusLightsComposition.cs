@@ -45,7 +45,7 @@ internal sealed class ForwardPlusLightsComposition(ForwardPlusLightsStack _stack
 
 	public bool IsDisposed { get; private set; } = false;
 
-	private Logger Logger => core.graphicsSystem.engine.Logger ?? Logger.Instance!;
+	private Logger Logger => core.graphicsSystem.Engine.Logger ?? Logger.Instance!;
 
 	#endregion
 	#region Methods
@@ -84,7 +84,7 @@ internal sealed class ForwardPlusLightsComposition(ForwardPlusLightsStack _stack
 
 		if (!stack.Scene.engine.ResourceManager.GetResource(RESOURCE_KEY_FULLSCREEN_QUAD_MESH, out ResourceHandle fullscreenQuadHandle))
 		{
-			success &= MeshPrimitiveFactory.CreateFullscreenQuadMesh(RESOURCE_KEY_FULLSCREEN_QUAD_MESH, core.graphicsSystem.engine, false, out _, out _, out fullscreenQuadHandle);
+			success &= MeshPrimitiveFactory.CreateFullscreenQuadMesh(RESOURCE_KEY_FULLSCREEN_QUAD_MESH, core.graphicsSystem.Engine, false, out _, out _, out fullscreenQuadHandle);
 		}
 
 		if (!stack.Scene.FindNode(NODE_NAME_COMPOSITE_SCENE_RENDERER, out _))

@@ -22,7 +22,7 @@ public sealed class Mesh : Resource
 	public Mesh(ResourceHandle _handle, GraphicsCore? _graphicsCore) : base(_handle)
 	{
 		graphicsCore = _graphicsCore ?? _handle.resourceManager.engine.GraphicsSystem.graphicsCore;
-		logger = graphicsCore.graphicsSystem.engine.Logger;
+		logger = graphicsCore.graphicsSystem.Engine.Logger;
 	}
 
 	/// <summary>

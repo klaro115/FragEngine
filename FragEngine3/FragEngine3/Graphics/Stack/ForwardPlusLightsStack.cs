@@ -86,7 +86,7 @@ public sealed class ForwardPlusLightsStack : IGraphicsStack
 	public int SkippedRendererCount { get; private set; } = 0;
 	public int FailedRendererCount { get; private set; } = 0;
 
-	private Logger Logger => Core.graphicsSystem.engine.Logger ?? Logger.Instance!;
+	private Logger Logger => Core.graphicsSystem.Engine.Logger ?? Logger.Instance!;
 
 	#endregion
 	#region Methods

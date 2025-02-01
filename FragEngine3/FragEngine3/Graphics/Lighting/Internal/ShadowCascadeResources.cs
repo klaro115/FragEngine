@@ -2,7 +2,6 @@
 using FragEngine3.Graphics.Cameras;
 using FragEngine3.Graphics.ConstantBuffers;
 using FragEngine3.Graphics.Contexts;
-using FragEngine3.Graphics.Lighting;
 using FragEngine3.Scenes;
 using System.Numerics;
 using Veldrid;
@@ -79,7 +78,7 @@ internal sealed class ShadowCascadeResources(LightInstance _light, uint _shadowC
 		out bool _outFramebufferChanged,
 		out bool _outCbCameraChanged)
 	{
-		Logger logger = core.graphicsSystem.engine.Logger;
+		Logger logger = core.graphicsSystem.Engine.Logger;
 
 		// Select framebuffer:
 		uint shadowMapArrayIdx = _shadowMapIdx + shadowCascadeIdx;

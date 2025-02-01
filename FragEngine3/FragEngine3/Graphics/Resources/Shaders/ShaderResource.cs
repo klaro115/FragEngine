@@ -28,9 +28,10 @@ public sealed class ShaderResource : Resource
 		ShaderConfig _maxFeatureConfig,
 		List<ShaderDataSourceCodeDesc>? _sourceCodeData = null,
 		byte[]? _sanitizedSourceCodeBytes = null)
-		: base(_resourceKey, _graphicsCore.graphicsSystem.engine)
+		: base(_resourceKey, _graphicsCore.graphicsSystem.Engine)
 	{
 		graphicsCore = _graphicsCore ?? throw new ArgumentNullException(nameof(_graphicsCore), "Material's graphics core may not be null!");
+		logger = graphicsCore.graphicsSystem.Engine.Logger;
 		Stage = _stage;
 
 		supportedVariantFlags = _supportedVariantFlags;
@@ -56,6 +57,7 @@ public sealed class ShaderResource : Resource
 	#region Fields
 
 	public readonly GraphicsCore graphicsCore;
+	private readonly Logger logger;
 
 	// Compiled variants:
 
@@ -87,8 +89,6 @@ public sealed class ShaderResource : Resource
 	public int VertexVariantCount => shaderVariants is not null ? shaderVariants.Length : 0;
 
 	public override ResourceType ResourceType => ResourceType.Shader;
-
-	private Logger? Logger => graphicsCore.graphicsSystem.engine.Logger ?? Logger.Instance;
 
 	#endregion
 	#region Methods
@@ -164,12 +164,12 @@ public sealed class ShaderResource : Resource
 	{
 		if (IsDisposed)
 		{
-			Logger?.LogError("Cannot compile shader variants from source for disposed shader resource!");
+			logger.LogError("Cannot compile shader variants from source for disposed shader resource!");
 			return false;
 		}
 		if (_variantFlags == 0 || (_variantFlags & unsupportedVariantFlags) != 0 || !canCompileFromSourceCode)
 		{
-			Logger?.LogError($"Cannot compile shader variants from source; missing source code, or unsupported variant flags! Flags: '{_variantFlags}'");
+			logger.LogError($"Cannot compile shader variants from source; missing source code, or unsupported variant flags! Flags: '{_variantFlags}'");
 			return false;
 		}
 
@@ -190,7 +190,7 @@ public sealed class ShaderResource : Resource
 		string entryPoint = sourceCodeBlock.EntryPoint;
 		if (string.IsNullOrEmpty(entryPoint))
 		{
-			Logger?.LogError($"Cannot compile shader variants from source; missing entry point function name! Flags: '{_variantFlags}'");
+			logger.LogError($"Cannot compile shader variants from source; missing entry point function name! Flags: '{_variantFlags}'");
 			return false;
 		}
 
@@ -206,7 +206,7 @@ public sealed class ShaderResource : Resource
 
 			if (!ShaderSourceCodeDefiner.SetFeatureDefines(sourceCodeBytes!, featureDefinesTxts, false, out sourceCodeBuffer))
 			{
-				Logger?.LogError($"Cannot compile shader variants from source; failed to set feature and variant '#define' macros! Flags: '{_variantFlags}'");
+				logger.LogError($"Cannot compile shader variants from source; failed to set feature and variant '#define' macros! Flags: '{_variantFlags}'");
 				return false;
 			}
 		}
@@ -236,7 +236,7 @@ public sealed class ShaderResource : Resource
 		}
 		catch (Exception ex)
 		{
-			Logger?.LogException($"Failed to compile shader variant '{_variantFlags}' for shader resource '{resourceKey}'!", ex);
+			logger.LogException($"Failed to compile shader variant '{_variantFlags}' for shader resource '{resourceKey}'!", ex);
 			return false;
 		}
 		finally

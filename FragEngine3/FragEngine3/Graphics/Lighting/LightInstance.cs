@@ -164,7 +164,7 @@ internal abstract class LightInstance(GraphicsCore _core) : ILightSource
 
 	public GraphicsCore GraphicsCore { get; } = _core;
 
-	protected Logger Logger => GraphicsCore.graphicsSystem.engine.Logger;
+	protected Logger Logger => GraphicsCore.graphicsSystem.Engine.Logger;
 
 	#endregion
 	#region Methods

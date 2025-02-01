@@ -46,7 +46,7 @@ public sealed class LightDataBuffer : IDisposable
 	public uint Count { get; private set; } = 0;
 	public uint Capacity { get; private set; } = 0;
 
-	private Logger Logger => core.graphicsSystem.engine.Logger;
+	private Logger Logger => core.graphicsSystem.Engine.Logger;
 
 	#endregion
 	#region Methods
