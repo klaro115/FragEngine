@@ -327,5 +327,23 @@ public sealed class Engine : IDisposable
 		return success;
 	}
 
+	/// <summary>
+	/// Generates a rough performance report on for the current engine state. This report includes frame rates, and other timing metrics about the main loop.<para/>
+	/// Note: At least one frame must have passed since the last reset, or the report will be invalid.
+	/// </summary>
+	/// <param name="_outReport">Outputs a report containing metrics about the current state's run-time performance.</param>
+	/// <param name="_resetMetrics">Whether to reset counters and timers after generating the report.</param>
+	/// <returns>True if a valid report could be created, false otherwise.</returns>
+	public bool GeneratePerformanceReport(out EngineStateReport _outReport, bool _resetMetrics = false)
+	{
+		if (!IsRunning)
+		{
+			_outReport = EngineStateReport.Zero;
+			return false;
+		}
+
+		return currentState.GenerateStateReport(out _outReport, _resetMetrics);
+	}
+
 	#endregion
 }
