@@ -1,4 +1,4 @@
-﻿using FragAssetFormats.Geometry.OBJ;
+﻿using FragAssetFormats.Geometry.WavefrontOBJ;
 using FragAssetFormats.Geometry;
 using FragAssetFormats.Images;
 using FragAssetFormats.Shaders.FSHA;
