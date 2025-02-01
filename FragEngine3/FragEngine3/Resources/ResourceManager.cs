@@ -122,10 +122,23 @@ public sealed class ResourceManager : IEngineSystem
 		}
 	}
 
+	/// <summary>
+	/// Issues and abortion of all ongoing file gathering and resource imports, and blocks until completed.
+	/// </summary>
 	public void AbortAllImports()
 	{
 		fileGatherer.AbortGathering();
 		importer.AbortAllImports();
+	}
+
+	/// <summary>
+	/// Asynchronously aborts all ongoing file gathering and resource imports, and awaits completion.
+	/// </summary>
+	public async Task AbortAllImportsAsync()
+	{
+		Task abortGatherTask = fileGatherer.AbortGatheringAsync();
+		Task abortImportTask = importer.AbortAllImportsAsync();
+		await Task.WhenAll(abortGatherTask, abortImportTask);
 	}
 
 	public bool HasFile(string _fileKey)
@@ -280,6 +293,22 @@ public sealed class ResourceManager : IEngineSystem
 	}
 
 	/// <summary>
+	/// Retrieve a resource handle for accessing and managing a specific resource, then loads the resource asynchronously if it wasn't already loaded.
+	/// </summary>
+	/// <param name="_resourceKey">The unique identifier for the resource and its handle.</param>
+	/// <param name="_loadImmediately"></param>
+	/// <returns>A resource handle through which the resource may be accessed and managed, or null, if getting or loading the resource has failed.</returns>
+	public async Task<ResourceHandle?> GetAndLoadResourceAsync(string _resourceKey)
+	{
+		if (!GetResource(_resourceKey, out ResourceHandle handle))
+		{
+			return null;
+		}
+		bool result = await handle.LoadAsync();
+		return result ? handle : null;
+	}
+
+	/// <summary>
 	/// Registers a new resource, identified by its resource handle, with this resource manager.
 	/// </summary>
 	/// <param name="_handle">A handle identifying and describing the new resource. Must be non-null
@@ -319,6 +348,19 @@ public sealed class ResourceManager : IEngineSystem
 			typeDict.TryAdd(_handle.resourceKey, _handle);
 		}
 		return true;
+	}
+
+	/// <summary>
+	/// Awaitable overload of <see cref="AddResource(ResourceHandle)"/>.
+	/// </summary>
+	/// <param name="_handle">A handle identifying and describing the new resource. Must be non-null
+	/// and valid, a resource may not be registered twice.</param>
+	/// <returns>True if the given resource handle is valid and was registered successfully, false
+	/// otherwise or if another handle with the same resource key already exists.</returns>
+	public Task<bool> AddResourceAsync(ResourceHandle _handle)
+	{
+		bool result = AddResource(_handle);
+		return Task.FromResult(result);
 	}
 
 	/// <summary>
@@ -387,6 +429,12 @@ public sealed class ResourceManager : IEngineSystem
 
 			return allResources.TryRemove(_resourceKey, out _);
 		}
+	}
+
+	public Task<bool> RemoveResourceAsync(string _resourceKey)
+	{
+		bool result = RemoveResource(_resourceKey);
+		return Task.FromResult(result);
 	}
 
 	internal bool LoadResource(string _resourceKey, bool _loadImmediately, ResourceHandle.FuncAssignResourceCallback _assignResourceCallback)
@@ -472,6 +520,12 @@ public sealed class ResourceManager : IEngineSystem
 			result &= importer.EnqueueResource(_handle, _assignResourceCallback);
 		}
 		return result;
+	}
+
+	internal Task<bool> LoadResourceAsync(ResourceHandle _handle, ResourceHandle.FuncAssignResourceCallback _assignResourceCallback)
+	{
+		bool result = LoadResource(_handle, true, _assignResourceCallback);
+		return Task.FromResult(result);
 	}
 
 	/// <summary>
@@ -622,10 +676,34 @@ public sealed class ResourceManager : IEngineSystem
 	}
 
 	/// <summary>
+	/// Asynchromnously unloads a specific resource.
+	/// </summary>
+	/// <param name="_resourceKey">The resource key used to identify a resource and its handle.</param>
+	/// <param name="_silentFailure">Whether to log errors if the resource wasn't found. If false, no errors are logged, which is great for shutdown operation
+	/// where resources might have been removed at a prior time, but you don't want the console clogged with redundant or out-of-date messages.</param>
+	/// <returns>True if the resource was known and registered, and couild be unloaded successfully. False if it wasn't registered.</returns>
+	public async Task<bool> UnloadResourceAsync(string _resourceKey, bool _silentFailure = false)
+	{
+		if (!GetResource(_resourceKey, out ResourceHandle handle))
+		{
+			if (!_silentFailure) engine.Logger.LogError($"Cannot unload resource with unregistered/unknown key '{_resourceKey ?? "NULL"}'!");
+			return false;
+		}
+
+		// If the resource object is available, terminate it and reset handle's load state:
+		Resource? resourceObj = await handle.GetResourceAsync(false);
+		if (resourceObj is not null && !resourceObj.IsDisposed)
+		{
+			resourceObj.Dispose();
+		}
+		handle.LoadState = ResourceLoadState.NotLoaded;
+		return true;
+	}
+
+	/// <summary>
 	/// Get an enumerator for iterating over all resource handles registered with this resource manager.
 	/// </summary>
 	/// <param name="_loadedOnly">Whether to only iterate over resources that have been fully loaded.</param>
-	/// <returns></returns>
 	public IEnumerator<ResourceHandle> IterateResources(bool _loadedOnly)
 	{
 		if (IsDisposed) yield break;

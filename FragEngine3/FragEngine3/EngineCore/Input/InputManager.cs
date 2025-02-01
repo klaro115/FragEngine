@@ -76,6 +76,9 @@ public sealed class InputManager : IEngineSystem
 	/// Current mouse velocity, in pixels per second.
 	/// </summary>
 	public Vector2 MouseVelocity { get; private set; } = new();
+	/// <summary>
+	/// Current mouse scroll wheel velocity.
+	/// </summary>
 	public float MouseWheel { get; private set; } = 0.0f;
 
 	/// <summary>

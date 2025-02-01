@@ -11,14 +11,14 @@ public sealed class ResourceFileData
 
 	// File details:
 	public string DataFilePath { get; set; } = string.Empty;
-	public ResourceFileType DataFileType { get; set; } = ResourceFileType.Single;
+	public ResourceFileType DataFileType { get; init; } = ResourceFileType.Single;
 	public ulong DataFileSize { get; set; } = 0;
-	public ulong DataFileHash { get; set; } = 0;    // xxHash3 checksum as a big-endian 64-bit number.
+	public ulong DataFileHash { get; init; } = 0;    // xxHash3 checksum as a big-endian 64-bit number.
 
 	// Compression details:
 	public ulong UncompressedFileSize {  get; set; } = 0;
-	public ulong BlockSize { get; set; } = 0;
-	public uint BlockCount { get; set; } = 0;
+	public ulong BlockSize { get; init; } = 0;
+	public uint BlockCount { get; init; } = 0;
 
 	// Content details:
 	public int ResourceCount { get; set; } = 0;

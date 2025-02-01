@@ -103,6 +103,12 @@ public sealed class ResourceImporter : IDisposable
 		importThreadProgress.Update(null, 0, 0);
 	}
 
+	public Task AbortAllImportsAsync()
+	{
+		AbortAllImports();
+		return Task.CompletedTask;
+	}
+
 	public bool RemoveResource(ResourceHandle _handle)
 	{
 		if (_handle == null) return false;

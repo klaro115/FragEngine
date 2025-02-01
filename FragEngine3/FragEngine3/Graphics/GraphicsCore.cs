@@ -2,7 +2,6 @@
 using FragEngine3.EngineCore.Config;
 using FragEngine3.Graphics.Internal;
 using FragEngine3.Graphics.Resources;
-using FragEngine3.Graphics.Resources.Data;
 using FragEngine3.Graphics.Resources.Shaders;
 using Veldrid;
 using Veldrid.Sdl2;
@@ -16,6 +15,7 @@ public abstract class GraphicsCore : IDisposable
 	protected GraphicsCore(GraphicsSystem _graphicsSystem, EngineConfig _config)
 	{
 		graphicsSystem = _graphicsSystem ?? throw new ArgumentNullException(nameof(_graphicsSystem), "Graphics system may not be null!");
+		logger = graphicsSystem.Engine.Logger;
 		config = _config ?? graphicsSystem.engine.GetEngineConfig();
 	}
 	~GraphicsCore()
@@ -30,6 +30,7 @@ public abstract class GraphicsCore : IDisposable
 	protected bool quitMessageReceived = false;
 
 	public readonly GraphicsSystem graphicsSystem;
+	protected readonly Logger logger;
 	protected readonly EngineConfig config;
 
 	protected readonly List<CommandList> cmdListQueue = new(1);
@@ -61,8 +62,6 @@ public abstract class GraphicsCore : IDisposable
 	public abstract bool DefaultMirrorY { get; }
 	public abstract ShaderLanguage DefaultShaderLanguage { get; }
 	public abstract CompiledShaderDataType CompiledShaderDataType { get; }
-
-	protected Logger Logger => graphicsSystem.engine.Logger ?? Logger.Instance!;
 
 	#endregion
 	#region Methods
@@ -119,9 +118,9 @@ public abstract class GraphicsCore : IDisposable
 	/// </summary>
 	/// <param name="_outRequestExit">Outputs whether a quit signal was received. (Ex.: WM_QUIT on windows)</param>
 	/// <returns>True if the message loop was worked off successfully, false if an error occurred.</returns>
-	public virtual bool UpdateMessageLoop(out bool _outRequestExit)
+	internal virtual bool UpdateMessageLoop(out bool _outRequestExit)
 	{
-		if (!IsInitialized || Window == null)
+		if (!IsInitialized || Window is null)
 		{
 			_outRequestExit = true;
 			return false;
@@ -135,13 +134,13 @@ public abstract class GraphicsCore : IDisposable
 		}
 		catch (Exception ex)
 		{
-			Logger.LogException("An exception was caught while updating message loop!", ex);
+			logger.LogException("An exception was caught while updating message loop!", ex);
 			_outRequestExit = true;
 			return false;
 		}
 
 		// Send window input events to input manager:
-		if (graphicsSystem.engine?.InputManager != null)
+		if (graphicsSystem.engine?.InputManager is not null)
 		{
 			graphicsSystem.engine.InputManager.UpdateInputStates(snapshot);
 		}
@@ -167,7 +166,7 @@ public abstract class GraphicsCore : IDisposable
 	{
 		if (!IsInitialized)
 		{
-			Logger.LogError("Cannot create new command list using uninitialized graphics devices!");
+			logger.LogError("Cannot create new command list using uninitialized graphics devices!");
 			_outCmdList = null;
 			return false;
 		}
@@ -181,7 +180,7 @@ public abstract class GraphicsCore : IDisposable
 		}
 		catch (Exception ex)
 		{
-			Logger.LogException("Failed to create graphics command list!", ex);
+			logger.LogException("Failed to create graphics command list!", ex);
 			_outCmdList = null;
 			return false;
 		}
@@ -197,12 +196,12 @@ public abstract class GraphicsCore : IDisposable
 	{
 		if (!IsInitialized)
 		{
-			Logger.LogError("Cannot commit command list to uninitialized graphics core!");
+			logger.LogError("Cannot commit command list to uninitialized graphics core!");
 			return false;
 		}
-		if (_cmdList == null || _cmdList.IsDisposed)
+		if (_cmdList is null || _cmdList.IsDisposed)
 		{
-			Logger.LogError("Cannot commit null or disposed command list!");
+			logger.LogError("Cannot commit null or disposed command list!");
 			return false;
 		}
 
@@ -217,7 +216,7 @@ public abstract class GraphicsCore : IDisposable
 	{
 		if (!IsInitialized)
 		{
-			Logger.LogError("Cannot begin frame on uninitialized graphics core!");
+			logger.LogError("Cannot begin frame on uninitialized graphics core!");
 			return false;
 		}
 
@@ -235,7 +234,7 @@ public abstract class GraphicsCore : IDisposable
 	{
 		if (!IsInitialized)
 		{
-			Logger.LogError("Cannot execute draw calls using uninitialized graphics core!");
+			logger.LogError("Cannot execute draw calls using uninitialized graphics core!");
 			return false;
 		}
 
@@ -307,17 +306,17 @@ public abstract class GraphicsCore : IDisposable
 	{
 		if (!IsInitialized)
 		{
-			Logger.LogError("Cannot schedule async geometry download on uninitialized graphics core!");
+			logger.LogError("Cannot schedule async geometry download on uninitialized graphics core!");
 			return false;
 		}
 		if (_request is null || !_request.IsValid)
 		{
-			Logger.LogError("Cannot schedule null or invalid async geometry download request!");
+			logger.LogError("Cannot schedule null or invalid async geometry download request!");
 			return false;
 		}
 		if (_request.callbackReceiveDownloadedData is null)
 		{
-			Logger.LogError("Cannot schedule async geometry download request with null callback!");
+			logger.LogError("Cannot schedule async geometry download request with null callback!");
 			return false;
 		}
 
@@ -418,7 +417,7 @@ public abstract class GraphicsCore : IDisposable
 			_outTexColorTarget = null!;
 			_outTexDepthTarget = null;
 			_outFramebuffer = null!;
-			Logger.LogError("Cannot create render targets using uninitialized graphics core!");
+			logger.LogError("Cannot create render targets using uninitialized graphics core!");
 			return false;
 		}
 
@@ -441,7 +440,7 @@ public abstract class GraphicsCore : IDisposable
 		}
 		catch (Exception ex)
 		{
-			Logger.LogException("Failed to create color render targets!", ex);
+			logger.LogException("Failed to create color render targets!", ex);
 			_outTexColorTarget = null!;
 			_outTexDepthTarget = null;
 			_outFramebuffer = null!;
@@ -467,7 +466,7 @@ public abstract class GraphicsCore : IDisposable
 			}
 			catch (Exception ex)
 			{
-				Logger.LogException("Failed to create depth render targets!", ex);
+				logger.LogException("Failed to create depth render targets!", ex);
 				_outTexColorTarget?.Dispose();
 				_outTexColorTarget = null!;
 				_outTexDepthTarget = null;
@@ -490,7 +489,7 @@ public abstract class GraphicsCore : IDisposable
 		}
 		catch (Exception ex)
 		{
-			Logger.LogException("Failed to create framebuffer from render targets!", ex);
+			logger.LogException("Failed to create framebuffer from render targets!", ex);
 			_outTexColorTarget?.Dispose();
 			_outTexDepthTarget?.Dispose();
 			_outTexColorTarget = null!;
@@ -513,7 +512,7 @@ public abstract class GraphicsCore : IDisposable
 	{
 		if (!IsInitialized)
 		{
-			Logger.LogError("Cannot create blank texture using initialized graphics core!");
+			logger.LogError("Cannot create blank texture using initialized graphics core!");
 			_outTexture = null!;
 			return false;
 		}
@@ -539,7 +538,7 @@ public abstract class GraphicsCore : IDisposable
 		}
 		catch (Exception ex)
 		{
-			Logger.LogException($"Failed to create blank texture! (Fill color: {_fillColor})", ex);
+			logger.LogException($"Failed to create blank texture! (Fill color: {_fillColor})", ex);
 			_outTexture = null!;
 			return false;
 		}
@@ -547,7 +546,7 @@ public abstract class GraphicsCore : IDisposable
 		// Initialize the texture to a solid color:
 		if (!FillTexture(_outTexture, _fillColor, width, height, depth, 0, 0))    // TODO [Bug]: This will be incorrect, if the default pixel format is anything other than 32-bit packed RGBA!
 		{
-			Logger.LogError($"Failed to fill blank texture with solid color! (Fill color: {_fillColor})");
+			logger.LogError($"Failed to fill blank texture with solid color! (Fill color: {_fillColor})");
 			_outTexture.Dispose();
 			_outTexture = null!;
 			return false;
@@ -568,7 +567,7 @@ public abstract class GraphicsCore : IDisposable
 		}
 		catch (Exception ex)
 		{
-			Logger.LogException($"Failed to fill texture with solid color value!", ex);
+			logger.LogException($"Failed to fill texture with solid color value!", ex);
 			return false;
 		}
 	}

@@ -34,12 +34,12 @@ public sealed class VulkanGraphicsCore(GraphicsSystem _graphicsSystem, EngineCon
 	{
 		if (IsDisposed)
 		{
-			Logger.LogError("Cannot initialize disposed Vulkan graphics devices!");
+			logger.LogError("Cannot initialize disposed Vulkan graphics devices!");
 			return false;
 		}
 		if (IsInitialized)
 		{
-			Logger.LogError("Vulkan graphics devices are already initialized!");
+			logger.LogError("Vulkan graphics devices are already initialized!");
 			return true;
 		}
 
@@ -116,13 +116,13 @@ public sealed class VulkanGraphicsCore(GraphicsSystem _graphicsSystem, EngineCon
 			Device.MainSwapchain.Name = "Swapchain_Main";
 
 			Console.WriteLine("done.");
-			Logger.LogMessage("# Initializing Vulkan graphics device... done.", true);
+			logger.LogMessage("# Initializing Vulkan graphics device... done.", true);
 		}
 		catch (Exception ex)
 		{
 			Console.WriteLine("FAIL.");
-			Logger.LogMessage("# Initializing Vulkan graphics device... FAIL.", true);
-			Logger.LogException("Failed to create system default Vulkan graphics device!", ex);
+			logger.LogMessage("# Initializing Vulkan graphics device... FAIL.", true);
+			logger.LogException("Failed to create system default Vulkan graphics device!", ex);
 			Shutdown();
 			stopwatch.Stop();
 			return false;
@@ -131,21 +131,21 @@ public sealed class VulkanGraphicsCore(GraphicsSystem _graphicsSystem, EngineCon
 		if (Device != null)
 		{
 			// Log general GPU information:
-			Logger.LogMessage("+ Graphics device details:");
-			Logger.LogMessage($"  - Name: {Device.DeviceName}");
-			Logger.LogMessage($"  - Vendor: {Device.VendorName}");
-			Logger.LogMessage($"  - Backend: {Device.BackendType}");
-			Logger.LogMessage($"  - API version: {Device.ApiVersion}");
+			logger.LogMessage("+ Graphics device details:");
+			logger.LogMessage($"  - Name: {Device.DeviceName}");
+			logger.LogMessage($"  - Vendor: {Device.VendorName}");
+			logger.LogMessage($"  - Backend: {Device.BackendType}");
+			logger.LogMessage($"  - API version: {Device.ApiVersion}");
 
 			// Log GPU features:
 			GraphicsDeviceFeatures features = Device.Features;
-			Logger.LogMessage("+ Graphics device features:");
-			Logger.LogMessage($"  - Compute shader: {features.ComputeShader}");
-			Logger.LogMessage($"  - Geometry shader: {features.GeometryShader}");
-			Logger.LogMessage($"  - Tesselation: {features.TessellationShaders}");
-			Logger.LogMessage($"  - Structured buffers: {features.StructuredBuffer}");
-			Logger.LogMessage($"  - 1D textures: {features.Texture1D}");
-			Logger.LogMessage($"  - Float64 in shaders: {features.ShaderFloat64}");
+			logger.LogMessage("+ Graphics device features:");
+			logger.LogMessage($"  - Compute shader: {features.ComputeShader}");
+			logger.LogMessage($"  - Geometry shader: {features.GeometryShader}");
+			logger.LogMessage($"  - Tesselation: {features.TessellationShaders}");
+			logger.LogMessage($"  - Structured buffers: {features.StructuredBuffer}");
+			logger.LogMessage($"  - 1D textures: {features.Texture1D}");
+			logger.LogMessage($"  - Float64 in shaders: {features.ShaderFloat64}");
 			{
 				capabilities.computeShaders = features.ComputeShader;
 				capabilities.geometryShaders = features.GeometryShader;
@@ -156,44 +156,44 @@ public sealed class VulkanGraphicsCore(GraphicsSystem _graphicsSystem, EngineCon
 			// Log Vulkan specific information:
 			if (Device.GetVulkanInfo(out BackendInfoVulkan vkInfo))
 			{
-				Logger.LogMessage("+ Vulkan device details:");
-				Logger.LogMessage($"  - Driver name: {vkInfo.DriverName}");
-				Logger.LogMessage($"  - Driver info: {vkInfo.DriverInfo}");
-				Logger.LogMessage($"  - Queue index: {vkInfo.GraphicsQueueFamilyIndex}");
+				logger.LogMessage("+ Vulkan device details:");
+				logger.LogMessage($"  - Driver name: {vkInfo.DriverName}");
+				logger.LogMessage($"  - Driver info: {vkInfo.DriverInfo}");
+				logger.LogMessage($"  - Queue index: {vkInfo.GraphicsQueueFamilyIndex}");
 
 				/* // Commented out because this spams too much stuff into the console and logs.
 				var deviceExts = vkInfo.AvailableDeviceExtensions;
 				if (deviceExts is not null && deviceExts.Count != 0)
 				{
-					Logger.LogMessage("  - Device extensions:");
+					logger.LogMessage("  - Device extensions:");
 					foreach (BackendInfoVulkan.ExtensionProperties extension in deviceExts)
 					{
-						Logger.LogMessage($"    * {extension.Name}: v{extension.SpecVersion}");
+						logger.LogMessage($"    * {extension.Name}: v{extension.SpecVersion}");
 					}
 				}
 				*/
 				var instanceExts = vkInfo.AvailableInstanceExtensions;
 				if (instanceExts is not null && instanceExts.Count != 0)
 				{
-					Logger.LogMessage("  - Instance extensions:");
+					logger.LogMessage("  - Instance extensions:");
 					foreach (string extension in instanceExts)
 					{
-						Logger.LogMessage($"    * {extension}");
+						logger.LogMessage($"    * {extension}");
 					}
 				}
 				var instanceLayers = vkInfo.AvailableInstanceLayers;
 				if (instanceLayers is not null && instanceLayers.Count != 0)
 				{
-					Logger.LogMessage("  - Instance layers:");
+					logger.LogMessage("  - Instance layers:");
 					foreach (string layer in instanceLayers)
 					{
-						Logger.LogMessage($"    * {layer}");
+						logger.LogMessage($"    * {layer}");
 					}
 				}
 			}
 			else
 			{
-				Logger.LogError("Could not query Vulkan device details!");
+				logger.LogError("Could not query Vulkan device details!");
 			}
 		}
 
@@ -204,7 +204,7 @@ public sealed class VulkanGraphicsCore(GraphicsSystem _graphicsSystem, EngineCon
 		isInitialized = Device != null && Window != null;
 		if (isInitialized)
 		{
-			Logger.LogMessage($"# Finished initializing Vulkan graphics device. ({stopwatch.ElapsedMilliseconds} ms)\n");
+			logger.LogMessage($"# Finished initializing Vulkan graphics device. ({stopwatch.ElapsedMilliseconds} ms)\n");
 		}
 
 		quitMessageReceived = false;
