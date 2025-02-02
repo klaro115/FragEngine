@@ -11,10 +11,10 @@ public sealed class RigidbodyComponent : Component, IOnComponentAddedListener, I
 {
 	#region Constructors
 
-	public RigidbodyComponent(SceneNode _node, PhysicsWorldComponent? _world) : base(_node)
+	public RigidbodyComponent(SceneNode _node, PhysicsWorldComponent? _world = null) : base(_node)
 	{
 		// Assign, find, or create a physics world in the component's scene:
-		if (_world is null && !TryFindPhysicsWorld(out _world) && !node.scene.rootNode.CreateComponent(out _world))
+		if (_world is null && !PhysicsWorldComponent.TryFindOrCreatePhysicsWorld(node, out _world))
 		{
 			throw new Exception("Could not find or create physics world for rigidbody component!");
 		}
@@ -94,24 +94,17 @@ public sealed class RigidbodyComponent : Component, IOnComponentAddedListener, I
 
 	protected override void Dispose(bool _disposing)
 	{
+		if (_disposing && collider is not null && !collider.IsDisposed)
+		{
+			collider.SetAssignedRigidbody(null);
+		}
+
 		instance.Dispose();
 		tempCollisonShape?.Dispose();
 
 		collider = null;
 
 		base.Dispose(_disposing);
-	}
-
-	private bool TryFindPhysicsWorld(out PhysicsWorldComponent? _outWorldComponent)
-	{
-		if (IsDisposed || node.IsDisposed)
-		{
-			Logger.LogError("Cannot find physics world component using disposed rigidbody component or scene node!");
-			_outWorldComponent = null;
-			return false;
-		}
-
-		return node.scene.FindComponentOfType(false, out _outWorldComponent);
 	}
 
 	private bool AssignColliderComponent(ColliderComponent _newComponent)
@@ -121,6 +114,7 @@ public sealed class RigidbodyComponent : Component, IOnComponentAddedListener, I
 		tempCollisonShape?.Dispose();
 		tempCollisonShape = null;
 
+		_newComponent.SetAssignedRigidbody(this);
 		return true;
 	}
 

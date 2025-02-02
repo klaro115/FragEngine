@@ -92,6 +92,28 @@ public sealed class PhysicsWorldComponent : Component, IOnFixedUpdateListener
 		}
 	}
 
+	internal static bool TryFindPhysicsWorld(SceneNode _node, out PhysicsWorldComponent? _outWorldComponent)
+	{
+		if (_node is null || _node.IsDisposed)
+		{
+			Logger.Instance?.LogError("Cannot find physics world component using disposed rigidbody component or scene node!");
+			_outWorldComponent = null;
+			return false;
+		}
+
+		return _node.scene.FindComponentOfType(false, out _outWorldComponent);
+	}
+
+	internal static bool TryFindOrCreatePhysicsWorld(SceneNode _node, out PhysicsWorldComponent? _outWorldComponent)
+	{
+		if (TryFindPhysicsWorld(_node, out _outWorldComponent))
+		{
+			return true;
+		}
+
+		return !_node.scene.rootNode.CreateComponent(out _outWorldComponent);
+	}
+
 	public override bool LoadFromData(in ComponentData _componentData, in Dictionary<int, ISceneElement> _idDataMap)
 	{
 		return true;

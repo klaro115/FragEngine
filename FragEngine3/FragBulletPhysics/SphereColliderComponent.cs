@@ -18,7 +18,7 @@ public sealed class SphereColliderComponent : ColliderComponent
 	#endregion
 	#region Constructors
 
-	public SphereColliderComponent(SceneNode _node) : base(_node)
+	public SphereColliderComponent(SceneNode _node, PhysicsWorldComponent? _world = null) : base(_node, _world)
 	{
 		CollisionShape = new SphereShape(radius);
 	}
