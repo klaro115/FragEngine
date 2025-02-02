@@ -10,6 +10,7 @@ using System.Numerics;
 using Veldrid.Sdl2;
 using Veldrid;
 using FragEngine3.Graphics;
+using FragBulletPhysics;
 
 namespace TestApp.Application;
 
@@ -73,6 +74,9 @@ internal sealed class TestPhysicsAppLogic : ApplicationLogic
 	{
 		Scene scene = Engine.SceneManager.MainScene!;
 
+		// Prepare physics scene:
+		scene.rootNode.CreateComponent<PhysicsWorldComponent>(out _);
+
 		// Set ambient lighting:
 		scene.settings.AmbientLightIntensityLow = new(0.18f, 0.16f, 0.12f, 0);
 		scene.settings.AmbientLightIntensityMid = new(0.15f, 0.15f, 0.15f, 0);
@@ -81,7 +85,7 @@ internal sealed class TestPhysicsAppLogic : ApplicationLogic
 		// Create a camera:
 		if (SceneSpawner.CreateCamera(scene, true, out CameraComponent camera))
 		{
-			camera.node.LocalPosition = new Vector3(0, 0, -3);
+			camera.node.LocalPosition = new Vector3(0, 2, -4);
 			camera.node.LocalRotation = Quaternion.Identity;
 			camera.node.LocalScale = Vector3.One;
 
@@ -100,7 +104,7 @@ internal sealed class TestPhysicsAppLogic : ApplicationLogic
 
 				ClearColor = true,
 				ClearDepth = true,
-				ClearColorValue = RgbaFloat.Black,
+				ClearColorValue = RgbaFloat.CornflowerBlue,
 				ClearDepthValue = 1.0f,
 			};
 			camera.IsMainCamera = true;
@@ -124,12 +128,53 @@ internal sealed class TestPhysicsAppLogic : ApplicationLogic
 		if (SceneSpawner.CreateStaticMeshRenderer(scene, out StaticMeshRendererComponent cube))
 		{
 			cube.node.Name = "Cube";
-			cube.node.LocalPosition = new Vector3(0, -0.5f, 2);
+			cube.node.LocalPosition = new Vector3(0, 1.5f, 2);
 			cube.node.SetRotationFromYawPitchRoll(45, 45, 0, true, true);
 			cube.node.LocalScale = Vector3.One;
+			cube.node.SetEnabled(false);
 
 			cube.SetMesh(cubeHandle);
 			cube.SetMaterial("Mtl_DefaultSurface");
+		}
+
+		MeshPrimitiveFactory.CreateCubeMesh("Ground", Engine, new(20, 1, 20), true, out _, out _, out ResourceHandle groundHandle);
+		if (SceneSpawner.CreateStaticMeshRenderer(scene, out StaticMeshRendererComponent ground))
+		{
+			SceneNode node = ground.node;
+			node.Name = "Ground";
+			node.LocalPosition = new(0, -0.5f, 0);
+			node.LocalRotation = Quaternion.Identity;
+			node.LocalScale = Vector3.One;
+
+			ground.SetMesh(groundHandle);
+			ground.SetMaterial("Mtl_DefaultSurface");
+
+			if (node.CreateComponent(out BoxColliderComponent? collider))
+			{
+				collider!.Size = new(20, 1, 20);
+			}
+		}
+
+		MeshPrimitiveFactory.CreateIcosahedronMesh("Sphere", Engine, 0.5f, true, out _, out _, out ResourceHandle sphereHandle);
+		if (SceneSpawner.CreateStaticMeshRenderer(scene, out StaticMeshRendererComponent sphere))
+		{
+			SceneNode node = sphere.node;
+			node.Name = "Sphere";
+			node.LocalPosition = new(0, 2, 0);
+			node.LocalRotation = Quaternion.Identity;
+			node.LocalScale = Vector3.One;
+
+			sphere.SetMesh(sphereHandle);
+			sphere.SetMaterial("Mtl_DefaultSurface");
+
+			if (node.CreateComponent(out SphereColliderComponent? collider))
+			{
+				collider!.Radius = 0.5f;
+			}
+			if (node.CreateComponent(out RigidbodyComponent? rigidbody))
+			{
+				rigidbody!.Mass = 1.0f;
+			}
 		}
 
 		return true;

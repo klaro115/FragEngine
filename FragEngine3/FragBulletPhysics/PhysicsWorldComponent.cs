@@ -20,8 +20,10 @@ public sealed class PhysicsWorldComponent : Component, IOnFixedUpdateListener
 		dispatcher = new(collisionConfig);
 		broadphase = new();
 
-		instance = new(dispatcher, broadphase, null, collisionConfig);
-		instance.Gravity = gravityAcceleration;
+		instance = new(dispatcher, broadphase, null, collisionConfig)
+		{
+			Gravity = gravityAcceleration
+		};
 	}
 
 	#endregion

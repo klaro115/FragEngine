@@ -23,7 +23,7 @@ public static class ProgramConstants
 #if DEBUG
 	private const string buildType = "Debug";
 #else
-	private string buildType = "Release";
+	private const string buildType = "Release";
 #endif
 	private const string buildNetVersionName = "net8.0";
 	public const string buildAssetsRelativePath = $"../../../../{buildProjectName}/bin/{buildType}/{buildNetVersionName}/data/core/";

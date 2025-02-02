@@ -1,70 +1,67 @@
 ﻿using BulletSharp;
 using FragEngine3.Scenes;
 using FragEngine3.Scenes.Data;
+using System.Numerics;
 
 namespace FragBulletPhysics;
 
-public sealed class SphereColliderComponent : ColliderComponent
+public sealed class BoxColliderComponent : ColliderComponent
 {
 	#region Types
 
 	[Serializable]
-	[ComponentDataType(typeof(SphereColliderComponent))]
+	[ComponentDataType(typeof(BoxColliderComponent))]
 	public sealed class Data
 	{
-		public required float Radius { get; init; }
+		public required Vector3 Size { get; init; }
 	}
 
 	#endregion
 	#region Constructors
 
-	public SphereColliderComponent(SceneNode _node, PhysicsWorldComponent? _world = null) : base(_node, _world)
+	public BoxColliderComponent(SceneNode _node, PhysicsWorldComponent? _world = null) : base(_node, _world)
 	{
-		CollisionShape = new SphereShape(radius);
+		CreateWithSize(size);
 	}
 
 	#endregion
 	#region Fields
 
-	private float radius = 0.5f;
+	private Vector3 size = Vector3.One;
 
 	#endregion
 	#region Properties
 
 	/// <summary>
-	/// Gets or sets the radius of the spherical collision shape.
+	/// Gets or sets the dimensions of the box collision shape.
 	/// </summary>
-	public float Radius
+	public Vector3 Size
 	{
-		get => radius;
+		get => size;
 		set
 		{
-			radius = Math.Max(value, 0.001f);
-			if (!IsDisposed && CollisionShape is SphereShape sphereShape)
+			Vector3 prevSize = size;
+			size = new(
+				Math.Max(value.X, 0.001f),
+				Math.Max(value.Y, 0.001f),
+				Math.Max(value.Z, 0.001f));
+			if (!IsDisposed && size != prevSize)
 			{
-				sphereShape.SetUnscaledRadius(radius);
-			}
-		}
-	}
-
-	/// <summary>
-	/// Gets or sets the diameter of the spherical collision shape.
-	/// </summary>
-	public float Diameter
-	{
-		get => radius * 2;
-		set
-		{
-			radius = Math.Max(value / 2, 0.001f);
-			if (!IsDisposed && CollisionShape is SphereShape sphereShape)
-			{
-				sphereShape.SetUnscaledRadius(radius);
+				CreateWithSize(size);
 			}
 		}
 	}
 
 	#endregion
 	#region Methods
+
+	private void CreateWithSize(Vector3 _newSize)
+	{
+		BoxShape newShape = new(0.5f * _newSize);
+
+		CollisionShape?.Dispose();
+		CollisionShape = newShape;
+	}
 
 	public override bool LoadFromData(in ComponentData _componentData, in Dictionary<int, ISceneElement> _idDataMap)
 	{
@@ -73,7 +70,7 @@ public sealed class SphereColliderComponent : ColliderComponent
 			return false;
 		}
 
-		Radius = data!.Radius;
+		Size = data!.Size;
 		return true;
 	}
 
@@ -81,7 +78,7 @@ public sealed class SphereColliderComponent : ColliderComponent
 	{
 		Data data = new()
 		{
-			Radius = Radius,
+			Size = Size,
 		};
 
 		if (!FragEngine3.Utility.Serialization.Serializer.SerializeToJson(data, out string jsonTxt))

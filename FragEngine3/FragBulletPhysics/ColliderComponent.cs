@@ -37,7 +37,7 @@ public abstract class ColliderComponent : Component //TODO: Add Enabled/Disabled
 	public CollisionShape CollisionShape
 	{
 		get => collisionShape;
-		protected init
+		protected set
 		{
 			collisionShape = value;
 			InitializeComponent();
