@@ -49,7 +49,7 @@ public sealed class TextureResource : Resource
 
 	public Texture? Texture { get; private set; } = null;
 
-	private Logger Logger => core.graphicsSystem.engine.Logger ?? Logger.Instance!;
+	private Logger Logger => core.graphicsSystem.Engine.Logger ?? Logger.Instance!;
 
 	#endregion
 	#region Methods
@@ -140,7 +140,7 @@ public sealed class TextureResource : Resource
 			_outTexture = null;
 			return false;
 		}
-		Logger logger = _graphicsCore.graphicsSystem.engine.Logger ?? Logger.Instance!;
+		Logger logger = _graphicsCore.graphicsSystem.Engine.Logger ?? Logger.Instance!;
 		if (!_graphicsCore.IsInitialized)
 		{
 			logger.LogError("Cannot create texture using uninitialized graphics core!");

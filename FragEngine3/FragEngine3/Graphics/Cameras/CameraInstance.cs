@@ -135,7 +135,7 @@ public sealed class CameraInstance : IDisposable
 		}
 	}
 
-	private Logger Logger => graphicsCore.graphicsSystem.engine.Logger;
+	private Logger Logger => graphicsCore.graphicsSystem.Engine.Logger;
 
 	#endregion
 	#region Methods

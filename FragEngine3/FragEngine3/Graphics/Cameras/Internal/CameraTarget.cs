@@ -1,6 +1,6 @@
 ﻿using Veldrid;
 
-namespace FragEngine3.Graphics.Components.Internal;
+namespace FragEngine3.Graphics.Cameras.Internal;
 
 internal sealed class CameraTarget : IDisposable
 {
@@ -144,8 +144,8 @@ internal sealed class CameraTarget : IDisposable
 		ulong id = 0;
 
 		// Resolution (max. 16K), bits 0-27
-		id |= (_resolutionX) << 0;
-		id |= (_resolutionY) << 14;
+		id |= _resolutionX << 0;
+		id |= _resolutionY << 14;
 
 		// Pixel formats (max. value = 60), bits 28-39
 		id |= (ulong)_colorFormat << 28;

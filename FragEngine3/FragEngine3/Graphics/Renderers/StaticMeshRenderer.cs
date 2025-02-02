@@ -23,6 +23,7 @@ public sealed class StaticMeshRenderer : IPhysicalRenderer
 	public StaticMeshRenderer(GraphicsCore _graphicsCore, string? _rendererName = null)
 	{
 		GraphicsCore = _graphicsCore ?? throw new ArgumentNullException(nameof(_graphicsCore), "Graphics core may not be null!");
+		logger = GraphicsCore.graphicsSystem.Engine.Logger;
 		name = !string.IsNullOrEmpty(_rendererName) ? _rendererName : "StaticMeshRendererInstance";
 
 		// Create object constant buffer immediately:
@@ -52,6 +53,8 @@ public sealed class StaticMeshRenderer : IPhysicalRenderer
 
 	#endregion
 	#region Fields
+
+	private readonly Logger logger;
 
 	public readonly string name;
 
@@ -102,8 +105,6 @@ public sealed class StaticMeshRenderer : IPhysicalRenderer
 	public Vector3 VisualCenterPoint => worldPose.position;
 	public float BoundingRadius => mesh is not null ? worldPose.scale.X * mesh.BoundingRadius : 0;
 
-	private Logger Logger => GraphicsCore.graphicsSystem.engine.Logger ?? Logger.Instance!;
-
 	#endregion
 	#region Methods
 
@@ -136,11 +137,11 @@ public sealed class StaticMeshRenderer : IPhysicalRenderer
 	{
 		if (string.IsNullOrEmpty(_resourceKey))
 		{
-			Logger.LogError("Cannot assign mesh to static mesh renderer using null or blank resource key!");
+			logger.LogError("Cannot assign mesh to static mesh renderer using null or blank resource key!");
 			return false;
 		}
 
-		ResourceManager resourceManager = GraphicsCore.graphicsSystem.engine.ResourceManager;
+		ResourceManager resourceManager = GraphicsCore.graphicsSystem.Engine.ResourceManager;
 
 		return resourceManager.GetResource(_resourceKey, out ResourceHandle handle) && SetMesh(handle);
 	}
@@ -154,7 +155,7 @@ public sealed class StaticMeshRenderer : IPhysicalRenderer
 	{
 		if (IsDisposed)
 		{
-			Logger.LogError("Cannot set mesh on disposed renderer!");
+			logger.LogError("Cannot set mesh on disposed renderer!");
 			return false;
 		}
 
@@ -190,11 +191,11 @@ public sealed class StaticMeshRenderer : IPhysicalRenderer
 	{
 		if (string.IsNullOrEmpty(_resourceKey))
 		{
-			Logger.LogError("Cannot assign material to static mesh renderer using null or blank resource key!");
+			logger.LogError("Cannot assign material to static mesh renderer using null or blank resource key!");
 			return false;
 		}
 
-		ResourceManager resourceManager = GraphicsCore.graphicsSystem.engine.ResourceManager;
+		ResourceManager resourceManager = GraphicsCore.graphicsSystem.Engine.ResourceManager;
 
 		return resourceManager.GetResource(_resourceKey, out ResourceHandle handle) && SetMaterial(handle);
 	}
@@ -210,7 +211,7 @@ public sealed class StaticMeshRenderer : IPhysicalRenderer
 	{
 		if (IsDisposed)
 		{
-			Logger.LogError("Cannot set material on disposed renderer!");
+			logger.LogError("Cannot set material on disposed renderer!");
 			return false;
 		}
 
@@ -295,7 +296,7 @@ public sealed class StaticMeshRenderer : IPhysicalRenderer
 	{
 		if (IsDisposed)
 		{
-			Logger.LogError("Cannot set override resource set on disposed static mesh renderer!");
+			logger.LogError("Cannot set override resource set on disposed static mesh renderer!");
 			return false;
 		}
 
@@ -391,7 +392,7 @@ public sealed class StaticMeshRenderer : IPhysicalRenderer
 	{
 		if (IsDisposed)
 		{
-			Logger.LogError("Cannot draw disposed static mesh renderer!");
+			logger.LogError("Cannot draw disposed static mesh renderer!");
 			return false;
 		}
 
@@ -481,7 +482,7 @@ public sealed class StaticMeshRenderer : IPhysicalRenderer
 		if (!_material.CreatePipeline(_sceneCtx, _cameraPassCtx, _newestVersion, mesh!.VertexDataFlags, out PipelineState pipelineState))
 		{
 			_pipeline.UpdateValue(0, null);
-			Logger.LogError($"Failed to retrieve pipeline description for material '{_material}'!");
+			logger.LogError($"Failed to retrieve pipeline description for material '{_material}'!");
 			return false;
 		}
 

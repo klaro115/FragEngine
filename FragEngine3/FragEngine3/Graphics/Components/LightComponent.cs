@@ -17,6 +17,7 @@ namespace FragEngine3.Graphics.Components;
 /// Note: This component is essentially a wrapper around a '<see cref="LightInstance"/>', that is attached to a scene node
 /// through component logic.
 /// </summary>
+[ComponentBackingType(typeof(LightInstance))]
 public sealed class LightComponent : Component, ILightSource, IOnNodeDestroyedListener, IOnComponentRemovedListener
 {
 	#region Constructors

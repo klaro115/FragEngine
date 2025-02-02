@@ -1,4 +1,5 @@
-﻿using FragEngine3.Graphics.Resources.Data;
+﻿using FragEngine3.EngineCore;
+using FragEngine3.Graphics.Resources.Data;
 using System.Collections.Concurrent;
 using Veldrid;
 
@@ -21,6 +22,7 @@ public sealed class SamplerManager(GraphicsCore _core) : IDisposable
 	#region Fields
 
 	public readonly GraphicsCore core = _core ?? throw new ArgumentNullException(nameof(_core), "Graphics core may not be null!");
+	private readonly Logger logger = _core.graphicsSystem.Engine.Logger;
 
 	private readonly ConcurrentDictionary<ulong, Sampler> samplerDict = new(-1, 10);
 
@@ -37,7 +39,7 @@ public sealed class SamplerManager(GraphicsCore _core) : IDisposable
 		GC.SuppressFinalize(this);
 		Dispose(true);
 	}
-	private void Dispose(bool _disposing)
+	private void Dispose(bool _)
 	{
 		IsDisposed = true;
 
@@ -57,7 +59,7 @@ public sealed class SamplerManager(GraphicsCore _core) : IDisposable
 	{
 		if (IsDisposed)
 		{
-			core.graphicsSystem.engine.Logger.LogError("Cannot get sampler from disposed sampler manager!");
+			logger.LogError("Cannot get sampler from disposed sampler manager!");
 			_outSampler = null!;
 			return false;
 		}
@@ -85,7 +87,7 @@ public sealed class SamplerManager(GraphicsCore _core) : IDisposable
 	{
 		if (IsDisposed)
 		{
-			core.graphicsSystem.engine.Logger.LogError("Cannot get sampler from disposed sampler manager!");
+			logger.LogError("Cannot get sampler from disposed sampler manager!");
 			_outSampler = null!;
 			return false;
 		}
@@ -112,7 +114,7 @@ public sealed class SamplerManager(GraphicsCore _core) : IDisposable
 	{
 		if (IsDisposed)
 		{
-			core.graphicsSystem.engine.Logger.LogError("Cannot get sampler from disposed sampler manager!");
+			logger.LogError("Cannot get sampler from disposed sampler manager!");
 			_outSampler = null!;
 			return false;
 		}
@@ -146,7 +148,7 @@ public sealed class SamplerManager(GraphicsCore _core) : IDisposable
 		catch (Exception ex)
 		{
 			string descTxt = MaterialDataDescriptionParser.CreateDescription_Sampler(_desc);
-			core.graphicsSystem.engine.Logger.LogException($"Failed to create texture sampler matching description '{descTxt}'!", ex);
+			logger.LogException($"Failed to create texture sampler matching description '{descTxt}'!", ex);
 			_outSampler = null!;
 			return false;
 		}

@@ -19,6 +19,8 @@ internal sealed class ForwardPlusLightsShadowMaps(ForwardPlusLightsStack _stack,
 	#region Fields
 
 	public readonly GraphicsCore core = _stack.Core;
+	private readonly Logger logger = _stack.Core.graphicsSystem.Engine.Logger;
+
 	public readonly ForwardPlusLightsStack stack = _stack;
 	private readonly ForwardPlusLightsSceneObjects sceneObjects = _sceneObjects;
 
@@ -29,8 +31,6 @@ internal sealed class ForwardPlusLightsShadowMaps(ForwardPlusLightsStack _stack,
 
 	public ShadowMapArray? ShadowMapArray { get; private set; } = null;
 	public LightDataBuffer? DummyLightDataBuffer { get; private set; } = null;
-
-	private Logger Logger => core.graphicsSystem.engine.Logger ?? Logger.Instance!;
 
 	#endregion
 	#region Methods
@@ -206,7 +206,7 @@ internal sealed class ForwardPlusLightsShadowMaps(ForwardPlusLightsStack _stack,
 		}
 		catch (Exception ex)
 		{
-			Logger.LogException($"An unhandled exception was caught while drawing shadow maps, around shadow map index {_outShadowMapLightCount}!", ex);
+			logger.LogException($"An unhandled exception was caught while drawing shadow maps, around shadow map index {_outShadowMapLightCount}!", ex);
 			success = false;
 		}
 

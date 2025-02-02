@@ -16,7 +16,7 @@ public abstract class GraphicsCore : IDisposable
 	{
 		graphicsSystem = _graphicsSystem ?? throw new ArgumentNullException(nameof(_graphicsSystem), "Graphics system may not be null!");
 		logger = graphicsSystem.Engine.Logger;
-		config = _config ?? graphicsSystem.engine.GetEngineConfig();
+		config = _config ?? graphicsSystem.Engine.GetEngineConfig();
 	}
 	~GraphicsCore()
 	{
@@ -140,9 +140,9 @@ public abstract class GraphicsCore : IDisposable
 		}
 
 		// Send window input events to input manager:
-		if (graphicsSystem.engine?.InputManager is not null)
+		if (graphicsSystem.Engine?.InputManager is not null)
 		{
-			graphicsSystem.engine.InputManager.UpdateInputStates(snapshot);
+			graphicsSystem.Engine.InputManager.UpdateInputStates(snapshot);
 		}
 
 		// Output exit request if the window was closed recently:

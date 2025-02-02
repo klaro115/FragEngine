@@ -14,31 +14,18 @@ namespace FragEngine3.Graphics;
 
 public class GraphicsSystem : IEngineSystem
 {
-	#region Types
-
-	[Flags]
-	public enum DirtyFlags
-	{
-		None		= 0,
-
-		Output		= 1,	// Window size, resolution, MSAA, VSync
-		Settings	= 2,	// Misc. settings and flags
-
-		All			= Settings | Output,
-	}
-
-	#endregion
 	#region Constructors
 
 	public GraphicsSystem(Engine _engine)
 	{
-		engine = _engine ?? throw new ArgumentNullException(nameof(_engine), "Engine may not be null!");
-		config = engine.GetEngineConfig();
+		Engine = _engine ?? throw new ArgumentNullException(nameof(_engine), "Engine may not be null!");
+		logger = Engine.Logger;
+		config = Engine.GetEngineConfig();
 
 		// Try loading graphics settings from file, use default settings on failure:
 		if (!LoadGraphicsSettings(out _, true))
 		{
-			settings = engine.GetEngineConfig().Graphics.FallbackGraphicsSettings;
+			Settings = Engine.GetEngineConfig().Graphics.FallbackGraphicsSettings;
 		}
 
 		// Create main window and main graphics device:
@@ -50,36 +37,29 @@ public class GraphicsSystem : IEngineSystem
 	#endregion
 	#region Fields
 
-	public readonly Engine engine;
+	private readonly Logger logger;
 	private readonly EngineConfig config;
-	private GraphicsSettings settings = new();
 
 	public readonly GraphicsCore graphicsCore;
 	private readonly List<GraphicsCore> allGraphicsCores = new(1);
 
-	private DirtyFlags dirtyFlags = 0;
-
 	#endregion
 	#region Properties
 
+	/// <summary>
+	/// Gets whether this graphics system has been disposed already.
+	/// </summary>
 	public bool IsDisposed { get; private set; } = false;
-	public bool IsDirty => dirtyFlags != 0;
 
-	public Engine Engine => engine;
+	public Engine Engine { get; }
 
-	public GraphicsSettings Settings
-	{
-		get => settings;
-		set { settings = value; MarkDirty(DirtyFlags.Settings | DirtyFlags.Output); }
-	}
+	public GraphicsSettings Settings { get; set; } = new();
 
 	public ResourceHandle TexPlaceholderWhite { get; private set; } = ResourceHandle.None;
 	public ResourceHandle TexPlaceholderGray { get; private set; } = ResourceHandle.None;
 	public ResourceHandle TexPlaceholderBlack { get; private set; } = ResourceHandle.None;
 	public ResourceHandle TexPlaceholderTransparent { get; private set; } = ResourceHandle.None;
 	public ResourceHandle TexPlaceholderMagenta { get; private set; } = ResourceHandle.None;
-
-	private Logger Logger => engine.Logger ?? Logger.Instance!;
 
 	#endregion
 	#region Methods
@@ -117,45 +97,42 @@ public class GraphicsSystem : IEngineSystem
 		if (_disposing) allGraphicsCores.Clear();
 	}
 
-	public void MarkDirty()
-	{
-		dirtyFlags = DirtyFlags.All;
-	}
-	internal void MarkDirty(DirtyFlags _flags)
-	{
-		dirtyFlags |= _flags;
-	}
-
+	/// <summary>
+	/// Tries to load graphics settings from a file located in the app's configuration and settings directory.
+	/// </summary>
+	/// <param name="_outSettings">Outputs the settings that were loaded from file. Null if no settings file exists, or if loading it has failed.</param>
+	/// <param name="_silent">Whether to skip logging error messages. If false, any failure to find and load a settings file will log an error.</param>
+	/// <returns>True if a settings file exists and was loaded successfully, false otherwise.</returns>
 	public bool LoadGraphicsSettings(out GraphicsSettings? _outSettings, bool _silent = false)
 	{
 		if (IsDisposed)
 		{
-			Logger.LogError("Cannot load settings for disposed graphics system!");
+			logger.LogError("Cannot load settings for disposed graphics system!");
 			_outSettings = null;
 			return false;
 		}
-		if (engine.ResourceManager?.fileGatherer is null ||
-			engine.ResourceManager.IsDisposed)
+		if (Engine.ResourceManager?.fileGatherer is null ||
+			Engine.ResourceManager.IsDisposed)
 		{
-			Logger.LogError("Cannot determine settings path using null or disposed resource manager!");
+			logger.LogError("Cannot determine settings path using null or disposed resource manager!");
 			_outSettings = null;
 			return false;
 		}
 
-		string applicationPath = engine.ResourceManager.fileGatherer.applicationPath;
+		string applicationPath = Engine.ResourceManager.fileGatherer.applicationPath;
 		string settingsDirPath = Path.Combine(applicationPath, GraphicsConstants.SETTINGS_ROOT_DIR_REL_PATH);
 		string filePath = Path.GetFullPath(Path.Combine(settingsDirPath, GraphicsConstants.SETTINGS_FILE_NAME));
 
 		if (!File.Exists(filePath))
 		{
-			if (!_silent) Logger.LogError($"Graphics settings file does not exist at path '{filePath}'!");
+			if (!_silent) logger.LogError($"Graphics settings file does not exist at path '{filePath}'!");
 			_outSettings = null;
 			return false;
 		}
 
 		if (!Serializer.DeserializeJsonFromFile(filePath, out _outSettings) || _outSettings == null)
 		{
-			if (!_silent) Logger.LogError("Failed to load graphics settings from file!");
+			if (!_silent) logger.LogError("Failed to load graphics settings from file!");
 			_outSettings = null;
 			return false;
 		}
@@ -164,32 +141,36 @@ public class GraphicsSystem : IEngineSystem
 		return true;
 	}
 
+	/// <summary>
+	/// Saves the current graphics settings to file into the app's configuration and settings directory.
+	/// </summary>
+	/// <returns>True if settings were successfully serialized to file, false otherwise.</returns>
 	public bool SaveGraphicsSettings()
 	{
 		if (IsDisposed)
 		{
-			Logger.LogError("Cannot save settings of disposed graphics system!");
+			logger.LogError("Cannot save settings of disposed graphics system!");
 			return false;
 		}
-		if (engine.ResourceManager?.fileGatherer is null ||
-			engine.ResourceManager.IsDisposed)
+		if (Engine.ResourceManager?.fileGatherer is null ||
+			Engine.ResourceManager.IsDisposed)
 		{
-			Logger.LogError("Cannot determine settings path using null or disposed resource manager!");
+			logger.LogError("Cannot determine settings path using null or disposed resource manager!");
 			return false;
 		}
 
-		string applicationPath = engine.ResourceManager.fileGatherer.applicationPath;
+		string applicationPath = Engine.ResourceManager.fileGatherer.applicationPath;
 		string settingsDirPath = Path.Combine(applicationPath, GraphicsConstants.SETTINGS_ROOT_DIR_REL_PATH);
 		string filePath = Path.GetFullPath(Path.Combine(settingsDirPath, GraphicsConstants.SETTINGS_FILE_NAME));
 
-		return Serializer.SerializeJsonToFile(settings, filePath);
+		return Serializer.SerializeJsonToFile(Settings, filePath);
 	}
 
 	private GraphicsCore CreateGraphicsCore()
 	{
 		if (IsDisposed) throw new ObjectDisposedException("Graphics system", "Cannot create core for disposed graphics system!");
 
-		Logger.LogMessage($"+ Creating graphics core for platform: '{engine.PlatformSystem.PlatformFlags}'");
+		logger.LogMessage($"+ Creating graphics core for platform: '{Engine.PlatformSystem.PlatformFlags}'");
 
 		GraphicsCore newCore;
 
@@ -230,13 +211,13 @@ public class GraphicsSystem : IEngineSystem
 	{
 		if (IsDisposed || !graphicsCore.IsInitialized)
 		{
-			Logger.LogError("Cannot load base content for disposed or uninitialized graphics system!");
+			logger.LogError("Cannot load base content for disposed or uninitialized graphics system!");
 			return false;
 		}
 
 		bool success = true;
 
-		Logger.LogMessage("- Creating placeholder textures.");
+		logger.LogMessage("- Creating placeholder textures.");
 
 		if (success &= CreatePlaceholderTexture("TexWhite", RgbaByte.White, out ResourceHandle texHandle))
 		{
@@ -270,7 +251,7 @@ public class GraphicsSystem : IEngineSystem
 				_outHandle = ResourceHandle.None;
 				return false;
 			}
-			return new TextureResource(_resourceKey, engine, texBlank, out _outHandle).IsLoaded;
+			return new TextureResource(_resourceKey, Engine, texBlank, out _outHandle).IsLoaded;
 		}
 	}
 
@@ -293,12 +274,12 @@ public class GraphicsSystem : IEngineSystem
 	{
 		if (IsDisposed)
 		{
-			Logger.LogError("Cannot begin new frame on disposed graphics system!");
+			logger.LogError("Cannot begin new frame on disposed graphics system!");
 			return false;
 		}
 		if (graphicsCore is null || !graphicsCore.IsInitialized)
 		{
-			Logger.LogError("Cannot begin new frame with null or uninitialized graphics core!");
+			logger.LogError("Cannot begin new frame with null or uninitialized graphics core!");
 			return false;
 		}
 
@@ -312,7 +293,6 @@ public class GraphicsSystem : IEngineSystem
 			}
 		}
 
-		dirtyFlags = DirtyFlags.None;
 		return success;
 	}
 
@@ -320,12 +300,12 @@ public class GraphicsSystem : IEngineSystem
 	{
 		if (IsDisposed)
 		{
-			Logger.LogError("Cannot end frame on disposed graphics system!");
+			logger.LogError("Cannot end frame on disposed graphics system!");
 			return false;
 		}
 		if (graphicsCore is null || !graphicsCore.IsInitialized)
 		{
-			Logger.LogError("Cannot end frame with null or uninitialized graphics core!");
+			logger.LogError("Cannot end frame with null or uninitialized graphics core!");
 			return false;
 		}
 
