@@ -7,6 +7,7 @@ using System.Numerics;
 
 namespace FragBulletPhysics;
 
+[Obsolete("Rigidbody dynamics are included in collision shapes in Bullet")]
 public sealed class RigidbodyComponent : Component, IOnComponentAddedListener, IOnComponentRemovedListener //TODO: Add Enabled/Disabled listeners, to pause or resume simulation of this body!
 {
 	#region Constructors
@@ -96,7 +97,7 @@ public sealed class RigidbodyComponent : Component, IOnComponentAddedListener, I
 	{
 		if (_disposing && collider is not null && !collider.IsDisposed)
 		{
-			collider.SetAssignedRigidbody(null);
+			//collider.SetAssignedRigidbody(null);
 		}
 
 		instance.Dispose();
@@ -114,7 +115,7 @@ public sealed class RigidbodyComponent : Component, IOnComponentAddedListener, I
 		tempCollisonShape?.Dispose();
 		tempCollisonShape = null;
 
-		_newComponent.SetAssignedRigidbody(this);
+		//_newComponent.SetAssignedRigidbody(this);
 		return true;
 	}
 

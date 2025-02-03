@@ -151,9 +151,10 @@ internal sealed class TestPhysicsAppLogic : ApplicationLogic
 			ground.SetMesh(groundHandle);
 			ground.SetMaterial("Mtl_DefaultSurface");
 
-			if (node.CreateComponent(out BoxColliderComponent? collider, physicsWorld!))
+			if (node.CreateComponent(out BoxColliderComponent? body, physicsWorld!) && body is not null)
 			{
-				collider!.Size = new(20, 1, 20);
+				body.Size = new(20, 1, 20);
+				body.IsStatic = true;
 			}
 		}
 
@@ -169,13 +170,11 @@ internal sealed class TestPhysicsAppLogic : ApplicationLogic
 			sphere.SetMesh(sphereHandle);
 			sphere.SetMaterial("Mtl_DefaultSurface");
 
-			if (node.CreateComponent(out SphereColliderComponent? collider, physicsWorld!))
+			if (node.CreateComponent(out SphereColliderComponent? body, physicsWorld!) && body is not null)
 			{
-				collider!.Radius = 0.5f;
-			}
-			if (node.CreateComponent(out RigidbodyComponent? rigidbody, physicsWorld!))
-			{
-				rigidbody!.Mass = 1.0f;
+				body.Radius = 0.5f;
+				body.IsStatic = false;
+				body.Mass = 1.0f;
 			}
 		}
 

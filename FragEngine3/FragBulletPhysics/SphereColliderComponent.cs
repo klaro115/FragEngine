@@ -1,10 +1,11 @@
 ﻿using BulletSharp;
 using FragEngine3.Scenes;
 using FragEngine3.Scenes.Data;
+using System.Drawing;
 
 namespace FragBulletPhysics;
 
-public sealed class SphereColliderComponent : ColliderComponent
+public sealed class SphereColliderComponent(SceneNode _node, PhysicsWorldComponent _world) : ColliderComponent(_node, _world)
 {
 	#region Types
 
@@ -13,14 +14,6 @@ public sealed class SphereColliderComponent : ColliderComponent
 	public sealed class Data
 	{
 		public required float Radius { get; init; }
-	}
-
-	#endregion
-	#region Constructors
-
-	public SphereColliderComponent(SceneNode _node, PhysicsWorldComponent? _world = null) : base(_node, _world)
-	{
-		CollisionShape = new SphereShape(radius);
 	}
 
 	#endregion
@@ -65,6 +58,21 @@ public sealed class SphereColliderComponent : ColliderComponent
 
 	#endregion
 	#region Methods
+
+	protected override bool InitializeCollisionShape(out CollisionShape _outCollisionShape)
+	{
+		try
+		{
+			_outCollisionShape = new SphereShape(radius);
+			return true;
+		}
+		catch (Exception ex)
+		{
+			Logger.LogException("Failed to initialize sphere collision shape!", ex);
+			_outCollisionShape = null!;
+			return false;
+		}
+	}
 
 	public override bool LoadFromData(in ComponentData _componentData, in Dictionary<int, ISceneElement> _idDataMap)
 	{

@@ -5,7 +5,7 @@ using System.Numerics;
 
 namespace FragBulletPhysics;
 
-public sealed class BoxColliderComponent : ColliderComponent
+public sealed class BoxColliderComponent(SceneNode _node, PhysicsWorldComponent _world) : ColliderComponent(_node, _world)
 {
 	#region Types
 
@@ -14,14 +14,6 @@ public sealed class BoxColliderComponent : ColliderComponent
 	public sealed class Data
 	{
 		public required Vector3 Size { get; init; }
-	}
-
-	#endregion
-	#region Constructors
-
-	public BoxColliderComponent(SceneNode _node, PhysicsWorldComponent? _world = null) : base(_node, _world)
-	{
-		CreateWithSize(size);
 	}
 
 	#endregion
@@ -47,7 +39,7 @@ public sealed class BoxColliderComponent : ColliderComponent
 				Math.Max(value.Z, 0.001f));
 			if (!IsDisposed && size != prevSize)
 			{
-				CreateWithSize(size);
+				ReinitializeBody();
 			}
 		}
 	}
@@ -55,12 +47,19 @@ public sealed class BoxColliderComponent : ColliderComponent
 	#endregion
 	#region Methods
 
-	private void CreateWithSize(Vector3 _newSize)
+	protected override bool InitializeCollisionShape(out CollisionShape _outCollisionShape)
 	{
-		BoxShape newShape = new(0.5f * _newSize);
-
-		CollisionShape?.Dispose();
-		CollisionShape = newShape;
+		try
+		{
+			_outCollisionShape = new BoxShape(0.5f * size);
+			return true;
+		}
+		catch (Exception ex)
+		{
+			Logger.LogException("Failed to initialize box collision shape!", ex);
+			_outCollisionShape = null!;
+			return false;
+		}
 	}
 
 	public override bool LoadFromData(in ComponentData _componentData, in Dictionary<int, ISceneElement> _idDataMap)
