@@ -74,8 +74,10 @@ internal sealed class TestPhysicsAppLogic : ApplicationLogic
 	{
 		Scene scene = Engine.SceneManager.MainScene!;
 
+		Test.RunTest();
+
 		// Prepare physics scene:
-		scene.rootNode.CreateComponent<PhysicsWorldComponent>(out _);
+		scene.rootNode.CreateComponent(out PhysicsWorldComponent? physicsWorld);
 
 		// Set ambient lighting:
 		scene.settings.AmbientLightIntensityLow = new(0.18f, 0.16f, 0.12f, 0);
@@ -149,7 +151,7 @@ internal sealed class TestPhysicsAppLogic : ApplicationLogic
 			ground.SetMesh(groundHandle);
 			ground.SetMaterial("Mtl_DefaultSurface");
 
-			if (node.CreateComponent(out BoxColliderComponent? collider))
+			if (node.CreateComponent(out BoxColliderComponent? collider, physicsWorld!))
 			{
 				collider!.Size = new(20, 1, 20);
 			}
@@ -167,11 +169,11 @@ internal sealed class TestPhysicsAppLogic : ApplicationLogic
 			sphere.SetMesh(sphereHandle);
 			sphere.SetMaterial("Mtl_DefaultSurface");
 
-			if (node.CreateComponent(out SphereColliderComponent? collider))
+			if (node.CreateComponent(out SphereColliderComponent? collider, physicsWorld!))
 			{
 				collider!.Radius = 0.5f;
 			}
-			if (node.CreateComponent(out RigidbodyComponent? rigidbody))
+			if (node.CreateComponent(out RigidbodyComponent? rigidbody, physicsWorld!))
 			{
 				rigidbody!.Mass = 1.0f;
 			}

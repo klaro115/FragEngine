@@ -16,9 +16,19 @@ public sealed class PhysicsWorldComponent : Component, IOnFixedUpdateListener
 		timeManager = _node.scene.engine.TimeManager;
 		logger = _node.Logger;
 
-		collisionConfig = new();
-		dispatcher = new(collisionConfig);
-		broadphase = new();
+		try
+		{
+			collisionConfig = new();
+			dispatcher = new(collisionConfig);
+			broadphase = new();
+			BroadphaseInterface b = new AxisSweep3(Vector3.One * -100, Vector3.One * 100);
+		}
+		catch (Exception ex)
+		{
+			logger.LogException("Failed to create dependencies for physics world!", ex);
+			Dispose();
+			return;
+		}
 
 		instance = new(dispatcher, broadphase, null, collisionConfig)
 		{
@@ -32,11 +42,11 @@ public sealed class PhysicsWorldComponent : Component, IOnFixedUpdateListener
 	private readonly TimeManager timeManager;
 	private readonly Logger logger;
 
-	private readonly DefaultCollisionConfiguration collisionConfig;
-	private readonly CollisionDispatcher dispatcher;
-	private readonly DbvtBroadphase broadphase;
+	private readonly DefaultCollisionConfiguration collisionConfig = null!;
+	private readonly CollisionDispatcher dispatcher = null!;
+	private readonly DbvtBroadphase broadphase = null!;
 
-	public readonly DiscreteDynamicsWorld instance;
+	public readonly DiscreteDynamicsWorld instance = null!;
 
 	private float fixedDeltaTime = 0.01f;
 	private Vector3 gravityAcceleration = new(0, -9.81f, 0);
@@ -68,10 +78,10 @@ public sealed class PhysicsWorldComponent : Component, IOnFixedUpdateListener
 
 	protected override void Dispose(bool _disposing)
 	{
-		instance.Dispose();
-		broadphase.Dispose();
-		dispatcher.Dispose();
-		collisionConfig.Dispose();
+		instance?.Dispose();
+		broadphase?.Dispose();
+		dispatcher?.Dispose();
+		collisionConfig?.Dispose();
 		
 		base.Dispose(_disposing);
 	}

@@ -3,6 +3,9 @@ using FragEngine3.Scenes.Data;
 
 namespace FragEngine3.Scenes;
 
+/// <summary>
+/// Factory and utility class for creating and duplicating instances of <see cref="Component"/> types.
+/// </summary>
 public static class ComponentFactory
 {
 	#region Methods
@@ -22,10 +25,10 @@ public static class ComponentFactory
 	/// <returns>True if a new component was created successfully, false otherwise.</returns>
 	public static bool CreateComponent<T>(SceneNode _node, out T? _outComponent, params object[] _params) where T : Component
 	{
-		if (CreateComponent(_node, typeof(T), out Component? newComponent, _params) && newComponent != null)
+		if (CreateComponent(_node, typeof(T), out Component? newComponent, _params) && newComponent is not null)
 		{
 			_outComponent = newComponent as T;
-			if (_outComponent == null)
+			if (_outComponent is null)
 			{
 				_node.Logger.LogError($"Type mismatch when trying to create component! Expected '{typeof(T)}', found '{newComponent.GetType()}'");
 				newComponent.Dispose();
@@ -69,7 +72,7 @@ public static class ComponentFactory
 			return false;
 		}
 
-		if (type != null)
+		if (type is not null)
 		{
 			return CreateComponent(_node, type, out _outComponent, _params);
 		}
@@ -79,6 +82,38 @@ public static class ComponentFactory
 			_outComponent = null;
 			return false;
 		}
+	}
+
+	/// <summary>
+	/// Checks whether a given type is a valid component type that can be created, instantiated, or duplicated.
+	/// </summary>
+	/// <param name="_type">The type the we're checking.</param>
+	/// <param name="_logger">A logger to use for recording any error messages. If null, <see cref="Logger.Instance"/> will be used instead.</param>
+	/// <param name="_logInvalidAsErrors">Whether to log invalid results as errors. If you don't want console spam while checking multiple types,
+	/// consider leaving this false.</param>
+	/// <returns>True if the given type is non-null and a valid spawn-able component type, false otherwise.</returns>
+	public static bool IsValidComponentType(Type? _type, Logger? _logger, bool _logInvalidAsErrors = false)
+	{
+		_logger ??= Logger.Instance;
+		bool logErrors = _logger is not null && _logInvalidAsErrors;
+
+		if (_type is null)
+		{
+			if (logErrors) _logger!.LogError("Component type may not be null!");
+			return false;
+		}
+		if (_type.IsPrimitive || _type.IsValueType || _type.IsInterface)
+		{
+			if (logErrors) _logger!.LogError($"Component type may not be a primitive, value type, or interface! Found: '{_type}'");
+			return false;
+		}
+		if (_type.IsAbstract)
+		{
+			if (logErrors) _logger!.LogError($"Cannot create instance of abstract component type '{_type}'!");
+			return false;
+		}
+
+		return true;
 	}
 
 	/// <summary>
@@ -96,40 +131,27 @@ public static class ComponentFactory
 	/// <returns>True if a new component was created successfully, false otherwise.</returns>
 	public static bool CreateComponent(SceneNode _node, Type _type, out Component? _outComponent, params object[] _params)
 	{
-		if (_node == null || _node.IsDisposed)
+		if (_node is null || _node.IsDisposed)
 		{
 			Logger.Instance?.LogError("Cannot create component for null or disposed node!");
 			_outComponent = null;
 			return false;
 		}
-		if (_type == null)
+		if (!IsValidComponentType(_type, _node.Logger, true))
 		{
-			_node.Logger.LogError("Component type may not be null!");
-			_outComponent = null;
-			return false;
-		}
-		if (_type.IsPrimitive || _type.IsValueType || _type.IsInterface)
-		{
-			_node.Logger.LogError($"Component type may not be a primitive, value type, or interface! Found: '{_type}'");
-			_outComponent = null;
-			return false;
-		}
-		if (_type.IsAbstract)
-		{
-			_node.Logger.LogError($"Cannot create instance of abstract component type '{_type}'!");
 			_outComponent = null;
 			return false;
 		}
 
 		// Prepare an array of all constructor parameters, lead by the node:
-		int paramCount = _params != null ? _params.Length : 0;
+		int paramCount = _params is not null ? _params.Length : 0;
 		int argumentCount = 1 + paramCount;
 
 		object[] arguments = new object[argumentCount];
 		arguments[0] = _node;
-		for (int i = 0; i < paramCount; ++i)
+		if (paramCount > 1)
 		{
-			arguments[i + 1] = _params![i];
+			_params!.CopyTo(arguments, 1);
 		}
 
 		// Try creating a new component instance:
