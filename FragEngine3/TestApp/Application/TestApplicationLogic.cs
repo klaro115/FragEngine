@@ -12,6 +12,7 @@ using FragEngine3.Resources;
 using FragEngine3.Scenes;
 using FragEngine3.Scenes.Utility;
 using System.Numerics;
+using TestApp.Camera;
 using Veldrid;
 using Veldrid.Sdl2;
 
@@ -19,12 +20,6 @@ namespace TestApp.Application;
 
 public sealed class TestApplicationLogic : ApplicationLogic
 {
-	#region Fields
-
-	private float cameraYaw = 0.0f;
-	private float cameraPitch = 0.0f;
-
-	#endregion
 	#region Methods
 
 	// STARTUP:
@@ -139,6 +134,8 @@ public sealed class TestApplicationLogic : ApplicationLogic
 			};
 			camera.IsMainCamera = true;
 			camera.MarkDirty();
+
+			camera.node.CreateComponent<CameraFlightComponent>(out _);
 		}
 
 		// Create a directional light:
@@ -410,32 +407,6 @@ public sealed class TestApplicationLogic : ApplicationLogic
 		//	localPose.Rotate(Quaternion.CreateFromYawPitchRoll(rotSpeed, 0, 0));
 		//	fbxNode.LocalTransformation = localPose;
 		//}
-
-		// Camera controls:
-		if (CameraComponent.MainCamera is not null)
-		{
-			Pose p = CameraComponent.MainCamera.node.LocalTransformation;
-			Vector3 inputWASD = Engine.InputManager.GetKeyAxesSmoothed(InputAxis.WASD);
-			Vector3 localMovement = new Vector3(inputWASD.X, inputWASD.Z, inputWASD.Y) * deltaTime;
-			if (Engine.InputManager.GetKey(Key.ShiftLeft))
-			{
-				localMovement *= 3;
-			}
-			Vector3 cameraMovement = p.TransformDirection(localMovement);
-			p.Translate(cameraMovement);
-
-			if (Engine.InputManager.GetMouseButton(MouseButton.Right))
-			{
-				const float DEG2RAD = MathF.PI / 180.0f;
-				const float mouseDegreesPerPixel = 0.1f;
-				Vector2 mouseMovement = Engine.InputManager.MouseMovement * mouseDegreesPerPixel;
-				cameraYaw += mouseMovement.X;
-				cameraPitch = Math.Clamp(cameraPitch + mouseMovement.Y, -89, 89);
-				p.rotation = Quaternion.CreateFromYawPitchRoll(cameraYaw * DEG2RAD, cameraPitch * DEG2RAD, 0);
-			}
-
-			CameraComponent.MainCamera.node.LocalTransformation = p;
-		}
 
 		// Try downloading mesh geometry data from GPU memory when pressing 'T':
 		if (Engine.InputManager.GetKeyUp(Key.T) && Engine.ResourceManager.GetResource("Cube", out ResourceHandle meshHandle))

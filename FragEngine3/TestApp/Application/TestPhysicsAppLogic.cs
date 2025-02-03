@@ -11,6 +11,7 @@ using Veldrid.Sdl2;
 using Veldrid;
 using FragEngine3.Graphics;
 using FragBulletPhysics;
+using TestApp.Camera;
 
 namespace TestApp.Application;
 
@@ -74,8 +75,6 @@ internal sealed class TestPhysicsAppLogic : ApplicationLogic
 	{
 		Scene scene = Engine.SceneManager.MainScene!;
 
-		Test.RunTest();
-
 		// Prepare physics scene:
 		scene.rootNode.CreateComponent(out PhysicsWorldComponent? physicsWorld);
 
@@ -111,6 +110,8 @@ internal sealed class TestPhysicsAppLogic : ApplicationLogic
 			};
 			camera.IsMainCamera = true;
 			camera.MarkDirty();
+
+			camera.node.CreateComponent<CameraFlightComponent>(out _);
 		}
 
 		// Create a directional light:

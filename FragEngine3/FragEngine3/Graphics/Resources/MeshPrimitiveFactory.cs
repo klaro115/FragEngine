@@ -690,7 +690,7 @@ public static class MeshPrimitiveFactory
 
 		// Data arrays:
 		BasicVertex[] verticesBasic = new BasicVertex[vertexCount];
-		ExtendedVertex[]? verticesExt = _useExtendedData ? new ExtendedVertex[triangleCount] : null;
+		ExtendedVertex[]? verticesExt = _useExtendedData ? new ExtendedVertex[vertexCount] : null;
 		ushort[] indices = new ushort[indexCount];
 
 		// Sqrt(L^2 * 3/4)
