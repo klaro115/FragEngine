@@ -48,6 +48,8 @@ public sealed class PhysicsWorldComponent : Component, IOnFixedUpdateListener
 
 	public readonly DiscreteDynamicsWorld instance = null!;
 
+	private readonly HashSet<ColliderComponent> bodies = new(100);
+
 	private float fixedDeltaTime = 0.01f;
 	private Vector3 gravityAcceleration = new(0, -9.81f, 0);
 
@@ -95,13 +97,49 @@ public sealed class PhysicsWorldComponent : Component, IOnFixedUpdateListener
 		try
 		{
 			instance.StepSimulation(deltaTime, 5, FixedDeltaTime);
-			return true;
 		}
 		catch (Exception ex)
 		{
 			logger.LogException("Failed to update physics simulation!", ex);
 			return false;
 		}
+
+		foreach (ColliderComponent body in bodies)
+		{
+			body.UpdateNodeFromPhysics();
+		}
+		return true;
+	}
+
+	internal bool RegisterBody(ColliderComponent _newBody)
+	{
+		if (IsDisposed)
+		{
+			logger.LogError("Cannot register new physics body in disposed physics world!");
+			return false;
+		}
+
+		instance.AddCollisionObject(_newBody.Rigidbody);
+		bodies.Add(_newBody);
+		return true;
+	}
+
+	internal bool UnregisterBody(ColliderComponent _body)
+	{
+		if (IsDisposed)
+		{
+			logger.LogError("Cannot unregister physics body from disposed physics world!");
+			return false;
+		}
+		if (_body is null)
+		{
+			logger.LogError("Cannot unregister null body from physics world!");
+			return false;
+		}
+
+		instance.RemoveCollisionObject(_body.Rigidbody);
+		bool removed = bodies.Remove(_body);
+		return removed;
 	}
 
 	internal static bool TryFindPhysicsWorld(SceneNode _node, out PhysicsWorldComponent? _outWorldComponent)

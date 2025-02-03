@@ -76,7 +76,10 @@ internal sealed class TestPhysicsAppLogic : ApplicationLogic
 		Scene scene = Engine.SceneManager.MainScene!;
 
 		// Prepare physics scene:
-		scene.rootNode.CreateComponent(out PhysicsWorldComponent? physicsWorld);
+		if (scene.rootNode.CreateComponent(out PhysicsWorldComponent? physicsWorld) && physicsWorld is not null)
+		{
+			physicsWorld.Gravity = Vector3.UnitY * -9.81f;
+		}
 
 		// Set ambient lighting:
 		scene.settings.AmbientLightIntensityLow = new(0.18f, 0.16f, 0.12f, 0);

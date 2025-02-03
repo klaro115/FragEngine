@@ -63,7 +63,11 @@ public abstract class ColliderComponent : Component
 	/// <summary>
 	/// Gets the instance controlling this body's rigidbody dynamics. Null if the body is static.
 	/// </summary>
-	public RigidBody? Rigidbody => isStatic ? null : rigidbody;
+	public RigidBody Rigidbody
+	{
+		get => rigidbody;
+		private set => rigidbody = value;
+	}
 
 	/// <summary>
 	/// Gets or sets whether this body is static. Static objects will take part in collisions, but act as immovable walls.
@@ -125,7 +129,7 @@ public abstract class ColliderComponent : Component
 		// Unregister previous rigidbody instance:
 		if (rigidbody is not null)
 		{
-			World.instance.RemoveCollisionObject(rigidbody);
+			World.UnregisterBody(this);
 		}
 
 		// Create collision shape:
@@ -167,8 +171,8 @@ public abstract class ColliderComponent : Component
 		}
 
 		// Register body in the physics world:
-		World.instance.AddCollisionObject(rigidbody);
-		return true;
+		bool success = World.RegisterBody(this);
+		return success;
 	}
 
 	/// <summary>
@@ -205,6 +209,14 @@ public abstract class ColliderComponent : Component
 		{
 			LocalInertia = collisionShape.CalculateLocalInertia(dynamicMass);
 		}
+	}
+
+	internal void UpdateNodeFromPhysics()
+	{
+		if (isStatic) return;
+
+		Pose worldPose = new(rigidbody.WorldTransform);
+		node.WorldTransformation = worldPose;
 	}
 
 	#endregion
