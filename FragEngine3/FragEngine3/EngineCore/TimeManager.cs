@@ -8,7 +8,7 @@ public sealed class TimeManager : IEngineSystem
 
 	public TimeManager(Engine _engine)
 	{
-		engine = _engine ?? throw new ArgumentNullException(nameof(_engine), "Engine may not be null!");
+		Engine = _engine ?? throw new ArgumentNullException(nameof(_engine), "Engine may not be null!");
 
 		stopwatch = new();
 		stopwatch.Start();
@@ -21,8 +21,6 @@ public sealed class TimeManager : IEngineSystem
 
 	#endregion
 	#region Fields
-
-	public readonly Engine engine;
 
 	private readonly Stopwatch stopwatch;
 
@@ -38,7 +36,9 @@ public sealed class TimeManager : IEngineSystem
 	#endregion
 	#region Properties
 
-	public Engine Engine => engine;
+	public bool IsDisposed { get; private set; } = false;
+
+	public Engine Engine { get; }
 
 	public TimeSpan LastFrameStartTime { get; private set; } = TimeSpan.Zero;
 	public TimeSpan LastFrameEndTime { get; private set; } = TimeSpan.Zero;
@@ -92,6 +92,7 @@ public sealed class TimeManager : IEngineSystem
 	}
 	private void Dispose(bool _)
 	{
+		IsDisposed = true;
 		stopwatch.Stop();
 	}
 
@@ -110,6 +111,12 @@ public sealed class TimeManager : IEngineSystem
 
 	internal bool BeginFrame()
 	{
+		if (IsDisposed)
+		{
+			Engine.Logger.LogError("Cannot begin frame using disposed time manager!");
+			return false;
+		}
+
 		RunTime = stopwatch.Elapsed;
 		FrameCount++;
 
@@ -120,6 +127,13 @@ public sealed class TimeManager : IEngineSystem
 
 	internal bool EndFrame(out TimeSpan _outThreadSleepTime)
 	{
+		if (IsDisposed)
+		{
+			Engine.Logger.LogError("Cannot end frame using disposed time manager!");
+			_outThreadSleepTime = TimeSpan.Zero;
+			return false;
+		}
+
 		TimeSpan newRunTime = stopwatch.Elapsed;
 		RunTime = newRunTime;
 

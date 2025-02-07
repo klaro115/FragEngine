@@ -2,13 +2,13 @@
 
 namespace FragEngine3.EngineCore;
 
-public sealed class Logger : ILogger
+public sealed class Logger : ILogger, IEngineSystem
 {
 	#region Constructors
 
 	public Logger(Engine _engine)
 	{
-		engine = _engine ?? throw new ArgumentNullException(nameof(_engine), "Engine may not be null!");
+		Engine = _engine ?? throw new ArgumentNullException(nameof(_engine), "Engine may not be null!");
 
 		string? entryPath = Path.GetDirectoryName(System.Reflection.Assembly.GetEntryAssembly()?.Location);
 		applicationPath = entryPath ?? Environment.CurrentDirectory;
@@ -18,10 +18,25 @@ public sealed class Logger : ILogger
 		logFileAbsPath = Path.Combine(logDirAbsPath, LoggerConstants.MAIN_LOG_FILE_NAME);
 	}
 
+	~Logger()
+	{
+		if (!IsDisposed) Dispose(false);
+	}
+
+	#endregion
+	#region Events
+
+	/// <summary>
+	/// Event that is triggered whenever a new entry was logged.
+	/// </summary>
+	public event Action<LogEntry>? OnLogAdded = null;
+	/// <summary>
+	/// Event that is triggered whenever buffered logs have been written to file.
+	/// </summary>
+	public event Action? OnLogsWritten = null;
+
 	#endregion
 	#region Fields
-
-	public readonly Engine engine;
 
 	private readonly Queue<LogEntry> entries = new(64);
 	private readonly int writeLogsEveryNEntries = 1;
@@ -35,12 +50,29 @@ public sealed class Logger : ILogger
 	#endregion
 	#region Properties
 
+	public bool IsDisposed { get; private set; } = false;
 	public bool IsInitialized { get; private set; } = false;
+
+	public Engine Engine { get; }
 
 	public static Logger? Instance { get; private set; } = null;
 
 	#endregion
 	#region Methods
+
+	public void Dispose()
+	{
+		GC.SuppressFinalize(this);
+		Dispose(true);
+	}
+	private void Dispose(bool _disposing)
+	{
+		if (_disposing && IsInitialized)
+		{
+			Shutdown();
+		}
+		IsDisposed = true;
+	}
 
 	public bool Initialize()
 	{
@@ -183,6 +215,9 @@ public sealed class Logger : ILogger
 				Console.ForegroundColor = LogEntry.defaultConsoleColor;
 			}
 		}
+
+		// Notify any subscribers that a new log has been recorded:
+		OnLogAdded?.Invoke(_entry);
 	}
 
 	private bool WriteLogs()
@@ -217,6 +252,10 @@ public sealed class Logger : ILogger
 			}
 		}
 
+		if (success)
+		{
+			OnLogsWritten?.Invoke();
+		}
 		return success;
 	}
 
