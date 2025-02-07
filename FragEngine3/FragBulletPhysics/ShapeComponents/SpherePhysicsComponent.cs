@@ -2,7 +2,7 @@
 using FragEngine3.Scenes;
 using FragEngine3.Scenes.Data;
 
-namespace FragBulletPhysics;
+namespace FragBulletPhysics.ShapeComponents;
 
 public sealed class SpherePhysicsComponent(SceneNode _node, PhysicsWorldComponent _world) : PhysicsBodyComponent(_node, _world)
 {

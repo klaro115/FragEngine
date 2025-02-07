@@ -5,8 +5,7 @@ using System.Numerics;
 
 namespace FragBulletPhysics;
 
-//TODO 1: Rename colliders to "PhysicsBody" or something. No need for poorly applied Unity terminology.
-//TODO 2: Add Enabled/Disabled listeners, to pause or resume simulation of this body!
+//TODO: Add Enabled/Disabled listeners, to pause or resume simulation of this body!
 public abstract class PhysicsBodyComponent : Component, IOnFixedUpdateListener
 {
 	#region Constructors

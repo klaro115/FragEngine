@@ -14,6 +14,7 @@ using FragBulletPhysics;
 using TestApp.Camera;
 using FragEngine3.EngineCore.Input;
 using BulletSharp;
+using FragBulletPhysics.ShapeComponents;
 
 namespace TestApp.Application;
 

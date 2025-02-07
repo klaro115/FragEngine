@@ -3,7 +3,7 @@ using FragEngine3.Scenes;
 using FragEngine3.Scenes.Data;
 using System.Numerics;
 
-namespace FragBulletPhysics;
+namespace FragBulletPhysics.ShapeComponents;
 
 public sealed class BoxPhysicsComponent(SceneNode _node, PhysicsWorldComponent _world) : PhysicsBodyComponent(_node, _world)
 {
