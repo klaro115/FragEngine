@@ -25,19 +25,33 @@ public sealed class PhysicsWorldComponent : Component, IOnFixedUpdateListener
 			Gravity = gravityAcceleration,
 		};
 		instance.OnDispose += OnInstanceDisposed;
+
+		
+		dummyShape = new BoxShape(0.1f);
+		using RigidBodyConstructionInfo dummyRigidbodyInfo = new(1, new DefaultMotionState(Matrix4x4.CreateTranslation(-100, -100, -100)), dummyShape);
+		dummyRigidbody = new(dummyRigidbodyInfo);
+		instance.AddCollisionObject(dummyRigidbody);
 	}
 
 	#endregion
 	#region Fields
 
+	//TEST
+	//private BoxShape bs;
+	//private RigidBody rb;
+	//TEST
+
 	private readonly TimeManager timeManager;
 	private readonly Logger logger;
 
-	private readonly CollisionConfiguration collisionConfig = null!;
-	private readonly Dispatcher dispatcher = null!;
-	private readonly BroadphaseInterface broadphase = null!;
+	private readonly CollisionConfiguration collisionConfig;
+	private readonly Dispatcher dispatcher;
+	private readonly BroadphaseInterface broadphase;
 
-	public readonly DiscreteDynamicsWorld instance = null!;
+	public readonly DiscreteDynamicsWorld instance;
+
+	private readonly CollisionShape dummyShape;
+	private readonly RigidBody dummyRigidbody;
 
 	private readonly HashSet<PhysicsBodyComponent> bodies = new(100);
 
@@ -76,6 +90,11 @@ public sealed class PhysicsWorldComponent : Component, IOnFixedUpdateListener
 			instance.OnDispose -= OnInstanceDisposed;
 		}
 
+		//TEST
+		dummyRigidbody.Dispose();
+		dummyShape.Dispose();
+		//TEST
+
 		instance?.Dispose();
 		broadphase?.Dispose();
 		dispatcher?.Dispose();
@@ -105,6 +124,10 @@ public sealed class PhysicsWorldComponent : Component, IOnFixedUpdateListener
 		foreach (PhysicsBodyComponent body in bodies)
 		{
 			body.UpdateNodeFromPhysics();
+			//if (!body.IsStatic)
+			//{
+			//	body.node.WorldTransformation = new(rb.WorldTransform);
+			//}
 		}
 		return true;
 	}
