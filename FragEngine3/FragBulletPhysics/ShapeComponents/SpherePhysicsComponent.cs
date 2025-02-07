@@ -1,10 +1,14 @@
 ﻿using BulletSharp;
 using FragEngine3.Scenes;
 using FragEngine3.Scenes.Data;
+using System.Numerics;
 
 namespace FragBulletPhysics.ShapeComponents;
 
-public sealed class SpherePhysicsComponent(SceneNode _node, PhysicsWorldComponent _world) : PhysicsBodyComponent(_node, _world)
+/// <summary>
+/// Rigidbody physics component with a spherical shape.
+/// </summary>
+public sealed class SpherePhysicsComponent : PhysicsBodyComponent
 {
 	#region Types
 
@@ -16,12 +20,30 @@ public sealed class SpherePhysicsComponent(SceneNode _node, PhysicsWorldComponen
 	}
 
 	#endregion
+	#region Constructors
+
+	public SpherePhysicsComponent(SceneNode _node, PhysicsWorldComponent _world, float _radius, float _mass, bool _isStatic) : base(_node, _world, _mass, _isStatic)
+	{
+		Radius = _radius;
+
+		CollisionShape = new SphereShape(radius);
+		LocalInertia = IsStatic ? Vector3.Zero : CollisionShape.CalculateLocalInertia(ActualMass);
+		DefaultMotionState motionState = new(node.WorldTransformation.Matrix);
+		using RigidBodyConstructionInfo rigidbodyInfo = new(ActualMass, motionState, CollisionShape, LocalInertia);
+		Rigidbody = new(rigidbodyInfo);
+
+		World.RegisterBody(this);
+	}
+
+	#endregion
 	#region Fields
 
 	private float radius = 0.5f;
 
 	#endregion
 	#region Properties
+
+	public override PhysicsBodyShapeType ShapeType => PhysicsBodyShapeType.Sphere;
 
 	/// <summary>
 	/// Gets or sets the radius of the spherical collision shape.
@@ -57,21 +79,6 @@ public sealed class SpherePhysicsComponent(SceneNode _node, PhysicsWorldComponen
 
 	#endregion
 	#region Methods
-
-	protected override bool InitializeCollisionShape(out CollisionShape _outCollisionShape)
-	{
-		try
-		{
-			_outCollisionShape = new SphereShape(radius);
-			return true;
-		}
-		catch (Exception ex)
-		{
-			Logger.LogException("Failed to initialize sphere collision shape!", ex);
-			_outCollisionShape = null!;
-			return false;
-		}
-	}
 
 	public override bool LoadFromData(in ComponentData _componentData, in Dictionary<int, ISceneElement> _idDataMap)
 	{

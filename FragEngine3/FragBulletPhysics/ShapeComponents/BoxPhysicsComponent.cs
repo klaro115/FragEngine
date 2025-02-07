@@ -5,7 +5,10 @@ using System.Numerics;
 
 namespace FragBulletPhysics.ShapeComponents;
 
-public sealed class BoxPhysicsComponent(SceneNode _node, PhysicsWorldComponent _world) : PhysicsBodyComponent(_node, _world)
+/// <summary>
+/// Rigidbody physics component with a rectangular shape.
+/// </summary>
+public sealed class BoxPhysicsComponent : PhysicsBodyComponent
 {
 	#region Types
 
@@ -17,12 +20,30 @@ public sealed class BoxPhysicsComponent(SceneNode _node, PhysicsWorldComponent _
 	}
 
 	#endregion
+	#region Constructors
+
+	public BoxPhysicsComponent(SceneNode _node, PhysicsWorldComponent _world, Vector3 _size, float _mass, bool _isStatic) : base(_node, _world, _mass, _isStatic)
+	{
+		Size = _size;
+
+		CollisionShape = new BoxShape(0.5f * size);
+		LocalInertia = IsStatic ? Vector3.Zero : CollisionShape.CalculateLocalInertia(ActualMass);
+		DefaultMotionState motionState = new(node.WorldTransformation.Matrix);
+		using RigidBodyConstructionInfo rigidbodyInfo = new(ActualMass, motionState, CollisionShape, LocalInertia);
+		Rigidbody = new(rigidbodyInfo);
+		
+		World.RegisterBody(this);
+	}
+
+	#endregion
 	#region Fields
 
 	private Vector3 size = Vector3.One;
 
 	#endregion
 	#region Properties
+
+	public override PhysicsBodyShapeType ShapeType => PhysicsBodyShapeType.Box;
 
 	/// <summary>
 	/// Gets or sets the dimensions of the box collision shape.
@@ -37,30 +58,24 @@ public sealed class BoxPhysicsComponent(SceneNode _node, PhysicsWorldComponent _
 				Math.Max(value.X, 0.001f),
 				Math.Max(value.Y, 0.001f),
 				Math.Max(value.Z, 0.001f));
+
 			if (!IsDisposed && size != prevSize)
 			{
-				ReinitializeBody();
+				BoxShape newShape = new(0.5f * size);
+				CollisionShape prevShape = CollisionShape;
+				if (!IsStatic)
+				{
+					LocalInertia = newShape.CalculateLocalInertia(Mass);
+					Rigidbody.SetMassProps(Mass, LocalInertia);
+				}
+				Rigidbody.CollisionShape = newShape;
+				prevShape.Dispose();
 			}
 		}
 	}
 
 	#endregion
 	#region Methods
-
-	protected override bool InitializeCollisionShape(out CollisionShape _outCollisionShape)
-	{
-		try
-		{
-			_outCollisionShape = new BoxShape(0.5f * size);
-			return true;
-		}
-		catch (Exception ex)
-		{
-			Logger.LogException("Failed to initialize box collision shape!", ex);
-			_outCollisionShape = null!;
-			return false;
-		}
-	}
 
 	public override bool LoadFromData(in ComponentData _componentData, in Dictionary<int, ISceneElement> _idDataMap)
 	{

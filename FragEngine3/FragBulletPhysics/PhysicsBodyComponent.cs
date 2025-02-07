@@ -1,4 +1,5 @@
 ﻿using BulletSharp;
+using FragBulletPhysics.ShapeComponents;
 using FragEngine3.Scenes;
 using FragEngine3.Scenes.EventSystem;
 using System.Numerics;
@@ -6,11 +7,11 @@ using System.Numerics;
 namespace FragBulletPhysics;
 
 //TODO: Add Enabled/Disabled listeners, to pause or resume simulation of this body!
-public abstract class PhysicsBodyComponent : Component, IOnFixedUpdateListener
+public abstract class PhysicsBodyComponent : Component//, IOnFixedUpdateListener
 {
 	#region Constructors
 
-	protected PhysicsBodyComponent(SceneNode _node, PhysicsWorldComponent _world) : base(_node)
+	protected PhysicsBodyComponent(SceneNode _node, PhysicsWorldComponent _world, float _mass, bool _isStatic) : base(_node)
 	{
 		// Assign, find, or create a physics world in the component's scene:
 		PhysicsWorldComponent? tempWorld = _world;
@@ -20,10 +21,8 @@ public abstract class PhysicsBodyComponent : Component, IOnFixedUpdateListener
 		}
 		World = tempWorld!;
 
-		if (!ReinitializeBody())
-		{
-			throw new Exception("Failed to initialize collider component!");
-		}
+		dynamicMass = _mass;
+		IsStatic = _isStatic;
 	}
 
 	~PhysicsBodyComponent()
@@ -34,7 +33,6 @@ public abstract class PhysicsBodyComponent : Component, IOnFixedUpdateListener
 	#endregion
 	#region Fields
 
-	private bool isStatic = true;
 	private float dynamicMass = 1.0f;
 
 	private CollisionShape collisionShape = null!;
@@ -51,13 +49,7 @@ public abstract class PhysicsBodyComponent : Component, IOnFixedUpdateListener
 	public CollisionShape CollisionShape
 	{
 		get => collisionShape;
-		protected set
-		{
-			collisionShape = value;
-			rigidbody.CollisionShape = collisionShape;
-
-			UpdateMass();
-		}
+		protected set => collisionShape = value;
 	}
 
 	/// <summary>
@@ -66,23 +58,13 @@ public abstract class PhysicsBodyComponent : Component, IOnFixedUpdateListener
 	public RigidBody Rigidbody
 	{
 		get => rigidbody;
-		private set => rigidbody = value;
+		protected set => rigidbody = value;
 	}
 
 	/// <summary>
 	/// Gets or sets whether this body is static. Static objects will take part in collisions, but act as immovable walls.
 	/// </summary>
-	public bool IsStatic
-	{
-		get => isStatic;
-		set
-		{
-			if (value == isStatic) return;
-
-			isStatic = value;
-			UpdateMass();
-		}
-	}
+	public bool IsStatic { get; set; } = true;
 
 	/// <summary>
 	/// Gets or sets the mass of the body.<para/>
@@ -96,16 +78,21 @@ public abstract class PhysicsBodyComponent : Component, IOnFixedUpdateListener
 			if (float.IsNaN(value) || value <= 0 || value == dynamicMass) return;
 
 			dynamicMass = value;
-			UpdateMass();
+			//UpdateMass();
 		}
 	}
 
-	protected float ActualMass => isStatic ? 0 : dynamicMass;
+	protected float ActualMass => IsStatic ? 0 : dynamicMass;
 
 	/// <summary>
 	/// Gets the local inertia vector of this body.
 	/// </summary>
 	public Vector3 LocalInertia { get; protected set; } = Vector3.Zero;
+
+	/// <summary>
+	/// Gets the shape type of this body's collision shape.
+	/// </summary>
+	public abstract PhysicsBodyShapeType ShapeType { get; }
 
 	#endregion
 	#region Methods
@@ -118,90 +105,9 @@ public abstract class PhysicsBodyComponent : Component, IOnFixedUpdateListener
 		base.Dispose(_disposing);
 	}
 
-	protected bool ReinitializeBody(bool _forceRecreate = false)
-	{
-		if (IsDisposed)
-		{
-			Logger.LogError("Cannot reinitialize disposed physics body!");
-			return false;
-		}
-
-		// Unregister previous rigidbody instance:
-		if (rigidbody is not null)
-		{
-			World.UnregisterBody(this);
-		}
-
-		// Create collision shape:
-		collisionShape?.Dispose();
-
-		if (!InitializeCollisionShape(out collisionShape))
-		{
-			Logger.LogError("Failed to (re)initialize collision shape of physics body!");
-			return false;
-		}
-		UpdateLocalInertia();
-
-		// Create rigidbody:
-		Matrix4x4 mtxWorldPose = node.WorldTransformation.Matrix;
-
-		if (_forceRecreate || rigidbody is null || rigidbody.IsDisposed)
-		{
-			if (_forceRecreate) rigidbody?.Dispose();
-
-			try
-			{
-				using RigidBodyConstructionInfo rigidbodyInfo = new(
-					ActualMass,
-					new DefaultMotionState(mtxWorldPose),
-					collisionShape);
-
-				rigidbody = new(rigidbodyInfo);
-			}
-			catch (Exception ex)
-			{
-				Logger.LogException("Failed to initialize rigidbody instance of physics body!", ex);
-				return false;
-			}
-		}
-		else
-		{
-			rigidbody.WorldTransform = mtxWorldPose;
-			rigidbody.CollisionShape = collisionShape;
-		}
-
-		// Register body in the physics world:
-		bool success = World.RegisterBody(this);
-		return success;
-	}
-
-	/// <summary>
-	/// Try to create, update, or recreate the body's collision shape.
-	/// </summary>
-	/// <param name="_outCollisionShape">Outputs the collision shape to use with this body.</param>
-	/// <returns>True if the collision shape was initialized, false otherwise.</returns>
-	protected abstract bool InitializeCollisionShape(out CollisionShape _outCollisionShape);
-
-	protected void UpdateMass()
-	{
-		float actualMass;
-		if (isStatic)
-		{
-			actualMass = 0; // In the Bullet physics engine, objects are static if their mass is 0.
-			LocalInertia = Vector3.Zero;
-		}
-		else
-		{
-			actualMass = dynamicMass;
-			LocalInertia = collisionShape.CalculateLocalInertia(dynamicMass);
-		}
-
-		rigidbody.SetMassProps(actualMass, LocalInertia);
-	}
-
 	protected void UpdateLocalInertia()
 	{
-		if (isStatic)
+		if (IsStatic)
 		{
 			LocalInertia = Vector3.Zero;
 		}
@@ -213,19 +119,9 @@ public abstract class PhysicsBodyComponent : Component, IOnFixedUpdateListener
 
 	internal void UpdateNodeFromPhysics()
 	{
-		if (isStatic) return;
+		if (IsStatic) return;
 
-		//node.WorldPosition = rigidbody.WorldTransform.Translation;
 		node.WorldTransformation = new(rigidbody.WorldTransform.Translation);
-	}
-
-	public bool OnFixedUpdate()
-	{
-		if (!isStatic)
-		{		
-			Console.WriteLine($"Sphere: Mass={ActualMass}, Position={rigidbody.WorldTransform.Translation}, Velocity={rigidbody.LinearVelocity}, Gravity={rigidbody.Gravity}");
-		}
-		return true;
 	}
 
 	#endregion
