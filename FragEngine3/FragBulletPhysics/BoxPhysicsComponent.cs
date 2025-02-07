@@ -5,12 +5,12 @@ using System.Numerics;
 
 namespace FragBulletPhysics;
 
-public sealed class BoxColliderComponent(SceneNode _node, PhysicsWorldComponent _world) : ColliderComponent(_node, _world)
+public sealed class BoxPhysicsComponent(SceneNode _node, PhysicsWorldComponent _world) : PhysicsBodyComponent(_node, _world)
 {
 	#region Types
 
 	[Serializable]
-	[ComponentDataType(typeof(BoxColliderComponent))]
+	[ComponentDataType(typeof(BoxPhysicsComponent))]
 	public sealed class Data
 	{
 		public required Vector3 Size { get; init; }

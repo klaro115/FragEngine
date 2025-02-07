@@ -182,7 +182,7 @@ internal sealed class TestPhysicsAppLogic : ApplicationLogic
 			ground.SetMesh(groundHandle);
 			ground.SetMaterial("Mtl_DefaultSurface");
 
-			if (node.CreateComponent(out BoxColliderComponent? body, physicsWorld!) && body is not null)
+			if (node.CreateComponent(out BoxPhysicsComponent? body, physicsWorld!) && body is not null)
 			{
 				body.Size = new(20, 1, 20);
 				body.IsStatic = true;
@@ -201,7 +201,7 @@ internal sealed class TestPhysicsAppLogic : ApplicationLogic
 			sphere.SetMesh(sphereHandle);
 			sphere.SetMaterial("Mtl_DefaultSurface");
 
-			if (node.CreateComponent(out SphereColliderComponent? body, physicsWorld!) && body is not null)
+			if (node.CreateComponent(out SpherePhysicsComponent? body, physicsWorld!) && body is not null)
 			{
 				body.Radius = 0.5f;
 				body.IsStatic = false;
@@ -228,7 +228,7 @@ internal sealed class TestPhysicsAppLogic : ApplicationLogic
 		{
 			Vector3 input = Engine.InputManager.GetKeyAxes(InputAxis.IJKL);
 
-			ColliderComponent body = node.GetComponent<ColliderComponent>()!;
+			PhysicsBodyComponent body = node.GetComponent<PhysicsBodyComponent>()!;
 			body.Rigidbody.ApplyCentralForce(input * 5);
 		}
 

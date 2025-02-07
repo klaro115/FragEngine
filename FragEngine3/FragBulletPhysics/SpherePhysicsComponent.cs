@@ -4,12 +4,12 @@ using FragEngine3.Scenes.Data;
 
 namespace FragBulletPhysics;
 
-public sealed class SphereColliderComponent(SceneNode _node, PhysicsWorldComponent _world) : ColliderComponent(_node, _world)
+public sealed class SpherePhysicsComponent(SceneNode _node, PhysicsWorldComponent _world) : PhysicsBodyComponent(_node, _world)
 {
 	#region Types
 
 	[Serializable]
-	[ComponentDataType(typeof(SphereColliderComponent))]
+	[ComponentDataType(typeof(SpherePhysicsComponent))]
 	public sealed class Data
 	{
 		public required float Radius { get; init; }

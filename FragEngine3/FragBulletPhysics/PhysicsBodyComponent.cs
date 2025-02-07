@@ -7,11 +7,11 @@ namespace FragBulletPhysics;
 
 //TODO 1: Rename colliders to "PhysicsBody" or something. No need for poorly applied Unity terminology.
 //TODO 2: Add Enabled/Disabled listeners, to pause or resume simulation of this body!
-public abstract class ColliderComponent : Component, IOnFixedUpdateListener
+public abstract class PhysicsBodyComponent : Component, IOnFixedUpdateListener
 {
 	#region Constructors
 
-	protected ColliderComponent(SceneNode _node, PhysicsWorldComponent _world) : base(_node)
+	protected PhysicsBodyComponent(SceneNode _node, PhysicsWorldComponent _world) : base(_node)
 	{
 		// Assign, find, or create a physics world in the component's scene:
 		PhysicsWorldComponent? tempWorld = _world;
@@ -27,7 +27,7 @@ public abstract class ColliderComponent : Component, IOnFixedUpdateListener
 		}
 	}
 
-	~ColliderComponent()
+	~PhysicsBodyComponent()
 	{
 		if (!IsDisposed) Dispose(false);
 	}

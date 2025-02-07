@@ -39,7 +39,7 @@ public sealed class PhysicsWorldComponent : Component, IOnFixedUpdateListener
 
 	public readonly DiscreteDynamicsWorld instance = null!;
 
-	private readonly HashSet<ColliderComponent> bodies = new(100);
+	private readonly HashSet<PhysicsBodyComponent> bodies = new(100);
 
 	private float fixedDeltaTime = 0.01f;
 	private Vector3 gravityAcceleration = new(0, -9.81f, 0);
@@ -102,14 +102,14 @@ public sealed class PhysicsWorldComponent : Component, IOnFixedUpdateListener
 			return false;
 		}
 
-		foreach (ColliderComponent body in bodies)
+		foreach (PhysicsBodyComponent body in bodies)
 		{
 			body.UpdateNodeFromPhysics();
 		}
 		return true;
 	}
 
-	internal bool RegisterBody(ColliderComponent _newBody)
+	internal bool RegisterBody(PhysicsBodyComponent _newBody)
 	{
 		if (IsDisposed)
 		{
@@ -125,7 +125,7 @@ public sealed class PhysicsWorldComponent : Component, IOnFixedUpdateListener
 		return true;
 	}
 
-	internal bool UnregisterBody(ColliderComponent _body)
+	internal bool UnregisterBody(PhysicsBodyComponent _body)
 	{
 		if (IsDisposed)
 		{
