@@ -711,7 +711,7 @@ public sealed class SceneNode : ISceneElement
 				scene.drawManager.UnregisterRenderer(renderer);
 			}
 
-			if (_component is ISceneEventListener eventListener)
+			if (_component is ISceneEventListener)
 			{
 				// Update update stage lists:
 				if (_component is ISceneUpdateListener updateListener)
@@ -857,7 +857,7 @@ public sealed class SceneNode : ISceneElement
 		}
 
 		// Update update stage lists:
-		if (_component is ISceneEventListener eventListener)
+		if (_component is ISceneEventListener)
 		{
 			if (_component is ISceneUpdateListener updateListener)
 			{
