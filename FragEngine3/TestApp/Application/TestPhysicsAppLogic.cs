@@ -12,11 +12,24 @@ using Veldrid;
 using FragEngine3.Graphics;
 using FragBulletPhysics;
 using TestApp.Camera;
+using FragEngine3.EngineCore.Input;
+using BulletSharp;
 
 namespace TestApp.Application;
 
 internal sealed class TestPhysicsAppLogic : ApplicationLogic
 {
+	private CollisionConfiguration? physCollisionConfig;
+	private Dispatcher? physDispatcher;
+	private BroadphaseInterface? physBroadphase;
+	private DiscreteDynamicsWorld? physWorld;
+
+	private BoxShape? physGroundShape;
+	private RigidBody? physGroundRigidbody;
+
+	private SphereShape? physBallShape;
+	private RigidBody? physBallRigidbody;
+
 	// STARTUP:
 
 	protected override bool RunStartupLogic()
@@ -73,6 +86,20 @@ internal sealed class TestPhysicsAppLogic : ApplicationLogic
 
 	protected override bool BeginRunningState()
 	{
+		//TEST TEST TEST TEST
+		physCollisionConfig = new DefaultCollisionConfiguration();
+		physDispatcher = new CollisionDispatcher(physCollisionConfig);
+		physBroadphase = new DbvtBroadphase();
+		physWorld = new(physDispatcher, physBroadphase, null, physCollisionConfig);
+
+		physGroundShape = new(20, 1, 20);
+		using RigidBodyConstructionInfo physGroundRigidbodyInfo = new(0, new DefaultMotionState(), physGroundShape);
+		physGroundRigidbody = new(physGroundRigidbodyInfo);
+		physWorld.AddCollisionObject(physGroundRigidbody);
+		//TEST TEST TEST TEST
+
+
+
 		Scene scene = Engine.SceneManager.MainScene!;
 
 		// Prepare physics scene:
@@ -130,14 +157,14 @@ internal sealed class TestPhysicsAppLogic : ApplicationLogic
 			light.ShadowDepthBias = 0.01f;
 		}
 
-		MeshPrimitiveFactory.CreateCubeMesh("Cube", Engine, new(2, 2, 2), false, out _, out _, out ResourceHandle cubeHandle);
+		MeshPrimitiveFactory.CreateCubeMesh("Cube", Engine, new(0.5f, 0.5f, 0.5f), false, out _, out _, out ResourceHandle cubeHandle);
 		if (SceneSpawner.CreateStaticMeshRenderer(scene, out StaticMeshRendererComponent cube))
 		{
 			cube.node.Name = "Cube";
-			cube.node.LocalPosition = new Vector3(0, 1.5f, 2);
+			cube.node.LocalPosition = new Vector3(0, 2, 0);
 			cube.node.SetRotationFromYawPitchRoll(45, 45, 0, true, true);
 			cube.node.LocalScale = Vector3.One;
-			cube.node.SetEnabled(false);
+			//cube.node.SetEnabled(false);
 
 			cube.SetMesh(cubeHandle);
 			cube.SetMaterial("Mtl_DefaultSurface");
@@ -167,7 +194,7 @@ internal sealed class TestPhysicsAppLogic : ApplicationLogic
 		{
 			SceneNode node = sphere.node;
 			node.Name = "Sphere";
-			node.LocalPosition = new(0, 2, 0);
+			node.LocalPosition = new(0, 8, 0);
 			node.LocalRotation = Quaternion.Identity;
 			node.LocalScale = Vector3.One;
 
@@ -193,6 +220,36 @@ internal sealed class TestPhysicsAppLogic : ApplicationLogic
 			Engine.Exit();
 		}
 
+		Scene scene = Engine.SceneManager.MainScene!;
+
+		//float deltaTime = (float)Engine.TimeManager.DeltaTime.TotalSeconds;
+
+		if (scene.FindNode("Sphere", out SceneNode? node) && node is not null)
+		{
+			Vector3 input = Engine.InputManager.GetKeyAxes(InputAxis.IJKL);
+
+			ColliderComponent body = node.GetComponent<ColliderComponent>()!;
+			body.Rigidbody.ApplyCentralForce(input * 5);
+		}
+
+		//TEST TEST TEST TEST
+		physWorld!.StepSimulation(0.0167f);
+		
+		if (physBallShape is null)
+		{
+			physBallShape = new(1);
+			using RigidBodyConstructionInfo physBallRigidbodyInfo = new(1, new DefaultMotionState(), physGroundShape);
+			physBallRigidbody = new(physBallRigidbodyInfo);
+			physBallRigidbody.Translate(Vector3.UnitY * 100);
+			physWorld.AddCollisionObject(physBallRigidbody);
+		}
+		else
+		{
+			Vector3 ballPos = physBallRigidbody!.WorldTransform.Translation;
+			//Console.WriteLine($"Sphere: Mass={1}, Position={ballPos}, Velocity={physBallRigidbody.LinearVelocity}, Gravity={physBallRigidbody.Gravity}");
+		}
+		//TEST TEST TEST TEST
+
 		return true;
 	}
 
@@ -203,6 +260,19 @@ internal sealed class TestPhysicsAppLogic : ApplicationLogic
 
 	protected override bool EndRunningState()
 	{
+		//TEST TEST TEST TEST
+		physBallRigidbody?.Dispose();
+		physBallShape?.Dispose();
+
+		physGroundRigidbody?.Dispose();
+		physGroundShape?.Dispose();
+
+		physWorld?.Dispose();
+		physBroadphase?.Dispose();
+		physDispatcher?.Dispose();
+		physCollisionConfig?.Dispose();
+		//TEST TEST TEST TEST
+
 		return true;
 	}
 }

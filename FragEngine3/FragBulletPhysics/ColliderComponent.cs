@@ -1,12 +1,13 @@
 ﻿using BulletSharp;
 using FragEngine3.Scenes;
+using FragEngine3.Scenes.EventSystem;
 using System.Numerics;
 
 namespace FragBulletPhysics;
 
 //TODO 1: Rename colliders to "PhysicsBody" or something. No need for poorly applied Unity terminology.
 //TODO 2: Add Enabled/Disabled listeners, to pause or resume simulation of this body!
-public abstract class ColliderComponent : Component
+public abstract class ColliderComponent : Component, IOnFixedUpdateListener
 {
 	#region Constructors
 
@@ -215,8 +216,17 @@ public abstract class ColliderComponent : Component
 	{
 		if (isStatic) return;
 
-		Pose worldPose = new(rigidbody.WorldTransform);
-		node.WorldTransformation = worldPose;
+		//node.WorldPosition = rigidbody.WorldTransform.Translation;
+		node.WorldTransformation = new(rigidbody.WorldTransform.Translation);
+	}
+
+	public bool OnFixedUpdate()
+	{
+		if (!isStatic)
+		{		
+			Console.WriteLine($"Sphere: Mass={ActualMass}, Position={rigidbody.WorldTransform.Translation}, Velocity={rigidbody.LinearVelocity}, Gravity={rigidbody.Gravity}");
+		}
+		return true;
 	}
 
 	#endregion

@@ -7,7 +7,9 @@ namespace FragEngine3.Scenes;
 /// <summary>
 /// Structure representing an object's spatial transformations, or a coordinate space.<para/>
 /// NOTE: All transformations using this type are done in the pose's parent or local space.
-/// A pose is agnostic to any transformations it might represent in a scene hierarchy.
+/// A pose is agnostic to any transformations it might represent in a scene hierarchy. All
+/// coordinate systems are assumed to follow a left-handed Y-up convention, unless otherwise
+/// stated.
 /// </summary>
 [Serializable]
 [StructLayout(LayoutKind.Sequential, Pack = 4, Size = byteSize)]
@@ -15,24 +17,46 @@ public struct Pose : IEquatable<Pose>
 {
 	#region Constructors
 
+	/// <summary>
+	/// Creates a new pose at coordinate origin, with no transformations.
+	/// </summary>
 	public Pose()
 	{
 		position = Vector3.Zero;
 		rotation = Quaternion.Identity;
 		scale = Vector3.One;
 	}
+
+	/// <summary>
+	/// Creates a new pose with a given position.
+	/// </summary>
+	/// <param name="_position">A position coordinate.</param>
 	public Pose(Vector3 _position)
 	{
 		position = _position;
 		rotation = Quaternion.Identity;
 		scale = Vector3.One;
 	}
+
+	/// <summary>
+	/// Creates a new pose with a given position, rotation, and scale.
+	/// </summary>
+	/// <param name="_position">A position coordinate.</param>
+	/// <param name="_rotation">A rotation quaternion.</param>
+	/// <param name="_scale">A scale vector. Should not be negative.</param>
+	/// <param name="_normalizeRotation">Whether to normalize rotations before assigning, to ensure it is
+	/// a unit quaternion that is safe for further transformations. This is a non-linear operation.</param>
 	public Pose(Vector3 _position, Quaternion _rotation, Vector3 _scale, bool _normalizeRotation = false)
 	{
 		position = _position;
 		rotation = _normalizeRotation ? Quaternion.Normalize(_rotation) : _rotation;
 		scale = _scale;
 	}
+
+	/// <summary>
+	/// Creates a new pose from a transformation matrix.
+	/// </summary>
+	/// <param name="_mtxTransformation">A 4x4 matrix describing position, orientation, and scale.</param>
 	public Pose(in Matrix4x4 _mtxTransformation)
 	{
 		Matrix4x4.Decompose(_mtxTransformation, out scale, out rotation, out position);
@@ -41,8 +65,17 @@ public struct Pose : IEquatable<Pose>
 	#endregion
 	#region Fields
 
+	/// <summary>
+	/// The pose's position in parent space.
+	/// </summary>
 	public Vector3 position;
+	/// <summary>
+	/// The pose's rotation in parent space. Should be a unit quaternion.
+	/// </summary>
 	public Quaternion rotation;
+	/// <summary>
+	/// The pose's scale in parent space. Should not be negative.
+	/// </summary>
 	public Vector3 scale;
 
 	#endregion
@@ -197,6 +230,23 @@ public struct Pose : IEquatable<Pose>
 
 	[MethodImpl(MethodImplOptions.AggressiveInlining)]
 	public readonly Quaternion InverseTransformRotation(Quaternion _worldRotation) => Quaternion.Conjugate(rotation) * _worldRotation;
+
+	// LEFT-HANDED => RIGHT-HANDED:
+
+	/// <summary>
+	/// Converts the pose between left-handed and right-handed coordinate systems.<para/>
+	/// Note: This assumes that the left-handed coordinate system is Y-up, and that the right-handed system is Z-up,
+	/// but that both are X-right.
+	/// </summary>
+	/// <returns>A pose with the same transformation, but in the other coordinate system.</returns>
+	public readonly Pose ConvertHandedness()
+	{
+		Pose rightHandedPose = new(
+			new Vector3(position.X, position.Z, position.Y),
+			new Quaternion(-rotation.X, -rotation.Z, -rotation.Y, rotation.W),
+			new Vector3(scale.X, scale.Z, scale.Y));
+		return rightHandedPose;
+	}
 
 	#region Methods Misc
 	#endregion

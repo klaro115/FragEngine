@@ -1,7 +1,6 @@
 ﻿using BulletSharp;
 using FragEngine3.Scenes;
 using FragEngine3.Scenes.Data;
-using System.Drawing;
 
 namespace FragBulletPhysics;
 

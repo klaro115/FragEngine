@@ -16,24 +16,15 @@ public sealed class PhysicsWorldComponent : Component, IOnFixedUpdateListener
 		timeManager = _node.scene.engine.TimeManager;
 		logger = _node.Logger;
 
-		try
-		{
-			collisionConfig = new();
-			dispatcher = new(collisionConfig);
-			broadphase = new();
-			BroadphaseInterface b = new AxisSweep3(Vector3.One * -100, Vector3.One * 100);
-		}
-		catch (Exception ex)
-		{
-			logger.LogException("Failed to create dependencies for physics world!", ex);
-			Dispose();
-			return;
-		}
+		collisionConfig = new DefaultCollisionConfiguration();
+		dispatcher = new CollisionDispatcher(collisionConfig);
+		broadphase = new DbvtBroadphase();
 
 		instance = new(dispatcher, broadphase, null, collisionConfig)
 		{
-			Gravity = gravityAcceleration
+			Gravity = gravityAcceleration,
 		};
+		instance.OnDispose += OnInstanceDisposed;
 	}
 
 	#endregion
@@ -42,9 +33,9 @@ public sealed class PhysicsWorldComponent : Component, IOnFixedUpdateListener
 	private readonly TimeManager timeManager;
 	private readonly Logger logger;
 
-	private readonly DefaultCollisionConfiguration collisionConfig = null!;
-	private readonly CollisionDispatcher dispatcher = null!;
-	private readonly DbvtBroadphase broadphase = null!;
+	private readonly CollisionConfiguration collisionConfig = null!;
+	private readonly Dispatcher dispatcher = null!;
+	private readonly BroadphaseInterface broadphase = null!;
 
 	public readonly DiscreteDynamicsWorld instance = null!;
 
@@ -80,6 +71,11 @@ public sealed class PhysicsWorldComponent : Component, IOnFixedUpdateListener
 
 	protected override void Dispose(bool _disposing)
 	{
+		if (instance is not null && !instance.IsDisposed)
+		{
+			instance.OnDispose -= OnInstanceDisposed;
+		}
+
 		instance?.Dispose();
 		broadphase?.Dispose();
 		dispatcher?.Dispose();
@@ -87,6 +83,8 @@ public sealed class PhysicsWorldComponent : Component, IOnFixedUpdateListener
 		
 		base.Dispose(_disposing);
 	}
+
+	private void OnInstanceDisposed() => Dispose(true);
 
 	public bool OnFixedUpdate()
 	{
@@ -119,7 +117,10 @@ public sealed class PhysicsWorldComponent : Component, IOnFixedUpdateListener
 			return false;
 		}
 
-		instance.AddCollisionObject(_newBody.Rigidbody);
+		//instance.AddCollisionObject(_newBody.Rigidbody);
+		instance.AddRigidBody(_newBody.Rigidbody);
+		_newBody.Rigidbody.Gravity = gravityAcceleration;
+
 		bodies.Add(_newBody);
 		return true;
 	}
