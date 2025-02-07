@@ -3,7 +3,13 @@ using FragEngine3.Scenes.EventSystem;
 
 namespace FragEngine3.Scenes;
 
-public sealed class SceneManager(Engine _engine) : IDisposable
+/// <summary>
+/// The engine's scene management system. This class is a container that holds ownership of all scenes that have been
+/// created in the engine. Each scene is a semi-isolated region of the app or game, that can have its own logic and
+/// rendering setup.
+/// </summary>
+/// <param name="_engine">The engine whose scenes we will be managing.</param>
+public sealed class SceneManager(Engine _engine) : IEngineSystem
 {
 	#region Constructors
 
@@ -13,9 +19,19 @@ public sealed class SceneManager(Engine _engine) : IDisposable
 	}
 
 	#endregion
-	#region Fields
+	#region Events
 
-	public readonly Engine engine = _engine ?? throw new ArgumentNullException(nameof(_engine), "Engine may not be null!");
+	/// <summary>
+	/// Event that is triggered whenever a new scene is added to the scene manager.
+	/// </summary>
+	public event Action<Scene>? OnSceneAdded = null;
+	/// <summary>
+	/// Event that is triggered whenever a scene is removed from the scene manager. The scene may be diposed after this.
+	/// </summary>
+	public event Action<Scene>? OnSceneRemoved = null;
+
+	#endregion
+	#region Fields
 
 	private readonly List<Scene> scenes = new(1);
 
@@ -23,6 +39,8 @@ public sealed class SceneManager(Engine _engine) : IDisposable
 	#region Properties
 
 	public bool IsDisposed { get; private set; } = false;
+
+	public Engine Engine { get; } = _engine ?? throw new ArgumentNullException(nameof(_engine), "Engine may not be null!");
 
 	/// <summary>
 	/// Gets the total number of scenes assigned to the manager.
@@ -59,23 +77,24 @@ public sealed class SceneManager(Engine _engine) : IDisposable
 	{
 		if (IsDisposed)
 		{
-			engine.Logger.LogError("Cannot add scene to disposed scene manager!");
+			Engine.Logger.LogError("Cannot add scene to disposed scene manager!");
 			return false;
 		}
 		if (_newScene == null || _newScene.IsDisposed)
 		{
-			engine.Logger.LogError("Cannot add null or disposed scene to manager!");
+			Engine.Logger.LogError("Cannot add null or disposed scene to manager!");
 			return false;
 		}
 		if (scenes.Contains(_newScene))
 		{
-			engine.Logger.LogError($"Scene '{_newScene.Name}' was already to manager!");
+			Engine.Logger.LogError($"Scene '{_newScene.Name}' was already to manager!");
 			return false;
 		}
 
 		scenes.Add(_newScene);
 
 		BroadcastEvent(SceneEventType.OnSceneAdded, _newScene, true);
+		OnSceneAdded?.Invoke(_newScene);
 		return true;
 	}
 
@@ -83,12 +102,12 @@ public sealed class SceneManager(Engine _engine) : IDisposable
 	{
 		if (IsDisposed)
 		{
-			engine.Logger.LogError("Cannot remove scene from disposed scene manager!");
+			Engine.Logger.LogError("Cannot remove scene from disposed scene manager!");
 			return false;
 		}
 		if (_scene == null)
 		{
-			engine.Logger.LogError("Cannot remove nul scene from manager!");
+			Engine.Logger.LogError("Cannot remove nul scene from manager!");
 			return false;
 		}
 
@@ -96,11 +115,12 @@ public sealed class SceneManager(Engine _engine) : IDisposable
 		if (removed)
 		{
 			BroadcastEvent(SceneEventType.OnSceneRemoved, _scene, true);
+			OnSceneAdded?.Invoke(_scene);
 			// NOTE: 'OnSceneUnloaded' should be called before by whomever issued this call for removal, and after unloading all scene contents.
 		}
 		else
 		{
-			engine.Logger.LogError($"Cannot remove scene '{_scene.Name}' from manager; it was not added to the manager.");
+			Engine.Logger.LogError($"Cannot remove scene '{_scene.Name}' from manager; it was not added to the manager.");
 		}
 
 		if (_disposeScene)
@@ -114,14 +134,14 @@ public sealed class SceneManager(Engine _engine) : IDisposable
 	{
 		if (IsDisposed)
 		{
-			engine.Logger.LogError("Cannot broadcast event through disposed scene manager!");
+			Engine.Logger.LogError("Cannot broadcast event through disposed scene manager!");
 			return false;
 		}
 
 		// Regular events are propagated across node hierarchy via recursion:
 		foreach (Scene scene in scenes)
 		{
-			if (!scene.IsDisposed && scene.UpdatedInEngineStates.HasFlag(engine.State))
+			if (!scene.IsDisposed && scene.UpdatedInEngineStates.HasFlag(Engine.State))
 			{
 				scene.BroadcastEvent(_eventType, _eventData, _enabledNodesOnly);
 			}
@@ -133,7 +153,7 @@ public sealed class SceneManager(Engine _engine) : IDisposable
 	{
 		if (IsDisposed)
 		{
-			engine.Logger.LogError("Cannot update scenes of disposed scene manager!");
+			Engine.Logger.LogError("Cannot update scenes of disposed scene manager!");
 			return false;
 		}
 
@@ -154,12 +174,12 @@ public sealed class SceneManager(Engine _engine) : IDisposable
 	{
 		if (IsDisposed)
 		{
-			engine.Logger.LogError("Cannot update scene of disposed scene manager!");
+			Engine.Logger.LogError("Cannot update scene of disposed scene manager!");
 			return false;
 		}
 		if (_scene == null || _scene.IsDisposed)
 		{
-			engine.Logger.LogError("Cannot update null or disposed scene!");
+			Engine.Logger.LogError("Cannot update null or disposed scene!");
 			return false;
 		}
 
@@ -170,7 +190,7 @@ public sealed class SceneManager(Engine _engine) : IDisposable
 	{
 		if (IsDisposed)
 		{
-			engine.Logger.LogError("Cannot draw scenes of disposed scene manager!");
+			Engine.Logger.LogError("Cannot draw scenes of disposed scene manager!");
 			return false;
 		}
 
@@ -191,12 +211,12 @@ public sealed class SceneManager(Engine _engine) : IDisposable
 	{
 		if (IsDisposed)
 		{
-			engine.Logger.LogError("Cannot draw scene of disposed scene manager!");
+			Engine.Logger.LogError("Cannot draw scene of disposed scene manager!");
 			return false;
 		}
 		if (_scene == null || _scene.IsDisposed)
 		{
-			engine.Logger.LogError("Cannot draw null or disposed scene!");
+			Engine.Logger.LogError("Cannot draw null or disposed scene!");
 			return false;
 		}
 
