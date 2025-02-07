@@ -68,6 +68,22 @@ public sealed class Engine : IDisposable
 	}
 
 	#endregion
+	#region Events
+
+	/// <summary>
+	/// Event that is triggered whenever an exit request was made, and the engine is about to shut down.
+	/// </summary>
+	public event Action? OnExitRequested = null;
+	/// <summary>
+	/// Event that is triggered whenever the engine is about to transition to a new state.
+	/// </summary>
+	public event Action<EngineState>? OnStateChanging = null;
+	/// <summary>
+	/// Event that is triggered whenever the engine has finished transitioning to a new state.
+	/// </summary>
+	public event Action<EngineState>? OnStateChanged = null;
+
+	#endregion
 	#region Fields
 
 	private readonly ApplicationLogic applicationLogic;
@@ -166,6 +182,8 @@ public sealed class Engine : IDisposable
 	{
 		Logger.LogMessage("Exit was requested.");
 
+		OnExitRequested?.Invoke();
+
 		if (mainLoopCancellationSrc is not null)
 		{
 			mainLoopCancellationSrc.Cancel();
@@ -241,6 +259,9 @@ public sealed class Engine : IDisposable
 		{
 			prevState = State;
 			stateChanged = _newState != State;
+
+			OnStateChanging?.Invoke(prevState);
+
 			State = _newState;
 
 			if (stateChanged || _force)
@@ -284,6 +305,8 @@ public sealed class Engine : IDisposable
 			{
 				Exit();
 			}
+
+			OnStateChanged?.Invoke(State);
 		}
 
 		return success;
