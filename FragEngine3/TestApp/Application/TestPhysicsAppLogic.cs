@@ -118,7 +118,10 @@ internal sealed class TestPhysicsAppLogic : ApplicationLogic
 			camera.IsMainCamera = true;
 			camera.MarkDirty();
 
-			camera.node.CreateComponent<CameraFlightComponent>(out _);
+			if (camera.node.CreateComponent(out CameraFlightComponent? cameraFlight))
+			{
+				cameraFlight!.RotationSpeed = 0.2f;
+			}
 		}
 
 		// Create a directional light:
@@ -159,7 +162,7 @@ internal sealed class TestPhysicsAppLogic : ApplicationLogic
 			ground.SetMesh(groundHandle);
 			ground.SetMaterial("Mtl_DefaultSurface");
 
-			node.CreatePhysicsBodyComponent(out BoxPhysicsComponent? body, new(20, 1, 20, 0), _isStatic: true);
+			node.CreatePhysicsBodyComponent(out BoxPhysicsComponent? _, new(20, 1, 20, 0), _isStatic: true);
 		}
 
 		MeshPrimitiveFactory.CreateIcosahedronMesh("Sphere", Engine, 0.5f, true, out _, out _, out ResourceHandle sphereHandle);
@@ -167,14 +170,14 @@ internal sealed class TestPhysicsAppLogic : ApplicationLogic
 		{
 			SceneNode node = sphere.node;
 			node.Name = "Sphere";
-			node.LocalPosition = new(0, 8, 0);
+			node.LocalPosition = new(0, 0.5f, 0);
 			node.LocalRotation = Quaternion.Identity;
 			node.LocalScale = Vector3.One;
 
 			sphere.SetMesh(sphereHandle);
 			sphere.SetMaterial("Mtl_DefaultSurface");
 
-			node.CreatePhysicsBodyComponent(out SpherePhysicsComponent? body, new(0.5f, 0, 0, 0), 1, false);
+			node.CreatePhysicsBodyComponent(out SpherePhysicsComponent? _, new(0.5f, 0, 0, 0), 1, false);
 		}
 
 		return true;
@@ -197,7 +200,7 @@ internal sealed class TestPhysicsAppLogic : ApplicationLogic
 			Vector3 input = Engine.InputManager.GetKeyAxes(InputAxis.IJKL);
 
 			PhysicsBodyComponent body = node.GetComponent<PhysicsBodyComponent>()!;
-			body.Rigidbody.ApplyCentralForce(input * 5);
+			body.Rigidbody.ApplyCentralForce(input * 50);
 		}
 
 		return true;

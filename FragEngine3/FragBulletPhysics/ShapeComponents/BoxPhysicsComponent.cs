@@ -1,4 +1,5 @@
 ﻿using BulletSharp;
+using FragEngine3;
 using FragEngine3.Scenes;
 using FragEngine3.Scenes.Data;
 using System.Numerics;
@@ -14,7 +15,7 @@ public sealed class BoxPhysicsComponent : PhysicsBodyComponent
 
 	[Serializable]
 	[ComponentDataType(typeof(BoxPhysicsComponent))]
-	public sealed class Data
+	public sealed class Data : BaseData
 	{
 		public required Vector3 Size { get; init; }
 	}
@@ -24,11 +25,14 @@ public sealed class BoxPhysicsComponent : PhysicsBodyComponent
 
 	public BoxPhysicsComponent(SceneNode _node, PhysicsWorldComponent _world, Vector3 _size, float _mass, bool _isStatic) : base(_node, _world, _mass, _isStatic)
 	{
-		Size = _size;
+		size = new(
+			Math.Max(_size.X, 0.001f),
+			Math.Max(_size.Y, 0.001f),
+			Math.Max(_size.Z, 0.001f));
 
-		CollisionShape = new BoxShape(0.5f * size);
+		CollisionShape = new BoxShape(0.5f * size.ConvertHandedness());
 		LocalInertia = IsStatic ? Vector3.Zero : CollisionShape.CalculateLocalInertia(ActualMass);
-		DefaultMotionState motionState = new(node.WorldTransformation.Matrix);
+		DefaultMotionState motionState = new(node.WorldTransformation.ConvertHandedness());
 		using RigidBodyConstructionInfo rigidbodyInfo = new(ActualMass, motionState, CollisionShape, LocalInertia);
 		Rigidbody = new(rigidbodyInfo);
 		
@@ -61,7 +65,7 @@ public sealed class BoxPhysicsComponent : PhysicsBodyComponent
 
 			if (!IsDisposed && size != prevSize)
 			{
-				BoxShape newShape = new(0.5f * size);
+				BoxShape newShape = new(0.5f * size.ConvertHandedness());
 				CollisionShape prevShape = CollisionShape;
 				if (!IsStatic)
 				{
@@ -84,7 +88,9 @@ public sealed class BoxPhysicsComponent : PhysicsBodyComponent
 			return false;
 		}
 
-		Size = data!.Size;
+		isStatic = data!.IsStatic;
+		Mass = data.Mass;
+		Size = data.Size;
 		return true;
 	}
 
@@ -92,6 +98,8 @@ public sealed class BoxPhysicsComponent : PhysicsBodyComponent
 	{
 		Data data = new()
 		{
+			IsStatic = IsStatic,
+			Mass = Mass,
 			Size = Size,
 		};
 

@@ -18,6 +18,16 @@ namespace TestApp.Camera;
 /// <param name="_node"></param>
 internal sealed class CameraFlightComponent(SceneNode _node) : Component(_node), IOnLateUpdateListener
 {
+	#region Types
+
+	[Serializable]
+	[ComponentDataType(typeof(CameraFlightComponent))]
+	public sealed class Data
+	{
+		public float RotationSpeed { get; set; }
+	}
+
+	#endregion
 	#region Fields
 
 	private readonly InputManager inputManager = _node.scene.engine.InputManager;
@@ -25,6 +35,20 @@ internal sealed class CameraFlightComponent(SceneNode _node) : Component(_node),
 
 	private float cameraYaw = 0.0f;
 	private float cameraPitch = 0.0f;
+
+	private float rotationSpeed = 0.1f;
+
+	#endregion
+	#region Properties
+
+	/// <summary>
+	/// Gets or sets the rotation speed, in degrees per pixel that the mouse cursor has moved across the screen.
+	/// </summary>
+	public float RotationSpeed
+	{
+		get => rotationSpeed;
+		set => rotationSpeed = Math.Clamp(value, -100, 100);
+	}
 
 	#endregion
 	#region Methods
@@ -46,8 +70,7 @@ internal sealed class CameraFlightComponent(SceneNode _node) : Component(_node),
 		if (inputManager.GetMouseButton(MouseButton.Right))
 		{
 			const float DEG2RAD = MathF.PI / 180.0f;
-			const float mouseDegreesPerPixel = 0.1f;
-			Vector2 mouseMovement = inputManager.MouseMovement * mouseDegreesPerPixel;
+			Vector2 mouseMovement = inputManager.MouseMovement * rotationSpeed;
 			cameraYaw += mouseMovement.X;
 			cameraPitch = Math.Clamp(cameraPitch + mouseMovement.Y, -89, 89);
 			p.rotation = Quaternion.CreateFromYawPitchRoll(cameraYaw * DEG2RAD, cameraPitch * DEG2RAD, 0);
@@ -59,14 +82,31 @@ internal sealed class CameraFlightComponent(SceneNode _node) : Component(_node),
 
 	public override bool LoadFromData(in ComponentData _componentData, in Dictionary<int, ISceneElement> _idDataMap)
 	{
+		if (!FragEngine3.Utility.Serialization.Serializer.DeserializeFromJson(_componentData.SerializedData, out Data? data))
+		{
+			return false;
+		}
+
+		RotationSpeed = data!.RotationSpeed;
 		return true;
 	}
 
 	public override bool SaveToData(out ComponentData _componentData, in Dictionary<ISceneElement, int> _idDataMap)
 	{
-		_componentData = new()
+		Data data = new()
 		{
-			SerializedData = string.Empty,
+			RotationSpeed = RotationSpeed,
+		};
+
+		if (!FragEngine3.Utility.Serialization.Serializer.SerializeToJson(data, out string jsonTxt))
+		{
+			_componentData = new ComponentData();
+			return false;
+		}
+
+		_componentData = new ComponentData()
+		{
+			SerializedData = jsonTxt,
 		};
 		return true;
 	}

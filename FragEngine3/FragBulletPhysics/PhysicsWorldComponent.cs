@@ -1,4 +1,5 @@
 ﻿using BulletSharp;
+using FragEngine3;
 using FragEngine3.EngineCore;
 using FragEngine3.Scenes;
 using FragEngine3.Scenes.Data;
@@ -9,6 +10,17 @@ namespace FragBulletPhysics;
 
 public sealed class PhysicsWorldComponent : Component, IOnFixedUpdateListener
 {
+	#region Types
+
+	[Serializable]
+	[ComponentDataType(typeof(PhysicsWorldComponent))]
+	public sealed class Data
+	{
+		public float FixedDeltaTime {  get; set; }
+		public Vector3 Gravity {  get; set; }
+	}
+
+	#endregion
 	#region Constructors
 
 	public PhysicsWorldComponent(SceneNode _node) : base(_node)
@@ -61,7 +73,7 @@ public sealed class PhysicsWorldComponent : Component, IOnFixedUpdateListener
 			gravityAcceleration = value;
 			if (!IsDisposed)
 			{
-				instance.Gravity = gravityAcceleration;
+				instance.Gravity = gravityAcceleration.ConvertHandedness();
 			}
 		}
 	}
@@ -166,14 +178,33 @@ public sealed class PhysicsWorldComponent : Component, IOnFixedUpdateListener
 
 	public override bool LoadFromData(in ComponentData _componentData, in Dictionary<int, ISceneElement> _idDataMap)
 	{
+		if (!FragEngine3.Utility.Serialization.Serializer.DeserializeFromJson(_componentData.SerializedData, out Data? data))
+		{
+			return false;
+		}
+
+		FixedDeltaTime = data!.FixedDeltaTime;
+		Gravity = data.Gravity;
 		return true;
 	}
 
 	public override bool SaveToData(out ComponentData _componentData, in Dictionary<ISceneElement, int> _idDataMap)
 	{
-		_componentData = new()
+		Data data = new()
 		{
-			SerializedData = string.Empty,
+			FixedDeltaTime = FixedDeltaTime,
+			Gravity = Gravity,
+		};
+
+		if (!FragEngine3.Utility.Serialization.Serializer.SerializeToJson(data, out string jsonTxt))
+		{
+			_componentData = new ComponentData();
+			return false;
+		}
+
+		_componentData = new ComponentData()
+		{
+			SerializedData = jsonTxt,
 		};
 		return true;
 	}

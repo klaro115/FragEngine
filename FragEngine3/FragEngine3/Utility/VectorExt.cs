@@ -84,5 +84,17 @@ public static class VectorExt
 			MoveTowards(_from.Z, _to.Z, _maxChange));
 	}
 
+	/// <summary>
+	/// Applies a conversion between left-handed and right-handed coordinate systems.<para/>
+	/// Note: This assumes that the left-handed coordinate system is Y-up, and that the right-handed system is Z-up,
+	/// but that both are X-right. Conversion is done by swapping Y and Z axes.
+	/// </summary>
+	/// <param name="_vector">The vector that you wish to convert to a different handedness.</param>
+	/// <returns>A vector with the same magnitude, but in the other coordinate system.</returns>
+	public static Vector3 ConvertHandedness(this Vector3 _vector)
+	{
+		return new Vector3(_vector.X, _vector.Z, _vector.Y);
+	}
+
 	#endregion
 }

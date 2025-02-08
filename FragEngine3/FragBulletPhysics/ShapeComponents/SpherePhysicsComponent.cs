@@ -14,7 +14,7 @@ public sealed class SpherePhysicsComponent : PhysicsBodyComponent
 
 	[Serializable]
 	[ComponentDataType(typeof(SpherePhysicsComponent))]
-	public sealed class Data
+	public sealed class Data : BaseData
 	{
 		public required float Radius { get; init; }
 	}
@@ -24,11 +24,11 @@ public sealed class SpherePhysicsComponent : PhysicsBodyComponent
 
 	public SpherePhysicsComponent(SceneNode _node, PhysicsWorldComponent _world, float _radius, float _mass, bool _isStatic) : base(_node, _world, _mass, _isStatic)
 	{
-		Radius = _radius;
+		radius = Math.Max(_radius, 0.001f);
 
 		CollisionShape = new SphereShape(radius);
 		LocalInertia = IsStatic ? Vector3.Zero : CollisionShape.CalculateLocalInertia(ActualMass);
-		DefaultMotionState motionState = new(node.WorldTransformation.Matrix);
+		DefaultMotionState motionState = new(node.WorldTransformation.ConvertHandedness());
 		using RigidBodyConstructionInfo rigidbodyInfo = new(ActualMass, motionState, CollisionShape, LocalInertia);
 		Rigidbody = new(rigidbodyInfo);
 
@@ -57,6 +57,7 @@ public sealed class SpherePhysicsComponent : PhysicsBodyComponent
 			if (!IsDisposed && CollisionShape is SphereShape sphereShape)
 			{
 				sphereShape.SetUnscaledRadius(radius);
+				UpdateMass();
 			}
 		}
 	}
@@ -67,14 +68,7 @@ public sealed class SpherePhysicsComponent : PhysicsBodyComponent
 	public float Diameter
 	{
 		get => radius * 2;
-		set
-		{
-			radius = Math.Max(value / 2, 0.001f);
-			if (!IsDisposed && CollisionShape is SphereShape sphereShape)
-			{
-				sphereShape.SetUnscaledRadius(radius);
-			}
-		}
+		set => Radius = value / 2;
 	}
 
 	#endregion
@@ -87,6 +81,8 @@ public sealed class SpherePhysicsComponent : PhysicsBodyComponent
 			return false;
 		}
 
+		isStatic = data!.IsStatic;
+		Mass = data.Mass;
 		Radius = data!.Radius;
 		return true;
 	}
@@ -95,6 +91,8 @@ public sealed class SpherePhysicsComponent : PhysicsBodyComponent
 	{
 		Data data = new()
 		{
+			IsStatic = IsStatic,
+			Mass = Mass,
 			Radius = Radius,
 		};
 

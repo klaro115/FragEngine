@@ -1,14 +1,29 @@
 ﻿using BulletSharp;
 using FragBulletPhysics.ShapeComponents;
 using FragEngine3.Scenes;
+using FragEngine3.Scenes.Data;
 using FragEngine3.Scenes.EventSystem;
 using System.Numerics;
 
 namespace FragBulletPhysics;
 
-//TODO: Add Enabled/Disabled listeners, to pause or resume simulation of this body!
-public abstract class PhysicsBodyComponent : Component//, IOnFixedUpdateListener
+/// <summary>
+/// Base class for rigidbody physics components.<para/>
+/// Note: This ain't Unity; there are no separate collider and rigidbody components. Use <see cref="IsStatic"/> to mark physics bodies as static or dynamic.
+/// </summary>
+public abstract class PhysicsBodyComponent : Component, IOnNodeSetEnabledListener
 {
+	#region Types
+
+	[Serializable]
+	[ComponentDataType(typeof(PhysicsBodyComponent))]
+	public abstract class BaseData
+	{
+		public bool IsStatic { get; set; }
+		public required float Mass { get; set; }
+	}
+
+	#endregion
 	#region Constructors
 
 	protected PhysicsBodyComponent(SceneNode _node, PhysicsWorldComponent _world, float _mass, bool _isStatic) : base(_node)
@@ -22,7 +37,7 @@ public abstract class PhysicsBodyComponent : Component//, IOnFixedUpdateListener
 		World = tempWorld!;
 
 		dynamicMass = _mass;
-		IsStatic = _isStatic;
+		isStatic = _isStatic;
 	}
 
 	~PhysicsBodyComponent()
@@ -33,6 +48,7 @@ public abstract class PhysicsBodyComponent : Component//, IOnFixedUpdateListener
 	#endregion
 	#region Fields
 
+	protected bool isStatic = true;
 	private float dynamicMass = 1.0f;
 
 	private CollisionShape collisionShape = null!;
@@ -41,7 +57,10 @@ public abstract class PhysicsBodyComponent : Component//, IOnFixedUpdateListener
 	#endregion
 	#region Properties
 
-	protected PhysicsWorldComponent World { get; init; } = null!;
+	/// <summary>
+	/// Gets the physics world that this body is assigned to.
+	/// </summary>
+	protected PhysicsWorldComponent World { get; } = null!;
 
 	/// <summary>
 	/// Gets the instance governing the shape and collision properties of this body.
@@ -64,7 +83,19 @@ public abstract class PhysicsBodyComponent : Component//, IOnFixedUpdateListener
 	/// <summary>
 	/// Gets or sets whether this body is static. Static objects will take part in collisions, but act as immovable walls.
 	/// </summary>
-	public bool IsStatic { get; set; } = true;
+	public virtual bool IsStatic
+	{
+		get => isStatic;
+		set
+		{
+			bool wasStatic = isStatic;
+			isStatic = value;
+			if (isStatic != wasStatic)
+			{
+				UpdateMass();
+			}
+		}
+	}
 
 	/// <summary>
 	/// Gets or sets the mass of the body.<para/>
@@ -75,13 +106,20 @@ public abstract class PhysicsBodyComponent : Component//, IOnFixedUpdateListener
 		get => dynamicMass;
 		set
 		{
-			if (float.IsNaN(value) || value <= 0 || value == dynamicMass) return;
+			if (float.IsNaN(value) || value <= 0) return;
 
+			float prevMass = dynamicMass;
 			dynamicMass = value;
-			//UpdateMass();
+			if (dynamicMass != prevMass)
+			{
+				UpdateMass();
+			}
 		}
 	}
 
+	/// <summary>
+	/// Gets the actual internal mass of the body. If the body is static, this will return 0, if it's dynamic, the dynamic mass will be returned.
+	/// </summary>
 	protected float ActualMass => IsStatic ? 0 : dynamicMass;
 
 	/// <summary>
@@ -105,9 +143,13 @@ public abstract class PhysicsBodyComponent : Component//, IOnFixedUpdateListener
 		base.Dispose(_disposing);
 	}
 
-	protected void UpdateLocalInertia()
+	/// <summary>
+	/// Update mass and inertia properties of the rigidbody.
+	/// This should be called after the mass of the body, or the dimensions of the collision shape have changed after creation.
+	/// </summary>
+	protected void UpdateMass()
 	{
-		if (IsStatic)
+		if (isStatic)
 		{
 			LocalInertia = Vector3.Zero;
 		}
@@ -115,13 +157,32 @@ public abstract class PhysicsBodyComponent : Component//, IOnFixedUpdateListener
 		{
 			LocalInertia = collisionShape.CalculateLocalInertia(dynamicMass);
 		}
+		rigidbody.SetMassProps(ActualMass, LocalInertia);
 	}
 
+	/// <summary>
+	/// Internal notification that the body should update the transformation of its host node from the rigidbody.
+	/// </summary>
 	internal void UpdateNodeFromPhysics()
 	{
 		if (IsStatic) return;
 
-		node.WorldTransformation = new(rigidbody.WorldTransform.Translation);
+		Pose newWorldPose = new Pose(rigidbody.WorldTransform.Translation).ConvertHandedness();
+		node.WorldTransformation = newWorldPose;				//TODO [Critical]: Change handedness of all transformations!
+	}
+
+	public virtual void OnNodeEnabled(bool _isEnabled)
+	{
+		if (IsDisposed) return;
+
+		if (_isEnabled)
+		{
+			World.RegisterBody(this);
+		}
+		else
+		{
+			World.UnregisterBody(this);
+		}
 	}
 
 	#endregion
