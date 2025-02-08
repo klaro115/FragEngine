@@ -28,24 +28,20 @@ public static class SceneNodeExt
 			return false;
 		}
 
-		// Prepare constructur parameters depending on shape type:
-		Type shapeType;
-		object[] parameters;
-
+		// Create components depending on shape type:
+		PhysicsBodyComponent newComponent;
 		switch (_shapeType)
 		{
 			case PhysicsBodyShapeType.Sphere:
 				{
 					float radius = _dimensions.X;
-					shapeType = typeof(SpherePhysicsComponent);
-					parameters = [ null!, radius, _mass, _isStatic ];
+					newComponent = new SpherePhysicsComponent(_node, null!, radius, _mass, _isStatic);
 				}
 				break;
 			case PhysicsBodyShapeType.Box:
 				{
 					Vector3 size = new(_dimensions.X, _dimensions.Y, _dimensions.Z);
-					shapeType = typeof(BoxPhysicsComponent);
-					parameters = [ null! , size, _mass, _isStatic ];
+					newComponent = new BoxPhysicsComponent(_node, null!, size, _mass, _isStatic);
 				}
 				break;
 			//...
@@ -57,14 +53,6 @@ public static class SceneNodeExt
 				}
 		}
 
-		// Create the actual component:
-		if (!ComponentFactory.CreateComponent(_node, shapeType, out Component? newComponent, parameters))
-		{
-			newComponent?.Dispose();
-			_outComponent = null;
-			return false;
-		}
-
 		// Attach the newly created component to the node:
 		if (!_node.AddComponent(newComponent!))
 		{
@@ -73,8 +61,7 @@ public static class SceneNodeExt
 			return false;
 		}
 
-		// Output physics component and return success:
-		_outComponent = newComponent as PhysicsBodyComponent;
+		_outComponent = newComponent;
 		return true;
 	}
 
@@ -94,17 +81,17 @@ public static class SceneNodeExt
 			return false;
 		}
 
-		// Prepare constructur parameters depending on type:
-		object[] parameters;
+		// Create components depending on generic type:
+		PhysicsBodyComponent newComponent;
 		if (typeof(T) == typeof(SpherePhysicsComponent))
 		{
 			float radius = _dimensions.X;
-			parameters = [ null!, radius, _mass, _isStatic ];
+			newComponent = new SpherePhysicsComponent(_node, null!, radius, _mass, _isStatic);
 		}
 		else if (typeof(T) == typeof(BoxPhysicsComponent))
 		{
 			Vector3 size = new(_dimensions.X, _dimensions.Y, _dimensions.Z);
-			parameters = [ null!, size, _mass, _isStatic ];
+			newComponent = new BoxPhysicsComponent(_node, null!, size, _mass, _isStatic);
 		}
 		//...
 		else
@@ -114,20 +101,15 @@ public static class SceneNodeExt
 			return false;
 		}
 
-		// Create the actual component:
-		if (!ComponentFactory.CreateComponent(_node, out _outComponent, parameters))
+		// Attach the newly created component to the node:
+		if (!_node.AddComponent(newComponent!))
 		{
+			newComponent?.Dispose();
 			_outComponent = null;
 			return false;
 		}
 
-		// Attach the newly created component to the node:
-		if (!_node.AddComponent(_outComponent!))
-		{
-			_outComponent?.Dispose();
-			_outComponent = null;
-			return false;
-		}
+		_outComponent = newComponent as T;
 		return true;
 	}
 

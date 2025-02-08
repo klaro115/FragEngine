@@ -170,7 +170,7 @@ internal sealed class TestPhysicsAppLogic : ApplicationLogic
 		{
 			SceneNode node = sphere.node;
 			node.Name = "Sphere";
-			node.LocalPosition = new(0, 0.5f, 0);
+			node.LocalPosition = new(0, 1.5f, 0);
 			node.LocalRotation = Quaternion.Identity;
 			node.LocalScale = Vector3.One;
 
