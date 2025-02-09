@@ -165,6 +165,20 @@ internal sealed class TestPhysicsAppLogic : ApplicationLogic
 			node.CreatePhysicsBodyComponent(out BoxPhysicsComponent? _, new(20, 1, 20, 0), _isStatic: true);
 		}
 
+		MeshPrimitiveFactory.CreateCylinderMesh("Cylinder", Engine, 1, 10, 32, true, out _, out _, out ResourceHandle cylinderHandle);
+		if (SceneSpawner.CreateStaticMeshRenderer(scene, out StaticMeshRendererComponent cylinder))
+		{
+			SceneNode node = cylinder.node;
+			node.Name = "Cylinder";
+			node.LocalPosition = new(0, 0.5f, 0);
+			//node.LocalRotation = Quaternion.CreateFromAxisAngle(Vector3.UnitX, MathF.PI * 0.5f);
+
+			cylinder.SetMesh(cylinderHandle);
+			cylinder.SetMaterial("Mtl_BrickWall");
+
+			node.CreatePhysicsBodyComponent(out CylinderPhysicsComponent? _, new(1, 10, 0, 0), _isStatic: true);
+		}
+
 		MeshPrimitiveFactory.CreateIcosahedronMesh("Sphere", Engine, 0.5f, true, out _, out _, out ResourceHandle sphereMeshHandle);
 		Engine.ResourceManager.GetResource("Mtl_DefaultSurface", out ResourceHandle sphereMaterialHandle);
 		SpawnSphere(in scene.rootNode, "Sphere", new(0, 1.5f, 0), sphereMaterialHandle, sphereMeshHandle);
@@ -180,8 +194,6 @@ internal sealed class TestPhysicsAppLogic : ApplicationLogic
 			SceneNode node = sphere.node;
 			node.Name = _name ?? "Sphere";
 			node.LocalPosition = _worldPosition;
-			node.LocalRotation = Quaternion.Identity;
-			node.LocalScale = Vector3.One;
 
 			sphere.SetMesh(_meshHandle);
 			sphere.SetMaterial(_materialHandle);

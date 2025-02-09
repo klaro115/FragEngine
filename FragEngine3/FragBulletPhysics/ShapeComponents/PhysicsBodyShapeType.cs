@@ -7,5 +7,6 @@ public enum PhysicsBodyShapeType
 {
 	Sphere,
 	Box,
+	Cylinder,
 	//...
 }

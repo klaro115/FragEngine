@@ -44,6 +44,13 @@ public static class SceneNodeExt
 					newComponent = new BoxPhysicsComponent(_node, null!, size, _mass, _isStatic);
 				}
 				break;
+			case PhysicsBodyShapeType.Cylinder:
+				{
+					float radius = _dimensions.X;
+					float height = _dimensions.Y;
+					newComponent = new CylinderPhysicsComponent(_node, null!, radius, height, _mass, _isStatic);
+				}
+				break;
 			//...
 			default:
 				{
@@ -92,6 +99,12 @@ public static class SceneNodeExt
 		{
 			Vector3 size = new(_dimensions.X, _dimensions.Y, _dimensions.Z);
 			newComponent = new BoxPhysicsComponent(_node, null!, size, _mass, _isStatic);
+		}
+		else if (typeof(T) == typeof(CylinderPhysicsComponent))
+		{
+			float radius = _dimensions.X;
+			float height = _dimensions.Y;
+			newComponent = new CylinderPhysicsComponent(_node, null!, radius, height, _mass, _isStatic);
 		}
 		//...
 		else
