@@ -167,8 +167,8 @@ public abstract class PhysicsBodyComponent : Component, IOnNodeSetEnabledListene
 	{
 		if (IsStatic) return;
 
-		Pose newWorldPose = new Pose(rigidbody.WorldTransform.Translation).ConvertHandedness();
-		node.WorldTransformation = newWorldPose;				//TODO [Critical]: Change handedness of all transformations!
+		Pose newWorldPose = new Pose(rigidbody.WorldTransform).ConvertHandedness();
+		node.WorldTransformation = newWorldPose;
 	}
 
 	public virtual void OnNodeEnabled(bool _isEnabled)

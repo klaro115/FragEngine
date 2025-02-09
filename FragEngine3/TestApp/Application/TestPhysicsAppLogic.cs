@@ -165,42 +165,70 @@ internal sealed class TestPhysicsAppLogic : ApplicationLogic
 			node.CreatePhysicsBodyComponent(out BoxPhysicsComponent? _, new(20, 1, 20, 0), _isStatic: true);
 		}
 
-		MeshPrimitiveFactory.CreateIcosahedronMesh("Sphere", Engine, 0.5f, true, out _, out _, out ResourceHandle sphereHandle);
-		if (SceneSpawner.CreateStaticMeshRenderer(scene, out StaticMeshRendererComponent sphere))
-		{
-			SceneNode node = sphere.node;
-			node.Name = "Sphere";
-			node.LocalPosition = new(0, 1.5f, 0);
-			node.LocalRotation = Quaternion.Identity;
-			node.LocalScale = Vector3.One;
-
-			sphere.SetMesh(sphereHandle);
-			sphere.SetMaterial("Mtl_DefaultSurface");
-
-			node.CreatePhysicsBodyComponent(out SpherePhysicsComponent? _, new(0.5f, 0, 0, 0), 1, false);
-		}
+		MeshPrimitiveFactory.CreateIcosahedronMesh("Sphere", Engine, 0.5f, true, out _, out _, out ResourceHandle sphereMeshHandle);
+		Engine.ResourceManager.GetResource("Mtl_DefaultSurface", out ResourceHandle sphereMaterialHandle);
+		SpawnSphere(in scene.rootNode, "Sphere", new(0, 1.5f, 0), sphereMaterialHandle, sphereMeshHandle);
+		scene.rootNode.CreateChild("SphereParent");
 
 		return true;
 	}
 
+	private static void SpawnSphere(in SceneNode _parent, string _name, Vector3 _worldPosition, ResourceHandle _materialHandle, ResourceHandle _meshHandle)
+	{
+		if (SceneSpawner.CreateStaticMeshRenderer(in _parent, out StaticMeshRendererComponent sphere))
+		{
+			SceneNode node = sphere.node;
+			node.Name = _name ?? "Sphere";
+			node.LocalPosition = _worldPosition;
+			node.LocalRotation = Quaternion.Identity;
+			node.LocalScale = Vector3.One;
+
+			sphere.SetMesh(_meshHandle);
+			sphere.SetMaterial(_materialHandle);
+
+			node.CreatePhysicsBodyComponent(out SpherePhysicsComponent? _, new(0.5f, 0, 0, 0), 1, false);
+		}
+	}
+
 	public override bool UpdateRunningState()
 	{
-		if (Engine.InputManager.GetKeyUp(Key.Escape) ||
-			Engine.InputManager.GetKeyUp(Key.Enter))
+		InputManager input = Engine.InputManager;
+
+		if (input.GetKeyUp(Key.Escape) ||
+			input.GetKeyUp(Key.Enter))
 		{
 			Engine.Exit();
 		}
 
 		Scene scene = Engine.SceneManager.MainScene!;
 
-		//float deltaTime = (float)Engine.TimeManager.DeltaTime.TotalSeconds;
-
 		if (scene.FindNode("Sphere", out SceneNode? node) && node is not null)
 		{
-			Vector3 input = Engine.InputManager.GetKeyAxes(InputAxis.IJKL);
+			Vector3 inputAxes = input.GetKeyAxes(InputAxis.IJKL);
 
 			PhysicsBodyComponent body = node.GetComponent<PhysicsBodyComponent>()!;
-			body.Rigidbody.ApplyCentralForce(input * 50);
+			body.Rigidbody.ApplyCentralForce(inputAxes * 50);
+		}
+
+		// Spawn a whole bunch of spheres when pressing 'Space':
+		if (input.GetKeyUp(Key.Space))
+		{
+			scene.FindNode("SphereParent", out SceneNode? sphereParent);
+			Engine.ResourceManager.GetResource("Sphere", out ResourceHandle sphereMeshHandle);
+			Engine.ResourceManager.GetResource("Mtl_DefaultSurface", out ResourceHandle sphereMaterialHandle);
+
+			for (int x = 0; x < 5;  x++)
+			{
+				float posX = 0.3f * x - 0.75f;
+
+				for (int z = 0; z < 5; z++)
+				{
+					float posZ = 0.3f * z - 0.75f;
+					float posY = 4 + x + z;
+
+					SpawnSphere(in sphereParent!, $"Sphere_{x}_{z}", new(posX, posY, posZ), sphereMaterialHandle, sphereMeshHandle);
+				}
+			}
 		}
 
 		return true;
