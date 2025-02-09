@@ -170,13 +170,16 @@ internal sealed class TestPhysicsAppLogic : ApplicationLogic
 		{
 			SceneNode node = cylinder.node;
 			node.Name = "Cylinder";
-			node.LocalPosition = new(0, 0.5f, 0);
-			//node.LocalRotation = Quaternion.CreateFromAxisAngle(Vector3.UnitX, MathF.PI * 0.5f);
+			node.LocalPosition = new(5, 1, 5);
+			node.LocalRotation = Quaternion.CreateFromAxisAngle(Vector3.UnitX, MathF.PI * 0.5f);
 
 			cylinder.SetMesh(cylinderHandle);
 			cylinder.SetMaterial("Mtl_BrickWall");
 
-			node.CreatePhysicsBodyComponent(out CylinderPhysicsComponent? _, new(1, 10, 0, 0), _isStatic: true);
+			if (node.CreatePhysicsBodyComponent(out CylinderPhysicsComponent? body, new(1, 10, 0, 0), _isStatic: true))
+			{
+				body!.Rigidbody.CollisionFlags |= CollisionFlags.KinematicObject;
+			}
 		}
 
 		MeshPrimitiveFactory.CreateIcosahedronMesh("Sphere", Engine, 0.5f, true, out _, out _, out ResourceHandle sphereMeshHandle);
@@ -213,6 +216,16 @@ internal sealed class TestPhysicsAppLogic : ApplicationLogic
 		}
 
 		Scene scene = Engine.SceneManager.MainScene!;
+
+		float deltaTime = (float)Engine.TimeManager.DeltaTime.TotalSeconds;
+
+		if (scene.FindNode("Cylinder", out SceneNode? cylinderNode) && cylinderNode!.GetComponent(out CylinderPhysicsComponent? cylinderBody))
+		{
+			Quaternion localRot = cylinderNode!.LocalRotation;
+			localRot *= Quaternion.CreateFromAxisAngle(Vector3.UnitZ, deltaTime * 0.7f);
+			cylinderNode.LocalRotation = localRot;
+			cylinderBody!.Rigidbody.WorldTransform = cylinderNode.WorldTransformation.ConvertHandedness();
+		}
 
 		if (scene.FindNode("Sphere", out SceneNode? node) && node is not null)
 		{

@@ -28,7 +28,7 @@ public sealed class CylinderPhysicsComponent : PhysicsBodyComponent
 		radius = Math.Max(_radius, 0.001f);
 		height = Math.Max(_height, 0.001f);
 
-		CollisionShape = new CylinderShape(radius, radius, height * 0.5f);
+		CollisionShape = new CylinderShapeZ(radius, radius, height * 0.5f);
 		LocalInertia = IsStatic ? Vector3.Zero : CollisionShape.CalculateLocalInertia(ActualMass);
 		DefaultMotionState motionState = new(node.WorldTransformation.ConvertHandedness());
 		using RigidBodyConstructionInfo rigidbodyInfo = new(ActualMass, motionState, CollisionShape, LocalInertia);
@@ -57,7 +57,7 @@ public sealed class CylinderPhysicsComponent : PhysicsBodyComponent
 		set
 		{
 			radius = Math.Max(value, 0.001f);
-			if (!IsDisposed && CollisionShape is SphereShape sphereShape)
+			if (!IsDisposed && CollisionShape is CylinderShape sphereShape)
 			{
 				UpdateShape();
 			}
@@ -96,7 +96,7 @@ public sealed class CylinderPhysicsComponent : PhysicsBodyComponent
 	{
 		if (!IsDisposed)
 		{
-			CylinderShape newShape = new CylinderShape(radius, radius, height * 0.5f);
+			CylinderShape newShape = new CylinderShapeZ(radius, radius, height * 0.5f);
 			CollisionShape prevShape = CollisionShape;
 			if (!IsStatic)
 			{
