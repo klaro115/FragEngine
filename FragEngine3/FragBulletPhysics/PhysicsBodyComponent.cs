@@ -51,9 +51,6 @@ public abstract class PhysicsBodyComponent : Component, IOnNodeSetEnabledListene
 	protected bool isStatic = true;
 	private float dynamicMass = 1.0f;
 
-	private CollisionShape collisionShape = null!;
-	private RigidBody rigidbody = null!;
-
 	#endregion
 	#region Properties
 
@@ -65,20 +62,12 @@ public abstract class PhysicsBodyComponent : Component, IOnNodeSetEnabledListene
 	/// <summary>
 	/// Gets the instance governing the shape and collision properties of this body.
 	/// </summary>
-	public CollisionShape CollisionShape
-	{
-		get => collisionShape;
-		protected set => collisionShape = value;
-	}
+	public CollisionShape CollisionShape { get; protected set; } = null!;
 
 	/// <summary>
 	/// Gets the instance controlling this body's rigidbody dynamics. Null if the body is static.
 	/// </summary>
-	public RigidBody Rigidbody
-	{
-		get => rigidbody;
-		protected set => rigidbody = value;
-	}
+	public RigidBody Rigidbody { get; protected set; } = null!;
 
 	/// <summary>
 	/// Gets or sets whether this body is static. Static objects will take part in collisions, but act as immovable walls.
@@ -137,8 +126,13 @@ public abstract class PhysicsBodyComponent : Component, IOnNodeSetEnabledListene
 
 	protected override void Dispose(bool _disposing)
 	{
-		rigidbody?.Dispose();
-		collisionShape?.Dispose();
+		if (_disposing && !World.IsDisposed)
+		{
+			World.UnregisterBody(this);
+		}
+
+		Rigidbody?.Dispose();
+		CollisionShape?.Dispose();
 
 		base.Dispose(_disposing);
 	}
@@ -155,9 +149,9 @@ public abstract class PhysicsBodyComponent : Component, IOnNodeSetEnabledListene
 		}
 		else
 		{
-			LocalInertia = collisionShape.CalculateLocalInertia(dynamicMass);
+			LocalInertia = CollisionShape.CalculateLocalInertia(dynamicMass);
 		}
-		rigidbody.SetMassProps(ActualMass, LocalInertia);
+		Rigidbody.SetMassProps(ActualMass, LocalInertia);
 	}
 
 	/// <summary>
@@ -167,7 +161,7 @@ public abstract class PhysicsBodyComponent : Component, IOnNodeSetEnabledListene
 	{
 		if (IsStatic) return;
 
-		Pose newWorldPose = new Pose(rigidbody.WorldTransform).ConvertHandedness();
+		Pose newWorldPose = new Pose(Rigidbody.WorldTransform).ConvertHandedness();
 		node.WorldTransformation = newWorldPose;
 	}
 

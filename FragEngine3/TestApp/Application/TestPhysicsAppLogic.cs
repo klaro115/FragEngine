@@ -8,8 +8,11 @@ using FragEngine3.Graphics;
 using FragEngine3.Graphics.Components;
 using FragEngine3.Graphics.Lighting;
 using FragEngine3.Graphics.Resources;
+using FragEngine3.Graphics.Resources.Data;
+using FragEngine3.Graphics.Resources.Materials;
 using FragEngine3.Graphics.Stack;
 using FragEngine3.Resources;
+using FragEngine3.Resources.Data;
 using FragEngine3.Scenes;
 using FragEngine3.Scenes.Utility;
 using System.Numerics;
@@ -21,6 +24,14 @@ namespace TestApp.Application;
 
 internal sealed class TestPhysicsAppLogic : ApplicationLogic
 {
+	#region Fields
+
+	private readonly List<ResourceHandle> colorTextures = [];
+	private readonly List<ResourceHandle> colorMaterials = [];
+
+	#endregion
+	#region Methods
+
 	// STARTUP:
 
 	protected override bool RunStartupLogic()
@@ -63,7 +74,95 @@ internal sealed class TestPhysicsAppLogic : ApplicationLogic
 			Engine.SceneManager.MainScene.GraphicsStack = stack;
 		}
 
+		GraphicsSystem graphics = Engine.GraphicsSystem;
+		GraphicsCore core = graphics.graphicsCore;
+		ResourceManager resourceManager = Engine.ResourceManager;
+
+		// Prepare several single-color texture resources:
+		ResourceHandle[] colorTextureHandles =
+		[
+			graphics.TexPlaceholderWhite,
+			graphics.TexPlaceholderGray,
+			graphics.TexPlaceholderBlack,
+			graphics.TexPlaceholderMagenta,
+		];
+		colorTextures.AddRange(colorTextureHandles);
+
+		Tuple<string, RgbaByte>[] colorTextureData =
+		[
+			new("TexRed", RgbaByte.Red),
+			new("TexGreen", RgbaByte.Green),
+			new("TexBlue", RgbaByte.Blue),
+			new("TexYellow", RgbaByte.Yellow),
+			new("TexCyan", RgbaByte.Cyan),
+		];
+		foreach (var data in colorTextureData)
+		{
+			ResourceHandle texHandle = CreateColorTexture(data.Item1, data.Item2);
+			if (texHandle.IsValid && texHandle.IsLoaded)
+			{
+				colorTextures.Add(texHandle);
+			}
+		}
+
+		// Create flat-shaded materials from single-color texture:
+		foreach (ResourceHandle texHandle in colorTextures)
+		{
+			string mtlResourceKey = texHandle.resourceKey.Replace("Tex", "Mtl");
+			ResourceHandleData mtlHandleData = new()
+			{
+				ResourceKey = mtlResourceKey,
+				ResourceType = ResourceType.Material,
+			};
+			ResourceHandle mtlHandle = new(resourceManager, mtlHandleData, mtlResourceKey);
+			MaterialData mtlData = new()
+			{
+				Key = mtlResourceKey,
+				Shaders = new()
+				{
+					Vertex = "DefaultSurface_VS",
+					Pixel = "Basic_PS",
+				},
+				Replacements = new()
+				{
+					ShadowMap = "Mtl_DefaultShadow",
+				},
+				Resources =
+				[
+					new()
+					{
+						ResourceKey = texHandle.resourceKey,
+						SlotName = "TexMain",
+						SlotIndex = 4,
+						ResourceKind = ResourceKind.TextureReadOnly,
+						ShaderStageFlags = ShaderStages.Fragment,
+					},
+				],
+			};
+			if (Material.CreateMaterial(mtlHandle, mtlData, core, out Material? material))
+			{
+				mtlHandle = new(material!);
+				if (resourceManager.AddResource(mtlHandle))
+				{
+					colorMaterials.Add(mtlHandle);
+				}
+				else
+				{
+					material!.Dispose();
+				}
+			}
+		}
+
 		return true;
+
+
+		// Local helper method for creating an 8x8 pixel single-color texture resource:
+		ResourceHandle CreateColorTexture(string _resourceKey, RgbaByte _color)
+		{
+			core.CreateBlankTexture(_color, out Texture texture);
+			_ = new TextureResource(_resourceKey, Engine, texture, out ResourceHandle handle);
+			return handle;
+		}
 	}
 
 	// UNLOADING:
@@ -208,14 +307,14 @@ internal sealed class TestPhysicsAppLogic : ApplicationLogic
 	public override bool UpdateRunningState()
 	{
 		InputManager input = Engine.InputManager;
+		Scene scene = Engine.SceneManager.MainScene!;
+		ResourceManager resourceManager = Engine.ResourceManager;
 
 		if (input.GetKeyUp(Key.Escape) ||
 			input.GetKeyUp(Key.Enter))
 		{
 			Engine.Exit();
 		}
-
-		Scene scene = Engine.SceneManager.MainScene!;
 
 		float deltaTime = (float)Engine.TimeManager.DeltaTime.TotalSeconds;
 
@@ -239,8 +338,7 @@ internal sealed class TestPhysicsAppLogic : ApplicationLogic
 		if (input.GetKeyUp(Key.Space))
 		{
 			scene.FindNode("SphereParent", out SceneNode? sphereParent);
-			Engine.ResourceManager.GetResource("Sphere", out ResourceHandle sphereMeshHandle);
-			Engine.ResourceManager.GetResource("Mtl_DefaultSurface", out ResourceHandle sphereMaterialHandle);
+			resourceManager.GetResource("Sphere", out ResourceHandle sphereMeshHandle);
 
 			for (int x = 0; x < 5;  x++)
 			{
@@ -250,6 +348,9 @@ internal sealed class TestPhysicsAppLogic : ApplicationLogic
 				{
 					float posZ = 0.3f * z - 0.75f;
 					float posY = 4 + x + z;
+					int sphereIdx = x * 5 + z;
+
+					ResourceHandle sphereMaterialHandle = colorMaterials[sphereIdx % colorMaterials.Count];
 
 					SpawnSphere(in sphereParent!, $"Sphere_{x}_{z}", new(posX, posY, posZ), sphereMaterialHandle, sphereMeshHandle);
 				}
@@ -268,4 +369,6 @@ internal sealed class TestPhysicsAppLogic : ApplicationLogic
 	{
 		return true;
 	}
+
+	#endregion
 }

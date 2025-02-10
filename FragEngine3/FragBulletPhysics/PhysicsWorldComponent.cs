@@ -59,12 +59,18 @@ public sealed class PhysicsWorldComponent : Component, IOnFixedUpdateListener
 	#endregion
 	#region Properties
 
+	/// <summary>
+	/// Gets or sets the desired interval between discrete physics simulation steps, in seconds.
+	/// </summary>
 	public float FixedDeltaTime
 	{
 		get => fixedDeltaTime;
 		set => fixedDeltaTime = Math.Max(value, 0.001f);
 	}
 
+	/// <summary>
+	/// Gets or sets the direction and intensity of gravitational acceleration, in world units per second squared.
+	/// </summary>
 	public Vector3 Gravity
 	{
 		get => gravityAcceleration;
@@ -121,6 +127,12 @@ public sealed class PhysicsWorldComponent : Component, IOnFixedUpdateListener
 		return true;
 	}
 
+	/// <summary>
+	/// Adds a new physics body to this world's simulation.
+	/// </summary>
+	/// <param name="_newBody">The new body we wish to add to this world.
+	/// Each body can only be registered once; additional calls to register it will be ignored.</param>
+	/// <returns>True if the body was added to the simulation, false on error.</returns>
 	internal bool RegisterBody(PhysicsBodyComponent _newBody)
 	{
 		if (IsDisposed)
@@ -129,13 +141,19 @@ public sealed class PhysicsWorldComponent : Component, IOnFixedUpdateListener
 			return false;
 		}
 
-		//instance.AddCollisionObject(_newBody.Rigidbody);
-		instance.AddRigidBody(_newBody.Rigidbody);
-
-		bodies.Add(_newBody);
+		if (!bodies.Contains(_newBody))
+		{
+			instance.AddRigidBody(_newBody.Rigidbody);
+			bodies.Add(_newBody);
+		}
 		return true;
 	}
 
+	/// <summary>
+	/// Removes a physics body from this world's simulation.
+	/// </summary>
+	/// <param name="_body">The existing body we wish to remove from this world.</param>
+	/// <returns>True if the body was removed, false on error or if the body wasn't part of this world.</returns>
 	internal bool UnregisterBody(PhysicsBodyComponent _body)
 	{
 		if (IsDisposed)
@@ -154,6 +172,12 @@ public sealed class PhysicsWorldComponent : Component, IOnFixedUpdateListener
 		return removed;
 	}
 
+	/// <summary>
+	/// Tries to find an instance of <see cref="PhysicsWorldComponent"/> in the scene.
+	/// </summary>
+	/// <param name="_node">A node in the scene where we are looking for a physics world.</param>
+	/// <param name="_outWorldComponent">Outputs the physics world component if it was found. Null on failure.</param>
+	/// <returns>True if a component was found, false otherwise.</returns>
 	internal static bool TryFindPhysicsWorld(SceneNode _node, out PhysicsWorldComponent? _outWorldComponent)
 	{
 		if (_node is null || _node.IsDisposed)
@@ -166,6 +190,12 @@ public sealed class PhysicsWorldComponent : Component, IOnFixedUpdateListener
 		return _node.scene.FindComponentOfType(false, out _outWorldComponent);
 	}
 
+	/// <summary>
+	/// Tries to find an instance of <see cref="PhysicsWorldComponent"/> in the scene, and creates one on the scene's root node if none was found.
+	/// </summary>
+	/// <param name="_node">A node in the scene where we are looking for a physics world.</param>
+	/// <param name="_outWorldComponent">Outputs the physics world component if it was found or created. Null on failure.</param>
+	/// <returns>True if a component was found or created, false otherwise.</returns>
 	internal static bool TryFindOrCreatePhysicsWorld(SceneNode _node, out PhysicsWorldComponent? _outWorldComponent)
 	{
 		if (TryFindPhysicsWorld(_node, out _outWorldComponent))

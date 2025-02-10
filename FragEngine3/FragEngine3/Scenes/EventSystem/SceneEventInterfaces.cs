@@ -8,6 +8,9 @@
 /// </summary>
 public interface ISceneEventListener : IDisposable
 {
+	/// <summary>
+	/// Gets whether this object has been disposed already.
+	/// </summary>
 	bool IsDisposed { get; }
 }
 
