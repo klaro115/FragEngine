@@ -61,6 +61,15 @@ public class GraphicsSystem : IEngineSystem
 		// Listen to window events:
 		graphicsCore.WindowClosing += OnWindowClosing;
 		graphicsCore.WindowResized += OnWindowResized;
+
+		// Request exit if the main core's main window is closed:
+		WindowClosing += (core) =>
+		{
+			if (core == graphicsCore && !Engine.IsExiting)
+			{
+				Engine.Exit();
+			}
+		};
 	}
 
 	#endregion
