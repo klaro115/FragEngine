@@ -101,6 +101,7 @@ No support is planned for the foreseeable future. Android will have to wait unti
         - Split material type into standard/user variants
         - Support for user-supplied constant buffers
         - Standard shader constant buffer _(i.e. CBDefaultSurface)_
+- Physics engine _(Bullet Physics)_
 - Linux support:
     - SPIR-V shader support **[Pipeline creation fails]**
 
@@ -131,6 +132,7 @@ The following is a rough and very short-sighted roadmap of features that are goi
     - Text rendering
     - Basic UI controls _(labels, buttons, etc.)_
     - Layouting groups
+    - Data binding system _(similar to WPF/MAUI?)_
     - Touch support _(much later, required for mobile platforms)_
 - Rework engine state machine:
     - More granular thread sleep timings
@@ -142,12 +144,13 @@ The following is a rough and very short-sighted roadmap of features that are goi
     - Non-static mesh renderers
     - Blend shape logic
     - Bone animation logic
-- File format support:
+- Scene Management:
+    - World origin shift
+- Particle systems
+- File format support: **[redundant due to asset pipeline?]**
     - FBX _(blend shapes, bone animation)_
     - GLTF
     - ...
-- Physics engine _(maybe Bullet Physics?)_
-- Particle systems
 - Additional I/O support:
     - Webcams _(probably via WMF on Windows?)_
     - Gamepads

@@ -1,4 +1,6 @@
-﻿namespace FragEngine3.Scenes.EventSystem;
+﻿using System.Numerics;
+
+namespace FragEngine3.Scenes.EventSystem;
 
 // GENERAL:
 
@@ -8,6 +10,9 @@
 /// </summary>
 public interface ISceneEventListener : IDisposable
 {
+	/// <summary>
+	/// Gets whether this object has been disposed already.
+	/// </summary>
 	bool IsDisposed { get; }
 }
 
@@ -60,6 +65,22 @@ public interface IOnLateUpdateListener : ISceneUpdateListener
 public interface IOnFixedUpdateListener : ISceneUpdateListener
 {
 	bool OnFixedUpdate();
+}
+
+// SCENE:
+
+/// <summary>
+/// Interface for all components and behaviours that respond to the <see cref="SceneEventType.OnWorldOriginShift"/> event.
+/// </summary>
+[SceneEventInterface(SceneEventType.OnWorldOriginShift)]
+public interface IOnWorldOriginShiftListener : ISceneEventListener
+{
+	/// <summary>
+	/// Event listener function for when the coordinate origin of the scene this instance is associated with has shifted.
+	/// </summary>
+	/// <param name="_newCoordinateShift">The distance by which the scene's world space coordinate system is shifted now.
+	/// This vector should only ever contain whole values; its fractional part should always be zero.</param>
+	void OnWorldOriginShift(Vector2 _newCoordinateShift);
 }
 
 // NODE STATE:
