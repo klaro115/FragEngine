@@ -166,10 +166,13 @@ internal sealed class Dx11GraphicsCore(GraphicsSystem _graphicsSystem, EngineCon
 
 		stopwatch.Stop();
 
-		isInitialized = Device != null && Window != null;
+		isInitialized = Device is not null && Window is not null;
 		if (isInitialized)
 		{
 			logger.LogMessage($"# Finished initializing D3D graphics device. ({stopwatch.ElapsedMilliseconds} ms)\n");
+
+			Window!.Closing += OnWindowClosing;
+			Window.Resized += OnWindowResized;
 		}
 
 		quitMessageReceived = false;

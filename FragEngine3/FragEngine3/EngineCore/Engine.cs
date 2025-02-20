@@ -114,6 +114,10 @@ public sealed class Engine : IDisposable
 	/// </summary>
 	public bool IsRunning => !IsDisposed && State == EngineState.Running;
 	/// <summary>
+	/// Gets whether the engine is exiting, or has already stopped running.
+	/// </summary>
+	public bool IsExiting => IsDisposed || State > EngineState.Running || (mainLoopCancellationSrc is not null && mainLoopCancellationSrc.IsCancellationRequested);
+	/// <summary>
 	/// Gets the current lifecycle state that the engine is in.
 	/// </summary>
 	public EngineState State { get; private set; } = EngineState.None;

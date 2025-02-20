@@ -63,4 +63,55 @@ public static class BinaryWriterExt
 	}
 
 	#endregion
+	#region Methods Hexadecimal
+
+	/// <summary>
+	/// Writes an 8-bit <see cref="byte"/> value as 2 hexadecimal ASCII characters.
+	/// </summary>
+	/// <param name="_writer">This writer.</param>
+	/// <param name="_value">An 8-bit byte value.</param>
+	public static void WriteUint8ToHex(this BinaryWriter _writer, byte _value)
+	{
+		_writer.Write(ConvertNibbleToHex((_value & 0xF0u) >> 4));
+		_writer.Write(ConvertNibbleToHex(_value & 0x0Fu));
+	}
+
+	/// <summary>
+	/// Writes a 16-bit <see cref="ushort"/> value as 4 hexadecimal ASCII characters.
+	/// </summary>
+	/// <param name="_writer">This writer.</param>
+	/// <param name="_value">A 16-bit unsigned short value.</param>
+	public static void WriteUint16ToHex(this BinaryWriter _writer, ushort _value)
+	{
+		_writer.Write(ConvertNibbleToHex((_value & 0xF000u) >> 12));
+		_writer.Write(ConvertNibbleToHex((_value & 0x0F00u) >> 8));
+		_writer.Write(ConvertNibbleToHex((_value & 0x00F0u) >> 4));
+		_writer.Write(ConvertNibbleToHex(_value & 0x000Fu));
+	}
+
+	/// <summary>
+	/// Writes a 32-bit <see cref="uint"/> value as 8 hexadecimal ASCII characters.
+	/// </summary>
+	/// <param name="_writer">This writer.</param>
+	/// <param name="_value">A 32-bit unsigned integer value.</param>
+	public static void WriteUint32ToHex(this BinaryWriter _writer, uint _value)
+	{
+		_writer.Write(ConvertNibbleToHex((_value & 0xF0000000u) >> 28));
+		_writer.Write(ConvertNibbleToHex((_value & 0x0F000000u) >> 24));
+		_writer.Write(ConvertNibbleToHex((_value & 0x00F00000u) >> 20));
+		_writer.Write(ConvertNibbleToHex((_value & 0x000F0000u) >> 16));
+		_writer.Write(ConvertNibbleToHex((_value & 0x0000F000u) >> 12));
+		_writer.Write(ConvertNibbleToHex((_value & 0x00000F00u) >> 8));
+		_writer.Write(ConvertNibbleToHex((_value & 0x000000F0u) >> 4));
+		_writer.Write(ConvertNibbleToHex(_value & 0x0000000Fu));
+	}
+
+	private static byte ConvertNibbleToHex(uint _uint4)
+	{
+		return _uint4 >= 10
+			? (byte)(_uint4 + 'A' - 10)
+			: (byte)(_uint4 + '0');
+	}
+
+	#endregion
 }
