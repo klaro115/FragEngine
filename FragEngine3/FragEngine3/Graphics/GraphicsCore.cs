@@ -3,11 +3,16 @@ using FragEngine3.EngineCore.Config;
 using FragEngine3.Graphics.Internal;
 using FragEngine3.Graphics.Resources;
 using FragEngine3.Graphics.Resources.Shaders;
+using System.Numerics;
 using Veldrid;
 using Veldrid.Sdl2;
 
 namespace FragEngine3.Graphics;
 
+/// <summary>
+/// Main class of the engine's graphics system. An instance of this type wraps both a
+/// graphics device and a window through which 3D graphics may be rendered and displayed.
+/// </summary>
 public abstract class GraphicsCore : IDisposable
 {
 	#region Constructors
@@ -24,6 +29,18 @@ public abstract class GraphicsCore : IDisposable
 	}
 
 	#endregion
+	#region Events
+
+	/// <summary>
+	/// Event that is triggered whenever this core's window is closing.
+	/// </summary>
+	public FuncWindowClosing? WindowClosing = null;
+	/// <summary>
+	/// Event that is triggered whenever this core's window's size has changed.
+	/// </summary>
+	public FuncWindowResized? WindowResized = null;
+
+	#endregion
 	#region Fields
 
 	protected bool isInitialized = false;
@@ -38,6 +55,8 @@ public abstract class GraphicsCore : IDisposable
 	protected CommandList? blittingCmdList = null;
 	protected readonly List<AsyncGeometryDownloadRequest> asyncDownloadsRequests = [];
 
+	private Vector2 prevWindowSize = new(-1, -1);
+
 	protected readonly object cmdLockObj = new();
 	protected readonly object downloadLockObj = new();
 
@@ -50,17 +69,55 @@ public abstract class GraphicsCore : IDisposable
 	public GraphicsDevice Device { get; protected set; } = null!;
 	public Sdl2Window Window { get; protected set; } = null!;
 
+	/// <summary>
+	/// Gets the main command list of this core's graphics device. This is created on initialization.
+	/// When using multiple command lists, it is recommended to use this instance only for the final
+	/// passes that are drawn directly to the swap chain's backbuffer.
+	/// </summary>
 	public CommandList MainCommandList { get; protected set; } = null!;
+	/// <summary>
+	/// Gets the main resource factory of this core's graphics device. This is created on initialization.
+	/// Use this to create GPU resources such as textures, buffers, and shaders.
+	/// </summary>
 	public ResourceFactory MainFactory { get; protected set; } = null!;
+	/// <summary>
+	/// Gets this core's sampler manager. This service manages texture samplers for use on the shader
+	/// pipeline, allowing you to easily create and re-use sampler states across all your shaders and
+	/// materials.
+	/// </summary>
 	public SamplerManager SamplerManager { get; protected set; } = null!;
 
+	/// <summary>
+	/// Gets the default pixel format for framebuffers' color targets.
+	/// </summary>
 	public PixelFormat DefaultColorTargetPixelFormat { get; protected set; } = PixelFormat.R8_G8_B8_A8_UNorm;
+	/// <summary>
+	/// Gets the default pixel format for framebuffers' depth targets.
+	/// </summary>
 	public PixelFormat DefaultDepthTargetPixelFormat { get; protected set; } = PixelFormat.D24_UNorm_S8_UInt;
+	/// <summary>
+	/// Gets the default pixel format for depth targets of shadow maps.
+	/// </summary>
 	public PixelFormat DefaultShadowMapDepthTargetFormat { get; protected set; } = PixelFormat.D24_UNorm_S8_UInt;
 
+	/// <summary>
+	/// Gets the platform flags identifying this core's underlying graphics API.
+	/// </summary>
 	public abstract EnginePlatformFlag ApiPlatformFlag { get; }
+	/// <summary>
+	/// Gets whether render output of this graphics core is mirrored vertically by default. If true, the
+	/// standard line order in framebuffer textures is in top-to-bottom order.
+	/// </summary>
 	public abstract bool DefaultMirrorY { get; }
+	/// <summary>
+	/// Gets the default shader language to use for compiling shader programs at run-time. Other languages
+	/// might not be supported by the shader compiler.
+	/// </summary>
 	public abstract ShaderLanguage DefaultShaderLanguage { get; }
+	/// <summary>
+	/// Gets the default data type of pre-compiled shader programs. Other data types might not be supported
+	/// by the resource factory.
+	/// </summary>
 	public abstract CompiledShaderDataType CompiledShaderDataType { get; }
 
 	#endregion
@@ -569,6 +626,24 @@ public abstract class GraphicsCore : IDisposable
 		{
 			logger.LogException($"Failed to fill texture with solid color value!", ex);
 			return false;
+		}
+	}
+
+	protected void OnWindowResized()
+	{
+		if (IsInitialized && WindowResized is not null)
+		{
+			Vector2 newSize = new(Window.Width, Window.Height);
+			WindowResized.Invoke(this, prevWindowSize, newSize);
+			prevWindowSize = newSize;
+		}
+	}
+
+	protected void OnWindowClosing()
+	{
+		if (IsInitialized && WindowClosing is not null)
+		{
+			WindowClosing.Invoke(this);
 		}
 	}
 

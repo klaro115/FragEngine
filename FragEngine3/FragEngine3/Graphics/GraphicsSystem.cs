@@ -1,4 +1,5 @@
-﻿using System.Runtime.InteropServices;
+﻿using System.Numerics;
+using System.Runtime.InteropServices;
 using FragEngine3.EngineCore;
 using FragEngine3.EngineCore.Config;
 using FragEngine3.Graphics.Config;
@@ -12,13 +13,30 @@ using Veldrid;
 
 namespace FragEngine3.Graphics;
 
+/// <summary>
+/// The engine's managment service for graphics and rendering. Graphics devices and windows are exposed through the
+/// <see cref="GraphicsCore"/> class, all instances of which are owned by this type.
+/// </summary>
 public class GraphicsSystem : IEngineSystem
 {
 	#region Constructors
 
-	public GraphicsSystem(Engine _engine)
+	/// <summary>
+	/// Creates a new graphics system for the engine.
+	/// </summary>
+	/// <param name="_engine"></param>
+	/// <exception cref="ArgumentNullException">The engine may not be null.</exception>
+	/// <exception cref="ObjectDisposedException">The engine has already been disposed.</exception>
+	/// <exception cref="NullReferenceException">Failed to get or create a main <see cref="GraphicsCore"/>.</exception>
+	/// <exception cref="Exception">Failed to initialize the main <see cref="GraphicsCore"/>.</exception>
+	internal GraphicsSystem(Engine _engine)
 	{
-		Engine = _engine ?? throw new ArgumentNullException(nameof(_engine), "Engine may not be null!");
+		if (_engine is null)
+			throw new ArgumentNullException(nameof(_engine), "Engine may not be null!");
+		if (_engine.IsDisposed)
+			throw new ObjectDisposedException(nameof(_engine), "Engine may not be disposed!");
+
+		Engine = _engine;
 		logger = Engine.Logger;
 		config = Engine.GetEngineConfig();
 
@@ -30,9 +48,41 @@ public class GraphicsSystem : IEngineSystem
 
 		// Create main window and main graphics device:
 		graphicsCore = CreateGraphicsCore();
-		if (graphicsCore == null || graphicsCore.IsDisposed) throw new NullReferenceException("Main graphics core creation failed!");
-		graphicsCore.Initialize();
+		if (graphicsCore is null || graphicsCore.IsDisposed)
+		{
+			throw new NullReferenceException("Main graphics core creation failed!");
+		}
+
+		if (!graphicsCore.Initialize())
+		{
+			throw new Exception("Failed to initialize the main graphics core!");
+		}
+
+		// Listen to window events:
+		graphicsCore.WindowClosing += OnWindowClosing;
+		graphicsCore.WindowResized += OnWindowResized;
+
+		// Request exit if the main core's main window is closed:
+		WindowClosing += (core) =>
+		{
+			if (core == graphicsCore && !Engine.IsExiting)
+			{
+				Engine.Exit();
+			}
+		};
 	}
+
+	#endregion
+	#region Events
+
+	/// <summary>
+	/// Event that is triggered whenever a window is closing.
+	/// </summary>
+	public event FuncWindowClosing? WindowClosing = null;
+	/// <summary>
+	/// Event that is triggered whenever a window's size has changed.
+	/// </summary>
+	public event FuncWindowResized? WindowResized = null;
 
 	#endregion
 	#region Fields
@@ -40,6 +90,9 @@ public class GraphicsSystem : IEngineSystem
 	private readonly Logger logger;
 	private readonly EngineConfig config;
 
+	/// <summary>
+	/// The main graphics core of the engine, created automatically on startup.
+	/// </summary>
 	public readonly GraphicsCore graphicsCore;
 	private readonly List<GraphicsCore> allGraphicsCores = new(1);
 
@@ -53,9 +106,9 @@ public class GraphicsSystem : IEngineSystem
 
 	public Engine Engine { get; }
 
-	public GraphicsSettings Settings { get; set; } = new();
+	public GraphicsSettings Settings { get; set; } = new(); //TODO: Setter needs to notify graphics systems of changed settings.
 
-	public ResourceHandle TexPlaceholderWhite { get; private set; } = ResourceHandle.None;
+	public ResourceHandle TexPlaceholderWhite { get; private set; } = ResourceHandle.None; //TODO: These are core-specific resources; move to graphics core!
 	public ResourceHandle TexPlaceholderGray { get; private set; } = ResourceHandle.None;
 	public ResourceHandle TexPlaceholderBlack { get; private set; } = ResourceHandle.None;
 	public ResourceHandle TexPlaceholderTransparent { get; private set; } = ResourceHandle.None;
@@ -262,7 +315,7 @@ public class GraphicsSystem : IEngineSystem
 	/// <returns>True if the message loop was worked off successfully, false if an error occurred.</returns>
 	internal bool UpdateMessageLoop(out bool _outRequestExit)
 	{
-		if (!IsDisposed && graphicsCore != null)
+		if (!IsDisposed && graphicsCore is not null)
 		{
 			return graphicsCore.UpdateMessageLoop(out _outRequestExit);
 		}
@@ -320,6 +373,22 @@ public class GraphicsSystem : IEngineSystem
 		}
 
 		return success;
+	}
+
+	private void OnWindowClosing(GraphicsCore _graphicsCore)
+	{
+		if (!IsDisposed && WindowClosing is not null)
+		{
+			WindowClosing.Invoke(_graphicsCore);
+		}
+	}
+
+	private void OnWindowResized(GraphicsCore _graphicsCore, Vector2 _previousSize, Vector2 _newSize)
+	{
+		if (!IsDisposed && WindowResized is not null)
+		{
+			WindowResized.Invoke(_graphicsCore, _previousSize, _newSize);
+		}
 	}
 
 	#endregion
