@@ -4,6 +4,7 @@ using Veldrid;
 namespace FragEngine3.Graphics.ConstantBuffers;
 
 [StructLayout(LayoutKind.Sequential, Pack = 4, Size = byteSize)]
+[ConstantBufferDataType(ConstantBufferType.CBScene)]
 public struct CBScene
 {
     #region Fields

@@ -5,6 +5,7 @@ using Veldrid;
 namespace FragEngine3.Graphics.ConstantBuffers;
 
 [StructLayout(LayoutKind.Explicit, Pack = 4, Size = byteSize)]
+[ConstantBufferDataType(ConstantBufferType.CBObject)]
 public struct CBObject
 {
     #region Fields
