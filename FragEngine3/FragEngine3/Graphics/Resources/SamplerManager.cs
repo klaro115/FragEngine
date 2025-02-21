@@ -21,7 +21,7 @@ public sealed class SamplerManager(GraphicsCore _core) : IDisposable
 	#endregion
 	#region Fields
 
-	public readonly GraphicsCore core = _core ?? throw new ArgumentNullException(nameof(_core), "Graphics core may not be null!");
+	private readonly GraphicsCore core = _core ?? throw new ArgumentNullException(nameof(_core), "Graphics core may not be null!");
 	private readonly Logger logger = _core.graphicsSystem.Engine.Logger;
 
 	private readonly ConcurrentDictionary<ulong, Sampler> samplerDict = new(-1, 10);
@@ -29,6 +29,9 @@ public sealed class SamplerManager(GraphicsCore _core) : IDisposable
 	#endregion
 	#region Properties
 
+	/// <summary>
+	/// Gets whether this object has been disposed already.
+	/// </summary>
 	public bool IsDisposed { get; private set; } = false;
 
 	#endregion
@@ -46,6 +49,9 @@ public sealed class SamplerManager(GraphicsCore _core) : IDisposable
 		Clear();
 	}
 
+	/// <summary>
+	/// Clears out and diposes all samplers.
+	/// </summary>
 	public void Clear()
 	{
 		foreach (var kvp in samplerDict)
@@ -55,6 +61,13 @@ public sealed class SamplerManager(GraphicsCore _core) : IDisposable
 		samplerDict.Clear();
 	}
 
+	/// <summary>
+	/// Gets or creates a sampler that matches a given description.
+	/// </summary>
+	/// <param name="_samplerDescription">A descriptive string that can be parsed into a <see cref="SamplerDescription"/>.<para/>
+	/// Note: You can use '<see cref="SamplerDescriptionParser.CreateDescriptionText(SamplerDescription)"/>' to generate this string.</param>
+	/// <param name="_outSampler">Outputs a fitting sampler, or null, if the given description was invalid.</param>
+	/// <returns>True if a sampler could be found or created, false otherwise.</returns>
 	public bool GetSampler(string? _samplerDescription, out Sampler _outSampler)
 	{
 		if (IsDisposed)
@@ -65,8 +78,8 @@ public sealed class SamplerManager(GraphicsCore _core) : IDisposable
 		}
 
 		// Generate the sampler's ID from its description text:
-		SamplerDescription desc = MaterialDataDescriptionParser.DecodeDescription_Sampler(_samplerDescription);
-		ulong samplerId = MaterialDataDescriptionParser.CreateIdentifier_Sampler(desc);
+		SamplerDescription desc = SamplerDescriptionParser.DecodeDescriptionText(_samplerDescription);
+		ulong samplerId = desc.CreateIdentifier();
 
 		// Check if an identical sampler already exists. If so, re-use that:
 		if (samplerDict.TryGetValue(samplerId, out Sampler? sampler))
@@ -83,6 +96,13 @@ public sealed class SamplerManager(GraphicsCore _core) : IDisposable
 		return TryCreateNewSampler(ref desc, samplerId, out _outSampler);
 	}
 
+	/// <summary>
+	/// Gets or creates a sampler that matches a given ID.
+	/// </summary>
+	/// <param name="_samplerId">A descriptive ID that can be parsed into a <see cref="SamplerDescription"/>.<para/>
+	/// Note: You can use '<see cref="SamplerDescriptionParser.CreateIdentifier(SamplerDescription)"/>' to generate this ID number.</param>
+	/// <param name="_outSampler">Outputs a fitting sampler, or null, if the given ID was invalid.</param>
+	/// <returns>True if a sampler could be found or created, false otherwise.</returns>
 	public bool GetSampler(ulong _samplerId, out Sampler _outSampler)
 	{
 		if (IsDisposed)
@@ -104,12 +124,18 @@ public sealed class SamplerManager(GraphicsCore _core) : IDisposable
 		}
 
 		// Generate a description from the information encoded in the ID:
-		SamplerDescription desc = MaterialDataDescriptionParser.DecodeIdentifier_Sampler(_samplerId);
+		SamplerDescription desc = SamplerDescriptionParser.DecodeIdentifier(_samplerId);
 
 		// Create and register a new sampler:
 		return TryCreateNewSampler(ref desc, _samplerId, out _outSampler);
 	}
 
+	/// <summary>
+	/// Gets or creates a sampler that matches a given description.
+	/// </summary>
+	/// <param name="_desc">Reference to a sampler description for which we need a sampler.</param>
+	/// <param name="_outSampler">Outputs a fitting sampler, or null, if the given description was invalid.</param>
+	/// <returns>True if a sampler could be found or created, false otherwise.</returns>
 	public bool GetSampler(ref SamplerDescription _desc, out Sampler _outSampler)
 	{
 		if (IsDisposed)
@@ -120,7 +146,7 @@ public sealed class SamplerManager(GraphicsCore _core) : IDisposable
 		}
 
 		// Generate a descriptive ID for the given description:
-		ulong samplerId = MaterialDataDescriptionParser.CreateIdentifier_Sampler(_desc);
+		ulong samplerId = _desc.CreateIdentifier();
 
 		// Check if an identical sampler already exists. If so, re-use that:
 		if (samplerDict.TryGetValue(samplerId, out Sampler? sampler))
@@ -147,7 +173,7 @@ public sealed class SamplerManager(GraphicsCore _core) : IDisposable
 		}
 		catch (Exception ex)
 		{
-			string descTxt = MaterialDataDescriptionParser.CreateDescription_Sampler(_desc);
+			string descTxt = _desc.CreateDescriptionText();
 			logger.LogException($"Failed to create texture sampler matching description '{descTxt}'!", ex);
 			_outSampler = null!;
 			return false;

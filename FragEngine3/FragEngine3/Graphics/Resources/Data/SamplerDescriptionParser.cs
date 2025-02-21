@@ -2,7 +2,10 @@
 
 namespace FragEngine3.Graphics.Resources.Data;
 
-public static class MaterialDataDescriptionParser
+/// <summary>
+/// Helper class for creating IDs and descriptions of <see cref="Sampler"/> state objects.
+/// </summary>
+public static class SamplerDescriptionParser
 {
 	#region Fields
 
@@ -22,7 +25,7 @@ public static class MaterialDataDescriptionParser
 		'>',    // Greater than
 		'!',    // Not equal
 		'G',    // Greater or equal,
-		'A',    // Allways
+		'A',    // Always
 	];
 	private static readonly char[] borderColorChars =
 	[
@@ -34,7 +37,13 @@ public static class MaterialDataDescriptionParser
 	#endregion
 	#region Methods
 
-	public static string CreateDescription_Sampler(SamplerDescription _desc)
+	/// <summary>
+	/// Creates a descriptive fixed-length string that encodes all settings of a <see cref="Sampler"/>.
+	/// This string is intended as a human-readable serialized form for sampler states.
+	/// </summary>
+	/// <param name="_desc">A sampler description which we want to serialize to a descriptive string.</param>
+	/// <returns>A string representation of the sampler description.</returns>
+	public static string CreateDescriptionText(this SamplerDescription _desc)
 	{
 		// Format: "WWW_7_>_B"
 
@@ -53,7 +62,13 @@ public static class MaterialDataDescriptionParser
 		return $"{addressModeU}{addressModeV}{addressModeW}_{filter}_{comparisonKind}_{borderColor}";
 	}
 
-	public static SamplerDescription DecodeDescription_Sampler(string? _description)
+	/// <summary>
+	/// Parses a descriptive fixed-length string into a description of a <see cref="Sampler"/> state.
+	/// </summary>
+	/// <param name="_description">The descriptive string we wish to parse.</param>
+	/// <returns>The parsed sampler state description. On failure, <see cref="SamplerDescription.Point"/> is
+	/// returned as a fallback.</returns>
+	public static SamplerDescription DecodeDescriptionText(string? _description)
 	{
 		if (string.IsNullOrEmpty(_description) || _description.Length < 9)
 		{
@@ -83,7 +98,13 @@ public static class MaterialDataDescriptionParser
 		}
 	}
 
-	public static ulong CreateIdentifier_Sampler(SamplerDescription _desc)
+	/// <summary>
+	/// Encodes all settings of a sampler description into a descriptive ID number for faster lookup.
+	/// This ID is used as instead of a hash for fast lookup and comparison of samplers.
+	/// </summary>
+	/// <param name="_desc">A sampler description which we want to serialize to a descriptive ID.</param>
+	/// <returns>A 64-bit unsigned integer that serves as a descriptive ID.</returns>
+	public static ulong CreateIdentifier(this SamplerDescription _desc)
 	{
 		// First 32 bits:
 		uint addressModeU = (uint)_desc.AddressModeU << 29;				//3 bits
@@ -110,7 +131,12 @@ public static class MaterialDataDescriptionParser
 		return ((ulong)first << 32) | second;
 	}
 
-	public static SamplerDescription DecodeIdentifier_Sampler(ulong _id)
+	/// <summary>
+	/// Parses a sampler description from a descriptive ID number.
+	/// </summary>
+	/// <param name="_id">A 64-bit unsigned integer ID whose value encodes a description of a sampler.</param>
+	/// <returns>The parsed sampler description.</returns>
+	public static SamplerDescription DecodeIdentifier(ulong _id)
 	{
 		uint first = (uint)(_id >> 32);
 		uint second = (uint)(_id & 0xFFFFFFFFu);
