@@ -26,7 +26,6 @@ public sealed class UiResourceBinding<TValue> : UiBinding<TValue> where TValue :
 	#endregion
 	#region Fields
 
-
 	public readonly bool loadImmediatelyIfNoReady;
 	public readonly bool loadResourceWhenSet;
 

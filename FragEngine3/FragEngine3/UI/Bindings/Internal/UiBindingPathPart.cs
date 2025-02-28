@@ -3,7 +3,7 @@ using System.Reflection;
 
 namespace FragEngine3.UI.Bindings.Internal;
 
-public abstract class UiBindingPathPart
+internal abstract class UiBindingPathPart
 {
 	#region Properties
 
