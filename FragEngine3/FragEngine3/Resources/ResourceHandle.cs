@@ -155,11 +155,28 @@ public sealed class ResourceHandle : IEquatable<ResourceHandle>
 	/// <returns>The resource object held by this handle, or null, if the resource is not yet loaded, or if it could not be loaded.</returns>
 	public Resource? GetResource(bool _loadImmediatelyIfNotReady = true, bool _loadResourceIfNotReady = true)
 	{
-		if (!IsLoaded && _loadResourceIfNotReady)
+		bool isLoaded = IsLoaded;
+		if (!isLoaded && _loadResourceIfNotReady)
 		{
-			Load(_loadImmediatelyIfNotReady);
+			isLoaded = Load(_loadImmediatelyIfNotReady);
 		}
-		return IsLoaded ? resource : null;
+		return isLoaded ? resource : null;
+	}
+
+	/// <summary>
+	/// Asynchronously gets the resource object held by this handle.
+	/// </summary>
+	/// <param name="_loadResourceIfNotReady">Whether to queue the resource up for immediate loading, if it isn't loaded yet. When in doubt,
+	/// leave this on the default value.</param>
+	/// <returns>The resource object held by this handle, or null, if the resource is not yet loaded, or if it could not be loaded.</returns>
+	public async Task<Resource?> GetResourceAsync(bool _loadResourceIfNotReady = true)
+	{
+		bool isLoaded = IsLoaded;
+		if (!isLoaded && _loadResourceIfNotReady)
+		{
+			isLoaded = await LoadAsync();
+		}
+		return isLoaded ? resource : null;
 	}
 
 	/// <summary>
@@ -180,11 +197,26 @@ public sealed class ResourceHandle : IEquatable<ResourceHandle>
 	}
 
 	/// <summary>
+	/// Asynchronously gets the resource object held by this handle.
+	/// </summary>
+	/// <typeparam name="T">The type of the resource you're expecting. Must be a non-abstract type inheriting from <see cref="Resource"/>.
+	/// </typeparam>
+	/// <param name="_loadResourceIfNotReady">Whether to queue the resource up for immediate loading, if it isn't loaded yet. When in doubt,
+	/// leave this on the default value.</param>
+	/// <returns>The resource object held by this handle, or null, if the resource is not yet loaded, or if it could not be loaded, or
+	/// if the resource's type did not match the generic parameter type T.</returns>
+	public async Task<T?> GetResourceAsync<T>(bool _loadResourceIfNotReady = true) where T : Resource
+	{
+		Resource? resource = await GetResourceAsync(_loadResourceIfNotReady);
+		return resource as T;
+	}
+
+	/// <summary>
 	/// Trigger loading of this handle's resource, if it wasn't loaded yet.
 	/// </summary>
 	/// <param name="_loadImmediately">Whether to load the resource immediately on the current thread. If false, the resource will instead
 	/// be queued up for asynchronous loading and will be ready for use at some later time.</param>
-	/// <returns>True if the resource was already loaded, or if immediate loaded succeeded, or if it was queued up for asynchronous loading.
+	/// <returns>True if the resource was already loaded, or if immediate loading succeeded, or if it was queued up for asynchronous loading.
 	/// </returns>
 	public bool Load(bool _loadImmediately)
 	{
@@ -199,6 +231,21 @@ public sealed class ResourceHandle : IEquatable<ResourceHandle>
 	}
 
 	/// <summary>
+	/// Triggers asynchronous loading of this handle's resource, if it wasn't loaded yet.<para/>
+	/// This overload does the same as <see cref="Load(bool)"/> with '<c>_loadImmediately: true</c>', but can be awaited.
+	/// </summary>
+	/// <returns>True if the resource was already loaded, or if loading succeeded, false if loading failed.</returns>
+	public async Task<bool> LoadAsync()
+	{
+		// If resource is already fully loaded, do nothing:
+		if (IsLoaded) return true;
+
+		// Load the resource via the resource manager, passing it a private callback to return the loaded value later:
+		bool result = await resourceManager.LoadResourceAsync(this, AssignResourceCallback);
+		return result;
+	}
+
+	/// <summary>
 	/// Request the resource manager to unload the resourcee data held by this handle, or to cancel a pending import.
 	/// </summary>
 	public void Unload()
@@ -206,6 +253,17 @@ public sealed class ResourceHandle : IEquatable<ResourceHandle>
 		if (LoadState != ResourceLoadState.NotLoaded)
 		{
 			resourceManager.UnloadResource(resourceKey);
+		}
+	}
+
+	/// <summary>
+	/// Request the resource manager to asynchronously unload the resourcee data held by this handle, or to cancel a pending import.
+	/// </summary>
+	public async Task UnloadAsync()
+	{
+		if (LoadState != ResourceLoadState.NotLoaded)
+		{
+			await resourceManager.UnloadResourceAsync(resourceKey);
 		}
 	}
 
@@ -242,6 +300,9 @@ public sealed class ResourceHandle : IEquatable<ResourceHandle>
 
 			DataOffset = dataOffset,
 			DataSize = dataSize,
+
+			DependencyCount = (uint)DependencyCount,
+			Dependencies = dependencies,
 		};
 		return true;
 	}

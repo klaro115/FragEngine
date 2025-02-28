@@ -4,6 +4,11 @@ using FragEngine3.Scenes;
 
 namespace FragEngine3.EngineCore.EngineStates;
 
+/// <summary>
+/// Base type for classes that implement the state-specific logic of the engine's lifecycle state machine.
+/// </summary>
+/// <param name="_engine">The engine whose state machine this state belongs to.</param>
+/// <param name="_applicationLogic">The engine's associated application logic controller.</param>
 internal abstract class EngineStateBase(Engine _engine, ApplicationLogic _applicationLogic) : IDisposable
 {
 	#region Constructors
@@ -30,8 +35,14 @@ internal abstract class EngineStateBase(Engine _engine, ApplicationLogic _applic
 	#endregion
 	#region Properties
 
+	/// <summary>
+	/// Gets whether this state has been disposed already.
+	/// </summary>
 	public bool IsDisposed { get; protected set; } = false;
 
+	/// <summary>
+	/// Gets an enum value identifying this engine state.
+	/// </summary>
 	protected abstract EngineState State { get; }
 
 	#endregion
@@ -47,6 +58,12 @@ internal abstract class EngineStateBase(Engine _engine, ApplicationLogic _applic
 		IsDisposed = true;
 	}
 
+	/// <summary>
+	/// Initializes and activates the state.
+	/// </summary>
+	/// <param name="_mainLoopCancellationSrc">A cancellation source that is used to request an abort/cancellation of this state.</param>
+	/// <param name="_verbose">Whether to log lots of additional status messages and warnings.</param>
+	/// <returns>True if the state was initialized successfully and is now active, false otherwise.</returns>
 	public bool BeginState(CancellationTokenSource? _mainLoopCancellationSrc, bool _verbose)
 	{
 		mainLoopCancellationSrc = _mainLoopCancellationSrc;
@@ -63,31 +80,28 @@ internal abstract class EngineStateBase(Engine _engine, ApplicationLogic _applic
 	}
 	protected abstract bool BeginState_internal(bool _verbose);
 
+	/// <summary>
+	/// Ends the state's activity.
+	/// </summary>
+	/// <param name="_verbose">Whether to log lots of additional status messages and warnings.</param>
 	public void EndState(bool _verbose)
 	{
-		TimeManager timeManager = engine.TimeManager;
-
 		// Log average frame timings of the previous state:
-		long stateFrameCount = timeManager.FrameCount - stateStartFrameCount;
-		if (stateFrameCount > 0)
+		if (GenerateStateReport(out EngineStateReport report, true))
 		{
-			double avgFrameRate = stateFrameCount / frameTimeSum.TotalMilliseconds * 1000.0;
-			double avgFrameTimeMs = frameTimeSum.TotalMilliseconds / stateFrameCount;
-			double avgComputeTimeMs = computeTimeSum.TotalMilliseconds / stateFrameCount;
-			double slowFramePerc = (double)below40FpsFrameCount / stateFrameCount;
-
-			engine.Logger.LogMessage($"Engine state {State} | Average frame rate: {avgFrameRate:0.00} Hz | Average frame time: {avgFrameTimeMs:0.00} ms | Average compute time: {avgComputeTimeMs:0.00} ms | Frames above 25 ms: {slowFramePerc:0.0}%");
+			report.LogReport(engine.Logger);
 		}
-		stateStartFrameCount = timeManager.FrameCount;
-		below40FpsFrameCount = 0;
-		frameTimeSum = TimeSpan.Zero;
-		computeTimeSum = TimeSpan.Zero;
 
 		// Terminate any ongoing state logic and loops:
 		EndState_internal(_verbose);
 	}
 	protected abstract void EndState_internal(bool _verbose);
 
+	/// <summary>
+	/// Starts up the state's processes and main loop (assuming it has one).
+	/// </summary>
+	/// <param name="_verbose">Whether to log lots of additional status messages and warnings.</param>
+	/// <returns>True if the state is running now, false otherwise.</returns>
 	public abstract bool RunState(bool _verbose);
 
 	protected virtual bool RunMainLoop()
@@ -180,6 +194,58 @@ internal abstract class EngineStateBase(Engine _engine, ApplicationLogic _applic
 		success &= jobManager.ProcessJobsOnMainThread(JobScheduleType.MainThread_PostDraw);
 
 		return success;
+	}
+
+	/// <summary>
+	/// Generates a rough performance report on for this engine state. This report includes frame rates, and other timing metrics about the main loop.<para/>
+	/// Note: At least one frame must have passed since the last reset, or the report will be invalid.
+	/// </summary>
+	/// <param name="_outReport">Outputs a report containing metrics about the state's run-time performance.</param>
+	/// <param name="_resetMetrics">Whether to reset counters and timers after generating the report.</param>
+	/// <returns>True if a valid report could be created, false otherwise.</returns>
+	public bool GenerateStateReport(out EngineStateReport _outReport, bool _resetMetrics = true)
+	{
+		if (IsDisposed)
+		{
+			_outReport = EngineStateReport.Zero;
+			return false;
+		}
+
+		TimeManager timeManager = engine.TimeManager;
+
+		long stateFrameCount = timeManager.FrameCount - stateStartFrameCount;
+		if (stateFrameCount <= 0)
+		{
+			_outReport = EngineStateReport.Zero;
+			return false;
+		}
+		
+		_outReport = new()
+		{
+			State = State,
+			ReportTimeUtc = DateTime.UtcNow,
+
+			AvgFrameRate = stateFrameCount / frameTimeSum.TotalMilliseconds * 1000.0,
+			AvgFrameTimeMs = frameTimeSum.TotalMilliseconds / stateFrameCount,
+			AvgComputeTimeMs = computeTimeSum.TotalMilliseconds / stateFrameCount,
+			SlowFramePerc = (double)below40FpsFrameCount / stateFrameCount,
+		};
+
+		if (_resetMetrics)
+		{
+			ResetStateMetrics();
+		}
+		return true;
+	}
+
+	private void ResetStateMetrics()
+	{
+		TimeManager timeManager = engine.TimeManager;
+
+		stateStartFrameCount = timeManager.FrameCount;
+		below40FpsFrameCount = 0;
+		frameTimeSum = TimeSpan.Zero;
+		computeTimeSum = TimeSpan.Zero;
 	}
 
 	#endregion

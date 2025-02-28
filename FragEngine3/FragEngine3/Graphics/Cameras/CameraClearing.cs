@@ -1,6 +1,6 @@
 ﻿using Veldrid;
 
-namespace FragEngine3;
+namespace FragEngine3.Graphics.Cameras;
 
 public struct CameraClearing
 {

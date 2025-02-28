@@ -1,6 +1,6 @@
 ﻿using Veldrid;
 
-namespace FragEngine3;
+namespace FragEngine3.Graphics.Cameras;
 
 public struct CameraOutput
 {
@@ -14,7 +14,7 @@ public struct CameraOutput
 	// Color output:
 	public uint resolutionX = 1280;
 	public uint resolutionY = 720;
-	public PixelFormat? colorFormat = null;		//default is used if null.
+	public PixelFormat? colorFormat = null;     //default is used if null.
 
 	// Depth/Stencil output:
 	public bool hasDepth = true;
@@ -28,8 +28,8 @@ public struct CameraOutput
 
 	public readonly float AspectRatio => (float)resolutionX / resolutionY;
 
-    #endregion
-    #region Methods
+	#endregion
+	#region Methods
 
 	public readonly bool HaveSettingsChanged(in Framebuffer _framebuffer)
 	{
@@ -40,7 +40,7 @@ public struct CameraOutput
 		bool descHasColor = outputDesc.ColorAttachments != null && outputDesc.ColorAttachments.Length != 0;
 		if (_framebuffer.Width != resolutionX ||
 			_framebuffer.Height != resolutionY ||
-			(descHasColor && colorFormat != null && colorFormat != outputDesc.ColorAttachments![0].Format))
+			descHasColor && colorFormat != null && colorFormat != outputDesc.ColorAttachments![0].Format)
 		{
 			return true;
 		}
@@ -80,12 +80,12 @@ public struct CameraOutput
 		}
 	}
 
-    public readonly override string ToString()
+	public readonly override string ToString()
 	{
 		string colorFormatTxt = colorFormat?.ToString() ?? "Default";
-		string depthFormatTxt = hasDepth ? (depthFormat?.ToString() ?? "Default") : "None";
+		string depthFormatTxt = hasDepth ? depthFormat?.ToString() ?? "Default" : "None";
 		return $"ResX: {resolutionX}, ResY: {resolutionY}, Color Format: {colorFormatTxt}, Depth Format: {depthFormatTxt} (D: {hasDepth}, S: {hasStencil})";
 	}
 
-    #endregion
+	#endregion
 }

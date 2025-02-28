@@ -1,7 +1,7 @@
 ﻿using System.Numerics;
 using FragEngine3.Graphics.Cameras;
+using FragEngine3.Graphics.Cameras.Internal;
 using FragEngine3.Graphics.Components.Data;
-using FragEngine3.Graphics.Components.Internal;
 using FragEngine3.Graphics.Contexts;
 using FragEngine3.Graphics.Lighting.Internal;
 using FragEngine3.Scenes;
@@ -12,6 +12,7 @@ using Veldrid;
 
 namespace FragEngine3.Graphics.Components;
 
+[ComponentBackingType(typeof(CameraInstance))]
 public sealed class CameraComponent : Component, IOnNodeDestroyedListener, IOnComponentRemovedListener
 {
 	#region Constructors

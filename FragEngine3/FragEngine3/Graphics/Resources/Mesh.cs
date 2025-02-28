@@ -7,19 +7,36 @@ using Veldrid;
 
 namespace FragEngine3.Graphics.Resources;
 
+/// <summary>
+/// Resource type for 3D model geometry.
+/// </summary>
 public sealed class Mesh : Resource
 {
 	#region Constructors
 
+	/// <summary>
+	/// Creates a new mesh.
+	/// </summary>
+	/// <param name="_handle">The resource handle through which this graphical resource will be managed.</param>
+	/// <param name="_graphicsCore">The graphics core on whose graphics device the vertex and index buffers of this mesh will be created.</param>
 	public Mesh(ResourceHandle _handle, GraphicsCore? _graphicsCore) : base(_handle)
 	{
 		graphicsCore = _graphicsCore ?? _handle.resourceManager.engine.GraphicsSystem.graphicsCore;
+		logger = graphicsCore.graphicsSystem.Engine.Logger;
 	}
+
+	/// <summary>
+	/// Creates a new mesh and registers it with the engine's resource manager.
+	/// </summary>
+	/// <param name="_resourceKey">A unique key through which this resource will be identified in the resource system.</param>
+	/// <param name="_engine">A reference of the game engine instance. The resource manager and main graphics core will be used for creating this resource.</param>
+	/// <param name="_outHandle">Outputs a new resource handle using the above resource key, that will manage this mesh.</param>
 	public Mesh(string _resourceKey, Engine _engine, out ResourceHandle _outHandle) : base(_resourceKey, _engine)
 	{
 		_outHandle = new(this);
 		resourceManager.AddResource(_outHandle);
 		graphicsCore = _engine.GraphicsSystem.graphicsCore;
+		logger = _engine.Logger;
 	}
 
 	~Mesh()
@@ -43,6 +60,7 @@ public sealed class Mesh : Resource
 	#region Fields
 
 	public readonly GraphicsCore graphicsCore;
+	private readonly Logger logger;
 
 	// Vertices:
 	private DeviceBuffer[] vertexBuffers = [];
@@ -72,19 +90,41 @@ public sealed class Mesh : Resource
 	public override ResourceType ResourceType => ResourceType.Model;
 
 	public bool IsInitialized => !IsDisposed && bufVerticesBasic is not null && bufIndices is not null;
+	/// <summary>
+	/// Gets whether the mesh's geometry data has changed and is pending for upload to GPU buffers.
+	/// </summary>
 	public bool IsDirty => areVerticesDirtyFlags != 0 || areIndicesDirty;
 
+	/// <summary>
+	/// Gets the number of vertex buffers required to hold this mesh's geometry data.
+	/// </summary>
 	public int VertexBufferCount => vertexBuffers.Length;
+	/// <summary>
+	/// Gets flags for all types of vertex data that have been assigned to this mesh. One vertex buffer is created for each data type.
+	/// </summary>
 	public MeshVertexDataFlags VertexDataFlags { get; private set; } = MeshVertexDataFlags.BasicSurfaceData;
+	/// <summary>
+	/// Gets whether the triangle indices of this mesh use a 16-bit or 32-bit integer type.
+	/// </summary>
 	public IndexFormat IndexFormat { get; private set; } = IndexFormat.UInt16;
 
+	/// <summary>
+	/// Gets the total number of vertices.
+	/// </summary>
 	public uint VertexCount { get; private set; } = 0;
+	/// <summary>
+	/// Gets the total number of triangle indices defining the mesh's polygons.
+	/// </summary>
 	public uint IndexCount { get; private set; } = 0;
+	/// <summary>
+	/// Gets the total number of triangle polygons defining the mesh's surface.
+	/// </summary>
 	public uint TriangleCount { get; private set; } = 0;
 
+	/// <summary>
+	/// Gets the maximum radius of the bounding sphere enveloping the entire mesh.
+	/// </summary>
 	public float BoundingRadius { get; private set; } = 1.0f;
-
-	private Logger Logger => graphicsCore.graphicsSystem.engine.Logger;
 
 	#endregion
 	#region Methods
@@ -102,6 +142,18 @@ public sealed class Mesh : Resource
 		bufIndices?.Dispose();
 	}
 
+	/// <summary>
+	/// Assigns new vertex data to this mesh.<para/>
+	/// Note: This will not upload the new geometry data to GPU memory immediately. Instead, the upload will take place just
+	/// before the mesh's next draw call, when <see cref="Prepare(out DeviceBuffer[], out DeviceBuffer)"/> is called.
+	/// </summary>
+	/// <param name="_verticesBasic">A list or array of all vertices' basic surface data. May not be null.</param>
+	/// <param name="_verticesExt">[Optional] A list of all vertices' extended surface data.</param>
+	/// <param name="_verticesBlend">[Optional] A list of blend shape data for each vertex.</param>
+	/// <param name="_verticesAnim">[Optional] A list of bone animation data for each vertex.</param>
+	/// <param name="_vertexCount">The total number of vertices to assign. Any vertex data beyond this number will be ignored.
+	/// If negative or zero, the vertex count will be derived from the number of elements in '_verticesBasic'.</param>
+	/// <returns>True if vertex data was assigned successfully, false otherwise.</returns>
 	public bool SetVertexData(
 		IList<BasicVertex> _verticesBasic,
 		IList<ExtendedVertex>? _verticesExt,
@@ -111,12 +163,12 @@ public sealed class Mesh : Resource
 	{
 		if (IsDisposed)
 		{
-			Logger.LogError("Cannot set vertex data of disposed mesh!");
+			logger.LogError("Cannot set vertex data of disposed mesh!");
 			return false;
 		}
 		if (_verticesBasic is null)
 		{
-			Logger.LogError("Mesh's basic vertex data may not be null!");
+			logger.LogError("Mesh's basic vertex data may not be null!");
 			return false;
 		}
 
@@ -219,7 +271,7 @@ public sealed class Mesh : Resource
 				}
 				catch (Exception ex)
 				{
-					Logger.LogException($"Mesh '{resourceKey}' failed to create or resize vertex buffer '{_vertexDataFlag}'!", ex);
+					logger.LogException($"Mesh '{resourceKey}' failed to create or resize vertex buffer '{_vertexDataFlag}'!", ex);
 					return false;
 				}
 			}
@@ -227,16 +279,25 @@ public sealed class Mesh : Resource
 		}
 	}
 
+	/// <summary>
+	/// Assigns new triangle index data to this mesh. Indices are 16-bit integers.<para/>
+	/// Note: This will not upload the new geometry data to GPU memory immediately. Instead, the upload will take place just
+	/// before the mesh's next draw call, when <see cref="Prepare(out DeviceBuffer[], out DeviceBuffer)"/> is called.
+	/// </summary>
+	/// <param name="_indices16">An array or list of triamngle indices. The list's count should be a multiple of 3. May not be null.</param>
+	/// <param name="_indexCount">The total number of indices to assign. Any index data beyond this number will be ignored.
+	/// If negative or zero, the index count will be derived from the number of elements in '_indices16'.</param>
+	/// <returns>True if index data was assigned successfully, false otherwise.</returns>
 	public bool SetIndexData(IList<ushort> _indices16, int _indexCount = -1)
 	{
 		if (IsDisposed)
 		{
-			Logger.LogError("Cannot set index data of disposed mesh!");
+			logger.LogError("Cannot set index data of disposed mesh!");
 			return false;
 		}
 		if (_indices16 is null)
 		{
-			Logger.LogError("Mesh's index data may not be null!");
+			logger.LogError("Mesh's index data may not be null!");
 			return false;
 		}
 
@@ -272,7 +333,7 @@ public sealed class Mesh : Resource
 				}
 				catch (Exception ex)
 				{
-					Logger.LogException($"Mesh '{resourceKey}' failed to create or resize index buffer '{IndexFormat.UInt16}'!", ex);
+					logger.LogException($"Mesh '{resourceKey}' failed to create or resize index buffer '{IndexFormat.UInt16}'!", ex);
 					return false;
 				}
 			}
@@ -290,16 +351,25 @@ public sealed class Mesh : Resource
 		return true;
 	}
 
+	/// <summary>
+	/// Assigns new triangle index data to this mesh. Indices are 32-bit integers.<para/>
+	/// Note: This will not upload the new geometry data to GPU memory immediately. Instead, the upload will take place just
+	/// before the mesh's next draw call, when <see cref="Prepare(out DeviceBuffer[], out DeviceBuffer)"/> is called.
+	/// </summary>
+	/// <param name="_indices32">An array or list of triamngle indices. The list's count should be a multiple of 3. May not be null.</param>
+	/// <param name="_indexCount">The total number of indices to assign. Any index data beyond this number will be ignored.
+	/// If negative or zero, the index count will be derived from the number of elements in '_indices16'.</param>
+	/// <returns>True if index data was assigned successfully, false otherwise.</returns>
 	public bool SetIndexData(IList<int> _indices32, int _indexCount = -1)
 	{
 		if (IsDisposed)
 		{
-			Logger.LogError("Cannot set index data of disposed mesh!");
+			logger.LogError("Cannot set index data of disposed mesh!");
 			return false;
 		}
 		if (_indices32 is null)
 		{
-			Logger.LogError("Mesh's index data may not be null!");
+			logger.LogError("Mesh's index data may not be null!");
 			return false;
 		}
 
@@ -348,7 +418,7 @@ public sealed class Mesh : Resource
 				}
 				catch (Exception ex)
 				{
-					Logger.LogException($"Mesh '{resourceKey}' failed to create or resize index buffer '{newIndexFormat}'!", ex);
+					logger.LogException($"Mesh '{resourceKey}' failed to create or resize index buffer '{newIndexFormat}'!", ex);
 					return false;
 				}
 			}
@@ -382,23 +452,30 @@ public sealed class Mesh : Resource
 		return true;
 	}
 
+	/// <summary>
+	/// Assigns a full set of geometry data to this mesh, including vertex and index data.<para/>
+	/// Note: This will not upload the new geometry data to GPU memory immediately. Instead, the upload will take place just
+	/// before the mesh's next draw call, when <see cref="Prepare(out DeviceBuffer[], out DeviceBuffer)"/> is called.
+	/// </summary>
+	/// <param name="_surfaceData">A set of surface geometry data, may not be null.</param>
+	/// <returns>True if vertex and index data were assigned successfully, false otherwise.</returns>
 	public bool SetGeometry(in MeshSurfaceData _surfaceData)
 	{
 		if (IsDisposed)
 		{
-			Logger.LogError("Cannot set surface data of disposed mesh!");
+			logger.LogError("Cannot set surface data of disposed mesh!");
 			return false;
 		}
 		if (_surfaceData is null)
 		{
-			Logger.LogError("Mesh's surface data may not be null!");
+			logger.LogError("Mesh's surface data may not be null!");
 			return false;
 		}
 
 		// Set vertex data:
 		if (!SetVertexData(_surfaceData.verticesBasic, _surfaceData.verticesExt, null, null, _surfaceData.VertexCount))
 		{
-			Logger.LogError($"Failed to set vertices from surface data on mesh '{resourceKey}'!");
+			logger.LogError($"Failed to set vertices from surface data on mesh '{resourceKey}'!");
 			return false;
 		}
 
@@ -414,20 +491,30 @@ public sealed class Mesh : Resource
 		}
 		if (!wereIndicesSet)
 		{
-			Logger.LogError($"Failed to set indices of format '{_surfaceData.IndexFormat}' from surface data on mesh '{resourceKey}'!");
+			logger.LogError($"Failed to set indices of format '{_surfaceData.IndexFormat}' from surface data on mesh '{resourceKey}'!");
 			return false;
 		}
 
 		return true;
 	}
 
-	public bool Prepare(out DeviceBuffer[] _outBufVertices, out DeviceBuffer _outBufIndices)
+	/// <summary>
+	/// Prepares the mesh for rendering. This will upload any pending geometry data to GPU memory, and then output buffers
+	/// that may be bound to the rendering pipeline.
+	/// </summary>
+	/// <param name="_outBufVertices">Outputs one of more vertex buffers. The first buffer will always contain basic surface
+	/// data. All subsequent buffers may optionally contain extended surface data, blend shape data, or bone animation data,
+	/// in that order. Null on failure.</param>
+	/// <param name="_outBufIndices">Outputs an index buffer, null on failure.</param>
+	/// <returns>True if geometry buffers could be prepared and if any newly assigned geometry data was uploaded successfully,
+	/// false otherwise.</returns>
+	public bool Prepare(out DeviceBuffer[]? _outBufVertices, out DeviceBuffer? _outBufIndices)
 	{
 		if (!IsInitialized)
 		{
-			Logger.LogError("Cannot prepare uninitialized or disposed mesh for rendering!");
-			_outBufVertices = null!;
-			_outBufIndices = null!;
+			logger.LogError("Cannot prepare uninitialized or disposed mesh for rendering!");
+			_outBufVertices = null;
+			_outBufIndices = null;
 			return false;
 		}
 
@@ -437,8 +524,8 @@ public sealed class Mesh : Resource
 		{
 			if (!UploadPendingVertexData())
 			{
-				_outBufVertices = null!;
-				_outBufIndices = null!;
+				_outBufVertices = null;
+				_outBufIndices = null;
 				return false;
 			}
 			dataHasChanged = true;
@@ -447,8 +534,8 @@ public sealed class Mesh : Resource
 		{
 			if (!UploadPendingIndexData())
 			{
-				_outBufVertices = null!;
-				_outBufIndices = null!;
+				_outBufVertices = null;
+				_outBufIndices = null;
 				return false;
 			}
 			dataHasChanged = true;
@@ -495,7 +582,7 @@ public sealed class Mesh : Resource
 				}
 				catch (Exception ex)
 				{
-					Logger.LogException($"Mesh '{resourceKey}' failed to upload pending vertex data '{_vertexDataFlag}' to vertex buffer on GPU!", ex);
+					logger.LogException($"Mesh '{resourceKey}' failed to upload pending vertex data '{_vertexDataFlag}' to vertex buffer on GPU!", ex);
 					return false;
 				}
 			}
@@ -521,7 +608,7 @@ public sealed class Mesh : Resource
 			}
 			catch (Exception ex)
 			{
-				Logger.LogException($"Mesh '{resourceKey}' failed to upload pending index data ({IndexFormat}) to vertex buffer on GPU!", ex);
+				logger.LogException($"Mesh '{resourceKey}' failed to upload pending index data ({IndexFormat}) to vertex buffer on GPU!", ex);
 				return false;
 			}
 
@@ -532,16 +619,25 @@ public sealed class Mesh : Resource
 		return true;
 	}
 
+	/// <summary>
+	/// Schedules the download of this mesh's geometry data from its buffers on the GPU back into CPU-side memory.
+	/// All pending download requests will be executed the next time that <see cref="GraphicsCore.EndFrame"/> is called,
+	/// and the data will be ready for use by the time the next input/update stage begins.<para/>
+	/// Note: If previously assigned geometry data is still pending for upload to GPU memory, some or all of it may still
+	/// reside in CPU-side memory; in this case, the request may conclude immediately by returning this CPU-side copy.
+	/// </summary>
+	/// <param name="_downloadCallback">A callback function through which the geometry data is received once the download completes.</param>
+	/// <returns>Treu if the download request was scheduled successfully, false otherwise.</returns>
 	public bool RequestGeometryDownload(AsyncGeometryDownloadRequest.CallbackReceiveDownloadedData _downloadCallback)
 	{
 		if (!IsInitialized)
 		{
-			Logger.LogError("Cannot download geometry data from uninitialized or disposed mesh!");
+			logger.LogError("Cannot download geometry data from uninitialized or disposed mesh!");
 			return false;
 		}
 		if (_downloadCallback is null)
 		{
-			Logger.LogError("Cannot download mesh geometry data using null download callback!");
+			logger.LogError("Cannot download mesh geometry data using null download callback!");
 			return false;
 		}
 
@@ -569,21 +665,21 @@ public sealed class Mesh : Resource
 	{
 		if (!IsInitialized)
 		{
-			Logger.LogError("Cannot dispatch copy for geometry download from uninitialized or disposed mesh!");
+			logger.LogError("Cannot dispatch copy for geometry download from uninitialized or disposed mesh!");
 			_outStagingBuffers = [];
 			_outStagingBufferDataTypes = [];
 			return true;
 		}
 		if (_blittingCmdList is null || _blittingCmdList.IsDisposed)
 		{
-			Logger.LogError("Cannot download mesh geometry data using null or disposed command list!");
+			logger.LogError("Cannot download mesh geometry data using null or disposed command list!");
 			_outStagingBuffers = [];
 			_outStagingBufferDataTypes = [];
 			return false;
 		}
 		if (!_request.IsValid)
 		{
-			Logger.LogError("Mesh geometry data download request is invalid!");
+			logger.LogError("Mesh geometry data download request is invalid!");
 			_outStagingBuffers = [];
 			_outStagingBufferDataTypes = [];
 			return false;
@@ -643,7 +739,7 @@ public sealed class Mesh : Resource
 			}
 			catch (Exception ex)
 			{
-				Logger.LogException($"Failed to create staging buffer for downloading geometry data from buffer '{_copyFrom.Name}'!", ex);
+				logger.LogException($"Failed to create staging buffer for downloading geometry data from buffer '{_copyFrom.Name}'!", ex);
 				return false;
 			}
 		}
@@ -653,12 +749,12 @@ public sealed class Mesh : Resource
 	{
 		if (!_request.IsValid)
 		{
-			Logger.LogError("Mesh geometry data download request is invalid!");
+			logger.LogError("Mesh geometry data download request is invalid!");
 			return false;
 		}
 		if (_request.StagingBuffers is null || _request.StagingBufferDataTypes is null)
 		{
-			Logger.LogError("Mesh geometry data download request has no staging buffers to download from!");
+			logger.LogError("Mesh geometry data download request has no staging buffers to download from!");
 			return false;
 		}
 
@@ -716,7 +812,7 @@ public sealed class Mesh : Resource
 			}
 			catch (Exception ex)
 			{
-				Logger.LogException($"Failed to map and download mesh geometry data of type '{typeof(T).Name}'", ex);
+				logger.LogException($"Failed to map and download mesh geometry data of type '{typeof(T).Name}'", ex);
 				return false;
 			}
 		}

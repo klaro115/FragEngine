@@ -6,6 +6,10 @@ using System.Diagnostics;
 
 namespace FragEngine3.Resources.Management;
 
+/// <summary>
+/// A file gathering service managed by the <see cref="ResourceManager"/>.
+/// This type is responsible for finding and registering all of the app's resource files.
+/// </summary>
 public sealed class ResourceFileGatherer : IDisposable
 {
 	#region Types
@@ -28,6 +32,7 @@ public sealed class ResourceFileGatherer : IDisposable
 	public ResourceFileGatherer(ResourceManager _resourceManager)
 	{
 		resourceManager = _resourceManager ?? throw new ArgumentNullException(nameof(_resourceManager), "Resource manager may not be null!");
+		logger = resourceManager.engine.Logger;
 
 		string? entryPath = Path.GetDirectoryName(System.Reflection.Assembly.GetEntryAssembly()?.Location);
 		applicationPath = entryPath ?? Environment.CurrentDirectory;
@@ -47,6 +52,7 @@ public sealed class ResourceFileGatherer : IDisposable
 	#region Fields
 
 	public readonly ResourceManager resourceManager;
+	private readonly Logger logger;
 	private readonly Stopwatch stopwatch = new();
 
 	public readonly string applicationPath = string.Empty;
@@ -65,9 +71,9 @@ public sealed class ResourceFileGatherer : IDisposable
 
 	public bool IsDisposed { get; private set; } = false;
 
-	public bool IsRunning => !IsDisposed && gatherProgress != null && !gatherProgress.IsFinished;
+	public bool IsRunning => !IsDisposed && gatherProgress is not null && !gatherProgress.IsFinished;
 
-	private bool IsCancelRequested => gatherThreadCancellationSrc == null || gatherThreadCancellationSrc.IsCancellationRequested;
+	private bool IsCancelRequested => gatherThreadCancellationSrc is null || gatherThreadCancellationSrc.IsCancellationRequested;
 
 	#endregion
 	#region Methods
@@ -101,6 +107,9 @@ public sealed class ResourceFileGatherer : IDisposable
 		stopwatch.Stop();
 	}
 
+	/// <summary>
+	/// Aborts any ongoing file gathering processes.
+	/// </summary>
 	public void AbortGathering()
 	{
 		gatherThreadCancellationSrc?.Cancel();
@@ -123,8 +132,32 @@ public sealed class ResourceFileGatherer : IDisposable
 		gatherProgress?.Finish();
 	}
 
+	/// <summary>
+	/// Aborts any ongoing file gathering processes.<para/>
+	/// This is an asynchronous overload of <see cref="AbortGathering"/> that can be awaited.
+	/// </summary>
+	public Task AbortGatheringAsync()
+	{
+		AbortGathering();
+		return Task.CompletedTask;
+	}
+
+	/// <summary>
+	/// Identifies and gathers all resource files.
+	/// </summary>
+	/// <param name="_gatherImmediately">Whether to run the gathering process immediately and block until it concludes.
+	/// If false, the gathering process will run asynchronously in a background thread.</param>
+	/// <param name="_outProgress">Outputs a progress object for tracking the gathering process's progressive completion.</param>
+	/// <returns>True if the file gathering process concluded successfully, false otherwise.</returns>
 	public bool GatherAllResources(bool _gatherImmediately, out Progress _outProgress)
 	{
+		if (IsRunning)
+		{
+			logger.LogError("Cannot gather resources; another gathering process is already running!");
+			_outProgress = gatherProgress!;
+			return false;
+		}
+
 		gatherProgress = new("Starting resource gathering...", 1);
 		_outProgress = gatherProgress;
 
@@ -146,7 +179,7 @@ public sealed class ResourceFileGatherer : IDisposable
 				gatherThreadCancellationSrc.Cancel();
 				gatherThreadCancellationSrc.Dispose();
 
-				resourceManager.engine.Logger.LogException("Failed to start resource file gathering thread!", ex);
+				logger.LogException("Failed to start resource file gathering thread!", ex);
 				_outProgress.Finish();
 				return false;
 			}
@@ -155,34 +188,57 @@ public sealed class ResourceFileGatherer : IDisposable
 		return true;
 	}
 
+	/// <summary>
+	/// Asynchronously identifies and gathers all resource files.
+	/// </summary>
+	/// <param name="_progress">A newly created progress object for tracking the gathering process's progressive completion.
+	/// The title and task counts of this instance will be overwritten by this method.</param>
+	/// <returns>True if the file gathering process concluded successfully, false otherwise.</returns>
+	public async Task<bool> GatherAllResourcesAsync(Progress _progress)
+	{
+		if (IsRunning)
+		{
+			logger.LogError("Cannot gather resources; another gathering process is already running!");
+			return false;
+		}
+
+		_progress.Update("Starting resource gathering...", 0, 1);
+		gatherProgress = _progress;
+
+		gatherThreadCancellationSrc = new();
+
+		await Task.Run(RunFileGatherThread, gatherThreadCancellationSrc.Token);
+		return true;
+	}
+
 	private void RunFileGatherThread()
 	{
 		stopwatch.Restart();
 		libraries.Clear();
 
-		resourceManager.engine.Logger.LogMessage("# Initializing resource system...");
+		logger.LogMessage("# Initializing resource system...");
 
 		if (!IsCancelRequested && !VerifyResourceDirectories())
 		{
-			resourceManager.engine.Logger.LogError("Failed to verify or create main resource directories!");
+			logger.LogError("Failed to verify or create main resource directories!");
 			goto exit;
 		}
 
 		if (!IsCancelRequested && !GatherAllLibraries())
 		{
-			resourceManager.engine.Logger.LogError("Failed to gather resource libraries!");
+			logger.LogError("Failed to gather resource libraries!");
 			goto exit;
 		}
 
 		if (!IsCancelRequested && !GatherResourceFiles())
 		{
-			resourceManager.engine.Logger.LogError("Failed to gather resource files!");
+			logger.LogError("Failed to gather resource files!");
 			goto exit;
 		}
 
 		gatherProgress?.CompleteAllTasks();
 
-		resourceManager.engine.Logger.LogMessage($"# Finished initializing resource system. ({stopwatch.ElapsedMilliseconds} ms)\n");
+		logger.LogMessage($"# Finished initializing resource system. ({stopwatch.ElapsedMilliseconds} ms)\n");
 
 	exit:
 		// Terminate progress:
@@ -190,7 +246,7 @@ public sealed class ResourceFileGatherer : IDisposable
 		gatherProgress?.Finish();
 
 		// Purge thread data as it exits:
-		if (gatherThreadCancellationSrc != null)
+		if (gatherThreadCancellationSrc is not null)
 		{
 			gatherThreadCancellationSrc.Cancel();
 			gatherThreadCancellationSrc.Dispose();
@@ -205,20 +261,20 @@ public sealed class ResourceFileGatherer : IDisposable
 		int progressTaskCount = 3 + ResourceConstants.coreResourceLibraries.Count;
 		gatherProgress?.Update("Verifying resource directories", 0, progressTaskCount);
 
-		resourceManager.engine.Logger.LogMessage("+ Verifying resource directories...");
+		logger.LogMessage("+ Verifying resource directories...");
 
 		try
 		{
 			// Verify root & application directories:
 			if (!Directory.Exists(rootResourcePath))
 			{
-				resourceManager.engine.Logger.LogMessage("  - Creating resource root directory.");
+				logger.LogMessage("  - Creating resource root directory.");
 				Directory.CreateDirectory(rootResourcePath);
 			}
 			gatherProgress?.Increment();
 			if (!Directory.Exists(coreResourcePath))
 			{
-				resourceManager.engine.Logger.LogMessage("  - Creating core resource directory.");
+				logger.LogMessage("  - Creating core resource directory.");
 				Directory.CreateDirectory(coreResourcePath);
 			}
 			gatherProgress?.Increment();
@@ -229,7 +285,7 @@ public sealed class ResourceFileGatherer : IDisposable
 				string coreLibPath = Path.Combine(coreResourcePath, coreLibName);
 				if (!Directory.Exists(coreLibPath))
 				{
-					resourceManager.engine.Logger.LogMessage($"    * Creating core library '{coreLibName}'.");
+					logger.LogMessage($"    * Creating core library '{coreLibName}'.");
 					Directory.CreateDirectory(coreLibPath);
 				}
 				gatherProgress?.Increment();
@@ -238,28 +294,28 @@ public sealed class ResourceFileGatherer : IDisposable
 			// Verify mod directory:
 			if (!Directory.Exists(modsResourcePath))
 			{
-				resourceManager.engine.Logger.LogMessage("  - Creating mod resource directory.");
+				logger.LogMessage("  - Creating mod resource directory.");
 				Directory.CreateDirectory(modsResourcePath);
 			}
 			gatherProgress?.Increment();
 
 			long endTimeMs = stopwatch.ElapsedMilliseconds;
 			long durationMs = endTimeMs - startTimeMs;
-			resourceManager.engine.Logger.LogMessage($"+ All resource directories verified. ({durationMs} ms)");
+			logger.LogMessage($"+ All resource directories verified. ({durationMs} ms)");
 
 			return true;
 		}
 		catch (IOException ex)
 		{
-			resourceManager.engine.Logger.LogException("An IO exception was caught while creating missing resource directory!", ex);
+			logger.LogException("An IO exception was caught while creating missing resource directory!", ex);
 		}
 		catch (UnauthorizedAccessException ex)
 		{
-			resourceManager.engine.Logger.LogException("An authorization exception was caught while creating missing resource directory! Make sure you have permission to write to the application's root folder!", ex);
+			logger.LogException("An authorization exception was caught while creating missing resource directory! Make sure you have permission to write to the application's root folder!", ex);
 		}
 		catch (Exception ex)
 		{
-			resourceManager.engine.Logger.LogException("An exception was caught while creating missing resource directories!", ex);
+			logger.LogException("An exception was caught while creating missing resource directories!", ex);
 		}
 
 		gatherProgress?.UpdateTitle("Resource directory verification failed");
@@ -272,7 +328,7 @@ public sealed class ResourceFileGatherer : IDisposable
 		int progressTaskCount = 2 + ResourceConstants.coreResourceLibraries.Count;
 		gatherProgress?.Update("+ Gathering all resource libraries", 0, progressTaskCount);
 
-		resourceManager.engine.Logger.LogMessage("+ Gathering all resource libraries...");
+		logger.LogMessage("+ Gathering all resource libraries...");
 
 		// Core libs:
 		foreach (string coreLibName in ResourceConstants.coreResourceLibraries)
@@ -280,7 +336,7 @@ public sealed class ResourceFileGatherer : IDisposable
 			string coreLibPath = Path.Combine(coreResourcePath, coreLibName);
 			libraries.Add(new(coreLibPath, coreLibName, ResourceSource.Core));
 
-			resourceManager.engine.Logger.LogMessage($"  - Found core library '{coreLibName}'.");
+			logger.LogMessage($"  - Found core library '{coreLibName}'.");
 			gatherProgress?.Increment();
 		}
 
@@ -297,13 +353,13 @@ public sealed class ResourceFileGatherer : IDisposable
 					string libName = PathTools.GetLastPartName(e.Current);
 					libraries.Add(new(e.Current, libName, ResourceSource.Application));
 
-					resourceManager.engine.Logger.LogMessage($"  - Found application library '{libName}'.");
+					logger.LogMessage($"  - Found application library '{libName}'.");
 				}
 			}
 		}
 		catch (Exception ex)
 		{
-			resourceManager.engine.Logger.LogException("Failed to gather application resource libraries!", ex);
+			logger.LogException("Failed to gather application resource libraries!", ex);
 			return false;
 		}
 		gatherProgress?.Increment();
@@ -318,19 +374,19 @@ public sealed class ResourceFileGatherer : IDisposable
 				string libName = PathTools.GetLastPartName(e.Current);
 				libraries.Add(new(e.Current, libName, ResourceSource.Mod));
 
-				resourceManager.engine.Logger.LogMessage($"  - Found mod library '{libName}'.");
+				logger.LogMessage($"  - Found mod library '{libName}'.");
 			}
 		}
 		catch (Exception ex)
 		{
-			resourceManager.engine.Logger.LogException("Failed to gather mod resource libraries!", ex);
+			logger.LogException("Failed to gather mod resource libraries!", ex);
 			return false;
 		}
 		gatherProgress?.Increment();
 
 		long endTimeMs = stopwatch.ElapsedMilliseconds;
 		long durationMs = endTimeMs - startTimeMs;
-		resourceManager.engine.Logger.LogMessage($"+ All resource libraries gathered. ({durationMs} ms)");
+		logger.LogMessage($"+ All resource libraries gathered. ({durationMs} ms)");
 		return true;
 	}
 
@@ -341,7 +397,7 @@ public sealed class ResourceFileGatherer : IDisposable
 		long startTimeMs = stopwatch.ElapsedMilliseconds;
 		gatherProgress?.Update("+ Gathering all resource files", 0, libraries.Count);
 
-		resourceManager.engine.Logger.LogMessage("+ Gathering all resource files...");
+		logger.LogMessage("+ Gathering all resource files...");
 
 		Dictionary<string, ResourceHandle> allResourceHandles = new(256);
 
@@ -448,7 +504,7 @@ public sealed class ResourceFileGatherer : IDisposable
 			}
 			catch (Exception ex)
 			{
-				resourceManager.engine.Logger.LogException($"Failed to gather resource files from library '{lib.path}'!", ex);
+				logger.LogException($"Failed to gather resource files from library '{lib.path}'!", ex);
 				return false;
 			}
 
@@ -458,22 +514,22 @@ public sealed class ResourceFileGatherer : IDisposable
 
 			if (libFileCount != 0 || libFileFailed != 0)
 			{
-				resourceManager.engine.Logger.LogMessage($"  - Loaded library '{lib.name}' - Resources: {libResourceCount}, Files: {libFileCount}, Errors: {libFileFailed}");
+				logger.LogMessage($"  - Loaded library '{lib.name}' - Resources: {libResourceCount}, Files: {libFileCount}, Errors: {libFileFailed}");
 			}
 			gatherProgress?.Increment();
 		}
 
 		// Log some numbers for the nerds:
-		resourceManager.engine.Logger.LogMessage($"  - Found {totalResourceCount} resources in {totalFileCount} files across {libraries.Count} libraries.");
+		logger.LogMessage($"  - Found {totalResourceCount} resources in {totalFileCount} files across {libraries.Count} libraries.");
 		if (totalResourcesReplaced > 0)
 		{
 			float replacedPercentage = (100.0f * totalResourcesReplaced) / totalResourceCount;
-			resourceManager.engine.Logger.LogMessage($"  - Mods detected: {totalResourcesReplaced}/{totalResourceCount} ({replacedPercentage:00.#}%) resources were replaced across {modLibCount} mod libraries.");
+			logger.LogMessage($"  - Mods detected: {totalResourcesReplaced}/{totalResourceCount} ({replacedPercentage:00.#}%) resources were replaced across {modLibCount} mod libraries.");
 		}
 
 		long endTimeMs = stopwatch.ElapsedMilliseconds;
 		long durationMs = endTimeMs - startTimeMs;
-		resourceManager.engine.Logger.LogMessage($"+ All resource files gathered. ({durationMs} ms)");
+		logger.LogMessage($"+ All resource files gathered. ({durationMs} ms)");
 
 		// RESOURCES:
 
@@ -481,7 +537,7 @@ public sealed class ResourceFileGatherer : IDisposable
 		startTimeMs = stopwatch.ElapsedMilliseconds;
 		gatherProgress?.Update("+ Registering all resource handles", 0, allResourceHandles.Count);
 
-		IEnumerator<KeyValuePair<string, ResourceHandle>> resourceEnumerator = allResourceHandles.GetEnumerator();
+		Dictionary<string, ResourceHandle>.Enumerator resourceEnumerator = allResourceHandles.GetEnumerator();
 		while (!IsCancelRequested && resourceEnumerator.MoveNext())
 		{
 			resourceManager.AddResource(resourceEnumerator.Current.Value);
@@ -489,7 +545,7 @@ public sealed class ResourceFileGatherer : IDisposable
 
 		endTimeMs = stopwatch.ElapsedMilliseconds;
 		durationMs = endTimeMs - startTimeMs;
-		resourceManager.engine.Logger.LogMessage($"+ All resource handles registered. ({durationMs} ms)");
+		logger.LogMessage($"+ All resource handles registered. ({durationMs} ms)");
 
 		return true;
 	}

@@ -31,12 +31,12 @@ internal sealed class Dx11GraphicsCore(GraphicsSystem _graphicsSystem, EngineCon
 	{
 		if (IsDisposed)
 		{
-			Logger.LogError("Cannot initialize disposed D3D graphics devices!");
+			logger.LogError("Cannot initialize disposed D3D graphics devices!");
 			return false;
 		}
 		if (IsInitialized)
 		{
-			Logger.LogError("D3D graphics devices are already initialized!");
+			logger.LogError("D3D graphics devices are already initialized!");
 			return true;
 		}
 
@@ -113,13 +113,13 @@ internal sealed class Dx11GraphicsCore(GraphicsSystem _graphicsSystem, EngineCon
 			Device.MainSwapchain.Name = "Swapchain_Main";
 
 			Console.WriteLine("done.");
-			Logger.LogMessage("# Initializing D3D graphics device... done.", true);
+			logger.LogMessage("# Initializing D3D graphics device... done.", true);
 		}
 		catch (Exception ex)
 		{
 			Console.WriteLine("FAIL.");
-			Logger.LogMessage("# Initializing D3D graphics device... FAIL.", true);
-			Logger.LogException("Failed to create system default D3D graphics device!", ex);
+			logger.LogMessage("# Initializing D3D graphics device... FAIL.", true);
+			logger.LogException("Failed to create system default D3D graphics device!", ex);
 			Shutdown();
 			stopwatch.Stop();
 			return false;
@@ -128,21 +128,21 @@ internal sealed class Dx11GraphicsCore(GraphicsSystem _graphicsSystem, EngineCon
 		if (Device != null)
 		{
 			// Log general GPU information:
-			Logger.LogMessage("+ Graphics device details:");
-			Logger.LogMessage($"  - Name: {Device.DeviceName}");
-			Logger.LogMessage($"  - Vendor: {Device.VendorName}");
-			Logger.LogMessage($"  - Backend: {Device.BackendType}");
-			Logger.LogMessage($"  - API version: {Device.ApiVersion}");
+			logger.LogMessage("+ Graphics device details:");
+			logger.LogMessage($"  - Name: {Device.DeviceName}");
+			logger.LogMessage($"  - Vendor: {Device.VendorName}");
+			logger.LogMessage($"  - Backend: {Device.BackendType}");
+			logger.LogMessage($"  - API version: {Device.ApiVersion}");
 
 			// Log GPU features:
 			GraphicsDeviceFeatures features = Device.Features;
-			Logger.LogMessage("+ Graphics device features:");
-			Logger.LogMessage($"  - Compute shader: {features.ComputeShader}");
-			Logger.LogMessage($"  - Geometry shader: {features.GeometryShader}");
-			Logger.LogMessage($"  - Tesselation: {features.TessellationShaders}");
-			Logger.LogMessage($"  - Structured buffers: {features.StructuredBuffer}");
-			Logger.LogMessage($"  - 1D textures: {features.Texture1D}");
-			Logger.LogMessage($"  - Float64 in shaders: {features.ShaderFloat64}");
+			logger.LogMessage("+ Graphics device features:");
+			logger.LogMessage($"  - Compute shader: {features.ComputeShader}");
+			logger.LogMessage($"  - Geometry shader: {features.GeometryShader}");
+			logger.LogMessage($"  - Tesselation: {features.TessellationShaders}");
+			logger.LogMessage($"  - Structured buffers: {features.StructuredBuffer}");
+			logger.LogMessage($"  - 1D textures: {features.Texture1D}");
+			logger.LogMessage($"  - Float64 in shaders: {features.ShaderFloat64}");
 			{
 				capabilities.computeShaders = features.ComputeShader;
 				capabilities.geometryShaders = features.GeometryShader;
@@ -153,12 +153,12 @@ internal sealed class Dx11GraphicsCore(GraphicsSystem _graphicsSystem, EngineCon
 			// Log D3D specific information:
 			if (Device.GetD3D11Info(out BackendInfoD3D11 d3dInfo))
 			{
-				Logger.LogMessage("+ D3D device details:");
-				Logger.LogMessage($"  - PCI ID: {d3dInfo.DeviceId}");
+				logger.LogMessage("+ D3D device details:");
+				logger.LogMessage($"  - PCI ID: {d3dInfo.DeviceId}");
 			}
 			else
 			{
-				Logger.LogError("Could not query D3D device details!");
+				logger.LogError("Could not query D3D device details!");
 			}
 		}
 
@@ -166,10 +166,13 @@ internal sealed class Dx11GraphicsCore(GraphicsSystem _graphicsSystem, EngineCon
 
 		stopwatch.Stop();
 
-		isInitialized = Device != null && Window != null;
+		isInitialized = Device is not null && Window is not null;
 		if (isInitialized)
 		{
-			Logger.LogMessage($"# Finished initializing D3D graphics device. ({stopwatch.ElapsedMilliseconds} ms)\n");
+			logger.LogMessage($"# Finished initializing D3D graphics device. ({stopwatch.ElapsedMilliseconds} ms)\n");
+
+			Window!.Closing += OnWindowClosing;
+			Window.Resized += OnWindowResized;
 		}
 
 		quitMessageReceived = false;

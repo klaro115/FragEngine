@@ -1,5 +1,4 @@
-﻿
-using FragEngine3.EngineCore;
+﻿using FragEngine3.EngineCore;
 using System.Collections.Frozen;
 
 namespace FragEngine3.Scenes.EventSystem
@@ -31,6 +30,7 @@ namespace FragEngine3.Scenes.EventSystem
         OnSceneSaved,       // Scene has finished saving to file and is ready for use again. data = saved scene (Scene)
 		OnSceneLoaded,      // Scene has finished loading and is ready for use. data = loaded scene (Scene)
 		OnSceneUnloaded,    // Scene has been fully unloaded and may now be removed. data = unloaded scene (Scene)
+        OnWorldOriginShift, // Scene's world origin was shifted, to center different content. data = coordinate shift (Vector2)
 
 		// NODE EVENTS:
 
@@ -62,6 +62,9 @@ namespace FragEngine3.Scenes.EventSystem
             new(SceneEventType.MainUpdate, typeof(IOnMainUpdateListener)),
             new(SceneEventType.LateUpdate, typeof(IOnLateUpdateListener)),
             new(SceneEventType.FixedUpdate, typeof(IOnFixedUpdateListener)),
+
+            // Scene Events:
+            new(SceneEventType.OnWorldOriginShift, typeof(IOnWorldOriginShiftListener)),
 
             // Node Events:
             new(SceneEventType.OnNodeDestroyed, typeof(IOnNodeDestroyedListener)),

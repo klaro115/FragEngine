@@ -58,7 +58,7 @@ public class Material(GraphicsCore _core, ResourceHandle _handle) : Resource(_ha
 	#region Fields
 
 	public readonly GraphicsCore core = _core ?? throw new ArgumentNullException(nameof(_core), "Graphics core may not be null!");
-	private readonly Logger logger = _core.graphicsSystem.engine.Logger;
+	private readonly Logger logger = _core.graphicsSystem.Engine.Logger;
 
 	private uint materialVersion = 1000;
 
@@ -171,9 +171,9 @@ public class Material(GraphicsCore _core, ResourceHandle _handle) : Resource(_ha
 			shaderSetDescs = new VersionedMember<ShaderSetDescription>[minVariantCount];
 
 			oldShaderSetDescs?.CopyTo(shaderSetDescs, 0);
-			for (int j = oldShaderSetDescCount; j < shaderSetDescs.Length; ++j)
+			for (int i = oldShaderSetDescCount; i < shaderSetDescs.Length; ++i)
 			{
-				shaderSetDescs[j] = new(default, 0);
+				shaderSetDescs[i] = new(default, 0);
 			}
 		}
 	}
@@ -552,7 +552,7 @@ public class Material(GraphicsCore _core, ResourceHandle _handle) : Resource(_ha
 			return false;
 		}
 
-		Logger logger = _graphicsCore.graphicsSystem.engine.Logger ?? Logger.Instance!;
+		Logger logger = _graphicsCore.graphicsSystem.Engine.Logger ?? Logger.Instance!;
 
 		if (_resourceHandle is null || !_resourceHandle.IsValid)
 		{

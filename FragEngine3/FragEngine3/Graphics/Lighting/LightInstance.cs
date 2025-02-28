@@ -2,7 +2,6 @@
 using FragEngine3.Graphics.Cameras;
 using FragEngine3.Graphics.Components;
 using FragEngine3.Graphics.Components.Data;
-using FragEngine3.Graphics.Components.Internal;
 using FragEngine3.Graphics.Contexts;
 using FragEngine3.Graphics.Lighting.Data;
 using FragEngine3.Graphics.Lighting.Internal;
@@ -165,7 +164,7 @@ internal abstract class LightInstance(GraphicsCore _core) : ILightSource
 
 	public GraphicsCore GraphicsCore { get; } = _core;
 
-	protected Logger Logger => GraphicsCore.graphicsSystem.engine.Logger;
+	protected Logger Logger => GraphicsCore.graphicsSystem.Engine.Logger;
 
 	#endregion
 	#region Methods

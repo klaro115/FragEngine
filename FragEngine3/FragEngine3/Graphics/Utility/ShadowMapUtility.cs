@@ -68,7 +68,7 @@ public static class ShadowMapUtility
 			catch (Exception ex)
 			{
 				_cameraInstance = null!;
-				Logger? logger = _graphicsCore?.graphicsSystem.engine.Logger ?? Logger.Instance;
+				Logger? logger = _graphicsCore?.graphicsSystem.Engine.Logger ?? Logger.Instance;
 				logger?.LogException("Failed to create camera instance for shadow map rendering!", ex);
 				return false;
 			}

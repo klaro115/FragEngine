@@ -1,7 +1,4 @@
-﻿using FragAssetFormats.Geometry;
-using FragAssetFormats.Geometry.OBJ;
-using FragAssetFormats.Images;
-using FragAssetFormats.Shaders.FSHA;
+﻿using FragAssetFormats.Extensions;
 using FragEngine3.EngineCore;
 using FragEngine3.EngineCore.Config;
 using TestApp.Application;
@@ -10,7 +7,7 @@ Console.WriteLine("### Starting...\n");
 
 EngineConfig config = new();
 //config.Graphics.PreferNativeFramework = false;	// default to Vulkan
-//config.Graphics.CenterWindowOnScreen = false;
+config.Graphics.CenterWindowOnScreen = false;
 
 Engine? engine = null;
 try
@@ -19,20 +16,7 @@ try
 	//engine = new(new TestEmptyAppLogic(), config);
 
 	// Register services and importers:
-	{
-		// 3D formats:
-		engine.GraphicsResourceLoader.RegisterModelImporter(new ObjImporter());
-		engine.GraphicsResourceLoader.RegisterModelImporter(new FbxImporter());
-
-		// Shader formats:
-		engine.GraphicsResourceLoader.RegisterShaderImporter(new FshaImporter());
-
-		// Image formats:
-		engine.GraphicsResourceLoader.RegisterImageImporter(new BitmapImporter());
-		engine.GraphicsResourceLoader.RegisterImageImporter(new QoiImporter());
-		//...
-		engine.GraphicsResourceLoader.RegisterImageImporter(new MagickImporter()); //fallback
-	}
+	engine.RegisterAssetFormatImporters();
 
 	engine.Run();
 }
