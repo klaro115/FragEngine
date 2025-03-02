@@ -43,6 +43,8 @@ public abstract class MaterialNew : Resource
 	#endregion
 	#region Properties
 
+	public override ResourceType ResourceType => ResourceType.Material;
+
 	/// <summary>
 	/// Gets a resource handle for the replacement material that's used to render shadow maps for this material.
 	/// </summary>
@@ -160,9 +162,9 @@ public abstract class MaterialNew : Resource
 	/// </summary>
 	/// <param name="_sceneCtx">A context object with rendering data for the current scene.</param>
 	/// <param name="_cameraCtx">A context object with rendering data for the current camera pass.</param>
-	/// <param name="_resourceSets">Outputs an array of all resource sets used by this material.</param>
+	/// <param name="_outResourceSets">Outputs an array of all resource sets used by this material.</param>
 	/// <returns>True if the material could be prepared, and resources are loaded for imminent rendering, false otherwise.</returns>
-	public abstract bool Prepare(in SceneContext _sceneCtx, in CameraPassContext _cameraCtx, out ResourceSet[]? _resourceSets);
+	public abstract bool Prepare(in SceneContext _sceneCtx, in CameraPassContext _cameraCtx, out ResourceSet[]? _outResourceSets);
 
 	//TODO: Create common methods for creating/updating common resource sets.
 
