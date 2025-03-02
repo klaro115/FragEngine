@@ -9,7 +9,7 @@ namespace FragEngine3.Graphics.ConstantBuffers.Internal;
 /// Use <see cref="SetValue{T}(in T)"/> to update constant values in an internal buffer; buffer contents are uploaded
 /// to the GPU-side buffer just before the first draw call using the material is issued.
 /// </summary>
-internal sealed record ConstantBufferSlot : IDisposable
+public sealed record ConstantBufferSlot : IDisposable
 {
 	#region Constructors
 
