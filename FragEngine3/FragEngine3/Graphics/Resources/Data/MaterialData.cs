@@ -11,6 +11,7 @@ namespace FragEngine3.Graphics.Resources.Data;
 /// </summary>
 [Serializable]
 [ResourceDataType(typeof(Material))]
+[Obsolete("Rewritten")]
 public sealed class MaterialData
 {
 	#region Properties

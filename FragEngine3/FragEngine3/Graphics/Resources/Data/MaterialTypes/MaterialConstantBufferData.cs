@@ -1,5 +1,6 @@
 ﻿namespace FragEngine3.Graphics.Resources.Data.MaterialTypes;
 
+[Obsolete("Rewritten")]
 public sealed class MaterialConstantData
 {
 	#region Properties
@@ -10,6 +11,7 @@ public sealed class MaterialConstantData
 	#endregion
 }
 
+[Obsolete("Rewritten")]
 public sealed class MaterialConstantBufferData
 {
 	#region Properties

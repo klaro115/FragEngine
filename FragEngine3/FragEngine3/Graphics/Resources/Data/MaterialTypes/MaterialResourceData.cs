@@ -3,6 +3,7 @@
 namespace FragEngine3.Graphics.Resources.Data.MaterialTypes;
 
 [Serializable]
+[Obsolete("Rewritten")]
 public sealed class MaterialResourceData
 {
 	#region Properties
