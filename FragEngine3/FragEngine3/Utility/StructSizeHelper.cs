@@ -47,16 +47,9 @@ public abstract class StructSizeHelper
 
 		// If the data type is a standard engine-defined constant buffer type, use its size:
 		ConstantBufferDataTypeAttribute? dataTypeAttribute = _structType.GetCustomAttribute<ConstantBufferDataTypeAttribute>();
-		if (dataTypeAttribute is not null && dataTypeAttribute.constantBufferType != ConstantBufferType.Custom)
+		if (dataTypeAttribute is not null)
 		{
-			return dataTypeAttribute.constantBufferType switch
-			{
-				ConstantBufferType.CBScene => CBScene.packedByteSize,
-				ConstantBufferType.CBCamera => CBCamera.packedByteSize,
-				ConstantBufferType.CBObject => CBObject.packedByteSize,
-				ConstantBufferType.CBDefaultSurface => CBDefaultSurface.packedByteSize,
-				_ => throw new Exception($"Invalid constant buffer type '{dataTypeAttribute.constantBufferType}'!"),
-			};
+			return (int)dataTypeAttribute.byteSize;
 		}
 
 		// If the data is a common scalar or vector type:
