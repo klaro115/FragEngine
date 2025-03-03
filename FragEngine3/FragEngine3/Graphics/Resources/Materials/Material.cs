@@ -10,6 +10,7 @@ using Veldrid;
 
 namespace FragEngine3.Graphics.Resources.Materials;
 
+[Obsolete("Rewritten")]
 public class Material(GraphicsCore _core, ResourceHandle _handle) : Resource(_handle)
 {
 	#region Types

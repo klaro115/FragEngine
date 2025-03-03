@@ -2,6 +2,7 @@
 
 namespace FragEngine3.Graphics.Resources.Data.MaterialTypes;
 
+[Obsolete("Replaced")]
 public readonly struct MaterialBoundResourceKeys(string _resourceKey, int _resourceIdx, uint _slotIdx, ResourceKind _resourceKind, string? _description)
 {
 	#region Fields

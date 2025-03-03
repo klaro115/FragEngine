@@ -2,7 +2,10 @@
 using FragEngine3.Graphics.ConstantBuffers;
 using FragEngine3.Graphics.Resources.Data.MaterialTypes;
 using FragEngine3.Graphics.Resources.Materials;
+using FragEngine3.Graphics.Resources.Materials.Internal;
 using FragEngine3.Resources.Data;
+using System.Security.Cryptography;
+using Veldrid;
 
 namespace FragEngine3.Graphics.Resources.Data;
 
@@ -154,6 +157,96 @@ public sealed class MaterialDataNew
 			}
 		}
 
+		return true;
+	}
+
+	/// <summary>
+	/// Tries to create a resource layout for a material's non-system resources, using the '<see cref="Resources"/>' array as definition.
+	/// </summary>
+	/// <param name="_graphicsCore">The graphics core through which the material should be rendered.</param>
+	/// <param name="_outLayout">Outputs the new resource layout. Null if no non-system resources are bound, or on failure.</param>
+	/// <returns>True if a resource layout was created successfully, or if no layout is needed, false on failure.</returns>
+	public bool CreateLayoutFromBoundResources(GraphicsCore _graphicsCore, out ResourceLayout? _outLayout)
+	{
+		if (_graphicsCore is null || !_graphicsCore.IsInitialized)
+		{
+			Logger.Instance?.LogError("Cannot create resource layout for material's bound resources using null or uninitialized graphics core!");
+			_outLayout = null;
+			return false;
+		}
+
+		// Get resource count; no layout is needed if no resources are bound:
+		int resourceCount = Resources is not null ? Resources.Length : 0;
+		if (resourceCount == 0)
+		{
+			_outLayout = null;
+			return true;
+		}
+
+		// Define layout elements from resource bindings:
+		ResourceLayoutElementDescription[] resLayoutElements = new ResourceLayoutElementDescription[resourceCount];
+		for (int i = 0; i < resourceCount; ++i)
+		{
+			MaterialResourceDataNew resourceData = Resources![i];
+			ResourceLayoutElementDescription element = new(
+				resourceData.SlotName,
+				resourceData.ResourceKind,
+				resourceData.ShaderStageFlags);
+			resLayoutElements[i] = element;
+		}
+
+		// Try creating the layout:
+		ResourceLayoutDescription resLayoutDesc = new(resLayoutElements);
+		try
+		{
+			_outLayout = _graphicsCore.MainFactory.CreateResourceLayout(ref resLayoutDesc);
+			_outLayout.Name = $"ResLayoutBound_{ResourceKey ?? "NULL"}";
+			return true;
+		}
+		catch (Exception ex)
+		{
+			_graphicsCore.graphicsSystem.Engine.Logger.LogException($"Failed to create bound resource layout! (Resource key: '{ResourceKey}')", ex);
+			_outLayout = null;
+			return false;
+		}
+	}
+
+	public bool CreateBindingSlotsFromBoundResources(Action _funcMarkResourceSetDirty, out Dictionary<string, MaterialUserBoundResourceSlot> _outResourceSlotDict, out BindableResource?[] _outResourcesArray)
+	{
+		if (_funcMarkResourceSetDirty is null)
+		{
+			Logger.Instance?.LogError("Cannot create binding slots for material's bound resources using null MarkDirty delegate!");
+			_outResourceSlotDict = [];
+			_outResourcesArray = [];
+			return false;
+		}
+
+		// Get resource count; no slots are needed if no resources are bound:
+		int resourceCount = Resources is not null ? Resources.Length : 0;
+		if (resourceCount == 0)
+		{
+			_outResourceSlotDict = [];
+			_outResourcesArray = [];
+			return true;
+		}
+
+		// Prepare output buffers:
+		_outResourceSlotDict = new(resourceCount);
+		_outResourcesArray = new BindableResource[resourceCount];
+
+		// Try to create generic slots for each user-bound resource:
+		for (int i = 0; i < resourceCount; ++i)
+		{
+			MaterialResourceDataNew resourceData = Resources![i];
+			if (!MaterialUserBoundResourceSlot.CreateSlot(_outResourcesArray, i, _funcMarkResourceSetDirty, resourceData.ResourceKind, out MaterialUserBoundResourceSlot? slot))
+			{
+				Logger.Instance?.LogError($"Failed to create binding slot for material's bound resource '{resourceData}'!");
+				_outResourceSlotDict = [];
+				_outResourcesArray = [];
+				return false;
+			}
+			_outResourceSlotDict.Add(resourceData.SlotName, slot!);
+		}
 		return true;
 	}
 

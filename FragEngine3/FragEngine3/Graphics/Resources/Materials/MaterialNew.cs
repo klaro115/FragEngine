@@ -67,6 +67,71 @@ public abstract class MaterialNew : Resource
 	#region Methods
 
 	/// <summary>
+	/// Creates a new graphics pipeline for a specific renderer's use-case.
+	/// </summary>
+	/// <param name="_sceneCtx">A context object with rendering data for the current scene.</param>
+	/// <param name="_cameraCtx">A context object with rendering data for the current camera pass.</param>
+	/// <param name="_vertexDataFlags">Bit flags of all vertex data flags that are available and used by the renderer.
+	/// For standard surface materials, at least the '<see cref="MeshVertexDataFlags.BasicSurfaceData"/>' flag must be raised.
+	/// For compute shader materials, this value is ignored.</param>
+	/// <param name="_outPipelineState">Outputs a new pipeline state object for the specified vertex data configuration, or null on failure.</param>
+	/// <returns>True if the pipeline could be (re)created and is ready for binding to the graphics device, false otherwise.</returns>
+	public abstract bool CreatePipeline(in SceneContext _sceneCtx, in CameraPassContext _cameraCtx, MeshVertexDataFlags _vertexDataFlags, out PipelineState? _outPipelineState);
+
+	/// <summary>
+	/// Prepares that material's resources for rendering and binds resources and shaders to the graphics pipeline.
+	/// </summary>
+	/// <param name="_sceneCtx">A context object with rendering data for the current scene.</param>
+	/// <param name="_cameraCtx">A context object with rendering data for the current camera pass.</param>
+	/// <param name="_outResourceSets">Outputs an array of all resource sets used by this material.</param>
+	/// <returns>True if the material could be prepared, and resources are loaded for imminent rendering, false otherwise.</returns>
+	public abstract bool Prepare(in SceneContext _sceneCtx, in CameraPassContext _cameraCtx, out ResourceSet[]? _outResourceSets);
+
+	#endregion
+	#region Methods Common
+
+	/// <summary>
+	/// Tries to create a new resource set for user-bound resources (i.e. resources not managed by the engine).
+	/// </summary>
+	/// <param name="_resourceLayout">A resource layout describing the layout and types of bound resources.</param>
+	/// <param name="_outResourceSet">Outputs a new resource set matching the given layout, and containing the given resources. Null on failure.</param>
+	/// <param name="_boundResources">An array of resources that shall be bound using this resource set.</param>
+	/// <returns>True if a new resource set was created successfully, false otherwise.</returns>
+	protected bool CreateResourceSetForBoundResources(ResourceLayout _resourceLayout, out ResourceSet? _outResourceSet, params BindableResource[] _boundResources)
+	{
+		if (_resourceLayout is null || _resourceLayout.IsDisposed)
+		{
+			logger.LogError($"Cannot create resource set for bound resources using null or disposed layout! (Resource key: {resourceKey})");
+			_outResourceSet = null;
+			return false;
+		}
+		if (_boundResources is null || _boundResources.Length == 0)
+		{
+			logger.LogError($"Cannot populate resource set for bound resources using null or empty resources array! (Resource key: {resourceKey})");
+			_outResourceSet = null;
+			return false;
+		}
+
+		try
+		{
+			ResourceSetDescription resSetDesc = new(_resourceLayout, _boundResources);
+
+			_outResourceSet = graphicsCore.MainFactory.CreateResourceSet(ref resSetDesc);
+			_outResourceSet.Name = $"ResSetBound_{resourceKey}";
+			return true;
+		}
+		catch (Exception ex)
+		{
+			logger.LogException($"Failed to create resource set for bound resources! (Resource key: {resourceKey})", ex);
+			_outResourceSet = null;
+			return false;
+		}
+	}
+
+	#endregion
+	#region Methods Replacements
+
+	/// <summary>
 	/// Assigns a replacement material that'll be used to draw shadow maps for this material.
 	/// </summary>
 	/// <param name="_resourceKey">A resource key identifying the material resource.</param>
@@ -145,28 +210,12 @@ public abstract class MaterialNew : Resource
 		return true;
 	}
 
-	/// <summary>
-	/// Creates a new graphics pipeline for a specific renderer's use-case.
-	/// </summary>
-	/// <param name="_sceneCtx">A context object with rendering data for the current scene.</param>
-	/// <param name="_cameraCtx">A context object with rendering data for the current camera pass.</param>
-	/// <param name="_vertexDataFlags">Bit flags of all vertex data flags that are available and used by the renderer.
-	/// For standard surface materials, at least the '<see cref="MeshVertexDataFlags.BasicSurfaceData"/>' flag must be raised.
-	/// For compute shader materials, this value is ignored.</param>
-	/// <param name="_outPipelineState">Outputs a new pipeline state object for the specified vertex data configuration, or null on failure.</param>
-	/// <returns>True if the pipeline could be (re)created and is ready for binding to the graphics device, false otherwise.</returns>
-	public abstract bool CreatePipeline(in SceneContext _sceneCtx, in CameraPassContext _cameraCtx, MeshVertexDataFlags _vertexDataFlags, out PipelineState? _outPipelineState);
+	#endregion
+	#region Methods Resources
 
-	/// <summary>
-	/// Prepares that material's resources for rendering and binds resources and shaders to the graphics pipeline.
-	/// </summary>
-	/// <param name="_sceneCtx">A context object with rendering data for the current scene.</param>
-	/// <param name="_cameraCtx">A context object with rendering data for the current camera pass.</param>
-	/// <param name="_outResourceSets">Outputs an array of all resource sets used by this material.</param>
-	/// <returns>True if the material could be prepared, and resources are loaded for imminent rendering, false otherwise.</returns>
-	public abstract bool Prepare(in SceneContext _sceneCtx, in CameraPassContext _cameraCtx, out ResourceSet[]? _outResourceSets);
-
-	//TODO: Create common methods for creating/updating common resource sets.
+	public virtual bool SetResource<T>(string _slotName, T _newValue) where T : class, BindableResource => SetResource(_slotName, (BindableResource)_newValue);
+	public abstract bool SetResource(string _slotName, BindableResource _newValue);
+	public abstract bool SetResource(string _slotName, ResourceHandle _newValueHandle);
 
 	#endregion
 }

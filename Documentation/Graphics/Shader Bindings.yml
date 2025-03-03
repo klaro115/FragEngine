@@ -62,10 +62,10 @@ MATERIAL:                                 owned by material, semi-persistent
 
 
 ############################################
-# ShaderGen Example:
+# ShaderConfig Example:
 
-Import:     shadergen=At_Nyy_Ly100p000
-Backend:    D3D11, HLSL
+Description:  shadergen=At_Nyy_Ly100p000
+Backend:      D3D11, HLSL
 
 - SET 0:    ResSetCamera
   - CBScene                 b0

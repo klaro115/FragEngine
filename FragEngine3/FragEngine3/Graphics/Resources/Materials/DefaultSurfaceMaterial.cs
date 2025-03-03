@@ -2,6 +2,8 @@
 using FragEngine3.Graphics.Contexts;
 using FragEngine3.Graphics.Internal;
 using FragEngine3.Graphics.Resources.Data;
+using FragEngine3.Graphics.Resources.Materials.Internal;
+using FragEngine3.Graphics.Utility;
 using FragEngine3.Resources;
 using Veldrid;
 
@@ -26,9 +28,20 @@ public sealed class DefaultSurfaceMaterial : MaterialNew
 
 	public DefaultSurfaceMaterial(GraphicsCore _graphicsCore, ResourceHandle _resourceHandle, MaterialDataNew _data) : base(_graphicsCore, _resourceHandle, _data)
 	{
-		BufferDescription constantBufferDesc = new(CBDefaultSurface.packedByteSize, BufferUsage.UniformBuffer);
-		cbDefaultSurface = graphicsCore.MainFactory.CreateBuffer(ref constantBufferDesc);
-		cbDefaultSurface.Name = $"{CBDefaultSurface.NAME_IN_SHADER}_{resourceKey}";
+		if (!ConstantBufferUtility.CreateOrUpdateConstantBuffer(graphicsCore, resourceKey, CBDefaultSurface.byteSize, ref cbDefaultSurface, ref cbDefaultSurfaceData))
+		{
+			throw new Exception($"Failed to create default surface constant buffer! (Resource key: '{resourceKey}')");
+		}
+		if (!_data.CreateLayoutFromBoundResources(graphicsCore, out resLayoutUserBound))
+		{
+			Dispose();
+			throw new Exception($"Failed to create resource layout for non-system resources! (Resource key: '{resourceKey}')");
+		}
+		if (!_data.CreateBindingSlotsFromBoundResources(MarkResSetUserBoundDirty, out resourceSlotsUserBound, out resourcesUserBound))
+		{
+			Dispose();
+			throw new Exception($"Failed to create resource slots and buffers for non-system resources! (Resource key: '{resourceKey}')");
+		}
 	}
 
 	#endregion
@@ -38,6 +51,12 @@ public sealed class DefaultSurfaceMaterial : MaterialNew
 
 	private CBDefaultSurface cbDefaultSurfaceData = default;
 	private DeviceBuffer? cbDefaultSurface = null;
+
+	private ResourceLayout? resLayoutUserBound = null;
+	private ResourceSet? resSetUserBound = null;
+
+	private Dictionary<string, MaterialUserBoundResourceSlot> resourceSlotsUserBound;
+	private BindableResource?[] resourcesUserBound;
 
 	private ResourceSet[] resourceSets = [];
 
@@ -54,11 +73,14 @@ public sealed class DefaultSurfaceMaterial : MaterialNew
 		IsDisposed = true;
 
 		cbDefaultSurface?.Dispose();
-		
+		resLayoutUserBound?.Dispose();
+		resSetUserBound?.Dispose();
+
 		//...
 	}
 
 	public void MarkDirty() => dirtyFlags = DirtyFlags.ALL;
+	private void MarkResSetUserBoundDirty() => dirtyFlags |= DirtyFlags.BoundResources;
 
 	public override bool CreatePipeline(in SceneContext _sceneCtx, in CameraPassContext _cameraCtx, MeshVertexDataFlags _vertexDataFlags, out PipelineState? _outPipelineState)
 	{
@@ -78,13 +100,8 @@ public sealed class DefaultSurfaceMaterial : MaterialNew
 		// Update constant buffers:
 		if (dirtyFlags.HasFlag(DirtyFlags.CBDefaultSurface))
 		{
-			try
+			if (!ConstantBufferUtility.UpdateConstantBuffer(graphicsCore, resourceKey, ref cbDefaultSurface!, ref cbDefaultSurfaceData))
 			{
-				graphicsCore.Device.UpdateBuffer(cbDefaultSurface, 0, ref cbDefaultSurfaceData);
-			}
-			catch (Exception ex)
-			{
-				logger.LogException("Failed to update contents of default surface constant buffer!", ex);
 				_outResourceSets = null;
 				return false;
 			}
@@ -94,8 +111,12 @@ public sealed class DefaultSurfaceMaterial : MaterialNew
 		// Update bound resource sets:
 		if (dirtyFlags.HasFlag(DirtyFlags.BoundResources))
 		{
-			//TODO
-
+			resSetUserBound?.Dispose();
+			if (!CreateResourceSetForBoundResources(resLayoutUserBound!, out resSetUserBound, resourcesUserBound!))
+			{
+				_outResourceSets = null;
+				return false;
+			}
 			dirtyFlags &= ~DirtyFlags.BoundResources;
 		}
 
@@ -111,6 +132,69 @@ public sealed class DefaultSurfaceMaterial : MaterialNew
 		{
 			yield return handle;
 		}
+	}
+
+	#endregion
+	#region Methods Resources
+
+	private bool GetUserBoundResourceSlot(string _slotName, out MaterialUserBoundResourceSlot? _slot)
+	{
+		if (IsDisposed)
+		{
+			logger.LogError($"Cannot set value of user-bound resource slot of disposed default surface material!");
+			_slot = null;
+			return false;
+		}
+		if (string.IsNullOrEmpty(_slotName))
+		{
+			logger.LogError($"Cannot set value of user-bound resource slot of default surface material '{resourceKey}' using null or blank slot name!");
+			_slot = null;
+			return false;
+		}
+		if (!resourceSlotsUserBound.TryGetValue(_slotName, out _slot))
+		{
+			logger.LogWarning($"Default surface material '{resourceKey}' does not have a user-bound resource slot named '{_slotName}'");
+			return false;
+		}
+		return true;
+	}
+
+	public override bool SetResource<T>(string _slotName, T _newValue)
+	{
+		if (!GetUserBoundResourceSlot(_slotName, out MaterialUserBoundResourceSlot? slot))
+		{
+			return false;
+		}
+		if (slot is not MaterialUserBoundResourceSlot<T> typedSlot)
+		{
+			logger.LogError($"Type mismatch on user-bound resource slot named '{_slotName}' of default surface material '{resourceKey}'! ()");
+			return false;
+		}
+
+		typedSlot.Value = _newValue;
+		return true;
+	}
+
+	public override bool SetResource(string _slotName, BindableResource _newValue)
+	{
+		if (!GetUserBoundResourceSlot(_slotName, out MaterialUserBoundResourceSlot? slot))
+		{
+			return false;
+		}
+
+		bool success = slot!.SetValue(_newValue);
+		return success;
+	}
+
+	public override bool SetResource(string _slotName, ResourceHandle _newValueHandle)
+	{
+		if (!GetUserBoundResourceSlot(_slotName, out MaterialUserBoundResourceSlot? slot))
+		{
+			return false;
+		}
+
+		bool success = slot!.SetValue(_newValueHandle);
+		return success;
 	}
 
 	#endregion

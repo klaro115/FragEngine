@@ -100,7 +100,6 @@ No support is planned for the foreseeable future. Android will have to wait unti
     - Rework materials:
         - Split material type into standard/user variants
         - Support for user-supplied constant buffers
-        - Standard shader constant buffer _(i.e. CBDefaultSurface)_
 - Physics engine _(Bullet Physics)_
 - Linux support:
     - SPIR-V shader support **[Pipeline creation fails]**
@@ -128,6 +127,8 @@ The following is a rough and very short-sighted roadmap of features that are goi
     - Constant buffer data:
         - Add timestamps to CBScene
         - Add focal positions to CBCamera
+- Architecture:
+    - Add dependency injection for engine systems
 - UI:
     - Text rendering
     - Basic UI controls _(labels, buttons, etc.)_

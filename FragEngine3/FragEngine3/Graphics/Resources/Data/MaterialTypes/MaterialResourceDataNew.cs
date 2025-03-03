@@ -29,5 +29,10 @@ public sealed class MaterialResourceDataNew
 		return result;
 	}
 
+	public override string ToString()
+	{
+		return $"Slot index: {SlotIndex}, Slot name: {SlotName ?? "NULL"}, Type: '{ResourceKind}', Stages: '{ShaderStageFlags}', Resource key: '{ResourceKey ?? "NULL"}'";
+	}
+
 	#endregion
 }
