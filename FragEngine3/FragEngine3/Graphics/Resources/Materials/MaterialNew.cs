@@ -52,7 +52,7 @@ public abstract class MaterialNew : Resource
 	/// <summary>
 	/// Gets the replacement material that's used to render shadow maps for this material.
 	/// </summary>
-	public Material? ShadowMaterial { get; private set; } = null;
+	public MaterialNew? ShadowMaterial { get; private set; } = null;
 
 	/// <summary>
 	/// Gets a resource handle for the replacement material that's used to render simplified versions or distant LODs of this material.
@@ -61,7 +61,7 @@ public abstract class MaterialNew : Resource
 	/// <summary>
 	/// Gets the replacement material that's used to render simplified versions or distant LODs of this material.
 	/// </summary>
-	public Material? SimplifiedMaterial { get; private set; } = null;
+	public MaterialNew? SimplifiedMaterial { get; private set; } = null;
 
 	#endregion
 	#region Methods
@@ -140,8 +140,7 @@ public abstract class MaterialNew : Resource
 	/// <returns>True if the new replacement material could be loaded and assigned, false otherwise.</returns>
 	public bool SetShadowMaterial(string _resourceKey, bool _loadImmediately = false)
 	{
-		ResourceHandle handle;
-		if (string.IsNullOrEmpty(_resourceKey) || !resourceManager.GetResource(_resourceKey, out handle))
+		if (string.IsNullOrEmpty(_resourceKey) || !resourceManager.GetResource(_resourceKey, out ResourceHandle handle))
 		{
 			handle = ResourceHandle.None;
 		}
@@ -166,7 +165,7 @@ public abstract class MaterialNew : Resource
 		}
 
 		ShadowMaterialHandle = _handle;
-		ShadowMaterial = ShadowMaterialHandle.GetResource<Material>(_loadImmediately);
+		ShadowMaterial = ShadowMaterialHandle.GetResource<MaterialNew>(_loadImmediately);
 
 		// Unassign shadow material if loading has failed:
 		if (_loadImmediately && ShadowMaterial is null)
@@ -183,7 +182,7 @@ public abstract class MaterialNew : Resource
 	/// </summary>
 	/// <param name="_material">The replacement material.</param>
 	/// <returns>True if the new replacement material could be assigned, false otherwise.</returns>
-	public bool SetShadowMaterial(Material? _material)
+	public bool SetShadowMaterial(MaterialNew? _material)
 	{
 		// Null material will unassign the shadow material:
 		if (_material is null)
