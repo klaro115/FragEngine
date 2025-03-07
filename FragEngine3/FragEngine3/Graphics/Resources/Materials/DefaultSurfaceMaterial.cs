@@ -9,7 +9,7 @@ using Veldrid;
 
 namespace FragEngine3.Graphics.Resources.Materials;
 
-public sealed class DefaultSurfaceMaterial : MaterialNew
+public sealed class DefaultSurfaceMaterial : SurfaceMaterial
 {
 	#region Types
 
@@ -61,11 +61,6 @@ public sealed class DefaultSurfaceMaterial : MaterialNew
 	private ResourceSet[] resourceSets = [];
 
 	#endregion
-	#region Properties
-
-	//...
-
-	#endregion
 	#region Methods
 
 	protected override void Dispose(bool _disposing)
@@ -82,10 +77,64 @@ public sealed class DefaultSurfaceMaterial : MaterialNew
 	public void MarkDirty() => dirtyFlags = DirtyFlags.ALL;
 	private void MarkResSetUserBoundDirty() => dirtyFlags |= DirtyFlags.BoundResources;
 
-	public override bool CreatePipeline(in SceneContext _sceneCtx, in CameraPassContext _cameraCtx, MeshVertexDataFlags _vertexDataFlags, out PipelineState? _outPipelineState)
+	public override bool CreatePipeline(in SceneContext _sceneCtx, in CameraPassContext _cameraCtx, MeshVertexDataFlags _vertexDataFlags, out PipelineState? _outPipelineState, out bool _outIsFullyLoaded)
 	{
-		//TODO
-		throw new NotImplementedException();
+		if (IsDisposed)
+		{
+			logger.LogError("Cannot create pipeline for default surface material that has already been disposed!");
+			_outPipelineState = null;
+			_outIsFullyLoaded = false;
+			return false;
+		}
+
+		if (!GetOrCreateShaderSet(_vertexDataFlags, out ShaderSetDescription shaderSetDesc, out _outIsFullyLoaded))
+		{
+			logger.LogError($"Failed to create shader set description for default surface material '{resourceKey}' and vertex variant '{_vertexDataFlags}'!");
+			_outPipelineState = null;
+			return false;
+		}
+
+		// If underlying resources are not ready to draw yet, exit now:
+		if (!_outIsFullyLoaded)
+		{
+			_outPipelineState = null;
+			return true;
+		}
+
+		ResourceLayout[] resourceLayouts = [];	//TODO [CRITICAL]
+
+		Pipeline pipeline;
+		try
+		{
+			GraphicsPipelineDescription pipelineDesc = new(
+			BlendStateDescription.SingleOverrideBlend,
+			DepthStencilStateDescription.DepthOnlyLessEqual,
+			RasterizerStateDescription.Default,
+			PrimitiveTopology.TriangleList,
+			shaderSetDesc,
+			resourceLayouts,
+			_cameraCtx.OutputDesc,
+			ResourceBindingModel.Default);
+
+			pipeline = graphicsCore.MainFactory.CreateGraphicsPipeline(ref pipelineDesc);
+			pipeline.Name = $"Pipeline_{resourceKey}_V{(int)_vertexDataFlags:b}";
+		}
+		catch (Exception ex)
+		{
+			logger.LogException($"Failed to create pipeline for default surface material '{resourceKey}' and vertex variant '{_vertexDataFlags}'!", ex);
+			_outPipelineState = null;
+			return false;
+		}
+
+		// Create pipeline state object and return success:
+		uint vertexBufferCount = (uint)shaderSetDesc.VertexLayouts.Length;
+
+		_outPipelineState = new(
+			pipeline,
+			0u,
+			_vertexDataFlags,
+			vertexBufferCount);
+		return true;
 	}
 
 	public override bool Prepare(in SceneContext _sceneCtx, in CameraPassContext _cameraCtx, out ResourceSet[]? _outResourceSets)

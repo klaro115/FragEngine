@@ -4,7 +4,6 @@ using FragEngine3.Graphics.Resources.Data.MaterialTypes;
 using FragEngine3.Graphics.Resources.Materials;
 using FragEngine3.Graphics.Resources.Materials.Internal;
 using FragEngine3.Resources.Data;
-using System.Security.Cryptography;
 using Veldrid;
 
 namespace FragEngine3.Graphics.Resources.Data;
@@ -13,7 +12,7 @@ namespace FragEngine3.Graphics.Resources.Data;
 /// Serializable resource data that is used to serialize or describe a material resource.
 /// </summary>
 [Serializable]
-[ResourceDataType(typeof(Material))]
+[ResourceDataType(typeof(MaterialNew))]
 public sealed class MaterialDataNew
 {
 	#region Properties

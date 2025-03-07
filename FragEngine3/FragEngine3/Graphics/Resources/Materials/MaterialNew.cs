@@ -37,6 +37,7 @@ public abstract class MaterialNew : Resource
 	protected readonly Logger logger;
 
 	public readonly MaterialType materialType;
+	public readonly MeshVertexDataFlags maxSupportedVariantFlags;
 
 	protected ConstantBufferSlot[] customConstantBufferSlots = null!;
 
@@ -75,8 +76,10 @@ public abstract class MaterialNew : Resource
 	/// For standard surface materials, at least the '<see cref="MeshVertexDataFlags.BasicSurfaceData"/>' flag must be raised.
 	/// For compute shader materials, this value is ignored.</param>
 	/// <param name="_outPipelineState">Outputs a new pipeline state object for the specified vertex data configuration, or null on failure.</param>
+	/// <param name="_outIsFullyLoaded">Outputs whether the pipeline is ready for drawing yet.
+	/// If false, some underlying resources are still being loaded and drawing of the material should be skipped.</param>
 	/// <returns>True if the pipeline could be (re)created and is ready for binding to the graphics device, false otherwise.</returns>
-	public abstract bool CreatePipeline(in SceneContext _sceneCtx, in CameraPassContext _cameraCtx, MeshVertexDataFlags _vertexDataFlags, out PipelineState? _outPipelineState);
+	public abstract bool CreatePipeline(in SceneContext _sceneCtx, in CameraPassContext _cameraCtx, MeshVertexDataFlags _vertexDataFlags, out PipelineState? _outPipelineState, out bool _outIsFullyLoaded);
 
 	/// <summary>
 	/// Prepares that material's resources for rendering and binds resources and shaders to the graphics pipeline.
