@@ -164,8 +164,10 @@ public sealed class MaterialDataNew
 	/// </summary>
 	/// <param name="_graphicsCore">The graphics core through which the material should be rendered.</param>
 	/// <param name="_outLayout">Outputs the new resource layout. Null if no non-system resources are bound, or on failure.</param>
+	/// <param name="_resourcesBoundByMaterial">An array of descriptions of resources that are bound and managed by the material,
+	/// and that are not stored in serializable data. These resources will precede any other bound resources in the layout.</param>
 	/// <returns>True if a resource layout was created successfully, or if no layout is needed, false on failure.</returns>
-	public bool CreateLayoutFromBoundResources(GraphicsCore _graphicsCore, out ResourceLayout? _outLayout)
+	public bool CreateLayoutFromBoundResources(GraphicsCore _graphicsCore, out ResourceLayout? _outLayout, params MaterialResourceDataNew[] _resourcesBoundByMaterial)
 	{
 		if (_graphicsCore is null || !_graphicsCore.IsInitialized)
 		{
@@ -175,23 +177,37 @@ public sealed class MaterialDataNew
 		}
 
 		// Get resource count; no layout is needed if no resources are bound:
-		int resourceCount = Resources is not null ? Resources.Length : 0;
-		if (resourceCount == 0)
+		int boundCbCount = _resourcesBoundByMaterial is not null ? _resourcesBoundByMaterial.Length : 0;
+		int userResourceCount = Resources is not null ? Resources.Length : 0;
+		int totalResourceCount = boundCbCount + userResourceCount;
+		if (totalResourceCount == 0)
 		{
 			_outLayout = null;
 			return true;
 		}
 
+		ResourceLayoutElementDescription[] resLayoutElements = new ResourceLayoutElementDescription[totalResourceCount];
+
+		// Define layout elements from bound constant buffer sizes:
+		for (int i = 0; i < boundCbCount; ++i)
+		{
+			MaterialResourceDataNew cbData = _resourcesBoundByMaterial![i];
+			ResourceLayoutElementDescription element = new(
+				cbData.SlotName,
+				cbData.ResourceKind,
+				cbData.ShaderStageFlags);
+			resLayoutElements[i] = element;
+		}
+
 		// Define layout elements from resource bindings:
-		ResourceLayoutElementDescription[] resLayoutElements = new ResourceLayoutElementDescription[resourceCount];
-		for (int i = 0; i < resourceCount; ++i)
+		for (int i = 0; i < userResourceCount; ++i)
 		{
 			MaterialResourceDataNew resourceData = Resources![i];
 			ResourceLayoutElementDescription element = new(
 				resourceData.SlotName,
 				resourceData.ResourceKind,
 				resourceData.ShaderStageFlags);
-			resLayoutElements[i] = element;
+			resLayoutElements[i + boundCbCount] = element;
 		}
 
 		// Try creating the layout:
@@ -210,7 +226,7 @@ public sealed class MaterialDataNew
 		}
 	}
 
-	public bool CreateBindingSlotsFromBoundResources(Action _funcMarkResourceSetDirty, out Dictionary<string, MaterialUserBoundResourceSlot> _outResourceSlotDict, out BindableResource?[] _outResourcesArray)
+	public bool CreateBindingSlotsFromBoundResources(Action _funcMarkResourceSetDirty, int _resourceCountBoundByMaterial, out Dictionary<string, MaterialUserBoundResourceSlot> _outResourceSlotDict, out BindableResource?[] _outResourcesArray)
 	{
 		if (_funcMarkResourceSetDirty is null)
 		{
@@ -221,8 +237,9 @@ public sealed class MaterialDataNew
 		}
 
 		// Get resource count; no slots are needed if no resources are bound:
-		int resourceCount = Resources is not null ? Resources.Length : 0;
-		if (resourceCount == 0)
+		int userResourceCount = Resources is not null ? Resources.Length : 0;
+		int totalResourceCount = _resourceCountBoundByMaterial + userResourceCount;
+		if (totalResourceCount == 0)
 		{
 			_outResourceSlotDict = [];
 			_outResourcesArray = [];
@@ -230,14 +247,15 @@ public sealed class MaterialDataNew
 		}
 
 		// Prepare output buffers:
-		_outResourceSlotDict = new(resourceCount);
-		_outResourcesArray = new BindableResource[resourceCount];
+		_outResourceSlotDict = new(totalResourceCount);
+		_outResourcesArray = new BindableResource[totalResourceCount];
 
 		// Try to create generic slots for each user-bound resource:
-		for (int i = 0; i < resourceCount; ++i)
+		for (int i = 0; i < userResourceCount; ++i)
 		{
+			int boundResourceIdx = _resourceCountBoundByMaterial + i;
 			MaterialResourceDataNew resourceData = Resources![i];
-			if (!MaterialUserBoundResourceSlot.CreateSlot(_outResourcesArray, i, _funcMarkResourceSetDirty, resourceData.ResourceKind, out MaterialUserBoundResourceSlot? slot))
+			if (!MaterialUserBoundResourceSlot.CreateSlot(_outResourcesArray, boundResourceIdx, _funcMarkResourceSetDirty, resourceData.ResourceKind, out MaterialUserBoundResourceSlot? slot))
 			{
 				Logger.Instance?.LogError($"Failed to create binding slot for material's bound resource '{resourceData}'!");
 				_outResourceSlotDict = [];

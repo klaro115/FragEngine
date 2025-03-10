@@ -2,6 +2,7 @@
 using FragEngine3.Graphics.Contexts;
 using FragEngine3.Graphics.Internal;
 using FragEngine3.Graphics.Resources.Data;
+using FragEngine3.Graphics.Resources.Data.MaterialTypes;
 using FragEngine3.Graphics.Resources.Materials.Internal;
 using FragEngine3.Graphics.Utility;
 using FragEngine3.Resources;
@@ -32,16 +33,19 @@ public sealed class DefaultSurfaceMaterial : SurfaceMaterial
 		{
 			throw new Exception($"Failed to create default surface constant buffer! (Resource key: '{resourceKey}')");
 		}
-		if (!_data.CreateLayoutFromBoundResources(graphicsCore, out resLayoutUserBound))
+		if (!_data.CreateLayoutFromBoundResources(graphicsCore, out resLayoutUserBound, materialBoundResourcesData))
 		{
 			Dispose();
 			throw new Exception($"Failed to create resource layout for non-system resources! (Resource key: '{resourceKey}')");
 		}
-		if (!_data.CreateBindingSlotsFromBoundResources(MarkResSetUserBoundDirty, out resourceSlotsUserBound, out resourcesUserBound))
+		if (!_data.CreateBindingSlotsFromBoundResources(MarkResSetUserBoundDirty, materialBoundResourcesData.Length, out resourceSlotsUserBound, out resourcesUserBound!))
 		{
 			Dispose();
 			throw new Exception($"Failed to create resource slots and buffers for non-system resources! (Resource key: '{resourceKey}')");
 		}
+
+		// Assign resources managed by material immediately; they will not change anymore:
+		resourcesUserBound[0] = cbDefaultSurface!;
 	}
 
 	#endregion
@@ -56,9 +60,24 @@ public sealed class DefaultSurfaceMaterial : SurfaceMaterial
 	private ResourceSet? resSetUserBound = null;
 
 	private Dictionary<string, MaterialUserBoundResourceSlot> resourceSlotsUserBound;
-	private BindableResource?[] resourcesUserBound;
+	private BindableResource[] resourcesUserBound;
 
 	private ResourceSet[] resourceSets = [];
+
+	/// <summary>
+	/// An array of all bound resources that are managed and provided by the material.
+	/// </summary>
+	private static readonly MaterialResourceDataNew[] materialBoundResourcesData =
+	[
+		new()
+		{
+			ResourceKey = string.Empty,
+			SlotName = CBDefaultSurface.NAME_IN_SHADER,
+			SlotIndex = 3,
+			ResourceKind = ResourceKind.UniformBuffer,
+			ShaderStageFlags = ShaderStages.Fragment,
+		},
+	];
 
 	#endregion
 	#region Methods
@@ -101,20 +120,26 @@ public sealed class DefaultSurfaceMaterial : SurfaceMaterial
 			return true;
 		}
 
-		ResourceLayout[] resourceLayouts = [];	//TODO [CRITICAL]
+		if (!CreateResourceLayouts(in _sceneCtx, out ResourceLayout[]? resourceLayouts))
+		{
+			logger.LogError($"Failed to prepare resource layouts for default surface material '{resourceKey}' and vertex variant '{_vertexDataFlags}'!");
+			_outPipelineState = null;
+			return false;
+		}
 
+		// Try to create pipeline:
 		Pipeline pipeline;
 		try
 		{
 			GraphicsPipelineDescription pipelineDesc = new(
-			BlendStateDescription.SingleOverrideBlend,
-			DepthStencilStateDescription.DepthOnlyLessEqual,
-			RasterizerStateDescription.Default,
-			PrimitiveTopology.TriangleList,
-			shaderSetDesc,
-			resourceLayouts,
-			_cameraCtx.OutputDesc,
-			ResourceBindingModel.Default);
+				BlendStateDescription.SingleOverrideBlend,
+				DepthStencilStateDescription.DepthOnlyLessEqual,
+				RasterizerStateDescription.Default,
+				PrimitiveTopology.TriangleList,
+				shaderSetDesc,
+				resourceLayouts,
+				_cameraCtx.OutputDesc,
+				ResourceBindingModel.Default);
 
 			pipeline = graphicsCore.MainFactory.CreateGraphicsPipeline(ref pipelineDesc);
 			pipeline.Name = $"Pipeline_{resourceKey}_V{(int)_vertexDataFlags:b}";
@@ -171,6 +196,34 @@ public sealed class DefaultSurfaceMaterial : SurfaceMaterial
 
 		_outResourceSets = resourceSets;
 		return true;
+	}
+
+	private bool CreateResourceLayouts(in SceneContext _sceneCtx, out ResourceLayout[] _outResourceLayouts)
+	{
+		if (resLayoutUserBound is not null)
+		{
+			_outResourceLayouts =
+			[
+				_sceneCtx.ResLayoutCamera,
+				_sceneCtx.ResLayoutObject,
+				resLayoutUserBound,
+			];
+		}
+		else
+		{
+			_outResourceLayouts =
+			[
+				_sceneCtx.ResLayoutCamera,
+				_sceneCtx.ResLayoutObject,
+			];
+		}
+		return true;
+	}
+
+	private bool CreateUserBoundResourceSet()
+	{
+		//TODO [CRITICAL]
+		return false;	//TEMP
 	}
 
 	public override IEnumerator<ResourceHandle> GetResourceDependencies()

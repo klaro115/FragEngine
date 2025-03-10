@@ -7,11 +7,11 @@ public sealed class MaterialResourceDataNew
 {
 	#region Properties
 
-	public string ResourceKey { get; set; } = string.Empty;
-	public string SlotName { get; set; } = string.Empty;
-	public uint SlotIndex { get; set; } = 0;
-	public ResourceKind ResourceKind { get; set; } = ResourceKind.TextureReadOnly;
-	public ShaderStages ShaderStageFlags { get; set; } = ShaderStages.Fragment;
+	public string ResourceKey { get; init; } = string.Empty;
+	public string SlotName { get; init; } = string.Empty;
+	public uint SlotIndex { get; init; } = 0;
+	public ResourceKind ResourceKind { get; init; } = ResourceKind.TextureReadOnly;
+	public ShaderStages ShaderStageFlags { get; init; } = ShaderStages.Fragment;
 
 	#endregion
 	#region Methods

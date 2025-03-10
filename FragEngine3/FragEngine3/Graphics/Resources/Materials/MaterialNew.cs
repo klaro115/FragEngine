@@ -78,7 +78,8 @@ public abstract class MaterialNew : Resource
 	/// <param name="_outPipelineState">Outputs a new pipeline state object for the specified vertex data configuration, or null on failure.</param>
 	/// <param name="_outIsFullyLoaded">Outputs whether the pipeline is ready for drawing yet.
 	/// If false, some underlying resources are still being loaded and drawing of the material should be skipped.</param>
-	/// <returns>True if the pipeline could be (re)created and is ready for binding to the graphics device, false otherwise.</returns>
+	/// <returns>False if pipeline creation failed, true otherwise.
+	/// This will return true both if the material is not fully loaded yet and no pipeline created, and alos when created successfully.</returns>
 	public abstract bool CreatePipeline(in SceneContext _sceneCtx, in CameraPassContext _cameraCtx, MeshVertexDataFlags _vertexDataFlags, out PipelineState? _outPipelineState, out bool _outIsFullyLoaded);
 
 	/// <summary>
