@@ -138,6 +138,8 @@ public sealed class StaticMeshRendererComponent : Component, IPhysicalRenderer
 		return instance.DrawShadowMap(_sceneCtx, _cameraPassCtx);
 	}
 
+	public AABB CalculateAxisAlignedBoundingBox() => instance.CalculateAxisAlignedBoundingBox();
+
 	public override bool LoadFromData(in ComponentData _componentData, in Dictionary<int, ISceneElement> _idDataMap)
 	{
 		if (IsDisposed || instance.IsDisposed)

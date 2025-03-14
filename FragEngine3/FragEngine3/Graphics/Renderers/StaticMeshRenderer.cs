@@ -490,5 +490,11 @@ public sealed class StaticMeshRenderer : IPhysicalRenderer
 		return true;
 	}
 
+	public AABB CalculateAxisAlignedBoundingBox()
+	{
+		//TODO
+		throw new NotImplementedException();
+	}
+
 	#endregion
 }

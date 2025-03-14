@@ -1,4 +1,5 @@
-﻿using System.Numerics;
+﻿using FragEngine3.Scenes.SpatialTrees;
+using System.Numerics;
 
 namespace FragEngine3.Graphics;
 
@@ -7,7 +8,7 @@ namespace FragEngine3.Graphics;
 /// types of nodes that represent objects with a tangible surface. Examples of non-physical renderers would be volumetris and weather,
 /// post-processing effects, or UI controls.
 /// </summary>
-public interface IPhysicalRenderer : IRenderer
+public interface IPhysicalRenderer : IRenderer, ISpatialTreeObject
 {
 	#region Properties
 
