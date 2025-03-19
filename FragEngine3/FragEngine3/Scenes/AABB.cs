@@ -1,4 +1,5 @@
-﻿using System.Numerics;
+﻿using FragEngine3.Scenes.SpatialTrees;
+using System.Numerics;
 
 namespace FragEngine3.Scenes;
 
@@ -35,6 +36,11 @@ public struct AABB
 			minimum = Vector3.Min(position, minimum);
 			maximum = Vector3.Max(position, maximum);
 		}
+	}
+	public AABB(float _minX, float _minY, float _minZ, float _maxX, float _maxY, float _maxZ)
+	{
+		minimum = new(_minX, _minY, _minZ);
+		maximum = new(_maxX, _maxY, _maxZ);
 	}
 
 	#endregion
@@ -84,6 +90,11 @@ public struct AABB
 	#endregion
 	#region Methods
 
+	/// <summary>
+	/// Checks whether the bounding box contains a specific point in space.
+	/// </summary>
+	/// <param name="_position">Coordinates of the point.</param>
+	/// <returns>True if the AABB contains the point, false otherwise.</returns>
 	public readonly bool Contains(Vector3 _position)
 	{
 		return
@@ -92,6 +103,20 @@ public struct AABB
 			_position.Z >= minimum.Z && _position.Z <= maximum.Z;
 	}
 
+	/// <summary>
+	/// Clamps a position to the extends of this bounding box.
+	/// </summary>
+	/// <param name="_position">Coordinates of the point.</param>
+	/// <returns>The clamped coordinates.</returns>
+	public readonly Vector3 ClampToBounds(Vector3 _position)
+	{
+		return Vector3.Clamp(_position, minimum, maximum);
+	}
+
+	/// <summary>
+	/// Expands the bounding box to enclose all space contained within another bounding box.
+	/// </summary>
+	/// <param name="_other">Another bounding box.</param>
 	public void Expand(in AABB _other)
 	{
 		minimum = Vector3.Min(_other.minimum, minimum);
@@ -108,6 +133,97 @@ public struct AABB
 	{
 		//TODO
 		throw new NotImplementedException();
+	}
+
+	/// <summary>
+	/// Splits the bounding box into two partitions along a given axis. The split runs through the center point.
+	/// </summary>
+	/// <param name="_splitAxis">The axis along which the bounding box will be cut.<para/>
+	/// Example: X=left/right, Y=bottom/top, Z=back/front.</param>
+	/// <param name="_outPartitionA">Outputs the first partition, which is positioned at the lower value range along the split axis.</param>
+	/// <param name="_outPartitionB">Outputs the second partition, which is positioned at the higher value range along the split axis.</param>
+	/// <returns>True if the bounding box could be split along the given axis, false otherwise.</returns>
+	public readonly bool Split(BspSplitAxis _splitAxis, out AABB _outPartitionA, out AABB _outPartitionB) => Split(Center, _splitAxis, out _outPartitionA, out _outPartitionB);
+
+	/// <summary>
+	/// Splits the bounding box into two partitions along a given axis, and centered around a specific point within its volume.
+	/// </summary>
+	/// <param name="_splitCenterPoint">The center point through which the split runs.</param>
+	/// <param name="_splitAxis">The axis along which the bounding box will be cut.<para/>
+	/// Example: X=left/right, Y=bottom/top, Z=back/front.</param>
+	/// <param name="_outPartitionA">Outputs the first partition, which is positioned at the lower value range along the split axis.</param>
+	/// <param name="_outPartitionB">Outputs the second partition, which is positioned at the higher value range along the split axis.</param>
+	/// <returns>True if the bounding box could be split along the given axis and through the given point, false otherwise.</returns>
+	public readonly bool Split(Vector3 _splitCenterPoint, BspSplitAxis _splitAxis, out AABB _outPartitionA, out AABB _outPartitionB)
+	{
+		if (!Contains(_splitCenterPoint))
+		{
+			_outPartitionA = this;
+			_outPartitionB = new(maximum, maximum);
+			return false;
+		}
+
+		switch (_splitAxis)
+		{
+			case BspSplitAxis.X:
+				{
+					_outPartitionA = new(
+						minimum.X,
+						minimum.Y,
+						minimum.Z,
+						_splitCenterPoint.X,
+						maximum.Y,
+						maximum.Z);
+					_outPartitionB = new(
+						_splitCenterPoint.X,
+						minimum.Y,
+						minimum.Z,
+						maximum.X,
+						maximum.Y,
+						maximum.Z);
+					return true;
+				}
+			case BspSplitAxis.Z:
+				{
+					_outPartitionA = new(
+						minimum.X,
+						minimum.Y,
+						minimum.Z,
+						maximum.X,
+						_splitCenterPoint.Y,
+						maximum.Z);
+					_outPartitionB = new(
+						minimum.X,
+						_splitCenterPoint.Y,
+						minimum.Z,
+						maximum.X,
+						maximum.Y,
+						maximum.Z);
+					return true;
+				}
+			case BspSplitAxis.Y:
+				{
+					_outPartitionA = new(
+						minimum.X,
+						minimum.Y,
+						minimum.Z,
+						maximum.X,
+						maximum.Y,
+						_splitCenterPoint.Z);
+					_outPartitionB = new(
+						minimum.X,
+						minimum.Y,
+						_splitCenterPoint.Z,
+						maximum.X,
+						maximum.Y,
+						maximum.Z);
+					return true;
+				}
+			default:
+				_outPartitionA = this;
+				_outPartitionB = new(maximum, maximum);
+				return false;
+		}
 	}
 
 	#endregion

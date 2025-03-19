@@ -27,12 +27,22 @@ public sealed class BspTreeBranch(uint _depth = 0, BspSplitAxis _splitAxis = Bsp
 
 	public bool IsBranched { get; private set; } = false;
 
+	/// <summary>
+	/// Gets a bounding box enclosing the section of space that was partitioned off into this branch.
+	/// </summary>
 	public AABB PartitionBounds { get; private set; } = AABB.One;
+	/// <summary>
+	/// Gets a bounding box enclosing all objects on this branch.
+	/// </summary>
 	public AABB ContentBounds { get; private set; } = AABB.Zero;
 
 	#endregion
 	#region Methods
 
+	/// <summary>
+	/// Removes all objects from this branch and all its sub-branches.
+	/// </summary>
+	/// <param name="_discardSubBranches">Whether to discard any sub-branches.</param>
 	public void Clear(bool _discardSubBranches = false)
 	{
 		objects.Clear();
@@ -46,6 +56,12 @@ public sealed class BspTreeBranch(uint _depth = 0, BspSplitAxis _splitAxis = Bsp
 		}
 	}
 
+	/// <summary>
+	/// Tries to add a new object to this branch. The object can only be added if it overlaps with this branch's <see cref="PartitionBounds"/>.<para/>
+	/// Note: This does not check for duplicates! It is the caller's responsibility to ensure each object is only added to the BSP tree once.
+	/// </summary>
+	/// <param name="_newObject">The new object we wish to add.</param>
+	/// <returns>True if the object was added, false otherwise.</returns>
 	public bool AddObject(ISpatialTreeObject _newObject)
 	{
 		if (_newObject is null)
@@ -54,10 +70,10 @@ public sealed class BspTreeBranch(uint _depth = 0, BspSplitAxis _splitAxis = Bsp
 		}
 
 		AABB bounds = _newObject.CalculateAxisAlignedBoundingBox();
-		return AddObject(_newObject, in bounds);
+		return AddObject(_newObject, in bounds, true);
 	}
 
-	private bool AddObject(ISpatialTreeObject _newObject, in AABB _newObjectBounds)
+	private bool AddObject(ISpatialTreeObject _newObject, in AABB _newObjectBounds, bool _allowFurtherBranching)
 	{
 		if (!PartitionBounds.Overlaps(in _newObjectBounds))
 		{
@@ -66,25 +82,66 @@ public sealed class BspTreeBranch(uint _depth = 0, BspSplitAxis _splitAxis = Bsp
 
 		if (IsBranched)
 		{
-			bool added =
-				subBranchA!.AddObject(_newObject, in _newObjectBounds) ||
-				subBranchB!.AddObject(_newObject, in _newObjectBounds);
-			return added;
+			if (subBranchA!.AddObject(_newObject, in _newObjectBounds, _allowFurtherBranching))
+			{
+				ContentBounds.Expand(subBranchA.ContentBounds);
+				return true;
+			}
+			else if (subBranchB!.AddObject(_newObject, in _newObjectBounds, _allowFurtherBranching))
+			{
+				ContentBounds.Expand(subBranchB.ContentBounds);
+				return true;
+			}
+			return false;
 		}
 
-		if (objects.Count < minimumObjectsBeforeBranching ||
+		objects.Add(_newObject);
+		ContentBounds.Expand(in _newObjectBounds);
+
+		if (!_allowFurtherBranching ||
+			objects.Count < minimumObjectsBeforeBranching ||
 			ContentBounds.Overlaps(in _newObjectBounds) ||
 			depth >= maximumTreeDepth)
 		{
-			objects.Add(_newObject);
-			ContentBounds.Expand(in _newObjectBounds);
 			return true;
 		}
 
-		//TODO: Split branch into 2 sub-branches.
-		throw new NotImplementedException();
+		// Split branch into 2 sub-branches:
+		uint subBranchDepth = depth + 1;
+		BspSplitAxis subBranchSplitAxis = (BspSplitAxis)(((int)splitAxis + 1) % 3);
+		int subBranchInitCapacity = Math.Max(objects.Count / 2, defaultObjectCapacity);
+		Vector3 subBranchSplitCenter = PartitionBounds.ClampToBounds(ContentBounds.Center); // split through the content's middle.
+
+		PartitionBounds.Split(subBranchSplitCenter, subBranchSplitAxis, out AABB subBranchBoundsA, out AABB subBranchBoundsB);
+
+		subBranchA = new(subBranchDepth, subBranchSplitAxis, subBranchInitCapacity)
+		{
+			PartitionBounds = subBranchBoundsA,
+		};
+		subBranchB = new(subBranchDepth, subBranchSplitAxis, subBranchInitCapacity)
+		{
+			PartitionBounds = subBranchBoundsB,
+		};
+
+		// Distribute all objects into sub-branches:
+		foreach (ISpatialTreeObject obj in objects)
+		{
+			AABB objBounds = obj.CalculateAxisAlignedBoundingBox();
+			if (!subBranchA.AddObject(obj, in objBounds, false))
+			{
+				subBranchB.AddObject(obj, in objBounds, false);
+			}
+		}
+
+		objects.Clear();
+		return true;
 	}
 
+	/// <summary>
+	/// Removes an object from this tree or any of its sub-branches.
+	/// </summary>
+	/// <param name="_object">The object we wish to remove.</param>
+	/// <returns>True if the object was removed from the tree, false if it wasn't found or on error.</returns>
 	public bool RemoveObject(ISpatialTreeObject _object)
 	{
 		if (_object is null)
@@ -107,6 +164,10 @@ public sealed class BspTreeBranch(uint _depth = 0, BspSplitAxis _splitAxis = Bsp
 		return removed;
 	}
 
+	/// <summary>
+	/// Recalculates the bounding box enclosing all objects on this branch.
+	/// </summary>
+	/// <param name="_recursive">Whether to recursively recalculate all sub-branches as well.</param>
 	public void RecalculateContentBounds(bool _recursive = true)
 	{
 		bool hasObjects = objects.Count != 0;
@@ -144,6 +205,10 @@ public sealed class BspTreeBranch(uint _depth = 0, BspSplitAxis _splitAxis = Bsp
 		}
 	}
 
+	/// <summary>
+	/// Retrieves all objects on this branch and all of its sub-branches.
+	/// </summary>
+	/// <param name="_dstAllObjects"></param>
 	public void GetAllObjects(List<ISpatialTreeObject> _dstAllObjects)
 	{
 		if (objects.Count != 0)
@@ -157,6 +222,9 @@ public sealed class BspTreeBranch(uint _depth = 0, BspSplitAxis _splitAxis = Bsp
 		}
 	}
 
+	/// <summary>
+	/// Gets an enumerator for iterating over all objects on this branch and all of its sub-branches.
+	/// </summary>
 	public IEnumerator<ISpatialTreeObject> EnumerateAllObjects()
 	{
 		if (objects.Count != 0)
