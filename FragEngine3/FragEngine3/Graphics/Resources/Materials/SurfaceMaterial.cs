@@ -5,6 +5,9 @@ using Veldrid;
 
 namespace FragEngine3.Graphics.Resources.Materials;
 
+/// <summary>
+/// Base class for surface materials. Material types inheriting from this class will be used to render a mesh's surface geometry.
+/// </summary>
 public abstract class SurfaceMaterial : MaterialNew
 {
 	#region Constructors
@@ -28,10 +31,25 @@ public abstract class SurfaceMaterial : MaterialNew
 	#endregion
 	#region Properties
 
+	/// <summary>
+	/// Resource handle for the material's vertex shader. This should never be null or invalid.
+	/// </summary>
 	public ResourceHandle VertexShaderHandle { get; protected set; } = ResourceHandle.None;
+	/// <summary>
+	/// Resource handle for the material's geometry shader.
+	/// </summary>
 	public ResourceHandle GeometryShaderHandle { get; protected set; } = ResourceHandle.None;
+	/// <summary>
+	/// Resource handle for the control stage of the material's tesselation shader.
+	/// </summary>
 	public ResourceHandle TesselationCtrlShaderHandle { get; protected set; } = ResourceHandle.None;
+	/// <summary>
+	/// Resource handle for the evaluation stage of the material's tesselation shader.
+	/// </summary>
 	public ResourceHandle TesselationEvalShaderHandle { get; protected set; } = ResourceHandle.None;
+	/// <summary>
+	/// Resource handle for the material's pixel shader. This should never be null or invalid.
+	/// </summary>
 	public ResourceHandle PixelShaderHandle { get; protected set; } = ResourceHandle.None;
 
 	#endregion
@@ -170,7 +188,12 @@ public abstract class SurfaceMaterial : MaterialNew
 		}
 	}
 
-	protected static VertexLayoutDescription[] GetVertexLayouts(MeshVertexDataFlags _vertexFlags)
+	/// <summary>
+	/// Creates an array of vertex layout descriptions for a given set of vertex data flags.
+	/// </summary>
+	/// <param name="_vertexFlags">Bit flags for all sets of vertex data to use. At least the '<see cref="MeshVertexDataFlags.BasicSurfaceData"/>' must be set.</param>
+	/// <returns>An array of vertex layout desciptions, with at least one element.</returns>
+	public static VertexLayoutDescription[] GetVertexLayouts(MeshVertexDataFlags _vertexFlags)
 	{
 		bool hasExtData = _vertexFlags.HasFlag(MeshVertexDataFlags.ExtendedSurfaceData);
 		bool hasBlendData = _vertexFlags.HasFlag(MeshVertexDataFlags.BlendShapes);
