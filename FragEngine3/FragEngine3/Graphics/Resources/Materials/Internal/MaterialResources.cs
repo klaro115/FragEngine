@@ -33,7 +33,7 @@ public abstract class MaterialResources(GraphicsCore _graphicsCore, ResourceLayo
 	protected ResourceSet? resourceSet = null;
 	protected DeviceBuffer? constantBuffer = null;
 
-	private readonly Dictionary<string, MaterialResourceMapping> valueNameMapping = []; //TODO: Move this to default/generic child class implementation?
+	private readonly Dictionary<string, MaterialResourceMapping> valueNameMapping = [];
 
 	#endregion
 	#region Properties

@@ -74,7 +74,7 @@ internal abstract class LightInstance(GraphicsCore _core) : ILightSource
 	public abstract LightType Type { get; }
 
 	/// <summary>
-	/// Gets or sets the intensity of light emitted by this light source. TODO: Figure out which unit to use for this.
+	/// Gets or sets the intensity of light emitted by this light source. TODO: Figure out which unit to use for this. (unit may be entirely dependent on shader logic)
 	/// </summary>
 	public abstract float LightIntensity { get; set; }
 

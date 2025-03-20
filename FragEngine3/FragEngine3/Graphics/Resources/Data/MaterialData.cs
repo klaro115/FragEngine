@@ -95,7 +95,6 @@ public sealed class MaterialData
 	/// bound to.</param>
 	/// <param name="_outUseExternalBoundResources">Outputs whether this material uses any user-bound resources. If false, the material
 	/// relies entirely on system-bound and internally managed resources.<para/>
-	/// TODO: This is likely incorrect, or poorly named. Needs fixing!</param>
 	/// <returns>True if creating resource layout descriptions and keys succeeded, false otherwise.</returns>
 	public bool GetBoundResourceLayoutDesc(out ResourceLayoutDescription _outLayoutDesc, out MaterialBoundResourceKeys[] _outResourceKeysAndIndices, out bool _outUseExternalBoundResources)
 	{
@@ -108,7 +107,7 @@ public sealed class MaterialData
 			return false;
 		}
 
- 		int resourceCount = Resources is not null ? Resources.Length : 0;	//TODO: This is confusing. Why is `Resources` nullable, if that only leads to errors here?
+ 		int resourceCount = Resources is not null ? Resources.Length : 0;
 
 		if (resourceCount == 0)
 		{

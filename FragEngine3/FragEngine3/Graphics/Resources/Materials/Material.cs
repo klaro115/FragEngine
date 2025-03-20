@@ -364,7 +364,7 @@ public class Material(GraphicsCore _core, ResourceHandle _handle) : Resource(_ha
 				case ResourceKind.StructuredBufferReadOnly:
 					{
 						logger.LogError($"Structured buffers are not supported yet for use in bound resources! (Material: '{resourceKey}', Slot: {resourceKeys.slotIdx})");
-						success = false;    // TODO [later]: Implement import and management of structured buffer data, then bind them as resource here.
+						success = false;
 					}
 					break;
 				case ResourceKind.TextureReadOnly:
@@ -534,8 +534,6 @@ public class Material(GraphicsCore _core, ResourceHandle _handle) : Resource(_ha
 			yield return tesselationShaderEval;
 		}
 		if (pixelShader is not null) yield return pixelShader;
-
-		//TODO: Iterate dependencies and referenced assets.
 
 		// Lastly, return this material itself:
 		if (resourceManager.GetResource(resourceKey, out ResourceHandle handle))
@@ -726,7 +724,7 @@ public class Material(GraphicsCore _core, ResourceHandle _handle) : Resource(_ha
 				ShadowMap = ShadowMapMaterialVersion?.resourceKey ?? string.Empty,
 			},
 
-			Resources = [], // TODO
+			Resources = [],
 		};
 		return _outData.IsValid();
 	}

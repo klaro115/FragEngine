@@ -251,20 +251,53 @@ public sealed class MaterialDataNew
 		_outResourcesArray = new BindableResource[totalResourceCount];
 
 		// Try to create generic slots for each user-bound resource:
-		for (int i = 0; i < userResourceCount; ++i)
+		try
 		{
-			int boundResourceIdx = _resourceCountBoundByMaterial + i;
-			MaterialResourceDataNew resourceData = Resources![i];
-			if (!MaterialUserBoundResourceSlot.CreateSlot(_outResourcesArray, boundResourceIdx, _funcMarkResourceSetDirty, resourceData.ResourceKind, out MaterialUserBoundResourceSlot? slot))
+			for (int i = 0; i < userResourceCount; ++i)
 			{
-				Logger.Instance?.LogError($"Failed to create binding slot for material's bound resource '{resourceData}'!");
-				_outResourceSlotDict = [];
-				_outResourcesArray = [];
-				return false;
+				int boundResourceIdx = _resourceCountBoundByMaterial + i;
+				MaterialResourceDataNew resourceData = Resources![i];
+				if (!MaterialUserBoundResourceSlot.CreateSlot(_outResourcesArray, boundResourceIdx, _funcMarkResourceSetDirty, resourceData.ResourceKind, out MaterialUserBoundResourceSlot? slot))
+				{
+					Logger.Instance?.LogError($"Failed to create binding slot for material's bound resource '{resourceData}'!");
+					_outResourceSlotDict = [];
+					_outResourcesArray = [];
+					return false;
+				}
+				_outResourceSlotDict.Add(resourceData.SlotName, slot!);
 			}
-			_outResourceSlotDict.Add(resourceData.SlotName, slot!);
+			return true;
 		}
-		return true;
+		catch (Exception ex)
+		{
+			Logger.Instance?.LogException($"Failed to create binding slot for one bound resources of material '{ResourceKey ?? "NULL"}'!", ex);
+			return false;
+		}
+	}
+
+	public string?[] GetBoundResourceKeys()
+	{
+		if (Resources is null || Resources.Length == 0)
+		{
+			return [];
+		}
+
+		int boundResourceCount = Resources.Length;
+
+		string?[] resourceKeys = new string[boundResourceCount];
+		for (int i = 0; i < boundResourceCount; ++i)
+		{
+			MaterialResourceDataNew? resData = Resources[i];
+			if (!string.IsNullOrEmpty(resData?.ResourceKey))
+			{
+				resourceKeys[i] = resData.ResourceKey;
+			}
+			else
+			{
+				resourceKeys[i] = null;
+			}
+		}
+		return resourceKeys;
 	}
 
 	public override string ToString()

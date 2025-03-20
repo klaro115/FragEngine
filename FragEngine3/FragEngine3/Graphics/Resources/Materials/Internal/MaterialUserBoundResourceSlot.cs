@@ -12,10 +12,16 @@ public abstract class MaterialUserBoundResourceSlot
 
 	internal MaterialUserBoundResourceSlot(BindableResource?[] _boundResources, int _boundResourceIndex, ResourceKind _resourceKind, Action _funcMarkDirty)
 	{
-		boundResources = _boundResources;
+		boundResources = _boundResources ?? throw new ArgumentNullException(nameof(_boundResources), "Array of bound resources may not be null!");
+		funcMarkDirty = _funcMarkDirty ?? throw new ArgumentNullException(nameof(_funcMarkDirty), "Function delegate to mark resource set as dirty may not be null!");
+
+		if (_boundResourceIndex < 0 || _boundResourceIndex >= boundResources.Length)
+		{
+			throw new IndexOutOfRangeException("Position index in array of bound resources is out of range!");
+		}
+
 		boundResourceIndex = _boundResourceIndex;
 		resourceKind = _resourceKind;
-		funcMarkDirty = _funcMarkDirty;
 	}
 
 	#endregion
@@ -34,6 +40,11 @@ public abstract class MaterialUserBoundResourceSlot
 	public readonly ResourceKind resourceKind;
 
 	protected ResourceHandle resourceHandle = ResourceHandle.None;
+
+	/// <summary>
+	/// Gets the resource key of the slot's bound resource. Null if the slot's value is unassigned, or if the value was not set using a resource handle.
+	/// </summary>
+	public string? ResourceKey => resourceHandle.IsValid ? resourceHandle.resourceKey : null;
 
 	#endregion
 	#region Properties
@@ -58,6 +69,17 @@ public abstract class MaterialUserBoundResourceSlot
 	#endregion
 	#region Methods
 
+	/// <summary>
+	/// Creates a new resource slot.
+	/// </summary>
+	/// <param name="_boundResources">An array of bound resources. This slot will map to an index position within this array.</param>
+	/// <param name="_boundResourceIndex">The index within the resources array that this slot maps to.</param>
+	/// <param name="_funcMarkDirty">Delegate for a method that marks the resource array as dirty. Use this to notify materials about the changed resource set.</param>
+	/// <param name="_resourceKind">The type of graphics resource that this slot can contain.</param>
+	/// <param name="_outSlot">Outputs a new resource slot, or null, on failure.</param>
+	/// <returns>True if a new resource slot could be created, false otherwise.</returns>
+	/// <exception cref="ArgumentNullException">'<see cref="_boundResources"/>' or '<see cref="_funcMarkDirty"/>' may not be null.</exception>
+	/// <exception cref="IndexOutOfRangeException">'<see cref="_boundResourceIndex"/>' array index may not be negative or out of bounds.</exception>
 	internal static bool CreateSlot(BindableResource?[] _boundResources, int _boundResourceIndex, Action _funcMarkDirty, ResourceKind _resourceKind, out MaterialUserBoundResourceSlot? _outSlot)
 	{
 		_outSlot = _resourceKind switch
@@ -68,7 +90,7 @@ public abstract class MaterialUserBoundResourceSlot
 			ResourceKind.TextureReadOnly			=> new MaterialUserBoundResourceSlot<Texture>(_boundResources, _boundResourceIndex, _resourceKind, _funcMarkDirty),
 			ResourceKind.TextureReadWrite			=> new MaterialUserBoundResourceSlot<Texture>(_boundResources, _boundResourceIndex, _resourceKind, _funcMarkDirty),
 			ResourceKind.Sampler					=> new MaterialUserBoundResourceSlot<Sampler>(_boundResources, _boundResourceIndex, _resourceKind, _funcMarkDirty),
-			_ => null,
+			_										=> null,
 		};
 		return _outSlot is not null;
 	}

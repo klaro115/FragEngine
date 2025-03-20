@@ -86,10 +86,11 @@ public abstract class MaterialNew : Resource
 	/// Prepares that material's resources for rendering and binds resources and shaders to the graphics pipeline.
 	/// </summary>
 	/// <param name="_sceneCtx">A context object with rendering data for the current scene.</param>
-	/// <param name="_cameraCtx">A context object with rendering data for the current camera pass.</param>
-	/// <param name="_outResourceSets">Outputs an array of all resource sets used by this material.</param>
+	/// <param name="_cameraPassCtx">A context object with rendering data for the current camera pass.</param>
+	///	<param name="_resSetObject">The renderer's object/mesh resource set. For non-physical renderers or compute materials, this may be null.</param>
+	/// <param name="_resourceSets">Reference to an array of all resource sets used by this material. If null, a new one will be created.</param>
 	/// <returns>True if the material could be prepared, and resources are loaded for imminent rendering, false otherwise.</returns>
-	public abstract bool Prepare(in SceneContext _sceneCtx, in CameraPassContext _cameraCtx, out ResourceSet[]? _outResourceSets);
+	public abstract bool Prepare(in SceneContext _sceneCtx, in CameraPassContext _cameraPassCtx, ResourceSet? _resSetObject, ref ResourceSet[]? _resourceSets);
 
 	#endregion
 	#region Methods Common

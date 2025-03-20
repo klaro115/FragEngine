@@ -46,6 +46,10 @@ public sealed class DefaultSurfaceMaterial : SurfaceMaterial
 
 		// Assign resources managed by material immediately; they will not change anymore:
 		resourcesUserBound[0] = cbDefaultSurface!;
+
+		// Initialize and assign resources that are identified in material data immediately:
+		string?[] boundResourceKeys = _data.GetBoundResourceKeys();
+		InitializeBoundResourceSlots(boundResourceKeys, false);
 	}
 
 	#endregion
@@ -56,13 +60,11 @@ public sealed class DefaultSurfaceMaterial : SurfaceMaterial
 	private CBDefaultSurface cbDefaultSurfaceData = default;
 	private DeviceBuffer? cbDefaultSurface = null;
 
-	private ResourceLayout? resLayoutUserBound = null;
+	private readonly ResourceLayout? resLayoutUserBound = null;
 	private ResourceSet? resSetUserBound = null;
 
-	private Dictionary<string, MaterialUserBoundResourceSlot> resourceSlotsUserBound;
-	private BindableResource[] resourcesUserBound;
-
-	private ResourceSet[] resourceSets = [];
+	private readonly Dictionary<string, MaterialUserBoundResourceSlot> resourceSlotsUserBound;
+	private readonly BindableResource[] resourcesUserBound;
 
 	/// <summary>
 	/// An array of all bound resources that are managed and provided by the material.
@@ -162,21 +164,22 @@ public sealed class DefaultSurfaceMaterial : SurfaceMaterial
 		return true;
 	}
 
-	public override bool Prepare(in SceneContext _sceneCtx, in CameraPassContext _cameraCtx, out ResourceSet[]? _outResourceSets)
+	public override bool Prepare(in SceneContext _sceneCtx, in CameraPassContext _cameraPassCtx, ResourceSet? _resSetObject, ref ResourceSet[]? _resourceSets)
 	{
 		if (IsDisposed)
 		{
 			logger.LogError("Cannot prepare default surface material that has already been disposed!");
-			_outResourceSets = null;
+			_resourceSets = null;
 			return false;
 		}
+
+		bool hasResourceSetChanged = _resourceSets is null || _resourceSets.Length != 3;
 
 		// Update constant buffers:
 		if (dirtyFlags.HasFlag(DirtyFlags.CBDefaultSurface))
 		{
 			if (!ConstantBufferUtility.UpdateConstantBuffer(graphicsCore, resourceKey, ref cbDefaultSurface!, ref cbDefaultSurfaceData))
 			{
-				_outResourceSets = null;
 				return false;
 			}
 			dirtyFlags &= ~DirtyFlags.CBDefaultSurface;
@@ -185,16 +188,30 @@ public sealed class DefaultSurfaceMaterial : SurfaceMaterial
 		// Update bound resource sets:
 		if (dirtyFlags.HasFlag(DirtyFlags.BoundResources))
 		{
+			// Note: The array of user-bound resource (i.e. `resourcesUserBound`) is updated automatically through
+			// resource slots. By assigning a value to a slot, the new value is automatically updated on the slot's
+			// mapped array index position.
+
 			resSetUserBound?.Dispose();
 			if (!CreateResourceSetForBoundResources(resLayoutUserBound!, out resSetUserBound, resourcesUserBound!))
 			{
-				_outResourceSets = null;
 				return false;
 			}
 			dirtyFlags &= ~DirtyFlags.BoundResources;
+			hasResourceSetChanged = true;
+
+			if (!InitializeBoundResourceSlots(null, true))
+			{
+				return false;
+			}
 		}
 
-		_outResourceSets = resourceSets;
+		// (Re)allocate and populate resource sets array:
+		if (hasResourceSetChanged && !RecreateResourceSets(in _cameraPassCtx, _resSetObject, ref _resourceSets))
+		{
+			return false;
+		}
+
 		return true;
 	}
 
@@ -220,16 +237,85 @@ public sealed class DefaultSurfaceMaterial : SurfaceMaterial
 		return true;
 	}
 
-	private bool CreateUserBoundResourceSet()
+	private bool InitializeBoundResourceSlots(string?[]? _resourceKeys, bool _loadImmediately)
 	{
-		//TODO [CRITICAL]
-		return false;	//TEMP
+		int i = 0;
+		if (_resourceKeys is null)
+		{
+			_resourceKeys = new string?[resourceSlotsUserBound.Count];
+			foreach (var kvp in resourceSlotsUserBound)
+			{
+				_resourceKeys[i++] = kvp.Value.ResourceKey;
+			}
+		}
+
+		bool success = true;
+
+		i = 0;
+		foreach (var kvp in resourceSlotsUserBound)
+		{
+			string? resourceKey = _resourceKeys[i++];
+			if (string.IsNullOrEmpty(resourceKey))
+				continue;
+
+			if (!resourceManager.GetResource(resourceKey, out ResourceHandle handle))
+				continue;
+
+			if (!handle.Load(_loadImmediately))
+				continue;
+
+			success &= kvp.Value.SetValue(handle);
+		}
+
+		return success;
+	}
+
+	private bool RecreateResourceSets(in CameraPassContext _cameraPassCtx, ResourceSet? _resSetObject, ref ResourceSet[]? _resourceSets)
+	{
+		if (_resSetObject is null || _resSetObject.IsDisposed)
+		{
+			logger.LogError($"Cannot recreate resource sets array for default surface material '{resourceKey}' using null or disposed object resource set!");
+			return false;
+		}
+		if (_resourceSets is null || _resourceSets.Length != 3)
+		{
+			_resourceSets = new ResourceSet[3];
+		}
+
+		_resourceSets[0] = _cameraPassCtx.ResSetCamera;
+		_resourceSets[1] = _resSetObject;
+		_resourceSets[2] = resSetUserBound!;
+
+		return true;
 	}
 
 	public override IEnumerator<ResourceHandle> GetResourceDependencies()
 	{
-		//TODO: Yield all referenced textures, buffers, samplers, and other resources.
+		// Enumerate shaders:
+		yield return VertexShaderHandle;
+		if (GeometryShaderHandle.IsValid)
+		{
+			yield return GeometryShaderHandle;
+		}
+		if (TesselationCtrlShaderHandle.IsValid &&
+			TesselationEvalShaderHandle.IsValid)
+		{
+			yield return TesselationCtrlShaderHandle;
+			yield return TesselationEvalShaderHandle;
+		}
+		yield return PixelShaderHandle;
 
+		// Enumerate all user-bound resources:
+		foreach (var kvp in resourceSlotsUserBound)
+		{
+			string? boundResourceKey = kvp.Value.ResourceKey;
+			if (!string.IsNullOrEmpty(boundResourceKey) && resourceManager.GetResource(boundResourceKey, out ResourceHandle boundResourceHandle))
+			{
+				yield return boundResourceHandle;
+			}
+		}
+
+		// Return self:
 		if (resourceManager.GetResource(resourceKey, out ResourceHandle handle))
 		{
 			yield return handle;
