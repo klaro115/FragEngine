@@ -8,7 +8,7 @@ using Veldrid;
 
 namespace FragEngine3.Graphics.Cameras
 {
-    public static class CameraUtility
+	public static class CameraUtility
 	{
 		#region Methods
 
@@ -41,10 +41,7 @@ namespace FragEngine3.Graphics.Cameras
 				}
 			}
 
-			/*
-			TimeManager timeManager = _graphicsCore.graphicsSystem.Engine.TimeManager;
-			float engineRunTime = (float)timeManager.RunTime.TotalSeconds;
-			*/
+			//TimeManager timeManager = _graphicsCore.graphicsSystem.Engine.TimeManager;
 
 			_cbSceneData = new()
 			{
@@ -56,10 +53,10 @@ namespace FragEngine3.Graphics.Cameras
 
 				// Time:
 				/*
-				engineRunTime = engineRunTime,
-				engineDeltaTime = (float)timeManager.DeltaTime.TotalSeconds,
-				engineFrameCount = (uint)timeManager.FrameCount,
-				engineSinTime = MathF.Sin(engineRunTime),
+				shaderTime = timeManager.ShaderTimeSeconds,
+				deltaTime = (float)timeManager.DeltaTime.TotalSeconds,
+				frameCounter = (uint)(timeManager.FrameCount & 0xFFFFFFFFL),
+				sinTime = MathF.Sin(engineRunTime),
 				*/
 			};
 
