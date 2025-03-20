@@ -1,4 +1,5 @@
-﻿using FragEngine3.Graphics.ConstantBuffers;
+﻿using FragEngine3.EngineCore;
+using FragEngine3.Graphics.ConstantBuffers;
 using FragEngine3.Graphics.Contexts;
 using FragEngine3.Graphics.Lighting.Internal;
 using FragEngine3.Scenes;
@@ -40,6 +41,8 @@ namespace FragEngine3.Graphics.Cameras
 				}
 			}
 
+			TimeManager timeManager = _graphicsCore.graphicsSystem.Engine.TimeManager;
+
 			_cbSceneData = new()
 			{
 				// Scene lighting:
@@ -47,6 +50,13 @@ namespace FragEngine3.Graphics.Cameras
 				ambientLightMid = _sceneSettings.AmbientLightIntensityMid,
 				ambientLightHigh = _sceneSettings.AmbientLightIntensityHigh,
 				shadowFadeStart = 0.9f,
+
+				// Time:
+				/*
+				shaderTime = timeManager.ShaderTimeSeconds,
+				deltaTime = (float)timeManager.DeltaTime.TotalSeconds,
+				frameCounter = (uint)(timeManager.FrameCount & 0xFFFFFFFFL),
+				*/
 			};
 
 			_graphicsCore.Device.UpdateBuffer(_cbScene, 0, ref _cbSceneData, CBScene.byteSize);
