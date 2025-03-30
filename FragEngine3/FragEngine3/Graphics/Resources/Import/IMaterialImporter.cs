@@ -50,7 +50,7 @@ public interface IMaterialImporter : IGraphicsResourceImporter
 	/// <param name="_materialData">Deserialized material data from which to construct the material resource.</param>
 	/// <param name="_outMaterial">Outputs a new material resource. Null on failure.</param>
 	/// <returns>True if the resource could be created successfully, false otherwise.</returns>
-	public bool CreateMaterial(in ResourceHandle _resourceHandle, in GraphicsCore _graphicsCore, in MaterialDataNew _materialData, out MaterialNew? _outMaterial);
+	public bool CreateMaterial(in ResourceHandle _resourceHandle, in GraphicsCore _graphicsCore, in MaterialDataNew _materialData, out Material? _outMaterial);
 
 	#endregion
 }

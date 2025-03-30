@@ -10,7 +10,7 @@ namespace FragEngine3.Graphics.Resources.Data;
 /// Serializable resource data that is used to serialize or describe a material resource.
 /// </summary>
 [Serializable]
-[ResourceDataType(typeof(Material))]
+[ResourceDataType(typeof(MaterialOld))]
 [Obsolete("Rewritten")]
 public sealed class MaterialData
 {

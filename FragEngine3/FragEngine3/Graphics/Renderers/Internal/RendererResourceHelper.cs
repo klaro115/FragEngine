@@ -97,7 +97,7 @@ public static class RendererResourceHelper
 					return true;
 				}
 
-				_shadowMaterialHandle = _sceneMaterial.ShadowMapMaterialVersion ?? ResourceHandle.None;
+				_shadowMaterialHandle = _sceneMaterial.ShadowMaterialHandle ?? ResourceHandle.None;
 			}
 
 			Material? prevShadowMaterial = _shadowMaterial;

@@ -574,8 +574,10 @@ public sealed class ResourceManager : IEngineSystem
 				}
 				break;
 			case ResourceType.Material:
-				if ((success = MaterialImporter.ImportMaterialData(_handle, engine.Logger, out MaterialData? materialData) && materialData is not null) &&
-					(success = Material.CreateMaterial(_handle, materialData!, engine.GraphicsSystem.graphicsCore, out Material? material)))
+				MaterialImporter materialImporter = engine.GraphicsResourceLoader.materialImporter;
+
+				if ((success = materialImporter.ImportMaterialData(_handle, out MaterialDataNew? materialData) && materialData is not null) &&
+					(success = materialImporter.CreateMaterial(in _handle, in materialData!, out Material? material)))
 				{
 					_assignResourceCallback(material);
 				}

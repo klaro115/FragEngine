@@ -11,7 +11,7 @@ using Veldrid;
 namespace FragEngine3.Graphics.Resources.Materials;
 
 [Obsolete("Rewritten")]
-public class Material(GraphicsCore _core, ResourceHandle _handle) : Resource(_handle)
+public class MaterialOld(GraphicsCore _core, ResourceHandle _handle) : Resource(_handle)
 {
 	#region Types
 
@@ -542,7 +542,7 @@ public class Material(GraphicsCore _core, ResourceHandle _handle) : Resource(_ha
 		}
 	}
 
-	public static bool CreateMaterial(ResourceHandle _resourceHandle, MaterialData _data, GraphicsCore _graphicsCore, out Material? _outMaterial)
+	public static bool CreateMaterial(ResourceHandle _resourceHandle, MaterialData _data, GraphicsCore _graphicsCore, out MaterialOld? _outMaterial)
 	{
 		if (_graphicsCore is null || !_graphicsCore.IsInitialized)
 		{

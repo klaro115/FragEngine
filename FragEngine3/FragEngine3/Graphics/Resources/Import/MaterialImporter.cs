@@ -127,7 +127,7 @@ public sealed class MaterialImporter : BaseResourceImporter<IMaterialImporter>
 		return success;
 	}
 
-	public bool CreateMaterial(in ResourceHandle _handle, in MaterialDataNew _materialData, out MaterialNew? _outMaterial)
+	public bool CreateMaterial(in ResourceHandle _handle, in MaterialDataNew _materialData, out Material? _outMaterial)
 	{
 		// Check input parameters:
 		if (_handle is null || !_handle.IsValid)

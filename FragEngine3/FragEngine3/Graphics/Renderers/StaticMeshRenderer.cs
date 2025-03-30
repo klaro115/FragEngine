@@ -99,7 +99,7 @@ public sealed class StaticMeshRenderer : IPhysicalRenderer
 	public bool DontDrawUnlessFullyLoaded { get; set; } = false;
 
 	public int LastUpdatedForFrameIdx { get; private set; } = -1;
-	public RenderMode RenderMode => materialScene is not null ? materialScene.RenderMode : RenderMode.Opaque;
+	public RenderMode RenderMode => materialScene is not null ? materialScene.renderMode : RenderMode.Opaque;
 	public uint LayerFlags { get; set; } = 1;
 
 	public Vector3 VisualCenterPoint => worldPose.position;
@@ -242,7 +242,7 @@ public sealed class StaticMeshRenderer : IPhysicalRenderer
 				// If no override shadow material is provided, use default from loaded scene material:
 				if (materialScene is not null && (_overrideShadowMaterial is null || !_overrideShadowMaterial.IsValid))
 				{
-					ShadowMaterialHandle = materialScene.ShadowMapMaterialVersion ?? ResourceHandle.None;
+					ShadowMaterialHandle = materialScene.ShadowMaterialHandle ?? ResourceHandle.None;
 					if (ShadowMaterialHandle.IsLoaded)
 					{
 						materialShadow = ShadowMaterialHandle.GetResource<Material>();
@@ -428,7 +428,7 @@ public sealed class StaticMeshRenderer : IPhysicalRenderer
 		_cameraPassCtx.CmdList.SetGraphicsResourceSet(0, _cameraPassCtx.ResSetCamera);
 		_cameraPassCtx.CmdList.SetGraphicsResourceSet(1, resSetObject);
 
-		ResourceSet? boundResourceSet = overrideBoundResourceSet ?? _material.BoundResourceSet;
+		ResourceSet? boundResourceSet = overrideBoundResourceSet ?? _material.BoundResourceSet;		//TODO [CRITICAL]: Change this to use the material's own resource set preparation!
 		if (boundResourceSet is not null && _material.BoundResourceLayout is not null)
 		{
 			_cameraPassCtx.CmdList.SetGraphicsResourceSet(2, boundResourceSet);
@@ -479,14 +479,14 @@ public sealed class StaticMeshRenderer : IPhysicalRenderer
 	{
 		_pipeline.DisposeValue();
 
-		if (!_material.CreatePipeline(_sceneCtx, _cameraPassCtx, _newestVersion, mesh!.VertexDataFlags, out PipelineState pipelineState))
+		if (!_material.CreatePipeline(_sceneCtx, _cameraPassCtx, mesh!.VertexDataFlags, out PipelineState? pipelineState, out _))
 		{
 			_pipeline.UpdateValue(0, null);
 			logger.LogError($"Failed to retrieve pipeline description for material '{_material}'!");
 			return false;
 		}
 
-		_pipeline.UpdateValue(_newestVersion, pipelineState.pipeline);  //TODO: Ditch pipeline state object and type.
+		_pipeline.UpdateValue(_newestVersion, pipelineState!.pipeline);  //TODO: Ditch pipeline state object and type.
 		return true;
 	}
 

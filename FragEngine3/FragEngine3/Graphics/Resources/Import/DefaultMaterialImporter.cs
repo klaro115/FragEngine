@@ -49,7 +49,7 @@ public sealed class DefaultMaterialImporter : IMaterialImporter
 		}
 	}
 
-	public bool CreateMaterial(in ResourceHandle _resourceHandle, in GraphicsCore _graphicsCore, in MaterialDataNew _materialData, out MaterialNew? _outMaterial)
+	public bool CreateMaterial(in ResourceHandle _resourceHandle, in GraphicsCore _graphicsCore, in MaterialDataNew _materialData, out Material? _outMaterial)
 	{
 		try
 		{

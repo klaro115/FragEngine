@@ -12,7 +12,7 @@ namespace FragEngine3.Graphics.Resources.Data;
 /// Serializable resource data that is used to serialize or describe a material resource.
 /// </summary>
 [Serializable]
-[ResourceDataType(typeof(MaterialNew))]
+[ResourceDataType(typeof(Material))]
 public sealed class MaterialDataNew
 {
 	#region Properties
@@ -28,14 +28,20 @@ public sealed class MaterialDataNew
 	/// </summary>
 	public required MaterialType MaterialType { get; init; }
 	/// <summary>
+	/// The way this material should be rendered. Different modes may be placed into different render queues, parallelized, or use different blending.
+	/// </summary>
+	public required RenderMode RenderMode { get; init; }
+	/// <summary>
 	/// The name of a type inheriting from <see cref="Material"/>, that this data shall be deserialized into. If null or
 	/// empty, a default material type is used instead.
 	/// </summary>
 	public string? TypeName { get; init; } = null;
 	/// <summary>
-	/// Optional. Additional string-serialized data and settings that may be consumed by custom user-supplied material types.
+	/// Optional. Additional string-serialized data and settings that may be consumed by custom user-supplied material types and importers.
 	/// </summary>
 	public string? SerializedData { get; init; } = null;
+
+	//TODO [IMPORTANT]: Add descriptions for depth/stencil states, Z-sorting bias, etc.
 
 	// BINDINGS:
 

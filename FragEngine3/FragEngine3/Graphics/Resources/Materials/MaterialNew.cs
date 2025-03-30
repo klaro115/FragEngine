@@ -14,18 +14,20 @@ namespace FragEngine3.Graphics.Resources.Materials;
 /// pipeline by an implementation of <see cref="IRenderer"/>. The renderer creates the <see cref="Pipeline"/>,
 /// but the material provides the resources and bindings for it.
 /// </summary>
-public abstract class MaterialNew : Resource
+public abstract class Material : Resource
 {
 	#region Constructors
 
-	protected MaterialNew(GraphicsCore _graphicsCore, ResourceHandle _resourceHandle, MaterialDataNew _data) : base(_resourceHandle)
+	protected Material(GraphicsCore _graphicsCore, ResourceHandle _resourceHandle, MaterialDataNew _data) : base(_resourceHandle)
 	{
 		graphicsCore = _graphicsCore ?? throw new ArgumentNullException(nameof(_graphicsCore), "Graphics core may not be null!");
 		logger = graphicsCore.graphicsSystem.Engine.Logger;
 		materialType = _data.MaterialType;
+		renderMode = _data.RenderMode;
+		//maxSupportedVariantFlags = _data. ???			//TODO: Initialize this value and add appropriate fields or getter methods to MaterialData!
 	}
 
-	~MaterialNew()
+	~Material()
 	{
 		if (!IsDisposed) Dispose(false);
 	}
@@ -37,6 +39,7 @@ public abstract class MaterialNew : Resource
 	protected readonly Logger logger;
 
 	public readonly MaterialType materialType;
+	public readonly RenderMode renderMode;
 	public readonly MeshVertexDataFlags maxSupportedVariantFlags;
 
 	protected ConstantBufferSlot[] customConstantBufferSlots = null!;
@@ -53,7 +56,11 @@ public abstract class MaterialNew : Resource
 	/// <summary>
 	/// Gets the replacement material that's used to render shadow maps for this material.
 	/// </summary>
-	public MaterialNew? ShadowMaterial { get; private set; } = null;
+	public Material? ShadowMaterial { get; private set; } = null;
+	/// <summary>
+	/// Gets whether this material has a replacement material for shadow maps assigned.
+	/// </summary>
+	public bool HasShadowMapMaterialVersion => ShadowMaterial is not null || ShadowMaterialHandle.IsValid;
 
 	/// <summary>
 	/// Gets a resource handle for the replacement material that's used to render simplified versions or distant LODs of this material.
@@ -62,7 +69,13 @@ public abstract class MaterialNew : Resource
 	/// <summary>
 	/// Gets the replacement material that's used to render simplified versions or distant LODs of this material.
 	/// </summary>
-	public MaterialNew? SimplifiedMaterial { get; private set; } = null;
+	public Material? SimplifiedMaterial { get; private set; } = null;
+	/// <summary>
+	/// Gets whether this material has a replacement material for simplified rendering assigned.
+	/// </summary>
+	public bool HasSimplifiedMaterialVersion => ShadowMaterial is not null || ShadowMaterialHandle.IsValid;
+
+	public float ZSortingBias { get; set; } = 0.0f;
 
 	#endregion
 	#region Methods
@@ -170,7 +183,7 @@ public abstract class MaterialNew : Resource
 		}
 
 		ShadowMaterialHandle = _handle;
-		ShadowMaterial = ShadowMaterialHandle.GetResource<MaterialNew>(_loadImmediately);
+		ShadowMaterial = ShadowMaterialHandle.GetResource<Material>(_loadImmediately);
 
 		// Unassign shadow material if loading has failed:
 		if (_loadImmediately && ShadowMaterial is null)
@@ -187,7 +200,7 @@ public abstract class MaterialNew : Resource
 	/// </summary>
 	/// <param name="_material">The replacement material.</param>
 	/// <returns>True if the new replacement material could be assigned, false otherwise.</returns>
-	public bool SetShadowMaterial(MaterialNew? _material)
+	public bool SetShadowMaterial(Material? _material)
 	{
 		// Null material will unassign the shadow material:
 		if (_material is null)

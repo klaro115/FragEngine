@@ -8,7 +8,7 @@ namespace FragEngine3.Graphics.Resources.Materials;
 /// <summary>
 /// Base class for surface materials. Material types inheriting from this class will be used to render a mesh's surface geometry.
 /// </summary>
-public abstract class SurfaceMaterial : MaterialNew
+public abstract class SurfaceMaterial : Material
 {
 	#region Constructors
 
