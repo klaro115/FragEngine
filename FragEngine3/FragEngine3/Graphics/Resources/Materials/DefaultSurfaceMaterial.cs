@@ -82,6 +82,11 @@ public sealed class DefaultSurfaceMaterial : SurfaceMaterial
 	];
 
 	#endregion
+	#region Properties
+
+	public ResourceLayout BoundResourceLayout => resLayoutUserBound!;
+
+	#endregion
 	#region Methods
 
 	protected override void Dispose(bool _disposing)
@@ -135,7 +140,7 @@ public sealed class DefaultSurfaceMaterial : SurfaceMaterial
 		{
 			GraphicsPipelineDescription pipelineDesc = new(
 				BlendStateDescription.SingleOverrideBlend,
-				DepthStencilStateDescription.DepthOnlyLessEqual,
+				DepthStencilStateDescription.DepthOnlyLessEqual,		//TODO [IMPORTANT]: Add actual depth/stencil/blend/raterizer state descriptions to MaterialData, and use those here!
 				RasterizerStateDescription.Default,
 				PrimitiveTopology.TriangleList,
 				shaderSetDesc,

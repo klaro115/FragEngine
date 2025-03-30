@@ -71,6 +71,7 @@ public sealed class StaticMeshRenderer : IPhysicalRenderer
 	private readonly DeviceBuffer cbObject;
 	private ResourceSet? resSetObject = null;
 	private ResourceSet? overrideBoundResourceSet = null;
+	private ResourceSet[]? allResourceSets = null;
 	private VersionedMember<Pipeline?> pipelineScene = new(null, 0);
 	private VersionedMember<Pipeline?> pipelineShadow = new(null, 0);
 
@@ -423,15 +424,17 @@ public sealed class StaticMeshRenderer : IPhysicalRenderer
 			return false;
 		}
 
+		// Update all resource sets (bound and system):
+		if (!_material.Prepare(in _sceneCtx, in _cameraPassCtx, resSetObject, ref allResourceSets))
+		{
+			return false;
+		}
+
 		// Bind pipeline and resource sets:
 		_cameraPassCtx.CmdList.SetPipeline(_pipeline.Value);
-		_cameraPassCtx.CmdList.SetGraphicsResourceSet(0, _cameraPassCtx.ResSetCamera);
-		_cameraPassCtx.CmdList.SetGraphicsResourceSet(1, resSetObject);
-
-		ResourceSet? boundResourceSet = overrideBoundResourceSet ?? _material.BoundResourceSet;		//TODO [CRITICAL]: Change this to use the material's own resource set preparation!
-		if (boundResourceSet is not null && _material.BoundResourceLayout is not null)
+		for (uint i = 0; i < allResourceSets!.Length; ++i)
 		{
-			_cameraPassCtx.CmdList.SetGraphicsResourceSet(2, boundResourceSet);
+			_cameraPassCtx.CmdList.SetGraphicsResourceSet(i, allResourceSets[i]);
 		}
 
 		// Bind geometry buffers:
