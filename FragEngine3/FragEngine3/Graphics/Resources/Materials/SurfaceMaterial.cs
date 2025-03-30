@@ -16,6 +16,27 @@ public abstract class SurfaceMaterial : Material
 	{
 		const int maxVariantCount = (int)MeshVertexDataFlags.ALL;
 		shaderSetDescriptions = new ShaderSetDescription?[maxVariantCount];
+
+		// Load resource handles for vertex and pixel shaders:
+		if (!resourceManager.GetResource(_data.Shaders.Vertex, out ResourceHandle handleVS) ||
+			!resourceManager.GetResource(_data.Shaders.Pixel, out ResourceHandle handlePS))
+		{
+			throw new Exception("Pixel or vertex shader of surface material could not be found!");
+		}
+		VertexShaderHandle = handleVS;
+		PixelShaderHandle = handlePS;
+
+		// Optionally, try loading geometry and tesselation shaders:
+		if (resourceManager.GetResource(_data.Shaders.Geometry, out ResourceHandle handleGS))
+		{
+			GeometryShaderHandle = handleGS;
+		}
+		if (resourceManager.GetResource(_data.Shaders.TesselationCtrl, out ResourceHandle handleTCS) &&
+			resourceManager.GetResource(_data.Shaders.TesselationEval, out ResourceHandle handleTES))
+		{
+			TesselationCtrlShaderHandle = handleTCS;
+			TesselationEvalShaderHandle = handleTES;
+		}
 	}
 
 	#endregion

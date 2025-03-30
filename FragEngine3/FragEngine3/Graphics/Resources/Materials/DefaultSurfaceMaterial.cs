@@ -263,16 +263,33 @@ public sealed class DefaultSurfaceMaterial : SurfaceMaterial
 			if (string.IsNullOrEmpty(resourceKey))
 				continue;
 
-			if (!resourceManager.GetResource(resourceKey, out ResourceHandle handle))
-				continue;
-
-			if (!handle.Load(_loadImmediately))
-				continue;
-
-			success &= kvp.Value.SetValue(handle);
+			if (kvp.Value.resourceKind == ResourceKind.Sampler)
+			{
+				success &= TryLoadBoundSampler(resourceKey, kvp.Value);
+			}
+			else
+			{
+				success &= TryLoadBoundResource(resourceKey, kvp.Value, _loadImmediately);
+			}
 		}
 
 		return success;
+	}
+
+	private bool TryLoadBoundSampler(string _samplerDescriptionTxt, MaterialUserBoundResourceSlot _slot)
+	{
+		return graphicsCore.SamplerManager.GetSampler(_samplerDescriptionTxt, out Sampler sampler) && _slot.SetValue(sampler);
+	}
+
+	private bool TryLoadBoundResource(string _resourceKey, MaterialUserBoundResourceSlot _slot, bool _loadImmediately)
+	{
+		if (!resourceManager.GetResource(_resourceKey, out ResourceHandle handle))
+			return true;
+
+		if (!handle.Load(_loadImmediately))
+			return true;
+
+		return _slot.SetValue(handle);
 	}
 
 	private bool RecreateResourceSets(in CameraPassContext _cameraPassCtx, ResourceSet? _resSetObject, ref ResourceSet[]? _resourceSets)

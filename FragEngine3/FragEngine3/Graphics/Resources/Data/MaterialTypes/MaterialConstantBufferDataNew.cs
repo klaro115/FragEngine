@@ -27,6 +27,14 @@ public sealed class MaterialConstantBufferValue
 	public required string SerializedValue { get; init; } = string.Empty;
 
 	#endregion
+	#region Methods
+
+	public override string ToString()
+	{
+		return $"Name: '{Name}', Index: {Index}, Serialized value: '{SerializedValue ?? "NULL"}'";
+	}
+
+	#endregion
 }
 
 /// <summary>
@@ -93,6 +101,11 @@ public sealed class MaterialConstantBufferDataNew
 				return false;
 		}
 		return true;
+	}
+
+	public override string ToString()
+	{
+		return $"SlotIndex: {SlotIndex}, Type: '{Type}', Values: {(Values is not null ? Values.Length : 0)}x, Serialized data: '{SerializedData ?? "NULL"}'";
 	}
 
 	#endregion
