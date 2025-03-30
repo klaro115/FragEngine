@@ -6,7 +6,7 @@ using FragEngine3.Resources;
 
 namespace FragEngine3.Graphics.Resources.Import;
 
-public class DefaultMaterialImporter : IMaterialImporter
+public sealed class DefaultMaterialImporter : IMaterialImporter
 {
 	#region Fields
 
@@ -15,6 +15,7 @@ public class DefaultMaterialImporter : IMaterialImporter
 	private static readonly FrozenDictionary<string, Type> supportedMaterialTypes = new Dictionary<string, Type>()
 	{
 		[typeof(DefaultSurfaceMaterial).Name] = typeof(DefaultSurfaceMaterial),
+		[typeof(SurfaceMaterial).Name] = typeof(SurfaceMaterial),
 	}.ToFrozenDictionary();
 
 	#endregion
@@ -24,7 +25,7 @@ public class DefaultMaterialImporter : IMaterialImporter
 
 	public bool CanImportSurfaceMaterials => true;
 
-	public bool CanImportComputeMaterials => true;
+	public bool CanImportComputeMaterials => false;
 
 	#endregion
 	#region Methods
