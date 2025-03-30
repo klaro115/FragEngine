@@ -1,73 +1,85 @@
 {
-    "Key": "Mtl_ForwardPlusLight_CompositeUI",
-    "States":
-    {
-        "EnableDepthTest": false,
-        "EnableDepthWrite": false,
-        
-        "EnableStencil": false,
-        "StencilFront":
-        {
-            "Fail": 0,
-            "Pass": 0,
-            "DepthFail": 0,
-            "ComparisonKind": 3
-        },
-        "StencilBack":
-        {
-            "Fail": 0,
-            "Pass": 0,
-            "DepthFail": 0,
-            "ComparisonKind": 3
-        },
+    "ResourceKey": "Mtl_ForwardPlusLight_CompositeUI",
+    "MaterialType": 0,
+    "RenderMode": 4,
+    "TypeName": null,
+    "SerializedData": null,
 
-        "EnableCulling": false,
-        "RenderMode": 4,
-        "ZSortingBias": 0.0
-    },
-    "Shaders":
-    {
+    "Shaders": {
         "IsSurfaceMaterial": true,
-        "Compute": "",
         "Vertex": "Basic_VS",
-        "Geometry": "",
-        "TesselationCtrl": "",
-        "TesselationEval": "",
         "Pixel": "ForwardPlusLight_CompositeUI_PS"
     },
-    "Replacements":
-    {
+    "Replacements": {
         "SimplifiedVersion": "",
         "ShadowMap": ""
     },
-    "Resources":
-    [
+    "Constants": [
         {
-            "ResourceKey": "",
+            "SlotIndex": 0,
+            "Type": 1
+        },
+        {
+            "SlotIndex": 1,
+            "Type": 2
+        },
+        {
+            "SlotIndex": 2,
+            "Type": 4
+        },
+        {
+            "SlotIndex": 3,
+            "Type": 8,
+            "Values": [
+                {
+                    "Name": "tintColor",
+                    "Index": 0,
+                    "SerializedValue": "{1, 1, 1, 1}"
+                },
+                {
+                    "Name": "roughness",
+                    "Index": 1,
+                    "SerializedValue": "1"
+                },
+                {
+                    "Name": "shininess",
+                    "Index": 2,
+                    "SerializedValue": "0"
+                },
+                {
+                    "Name": "reflectionIndex",
+                    "Index": 3,
+                    "SerializedValue": "0"
+                },
+                {
+                    "Name": "refractionIndex",
+                    "Index": 4,
+                    "SerializedValue": "0"
+                }
+            ]
+        }
+    ],
+    "Resources": [
+        {
+            "ResourceKey": "TexWhite",
             "SlotName": "TexSceneColor",
             "SlotIndex": 4,
             "ResourceKind": 3,
-            "ShaderStageFlags": 16,
-            "Description": null,
-            "IsBoundBySystem": true
+            "ShaderStageFlags": 16
         },
         {
-            "ResourceKey": "",
+            "ResourceKey": "TexWhite",
             "SlotName": "TexSceneDepth",
             "SlotIndex": 5,
             "ResourceKind": 3,
-            "ShaderStageFlags": 16,
-            "Description": null,
-            "IsBoundBySystem": true
+            "ShaderStageFlags": 16
         },
         {
-            "ResourceKey": "",
+            "ResourceKey": "TexWhite",
             "SlotName": "TexUIColor",
             "SlotIndex": 6,
             "ResourceKind": 3,
-            "ShaderStageFlags": 16,
-            "Description": null,
-            "IsBoundBySystem": true
+            "ShaderStageFlags": 16
         }
     ]
 }
