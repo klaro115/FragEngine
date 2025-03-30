@@ -50,6 +50,56 @@ public sealed class MaterialImporter : BaseResourceImporter<IMaterialImporter>
 		return true;
 	}
 
+	public bool ImportMaterialData(ResourceHandle _resourceHandle, out MaterialDataNew? _outMaterialData)
+	{
+		if (IsDisposed)
+		{
+			logger.LogError($"Cannot import material data using disposed {nameof(ModelImporter)}!");
+			_outMaterialData = null;
+			return false;
+		}
+
+		if (!TryGetResourceFile(_resourceHandle, out ResourceFileHandle fileHandle))
+		{
+			_outMaterialData = null;
+			return false;
+		}
+
+		Stream? stream = null;
+		try
+		{
+			// Open file stream:
+			if (!fileHandle.TryOpenDataStream(resourceManager.engine, _resourceHandle.dataOffset, _resourceHandle.dataSize, out stream, out _))
+			{
+				logger.LogError($"Failed to open file stream for resource handle '{_resourceHandle}'!");
+				_outMaterialData = null;
+				return false;
+			}
+
+			// Import from stream, identifying file format from extension:
+			string formatExt = Path.GetExtension(fileHandle.dataFilePath);
+
+			if (!ImportMaterialData(stream, formatExt, out _outMaterialData))
+			{
+				logger.LogError($"Failed to import material data for resource handle '{_resourceHandle}'!");
+				_outMaterialData = null;
+				return false;
+			}
+		}
+		catch (Exception ex)
+		{
+			logger.LogException($"Failed to import material data for resource handle '{_resourceHandle}'!", ex);
+			_outMaterialData = null;
+			return false;
+		}
+		finally
+		{
+			stream?.Close();
+		}
+
+		return true;
+	}
+
 	public bool ImportMaterialData(Stream _stream, string _formatExt, out MaterialDataNew? _outMaterialData)
 	{
 		if (_stream is null || !_stream.CanRead)
