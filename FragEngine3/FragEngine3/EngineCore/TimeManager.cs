@@ -12,7 +12,8 @@ public sealed class TimeManager : IEngineSystem
 
 	/// <summary>
 	/// Reset modes that dictate if and how long to wait befire resetting <see cref="ShaderTime"/>.
-	/// A delayed reset mode can be used to prevent visual artifacting in timer-based visual effects when the time value is reset to zero.
+	/// A delayed reset mode can be used to prevent visual artifacting in timer-based visual effects when the time value is reset to zero.<para/>
+	/// Note: All wait conditions are relative to <see cref="RunTime"/>, and not to the current value of <see cref="ShaderTime"/>.
 	/// </summary>
 	public enum ShaderTimeResetMode
 	{
