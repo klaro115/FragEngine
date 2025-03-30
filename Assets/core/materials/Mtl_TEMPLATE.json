@@ -1,0 +1,55 @@
+{
+    "ResourceKey": "Mtl_TEMPLATE_KEY",
+    "MaterialType": 0,
+    "RenderMode": 1,
+    "TypeName": null,
+    "SerializedData": null,
+
+    "Shaders": {
+        "IsSurfaceMaterial": true,
+        "Vertex": "DefaultSurface_VS",
+        "Pixel": "DefaultSurface_PS"
+    },
+    "Replacements": {
+        "SimplifiedVersion": "",
+        "ShadowMap": "Mtl_DefaultShadow"
+    },
+    "Constants": [
+        {
+            "SlotIndex": 0,
+            "Type": 1
+        },
+        {
+            "SlotIndex": 1,
+            "Type": 2
+        },
+        {
+            "SlotIndex": 2,
+            "Type": 4
+        },
+        {
+            "SlotIndex": 3,
+            "Type": 8
+        },
+        {
+            "SlotIndex": 4,
+            "Type": 16,
+            "Values": [
+                {
+                    "Name": "VARIABLE_NAME",
+                    "Index": 0,
+                    "SerializedValue": "3.14"
+                }
+            ]
+        }
+    ],
+    "Resources": [
+        {
+            "ResourceKey": "RESOURCE_KEY",
+            "SlotName": "TexMain",
+            "SlotIndex": 0,
+            "ResourceKind": 3,
+            "ShaderStageFlags": 16
+        }
+    ]
+}
