@@ -21,6 +21,7 @@ public sealed class GraphicsResourceLoader : IDisposable
 		modelImporter = new(engine.ResourceManager, engine.GraphicsSystem.graphicsCore);
 		shaderImporter = new(engine.ResourceManager, engine.GraphicsSystem.graphicsCore);
 		imageImporter = new(engine.ResourceManager, engine.GraphicsSystem.graphicsCore);
+		materialImporter = new(engine.ResourceManager, engine.GraphicsSystem.graphicsCore);
 		//...
 	}
 
@@ -46,6 +47,10 @@ public sealed class GraphicsResourceLoader : IDisposable
 	/// The service responsible for managing image and texture import.
 	/// </summary>
 	internal readonly ImageImporter imageImporter;
+	/// <summary>
+	/// The service responsible for managing material import.
+	/// </summary>
+	internal readonly MaterialImporter materialImporter;
 	//...
 
 	#endregion
@@ -99,6 +104,17 @@ public sealed class GraphicsResourceLoader : IDisposable
 	public bool RegisterImageImporter(IImageImporter _newImporter)
 	{
 		return !IsDisposed && imageImporter.RegisterImporter(_newImporter);
+	}
+
+	/// <summary>
+	/// Tries to register a new material importer.<para/>
+	/// Note: The fallback importer of type <see cref="DefaultMaterialImporter"/> is already registered by default.
+	/// </summary>
+	/// <param name="_newImporter">The new importer instance.</param>
+	/// <returns>True if the importer was registered successfully, false otherwise.</returns>
+	public bool RegisterMaterialImporter(IMaterialImporter _newImporter)
+	{
+		return !IsDisposed && materialImporter.RegisterImporter(_newImporter);
 	}
 
 	#endregion

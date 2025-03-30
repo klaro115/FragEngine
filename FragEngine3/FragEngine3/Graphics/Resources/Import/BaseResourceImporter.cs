@@ -149,7 +149,7 @@ public abstract class BaseResourceImporter<TImporter> : BaseResourceImporter
 	/// <param name="_newImporter">The new model importer instance. Upon successful addition, ownership of the importer is passed to this instance.
 	/// If the importer instance implements the <see cref="IDisposable"/> interface, it will be disposed safely once this object expires.</param>
 	/// <returns>True if the model importer was registered for importing of at least one file format.</returns>
-	public bool RegisterImporter(TImporter _newImporter)
+	public virtual bool RegisterImporter(TImporter _newImporter)
 	{
 		if (_newImporter is null)
 		{
