@@ -1,44 +1,29 @@
 {
-    "Key": "Mtl_DefaultShadow",
-    "States":
-    {
-        "EnableDepthTest": true,
-        "EnableDepthWrite": true,
-        
-        "EnableStencil": false,
-        "StencilFront":
-        {
-            "Fail": 0,
-            "Pass": 0,
-            "DepthFail": 0,
-            "ComparisonKind": 3
-        },
-        "StencilBack":
-        {
-            "Fail": 0,
-            "Pass": 0,
-            "DepthFail": 0,
-            "ComparisonKind": 3
-        },
+    "ResourceKey": "Mtl_DefaultShadow",
+    "MaterialType": 0,
+    "RenderMode": 1,
+    "TypeName": null,
+    "SerializedData": null,
 
-        "EnableCulling": true,
-        "RenderMode": 1,
-        "ZSortingBias": 0.0
-    },
-    "Shaders":
-    {
+    "Shaders": {
         "IsSurfaceMaterial": true,
-        "Compute": "",
         "Vertex": "DefaultSurface_VS",
-        "Geometry": "",
-        "TesselationCtrl": "",
-        "TesselationEval": "",
         "Pixel": "DefaultShadow_PS"
     },
-    "Replacements":
-    {
-        "SimplifiedVersion": "",
-        "ShadowMap": ""
-    },
+    "Replacements": null,
+    "Constants": [
+        {
+            "SlotIndex": 0,
+            "Type": 1
+        },
+        {
+            "SlotIndex": 1,
+            "Type": 2
+        },
+        {
+            "SlotIndex": 2,
+            "Type": 4
+        }
+    ],
     "Resources": null
 }

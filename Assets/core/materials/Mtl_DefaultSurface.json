@@ -1,82 +1,92 @@
 {
-    "Key": "Mtl_DefaultSurface",
-    "States":
-    {
-        "EnableDepthTest": true,
-        "EnableDepthWrite": true,
-        
-        "EnableStencil": false,
-        "StencilFront":
-        {
-            "Fail": 0,
-            "Pass": 0,
-            "DepthFail": 0,
-            "ComparisonKind": 3
-        },
-        "StencilBack":
-        {
-            "Fail": 0,
-            "Pass": 0,
-            "DepthFail": 0,
-            "ComparisonKind": 3
-        },
+    "ResourceKey": "Mtl_DefaultSurface",
+    "MaterialType": 0,
+    "RenderMode": 1,
+    "TypeName": null,
+    "SerializedData": null,
 
-        "EnableCulling": true,
-        "RenderMode": 1,
-        "ZSortingBias": 0.0
-    },
-    "Shaders":
-    {
+    "Shaders": {
         "IsSurfaceMaterial": true,
-        "Compute": "",
         "Vertex": "DefaultSurface_VS",
-        "Geometry": "",
-        "TesselationCtrl": "",
-        "TesselationEval": "",
         "Pixel": "DefaultSurface_PS"
     },
-    "Replacements":
-    {
+    "Replacements": {
         "SimplifiedVersion": "",
         "ShadowMap": "Mtl_DefaultShadow"
     },
-    "Resources":
-    [
+    "Constants": [
+        {
+            "SlotIndex": 0,
+            "Type": 1
+        },
+        {
+            "SlotIndex": 1,
+            "Type": 2
+        },
+        {
+            "SlotIndex": 2,
+            "Type": 4
+        },
+        {
+            "SlotIndex": 3,
+            "Type": 8,
+            "Values": [
+                {
+                    "Name": "tintColor",
+                    "Index": 0,
+                    "SerializedValue": "{1, 1, 1, 1}"
+                },
+                {
+                    "Name": "roughness",
+                    "Index": 1,
+                    "SerializedValue": "0.5"
+                },
+                {
+                    "Name": "shininess",
+                    "Index": 2,
+                    "SerializedValue": "0.1"
+                },
+                {
+                    "Name": "reflectionIndex",
+                    "Index": 3,
+                    "SerializedValue": "0"
+                },
+                {
+                    "Name": "refractionIndex",
+                    "Index": 4,
+                    "SerializedValue": "0"
+                }
+            ]
+        }
+    ],
+    "Resources": [
         {
             "ResourceKey": "TexWhite",
             "SlotName": "TexMain",
             "SlotIndex": 4,
             "ResourceKind": 3,
-            "ShaderStageFlags": 16,
-            "Description": null,
-            "IsBoundBySystem": false
+            "ShaderStageFlags": 16
         },
         {
             "ResourceKey": "TexFeatureTest_Normal",
             "SlotName": "TexNormal",
             "SlotIndex": 5,
             "ResourceKind": 3,
-            "ShaderStageFlags": 16,
-            "Description": null,
-            "IsBoundBySystem": false
+            "ShaderStageFlags": 16
         },
         {
             "ResourceKey": "TexWhite",
             "SlotName": "TexLightmap",
             "SlotIndex": 6,
             "ResourceKind": 3,
-            "ShaderStageFlags": 16,
-            "Description": null,
-            "IsBoundBySystem": false
+            "ShaderStageFlags": 16
         },
         {
-            "ResourceKey": "",
+            "ResourceKey": "WWW_7_N_W",
             "SlotName": "SamplerMain",
             "SlotIndex": 1,
             "ResourceKind": 5,
-            "ShaderStageFlags": 16,
-            "Description": "WWW_7_N_W",
-            "IsBoundBySystem": false
+            "ShaderStageFlags": 16
         }
     ]
 }

@@ -29,16 +29,32 @@
         },
         {
             "SlotIndex": 3,
-            "Type": 8
-        },
-        {
-            "SlotIndex": 4,
-            "Type": 16,
+            "Type": 8,
             "Values": [
                 {
-                    "Name": "VARIABLE_NAME",
+                    "Name": "tintColor",
                     "Index": 0,
-                    "SerializedValue": "3.14"
+                    "SerializedValue": "{1, 1, 1, 1}"
+                },
+                {
+                    "Name": "roughness",
+                    "Index": 1,
+                    "SerializedValue": "0.5"
+                },
+                {
+                    "Name": "shininess",
+                    "Index": 2,
+                    "SerializedValue": "0.1"
+                },
+                {
+                    "Name": "reflectionIndex",
+                    "Index": 3,
+                    "SerializedValue": "0"
+                },
+                {
+                    "Name": "refractionIndex",
+                    "Index": 4,
+                    "SerializedValue": "0"
                 }
             ]
         }
@@ -47,7 +63,7 @@
         {
             "ResourceKey": "RESOURCE_KEY",
             "SlotName": "TexMain",
-            "SlotIndex": 0,
+            "SlotIndex": 4,
             "ResourceKind": 3,
             "ShaderStageFlags": 16
         }
