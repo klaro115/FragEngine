@@ -1,51 +1,28 @@
-﻿using FragEngine3.Graphics.ConstantBuffers;
-using FragEngine3.Graphics.Contexts;
+﻿using FragEngine3.Graphics.Contexts;
 using FragEngine3.Graphics.Internal;
 using FragEngine3.Graphics.Resources.Data;
-using FragEngine3.Graphics.Resources.Data.MaterialTypes;
 using FragEngine3.Graphics.Resources.Materials.Internal;
-using FragEngine3.Graphics.Utility;
 using FragEngine3.Resources;
 using Veldrid;
 
 namespace FragEngine3.Graphics.Resources.Materials;
 
-public sealed class DefaultSurfaceMaterial : SurfaceMaterial
+public sealed class BasicSurfaceMaterial : SurfaceMaterial
 {
-	#region Types
-
-	[Flags]
-	private enum DirtyFlags
-	{
-		CBDefaultSurface	= 1,
-		BoundResources		= 2,
-		//...
-
-		ALL					= CBDefaultSurface | BoundResources
-	}
-
-	#endregion
 	#region Constructors
 
-	public DefaultSurfaceMaterial(GraphicsCore _graphicsCore, ResourceHandle _resourceHandle, MaterialDataNew _data) : base(_graphicsCore, _resourceHandle, _data)
+	public BasicSurfaceMaterial(GraphicsCore _graphicsCore, ResourceHandle _resourceHandle, MaterialDataNew _data) : base(_graphicsCore, _resourceHandle, _data)
 	{
-		if (!ConstantBufferUtility.CreateOrUpdateConstantBuffer(graphicsCore, resourceKey, CBDefaultSurface.byteSize, ref cbDefaultSurface, ref cbDefaultSurfaceData))
-		{
-			throw new Exception($"Failed to create default surface constant buffer! (Resource key: '{resourceKey}')");
-		}
-		if (!_data.CreateLayoutFromBoundResources(graphicsCore, out resLayoutUserBound, materialBoundResourcesData))
+		if (!_data.CreateLayoutFromBoundResources(graphicsCore, out resLayoutUserBound, []))
 		{
 			Dispose();
 			throw new Exception($"Failed to create resource layout for non-system resources! (Resource key: '{resourceKey}')");
 		}
-		if (!_data.CreateBindingSlotsFromBoundResources(MarkResSetUserBoundDirty, materialBoundResourcesData.Length, out resourceSlotsUserBound, out resourcesUserBound!))
+		if (!_data.CreateBindingSlotsFromBoundResources(MarkDirty, 0, out resourceSlotsUserBound, out resourcesUserBound!))
 		{
 			Dispose();
 			throw new Exception($"Failed to create resource slots and buffers for non-system resources! (Resource key: '{resourceKey}')");
 		}
-
-		// Assign resources managed by material immediately; they will not change anymore:
-		resourcesUserBound[0] = cbDefaultSurface!;
 
 		// Initialize and assign resources that are identified in material data immediately:
 		string?[] boundResourceKeys = _data.GetBoundResourceKeys();
@@ -55,31 +32,13 @@ public sealed class DefaultSurfaceMaterial : SurfaceMaterial
 	#endregion
 	#region Fields
 
-	private DirtyFlags dirtyFlags = DirtyFlags.ALL;
-
-	private CBDefaultSurface cbDefaultSurfaceData = default;
-	private DeviceBuffer? cbDefaultSurface = null;
+	private bool isDirty = true;
 
 	private readonly ResourceLayout? resLayoutUserBound = null;
 	private ResourceSet? resSetUserBound = null;
 
 	private readonly Dictionary<string, MaterialUserBoundResourceSlot> resourceSlotsUserBound;
 	private readonly BindableResource[] resourcesUserBound;
-
-	/// <summary>
-	/// An array of all bound resources that are managed and provided by the material.
-	/// </summary>
-	private static readonly MaterialResourceDataNew[] materialBoundResourcesData =
-	[
-		new()
-		{
-			ResourceKey = string.Empty,
-			SlotName = CBDefaultSurface.NAME_IN_SHADER,
-			SlotIndex = 3,
-			ResourceKind = ResourceKind.UniformBuffer,
-			ShaderStageFlags = ShaderStages.Fragment,
-		},
-	];
 
 	#endregion
 	#region Properties
@@ -93,13 +52,11 @@ public sealed class DefaultSurfaceMaterial : SurfaceMaterial
 	{
 		IsDisposed = true;
 
-		cbDefaultSurface?.Dispose();
 		resLayoutUserBound?.Dispose();
 		resSetUserBound?.Dispose();
 	}
 
-	public void MarkDirty() => dirtyFlags = DirtyFlags.ALL;
-	private void MarkResSetUserBoundDirty() => dirtyFlags |= DirtyFlags.BoundResources;
+	public void MarkDirty() => isDirty = true;
 
 	public override bool CreatePipeline(in SceneContext _sceneCtx, in CameraPassContext _cameraCtx, MeshVertexDataFlags _vertexDataFlags, out PipelineState? _outPipelineState, out bool _outIsFullyLoaded)
 	{
@@ -138,7 +95,7 @@ public sealed class DefaultSurfaceMaterial : SurfaceMaterial
 		{
 			GraphicsPipelineDescription pipelineDesc = new(
 				BlendStateDescription.SingleOverrideBlend,
-				DepthStencilStateDescription.DepthOnlyLessEqual,		//TODO [IMPORTANT]: Add actual depth/stencil/blend/raterizer state descriptions to MaterialData, and use those here!
+				DepthStencilStateDescription.DepthOnlyLessEqual,        //TODO [IMPORTANT]: Add actual depth/stencil/blend/raterizer state descriptions to MaterialData, and use those here!
 				RasterizerStateDescription.Default,
 				PrimitiveTopology.TriangleList,
 				shaderSetDesc,
@@ -178,18 +135,8 @@ public sealed class DefaultSurfaceMaterial : SurfaceMaterial
 
 		bool hasResourceSetChanged = _resourceSets is null || _resourceSets.Length != 3;
 
-		// Update constant buffers:
-		if (dirtyFlags.HasFlag(DirtyFlags.CBDefaultSurface))
-		{
-			if (!ConstantBufferUtility.UpdateConstantBuffer(graphicsCore, resourceKey, ref cbDefaultSurface!, ref cbDefaultSurfaceData))
-			{
-				return false;
-			}
-			dirtyFlags &= ~DirtyFlags.CBDefaultSurface;
-		}
-
 		// Update bound resource sets:
-		if (dirtyFlags.HasFlag(DirtyFlags.BoundResources))
+		if (isDirty)
 		{
 			// Note: The array of user-bound resource (i.e. `resourcesUserBound`) is updated automatically through
 			// resource slots. By assigning a value to a slot, the new value is automatically updated on the slot's
@@ -200,7 +147,7 @@ public sealed class DefaultSurfaceMaterial : SurfaceMaterial
 			{
 				return false;
 			}
-			dirtyFlags &= ~DirtyFlags.BoundResources;
+			isDirty = false;
 			hasResourceSetChanged = true;
 
 			if (!InitializeBoundResourceSlots(resourceSlotsUserBound, null, true))
@@ -266,16 +213,6 @@ public sealed class DefaultSurfaceMaterial : SurfaceMaterial
 	{
 		// Enumerate shaders:
 		yield return VertexShaderHandle;
-		if (GeometryShaderHandle.IsValid)
-		{
-			yield return GeometryShaderHandle;
-		}
-		if (TesselationCtrlShaderHandle.IsValid &&
-			TesselationEvalShaderHandle.IsValid)
-		{
-			yield return TesselationCtrlShaderHandle;
-			yield return TesselationEvalShaderHandle;
-		}
 		yield return PixelShaderHandle;
 
 		// Enumerate all user-bound resources:

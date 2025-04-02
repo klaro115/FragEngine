@@ -1,4 +1,5 @@
 ﻿using FragEngine3.Graphics.Resources.Data;
+using FragEngine3.Graphics.Resources.Materials.Internal;
 using FragEngine3.Graphics.Resources.Shaders;
 using FragEngine3.Resources;
 using Veldrid;
@@ -235,6 +236,68 @@ public abstract class SurfaceMaterial : Material
 		if (hasAnimData) vertexLayoutDescs[vertexDataIdx++] = IndexedWeightedVertex.vertexLayoutDesc;
 
 		return vertexLayoutDescs;
+	}
+
+	/// <summary>
+	/// Initializes a set of bound resource slots from their current values.
+	/// </summary>
+	/// <param name="resourceSlotsUserBound">A dictionary that maps slots for user-bound resources onto the slots' name.</param>
+	/// <param name="_resourceKeys">An array of resource keys from which to populate the resource slots. If null, keys will be
+	/// used from the slots' currently assigned values.</param>
+	/// <param name="_loadImmediately">Whether to load resources immediately upon assigning them. If false, they will be queued
+	/// up for asynchronous loading instead.</param>
+	/// <returns>True if initializing slots was successful and resources loading was initiated, false otherwise.</returns>
+	protected bool InitializeBoundResourceSlots(
+		IReadOnlyDictionary<string, MaterialUserBoundResourceSlot> resourceSlotsUserBound,
+		string?[]? _resourceKeys,
+		bool _loadImmediately)
+	{
+		int i = 0;
+		if (_resourceKeys is null)
+		{
+			_resourceKeys = new string?[resourceSlotsUserBound.Count];
+			foreach (var kvp in resourceSlotsUserBound)
+			{
+				_resourceKeys[i++] = kvp.Value.ResourceKey;
+			}
+		}
+
+		bool success = true;
+
+		i = 0;
+		foreach (var kvp in resourceSlotsUserBound)
+		{
+			string? resourceKey = _resourceKeys[i++];
+			if (string.IsNullOrEmpty(resourceKey))
+				continue;
+
+			if (kvp.Value.resourceKind == ResourceKind.Sampler)
+			{
+				success &= TryLoadBoundSampler(resourceKey, kvp.Value);
+			}
+			else
+			{
+				success &= TryLoadBoundResource(resourceKey, kvp.Value, _loadImmediately);
+			}
+		}
+
+		return success;
+	}
+
+	private bool TryLoadBoundSampler(string _samplerDescriptionTxt, MaterialUserBoundResourceSlot _slot)
+	{
+		return graphicsCore.SamplerManager.GetSampler(_samplerDescriptionTxt, out Sampler sampler) && _slot.SetValue(sampler);
+	}
+
+	private bool TryLoadBoundResource(string _resourceKey, MaterialUserBoundResourceSlot _slot, bool _loadImmediately)
+	{
+		if (!resourceManager.GetResource(_resourceKey, out ResourceHandle handle))
+			return true;
+
+		if (!handle.Load(_loadImmediately))
+			return true;
+
+		return _slot.SetValue(handle);
 	}
 
 	#endregion

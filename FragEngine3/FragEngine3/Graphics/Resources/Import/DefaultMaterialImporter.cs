@@ -15,6 +15,7 @@ public sealed class DefaultMaterialImporter : IMaterialImporter
 	private static readonly FrozenDictionary<string, Type> supportedMaterialTypes = new Dictionary<string, Type>()
 	{
 		[typeof(DefaultSurfaceMaterial).Name] = typeof(DefaultSurfaceMaterial),
+		[typeof(BasicSurfaceMaterial).Name] = typeof(BasicSurfaceMaterial),
 		[typeof(SurfaceMaterial).Name] = typeof(SurfaceMaterial),
 	}.ToFrozenDictionary();
 
@@ -53,8 +54,17 @@ public sealed class DefaultMaterialImporter : IMaterialImporter
 	{
 		try
 		{
-			_outMaterial = new DefaultSurfaceMaterial(_graphicsCore, _resourceHandle, _materialData);
-			return true;
+			switch (_materialData.TypeName)
+			{
+				case nameof(BasicSurfaceMaterial):
+					_outMaterial = new BasicSurfaceMaterial(_graphicsCore, _resourceHandle, _materialData);
+					return true;
+				case nameof(DefaultSurfaceMaterial):
+				default:
+					_outMaterial = new DefaultSurfaceMaterial(_graphicsCore, _resourceHandle, _materialData);
+					return true;
+			}
+
 		}
 		catch (Exception ex)
 		{

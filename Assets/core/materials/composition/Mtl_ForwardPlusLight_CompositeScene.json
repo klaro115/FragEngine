@@ -2,7 +2,7 @@
     "ResourceKey": "Mtl_ForwardPlusLight_CompositeScene",
     "MaterialType": 4,
     "RenderMode": 4,
-    "TypeName": null,
+    "TypeName": "BasicSurfaceMaterial",
     "SerializedData": null,
 
     "Shaders": {

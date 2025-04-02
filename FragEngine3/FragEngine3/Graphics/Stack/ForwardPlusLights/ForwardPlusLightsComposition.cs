@@ -153,7 +153,7 @@ internal sealed class ForwardPlusLightsComposition(ForwardPlusLightsStack _stack
 			_outSceneFramebuffer = null!;
 			return false;
 		}
-		if (compositeSceneRenderer.MaterialHandle!.GetResource(true, true) is not DefaultSurfaceMaterial compositionMaterial)
+		if (compositeSceneRenderer.MaterialHandle!.GetResource(true, true) is not BasicSurfaceMaterial compositionMaterial)
 		{
 			_outSceneFramebuffer = null!;
 			return false;
@@ -206,8 +206,13 @@ internal sealed class ForwardPlusLightsComposition(ForwardPlusLightsStack _stack
 				];
 				ResourceSetDescription resourceSetDesc = new(resourceLayout, resources);
 
-				compositeSceneResourceSet = core.MainFactory.CreateResourceSet(ref resourceSetDesc);
-				compositeSceneResourceSet.Name = $"ResSet_Bound_{RESOURCE_KEY_COMPOSITE_SCENE_MATERIAL}";
+				//compositeSceneResourceSet = core.MainFactory.CreateResourceSet(ref resourceSetDesc);
+				//compositeSceneResourceSet.Name = $"ResSet_Bound_{RESOURCE_KEY_COMPOSITE_SCENE_MATERIAL}";
+
+				success &= compositionMaterial.SetResource("TexOpaqueColor", opaqueTarget?.texColorTarget ?? texNull);	//TEMP
+				success &= compositionMaterial.SetResource("TexOpaqueDepth", opaqueTarget?.texDepthTarget ?? texNull);
+				success &= compositionMaterial.SetResource("TexTransparentColor", transparentTarget?.texColorTarget ?? texNull);
+				success &= compositionMaterial.SetResource("TexTransparentDepth", transparentTarget?.texDepthTarget ?? texNull);
 			}
 			catch (Exception ex)
 			{
@@ -255,7 +260,7 @@ internal sealed class ForwardPlusLightsComposition(ForwardPlusLightsStack _stack
 			_outFinalFramebuffer = null!;
 			return false;
 		}
-		if (compositeUIRenderer.MaterialHandle!.GetResource(true, true) is not DefaultSurfaceMaterial compositionMaterial)
+		if (compositeUIRenderer.MaterialHandle!.GetResource(true, true) is not BasicSurfaceMaterial compositionMaterial)
 		{
 			_outFinalFramebuffer = null!;
 			return false;
@@ -325,8 +330,12 @@ internal sealed class ForwardPlusLightsComposition(ForwardPlusLightsStack _stack
 				];
 				ResourceSetDescription resourceSetDesc = new(resourceLayout, resources);
 
-				compositeUIResourceSet = core.MainFactory.CreateResourceSet(ref resourceSetDesc);
-				compositeUIResourceSet.Name = $"ResSet_Bound_{RESOURCE_KEY_COMPOSITE_UI_MATERIAL}";
+				//compositeUIResourceSet = core.MainFactory.CreateResourceSet(ref resourceSetDesc);
+				//compositeUIResourceSet.Name = $"ResSet_Bound_{RESOURCE_KEY_COMPOSITE_UI_MATERIAL}";
+
+				success &= compositionMaterial.SetResource("TexSceneColor", _inputFramebuffer.ColorTargets?[0].Target ?? texNull);	//TEMP
+				success &= compositionMaterial.SetResource("TexSceneDepth", _inputFramebuffer.DepthTarget?.Target ?? texNull);
+				success &= compositionMaterial.SetResource("TexUIColor", uiTarget?.texColorTarget ?? texNull);
 			}
 			catch (Exception ex)
 			{
