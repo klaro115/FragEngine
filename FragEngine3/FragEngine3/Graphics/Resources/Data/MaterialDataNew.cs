@@ -101,7 +101,6 @@ public sealed class MaterialDataNew
 		{
 			case MaterialType.Surface:
 			case MaterialType.PostProcessing:
-			case MaterialType.Compositing:
 				// Vertex and pixel shaders are set:
 				if (string.IsNullOrEmpty(Shaders.Vertex) ||
 					string.IsNullOrEmpty(Shaders.Pixel))
@@ -111,6 +110,17 @@ public sealed class MaterialDataNew
 				}
 				// At least CBScene and CBCamera must be defined:
 				requiredConstantBufferFlags = ConstantBufferType.CBScene | ConstantBufferType.CBCamera;
+				break;
+			case MaterialType.Compositing:
+				// Vertex and pixel shaders are set:
+				if (string.IsNullOrEmpty(Shaders.Vertex) ||
+					string.IsNullOrEmpty(Shaders.Pixel))
+				{
+					_logger?.LogWarning($"Invalid MaterialData '{ResourceKey}': Material type '{MaterialType}' is missing vertex or pixel shaders.");
+					return false;
+				}
+				// At least CBCamera must be defined:
+				requiredConstantBufferFlags = ConstantBufferType.CBCamera;
 				break;
 			case MaterialType.Compute:
 				if (string.IsNullOrEmpty(Shaders.Compute))

@@ -1,5 +1,5 @@
 {
-    "DataFilePath": "./ForwardPlusLight_CompositeScene_PS.fsha",
+    "DataFilePath": "./ForwardPlusLight_CompositeScene_PS.hlsl",
     "DataFileType": 0,
     "DataFileSize": 0,
     "UncompressedFileSize": 0,

@@ -1,6 +1,6 @@
 {
     "ResourceKey": "Mtl_ForwardPlusLight_CompositeUI",
-    "MaterialType": 0,
+    "MaterialType": 4,
     "RenderMode": 4,
     "TypeName": null,
     "SerializedData": null,
@@ -16,47 +16,8 @@
     },
     "Constants": [
         {
-            "SlotIndex": 0,
-            "Type": 1
-        },
-        {
             "SlotIndex": 1,
             "Type": 2
-        },
-        {
-            "SlotIndex": 2,
-            "Type": 4
-        },
-        {
-            "SlotIndex": 3,
-            "Type": 8,
-            "Values": [
-                {
-                    "Name": "tintColor",
-                    "Index": 0,
-                    "SerializedValue": "{1, 1, 1, 1}"
-                },
-                {
-                    "Name": "roughness",
-                    "Index": 1,
-                    "SerializedValue": "1"
-                },
-                {
-                    "Name": "shininess",
-                    "Index": 2,
-                    "SerializedValue": "0"
-                },
-                {
-                    "Name": "reflectionIndex",
-                    "Index": 3,
-                    "SerializedValue": "0"
-                },
-                {
-                    "Name": "refractionIndex",
-                    "Index": 4,
-                    "SerializedValue": "0"
-                }
-            ]
         }
     ],
     "Resources": [

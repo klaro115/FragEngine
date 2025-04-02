@@ -153,7 +153,11 @@ internal sealed class ForwardPlusLightsComposition(ForwardPlusLightsStack _stack
 			_outSceneFramebuffer = null!;
 			return false;
 		}
-		DefaultSurfaceMaterial compositionMaterial = (compositeSceneRenderer.MaterialHandle!.GetResource(true, true) as DefaultSurfaceMaterial)!;
+		if (compositeSceneRenderer.MaterialHandle!.GetResource(true, true) is not DefaultSurfaceMaterial compositionMaterial)
+		{
+			_outSceneFramebuffer = null!;
+			return false;
+		}
 
 		_outSceneFramebuffer = _camera.GetOrCreateCameraTarget(RenderMode.Composition, out CameraTarget target)
 			? target.framebuffer
@@ -251,7 +255,11 @@ internal sealed class ForwardPlusLightsComposition(ForwardPlusLightsStack _stack
 			_outFinalFramebuffer = null!;
 			return false;
 		}
-		DefaultSurfaceMaterial compositionMaterial = (compositeUIRenderer.MaterialHandle!.GetResource(true, true) as DefaultSurfaceMaterial)!;
+		if (compositeUIRenderer.MaterialHandle!.GetResource(true, true) is not DefaultSurfaceMaterial compositionMaterial)
+		{
+			_outFinalFramebuffer = null!;
+			return false;
+		}
 
 		// If this is the main camera, and there's no post-UI post-processing stack, ouput composited image directly to the swapchain's backbuffer:
 		if (_camera.IsMainCamera && stack.PostProcessingStackFinal is null)
