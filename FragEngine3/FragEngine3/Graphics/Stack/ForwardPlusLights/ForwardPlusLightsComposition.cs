@@ -25,8 +25,6 @@ internal sealed class ForwardPlusLightsComposition(ForwardPlusLightsStack _stack
 	private readonly ForwardPlusLightsStack stack = _stack;
 	public readonly GraphicsCore core = _stack.Core;
 
-	private ResourceSet? compositeSceneResourceSet = null;
-	private ResourceSet? compositeUIResourceSet = null;
 	private StaticMeshRendererComponent? compositeSceneRenderer = null;
 	private StaticMeshRendererComponent? compositeUIRenderer = null;
 
@@ -60,14 +58,8 @@ internal sealed class ForwardPlusLightsComposition(ForwardPlusLightsStack _stack
 	{
 		IsDisposed = true;
 
-		compositeSceneResourceSet?.Dispose();
-		compositeUIResourceSet?.Dispose();
-
 		if (disposing)
 		{
-			compositeSceneResourceSet = null;
-			compositeUIResourceSet = null;
-
 			compositeSceneRenderer = null;
 			compositeUIRenderer = null;
 		}
@@ -128,12 +120,6 @@ internal sealed class ForwardPlusLightsComposition(ForwardPlusLightsStack _stack
 				compositeUIRenderer = null;
 			}
 		}
-
-		compositeSceneResourceSet?.Dispose();
-		compositeUIResourceSet?.Dispose();
-
-		compositeSceneResourceSet = null;
-		compositeUIResourceSet = null;
 	}
 
 	public bool CompositeSceneOutput(
@@ -181,9 +167,7 @@ internal sealed class ForwardPlusLightsComposition(ForwardPlusLightsStack _stack
 
 		bool success = true;
 
-		// Create resource set containing all render targets that were previously drawn to:
-		ResourceLayout resourceLayout = compositionMaterial.BoundResourceLayout!;
-		if (resourceLayout is not null && (compositeSceneResourceSet is null || compositeSceneResourceSet.IsDisposed))
+		// Bind render targets to the composition material as textures:
 		{
 			success &= _camera.GetOrCreateCameraTarget(RenderMode.Opaque, out CameraTarget? opaqueTarget);
 			success &= _camera.GetOrCreateCameraTarget(RenderMode.Transparent, out CameraTarget? transparentTarget);
@@ -193,39 +177,12 @@ internal sealed class ForwardPlusLightsComposition(ForwardPlusLightsStack _stack
 				return false;
 			}
 
-			try
-			{
-				Texture texNull = core.graphicsSystem.TexPlaceholderTransparent.GetResource<TextureResource>(false, false)!.Texture!;
+			Texture texNull = core.graphicsSystem.TexPlaceholderTransparent.GetResource<TextureResource>(false, false)!.Texture!;
 
-				BindableResource[] resources =
-				[
-					opaqueTarget?.texColorTarget ?? texNull,
-					opaqueTarget?.texDepthTarget ?? texNull,
-					transparentTarget?.texColorTarget ?? texNull,
-					transparentTarget?.texDepthTarget ?? texNull,
-				];
-				ResourceSetDescription resourceSetDesc = new(resourceLayout, resources);
-
-				//compositeSceneResourceSet = core.MainFactory.CreateResourceSet(ref resourceSetDesc);
-				//compositeSceneResourceSet.Name = $"ResSet_Bound_{RESOURCE_KEY_COMPOSITE_SCENE_MATERIAL}";
-
-				success &= compositionMaterial.SetResource("TexOpaqueColor", opaqueTarget?.texColorTarget ?? texNull);	//TEMP
-				success &= compositionMaterial.SetResource("TexOpaqueDepth", opaqueTarget?.texDepthTarget ?? texNull);
-				success &= compositionMaterial.SetResource("TexTransparentColor", transparentTarget?.texColorTarget ?? texNull);
-				success &= compositionMaterial.SetResource("TexTransparentDepth", transparentTarget?.texDepthTarget ?? texNull);
-			}
-			catch (Exception ex)
-			{
-				Logger.LogException("Failed to create resource set containing render targets for scene composition!", ex, EngineCore.Logging.LogEntrySeverity.Major);
-				return false;
-			}
-		}
-
-		// Bind render targets:
-		if (compositeSceneResourceSet is not null && !compositeSceneRenderer.SetOverrideBoundResourceSet(compositeSceneResourceSet))
-		{
-			Logger.LogError("Failed to override bound resource set for graphics stack's scene composition pass!");
-			return false;
+			success &= compositionMaterial.SetResource("TexOpaqueColor", opaqueTarget?.texColorTarget ?? texNull);
+			success &= compositionMaterial.SetResource("TexOpaqueDepth", opaqueTarget?.texDepthTarget ?? texNull);
+			success &= compositionMaterial.SetResource("TexTransparentColor", transparentTarget?.texColorTarget ?? texNull);
+			success &= compositionMaterial.SetResource("TexTransparentDepth", transparentTarget?.texDepthTarget ?? texNull);
 		}
 
 		// Send draw calls for output composition:
@@ -307,9 +264,7 @@ internal sealed class ForwardPlusLightsComposition(ForwardPlusLightsStack _stack
 
 		bool success = true;
 
-		// Create resource set containing all render targets that were previously drawn to:
-		ResourceLayout resourceLayout = compositionMaterial.BoundResourceLayout!;
-		if (resourceLayout is not null && (compositeUIResourceSet is null || compositeUIResourceSet.IsDisposed))
+		// Bind render targets to the composition material as textures:
 		{
 			success &= _camera.GetOrCreateCameraTarget(RenderMode.UI, out CameraTarget? uiTarget);
 			if (!success)
@@ -318,37 +273,11 @@ internal sealed class ForwardPlusLightsComposition(ForwardPlusLightsStack _stack
 				return false;
 			}
 
-			try
-			{
-				Texture texNull = core.graphicsSystem.TexPlaceholderTransparent.GetResource<TextureResource>(false, false)!.Texture!;
+			Texture texNull = core.graphicsSystem.TexPlaceholderTransparent.GetResource<TextureResource>(false, false)!.Texture!;
 
-				BindableResource[] resources =
-				[
-					_inputFramebuffer.ColorTargets?[0].Target ?? texNull,
-					_inputFramebuffer.DepthTarget?.Target ?? texNull,
-					uiTarget?.texColorTarget ?? texNull,
-				];
-				ResourceSetDescription resourceSetDesc = new(resourceLayout, resources);
-
-				//compositeUIResourceSet = core.MainFactory.CreateResourceSet(ref resourceSetDesc);
-				//compositeUIResourceSet.Name = $"ResSet_Bound_{RESOURCE_KEY_COMPOSITE_UI_MATERIAL}";
-
-				success &= compositionMaterial.SetResource("TexSceneColor", _inputFramebuffer.ColorTargets?[0].Target ?? texNull);	//TEMP
-				success &= compositionMaterial.SetResource("TexSceneDepth", _inputFramebuffer.DepthTarget?.Target ?? texNull);
-				success &= compositionMaterial.SetResource("TexUIColor", uiTarget?.texColorTarget ?? texNull);
-			}
-			catch (Exception ex)
-			{
-				Logger.LogException("Failed to create resource set containing render targets for UI output composition!", ex, EngineCore.Logging.LogEntrySeverity.Major);
-				return false;
-			}
-		}
-
-		// Bind render targets:
-		if (compositeUIResourceSet is not null && !compositeUIRenderer.SetOverrideBoundResourceSet(compositeUIResourceSet))
-		{
-			Logger.LogError("Failed to override bound resource set for graphics stack's UI composition pass!");
-			return false;
+			success &= compositionMaterial.SetResource("TexSceneColor", _inputFramebuffer.ColorTargets?[0].Target ?? texNull);
+			success &= compositionMaterial.SetResource("TexSceneDepth", _inputFramebuffer.DepthTarget?.Target ?? texNull);
+			success &= compositionMaterial.SetResource("TexUIColor", uiTarget?.texColorTarget ?? texNull);
 		}
 
 		// Send draw calls for output composition:

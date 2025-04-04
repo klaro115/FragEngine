@@ -70,7 +70,6 @@ public sealed class StaticMeshRenderer : IPhysicalRenderer
 	// Graphics objects:
 	private readonly DeviceBuffer cbObject;
 	private ResourceSet? resSetObject = null;
-	private ResourceSet? overrideBoundResourceSet = null;
 	private ResourceSet[]? allResourceSets = null;
 	private VersionedMember<Pipeline?> pipelineScene = new(null, 0);
 	private VersionedMember<Pipeline?> pipelineShadow = new(null, 0);
@@ -282,32 +281,6 @@ public sealed class StaticMeshRenderer : IPhysicalRenderer
 		if (renderModeChanged)
 		{
 			OnRenderModeChanged?.Invoke(this);
-		}
-		return true;
-	}
-
-	/// <summary>
-	/// Assigns a resource set that replaces any bound resource sets provided by the renderer's material.
-	/// </summary>
-	/// <param name="_newOverrideResourceSet">The resource set to use instead of whatever the material provides.
-	/// If null, the override will be unassigned, and the material's set will be used instead.
-	/// The renderer does not assume ownership of the given resource set.</param>
-	/// <returns>True if the resource set was overriden, or if the override was unassigned. False if an error occured.</returns>
-	public bool SetOverrideBoundResourceSet(ResourceSet? _newOverrideResourceSet)
-	{
-		if (IsDisposed)
-		{
-			logger.LogError("Cannot set override resource set on disposed static mesh renderer!");
-			return false;
-		}
-
-		if (_newOverrideResourceSet is null || _newOverrideResourceSet.IsDisposed)
-		{
-			overrideBoundResourceSet = null;
-		}
-		else
-		{
-			overrideBoundResourceSet = _newOverrideResourceSet;
 		}
 		return true;
 	}

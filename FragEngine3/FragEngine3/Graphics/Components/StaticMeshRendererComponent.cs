@@ -111,8 +111,6 @@ public sealed class StaticMeshRendererComponent : Component, IPhysicalRenderer
 	/// <returns>True if the material was assigned, false otherwise.</returns>
 	public bool SetMaterial(ResourceHandle? _materialHandle, ResourceHandle? _overrideShadowMaterial = null) => !IsDisposed && instance.SetMaterial(_materialHandle, _overrideShadowMaterial);
 
-	public bool SetOverrideBoundResourceSet(ResourceSet? _newOverrideResourceSet) => !IsDisposed && instance.SetOverrideBoundResourceSet(_newOverrideResourceSet);
-
 	public float GetZSortingDepth(Vector3 _viewportPosition, Vector3 _cameraDirection) => instance.GetZSortingDepth(_viewportPosition, _cameraDirection);
 
 	public bool Draw(SceneContext _sceneCtx, CameraPassContext _cameraPassCtx)
