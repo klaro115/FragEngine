@@ -7,7 +7,7 @@ Console.WriteLine("### Starting...\n");
 
 EngineConfig config = new();
 //config.Graphics.PreferNativeFramework = false;	// default to Vulkan
-config.Graphics.CenterWindowOnScreen = false;
+config.Graphics.CenterWindowOnScreen = true;
 
 Engine? engine = null;
 try

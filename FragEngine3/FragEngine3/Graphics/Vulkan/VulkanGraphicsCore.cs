@@ -54,10 +54,20 @@ public sealed class VulkanGraphicsCore(GraphicsSystem _graphicsSystem, EngineCon
 
 			// DEFINE WINDOW:
 
+			int errorCode = Sdl2Native.SDL_Init(SDLInitFlags.Video);
+			if (errorCode != 0)
+			{
+				logger.LogSdl2Error(errorCode, EngineCore.Logging.LogEntrySeverity.Major);
+			}
+
 			Rectangle displayRect = new(0, 0, 1920, 1080);
 			unsafe
 			{
-				Sdl2Native.SDL_GetDisplayBounds(config.Graphics.DisplayIndex, &displayRect);
+				errorCode = Sdl2Native.SDL_GetDisplayBounds(config.Graphics.DisplayIndex, &displayRect);
+				if (errorCode != 0)
+				{
+					logger.LogSdl2Error(errorCode);
+				}
 			}
 
 			int posX = 0;

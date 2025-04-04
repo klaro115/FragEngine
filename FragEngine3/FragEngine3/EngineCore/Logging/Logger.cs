@@ -1,4 +1,7 @@
 ﻿using FragEngine3.EngineCore.Logging;
+using FragEngine3.Utility;
+using System.Text;
+using Veldrid.Sdl2;
 
 namespace FragEngine3.EngineCore;
 
@@ -190,6 +193,24 @@ public sealed class Logger : ILogger, IEngineSystem
 	{
 		LogEntry entry = new(LogEntryType.Status, _message, 0, _severity);
 		LogNewEntry(entry);
+	}
+
+	public unsafe void LogSdl2Error(int _errorCode, LogEntrySeverity _severity = LogEntrySeverity.Normal, bool _clearError = true)
+	{
+		if (_errorCode == 0) return;
+
+		byte* pErrorMessageUtf8 = Sdl2Native.SDL_GetError();
+		if (pErrorMessageUtf8 == null) return;
+
+		uint length = PointerExt.GetUtf8Length((IntPtr)pErrorMessageUtf8, 1024u);
+		string errorMessage = Encoding.UTF8.GetString(pErrorMessageUtf8, (int)length);
+
+		LogError($"SDL2: {errorMessage}", _errorCode, _severity);
+
+		if (_clearError)
+		{
+			Sdl2Native.SDL_ClearError();
+		}
 	}
 
 	public void LogNewEntry(LogEntry _entry, bool _dontPrintToConsole = false)
