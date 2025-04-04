@@ -213,6 +213,16 @@ public sealed class BasicSurfaceMaterial : SurfaceMaterial
 	{
 		// Enumerate shaders:
 		yield return VertexShaderHandle;
+		if (GeometryShaderHandle.IsValid)
+		{
+			yield return GeometryShaderHandle;
+		}
+		if (TesselationCtrlShaderHandle.IsValid &&
+			TesselationEvalShaderHandle.IsValid)
+		{
+			yield return TesselationCtrlShaderHandle;
+			yield return TesselationEvalShaderHandle;
+		}
 		yield return PixelShaderHandle;
 
 		// Enumerate all user-bound resources:
@@ -230,6 +240,31 @@ public sealed class BasicSurfaceMaterial : SurfaceMaterial
 		{
 			yield return handle;
 		}
+	}
+
+	public override bool GetResourceSlotIndex(string _slotName, out int _outSlotIndex)
+	{
+		if (!string.IsNullOrEmpty(_slotName) && resourceSlotsUserBound.TryGetValue(_slotName, out MaterialUserBoundResourceSlot? slot))
+		{
+			_outSlotIndex = slot.boundResourceIndex;
+			return true;
+		}
+		_outSlotIndex = -1;
+		return false;
+	}
+
+	public override bool GetResourceSlotName(int _slotIndex, out string _outSlotName)
+	{
+		foreach (var kvp in resourceSlotsUserBound)
+		{
+			if (kvp.Value.boundResourceIndex == _slotIndex)
+			{
+				_outSlotName = kvp.Key;
+				return true;
+			}
+		}
+		_outSlotName = string.Empty;
+		return false;
 	}
 
 	private bool GetUserBoundResourceSlot(string _slotName, out MaterialUserBoundResourceSlot? _slot)

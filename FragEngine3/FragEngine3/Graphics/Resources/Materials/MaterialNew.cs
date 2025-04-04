@@ -230,9 +230,29 @@ public abstract class Material : Resource
 	#endregion
 	#region Methods Resources
 
+	public abstract bool GetResourceSlotIndex(string _slotName, out int _outSlotIndex);
+	public abstract bool GetResourceSlotName(int _slotIndex, out string _outSlotName);
+
 	public virtual bool SetResource<T>(string _slotName, T _newValue) where T : class, BindableResource => SetResource(_slotName, (BindableResource)_newValue);
 	public abstract bool SetResource(string _slotName, BindableResource _newValue);
 	public abstract bool SetResource(string _slotName, ResourceHandle _newValueHandle);
+
+	public virtual bool SetResource<T>(int _slotIndex, T _newValue) where T : class, BindableResource => SetResource(_slotIndex, (BindableResource)_newValue);
+	public virtual bool SetResource(int _slotIndex, BindableResource _newValue)
+	{
+		bool success =
+			GetResourceSlotName(_slotIndex, out string slotName) &&
+			SetResource(slotName, _newValue);
+		return success;
+	}
+	public virtual bool SetResource(int _slotIndex, ResourceHandle _newValueHandle)
+	{
+		bool success =
+			GetResourceSlotName(_slotIndex, out string slotName) &&
+			SetResource(slotName, _newValueHandle);
+		return success;
+	}
+
 
 	#endregion
 }

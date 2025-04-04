@@ -295,6 +295,31 @@ public sealed class DefaultSurfaceMaterial : SurfaceMaterial
 		}
 	}
 
+	public override bool GetResourceSlotIndex(string _slotName, out int _outSlotIndex)
+	{
+		if (!string.IsNullOrEmpty(_slotName) && resourceSlotsUserBound.TryGetValue(_slotName, out MaterialUserBoundResourceSlot? slot))
+		{
+			_outSlotIndex = slot.boundResourceIndex;
+			return true;
+		}
+		_outSlotIndex = -1;
+		return false;
+	}
+
+	public override bool GetResourceSlotName(int _slotIndex, out string _outSlotName)
+	{
+		foreach (var kvp in resourceSlotsUserBound)
+		{
+			if (kvp.Value.boundResourceIndex == _slotIndex)
+			{
+				_outSlotName = kvp.Key;
+				return true;
+			}
+		}
+		_outSlotName = string.Empty;
+		return false;
+	}
+
 	private bool GetUserBoundResourceSlot(string _slotName, out MaterialUserBoundResourceSlot? _slot)
 	{
 		if (IsDisposed)
