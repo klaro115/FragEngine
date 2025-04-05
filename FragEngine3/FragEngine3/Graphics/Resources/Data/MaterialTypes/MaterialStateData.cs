@@ -12,6 +12,7 @@ public sealed class MaterialStencilBehaviourData
 }
 
 [Serializable]
+[Obsolete($"Replaced by {nameof(MaterialDepthStencilStateData)}")]
 public sealed class MaterialStateData
 {
 	public bool EnableDepthTest { get; set; } = true;

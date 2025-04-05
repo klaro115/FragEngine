@@ -1,4 +1,5 @@
 ﻿using FragEngine3.Graphics.Resources.Data;
+using FragEngine3.Graphics.Resources.Data.MaterialTypes;
 using FragEngine3.Graphics.Resources.Materials.Internal;
 using FragEngine3.Graphics.Resources.Shaders;
 using FragEngine3.Resources;
@@ -11,6 +12,47 @@ namespace FragEngine3.Graphics.Resources.Materials;
 /// </summary>
 public abstract class SurfaceMaterial : Material
 {
+	#region Types
+
+	public record struct DepthStencilDesc
+	{
+		public bool enableDepthTest;
+		public bool enableDepthWrite;
+
+		public bool enableStencil;
+		public StencilBehaviorDescription stencilFront;
+		public StencilBehaviorDescription stencilBack;
+		public byte readMask;
+		public byte writeMask;
+		public uint referenceValue;
+
+		public static DepthStencilDesc Default => new()
+		{
+			enableDepthTest = true,
+			enableDepthWrite = true,
+
+			enableStencil = false,
+			stencilFront = default,
+			stencilBack = default,
+			readMask = 0,
+			writeMask = 0,
+			referenceValue = 0,
+		};
+	}
+
+	public record struct RasterizerDesc
+	{
+		public bool enableCulling;
+		public bool cullClockwise;
+
+		public static RasterizerDesc Default => new()
+		{
+			enableCulling = true,
+			cullClockwise = false,
+		};
+	}
+
+	#endregion
 	#region Constructors
 
 	protected SurfaceMaterial(GraphicsCore _graphicsCore, ResourceHandle _resourceHandle, MaterialDataNew _data) : base(_graphicsCore, _resourceHandle, _data)
@@ -38,10 +80,16 @@ public abstract class SurfaceMaterial : Material
 			TesselationCtrlShaderHandle = handleTCS;
 			TesselationEvalShaderHandle = handleTES;
 		}
+
+		// Set depth/stencil states from data:
+		SetDepthStencilStatesFromMaterialData(_data.DepthStencilState);
+		SetRasterizerStatesFromMaterialData(_data.RasterizerState);
 	}
 
 	#endregion
 	#region Fields
+
+	// SHADERS:
 
 	protected ShaderSetDescription?[] shaderSetDescriptions;
 	protected ShaderResource? vertexShader = null;
@@ -49,6 +97,11 @@ public abstract class SurfaceMaterial : Material
 	protected ShaderResource? tesselationCtrlShader = null;
 	protected ShaderResource? tesselationEvalShader = null;
 	protected ShaderResource? pixelShader = null;
+
+	// PIPELINE STATES:
+
+	protected DepthStencilDesc depthStencilState = DepthStencilDesc.Default;
+	protected RasterizerDesc rasterizerState = RasterizerDesc.Default;
 
 	#endregion
 	#region Properties
@@ -74,8 +127,101 @@ public abstract class SurfaceMaterial : Material
 	/// </summary>
 	public ResourceHandle PixelShaderHandle { get; protected set; } = ResourceHandle.None;
 
+	/// <summary>
+	/// Gets or sets the material's behaviour for depth maps and stencil buffers.<para/>
+	/// Note: If this value changes, all graphics pipelines using this material may have to be recreated.
+	/// </summary>
+	public DepthStencilDesc DepthStencilState
+	{
+		get => depthStencilState;
+		set
+		{
+			bool hasChanged = value != depthStencilState;
+			depthStencilState = value;
+			if (hasChanged)
+			{
+				MarkDirty();
+			}
+		}
+	}
+
+	/// <summary>
+	/// Gets or sets the material's behaviour for polygon rasterization.<para/>
+	/// Note: If this value changes, all graphics pipelines using this material may have to be recreated.
+	/// </summary>
+	public RasterizerDesc RasterizerState
+	{
+		get => rasterizerState;
+		set
+		{
+			bool hasChanged = value != rasterizerState;
+			rasterizerState = value;
+			if (hasChanged)
+			{
+				MarkDirty();
+			}
+		}
+	}
+
 	#endregion
 	#region Methods
+
+	public abstract void MarkDirty();
+
+	public bool SetDepthStencilStatesFromMaterialData(MaterialDepthStencilStateData? _data)
+	{
+		if (_data is null)
+		{
+			return false;
+		}
+
+		DepthStencilDesc newStateDesc = new()
+		{
+			enableDepthTest = _data.EnableDepthTest,
+			enableDepthWrite = _data.EnableDepthWrite,
+
+			enableStencil = _data.EnableStencil,
+			readMask = _data.StencilReadMask,
+			writeMask = _data.StencilWriteMask,
+			referenceValue = _data.StencilReferenceValue,
+		};
+		if (_data.StencilFront is not null)
+		{
+			depthStencilState.stencilFront = new(
+				_data.StencilFront.Fail,
+				_data.StencilFront.Pass,
+				_data.StencilFront.DepthFail,
+				_data.StencilFront.ComparisonKind);
+		}
+		if (_data.StencilBack is not null)
+		{
+			depthStencilState.stencilBack = new(
+				_data.StencilBack.Fail,
+				_data.StencilBack.Pass,
+				_data.StencilBack.DepthFail,
+				_data.StencilBack.ComparisonKind);
+		}
+
+		DepthStencilState = newStateDesc;
+		return true;
+	}
+
+	public bool SetRasterizerStatesFromMaterialData(MaterialRasterizerStateData? _data)
+	{
+		if (_data is null)
+		{
+			return false;
+		}
+
+		RasterizerDesc newStateDesc = new()
+		{
+			enableCulling = _data.EnableCulling,
+			cullClockwise = _data.CullClockwise,
+		};
+
+		RasterizerState = newStateDesc;
+		return true;
+	}
 
 	protected bool GetOrCreateShaderSet(MeshVertexDataFlags _vertexFlags, out ShaderSetDescription _outShaderSetDesc, out bool _outIsFullyLoaded)
 	{

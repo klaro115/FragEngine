@@ -5,6 +5,34 @@
     "TypeName": null,
     "SerializedData": null,
 
+    "BlendState": {
+        "ZSortingBias": 0
+    },
+    "DepthStencilState": {
+        "EnableDepthTest": true,
+        "EnableDepthWrite": true,
+        "EnableStencil": false,
+        "StencilFront": {
+            "Fail": 0,
+            "Pass": 0,
+            "DepthFail": 0,
+            "ComparisonKind": 3
+        },
+        "StencilBack": {
+            "Fail": 0,
+            "Pass": 0,
+            "DepthFail": 0,
+            "ComparisonKind": 3
+        },
+        "StencilReadMask": 0,
+        "StencilWriteMask": 0,
+        "StencilReferenceValue": 0
+    },
+    "RasterizerState": {
+        "EnableCulling": false,
+        "CullClockwise": false
+    },
+
     "Shaders": {
         "IsSurfaceMaterial": true,
         "Vertex": "DefaultSurface_VS",

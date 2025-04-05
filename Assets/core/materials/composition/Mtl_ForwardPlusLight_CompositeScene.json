@@ -5,6 +5,19 @@
     "TypeName": "BasicSurfaceMaterial",
     "SerializedData": null,
 
+    "BlendState": {
+        "ZSortingBias": 0
+    },
+    "DepthStencilState": {
+        "EnableDepthTest": true,
+        "EnableDepthWrite": true,
+        "EnableStencil": false
+    },
+    "RasterizerState": {
+        "EnableCulling": false,
+        "CullClockwise": false
+    },
+
     "Shaders": {
         "IsSurfaceMaterial": true,
         "Vertex": "Basic_VS",

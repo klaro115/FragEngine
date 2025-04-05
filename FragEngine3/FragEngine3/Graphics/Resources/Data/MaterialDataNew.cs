@@ -28,7 +28,8 @@ public sealed class MaterialDataNew
 	/// </summary>
 	public required MaterialType MaterialType { get; init; }
 	/// <summary>
-	/// The way this material should be rendered. Different modes may be placed into different render queues, parallelized, or use different blending.
+	/// The way this material should be rendered. Different modes may be placed into different render queues, parallelized,
+	/// or use different blending.
 	/// </summary>
 	public required RenderMode RenderMode { get; init; }
 	/// <summary>
@@ -37,11 +38,33 @@ public sealed class MaterialDataNew
 	/// </summary>
 	public string? TypeName { get; init; } = null;
 	/// <summary>
-	/// Optional. Additional string-serialized data and settings that may be consumed by custom user-supplied material types and importers.
+	/// Optional. Additional string-serialized data and settings that may be consumed by custom user-supplied material
+	/// types and importers.
 	/// </summary>
 	public string? SerializedData { get; init; } = null;
 
-	//TODO [IMPORTANT]: Add descriptions for depth/stencil states, Z-sorting bias, etc.
+
+	// BEHAVIOUR:
+
+	/// <summary>
+	/// Optional. A description of the material's blend state, which is used for transparancy and the likes. If null,
+	/// a default opaque blend state is used instead.
+	/// </summary>
+	public MaterialBlendStateData? BlendState { get; init; } = null;
+
+	/// <summary>
+	/// Optional. A description of the material's depth and stencil states, which are used for reading and writing of depth
+	/// maps, and for stencil masks. If null, the default Z-write behaviour withjout stencil is used.
+	/// a default opaque blend state is used instead.
+	/// </summary>
+	public MaterialDepthStencilStateData? DepthStencilState { get; init; } = null;
+
+	/// <summary>
+	/// Optional. A description of the material's rasterizer state, which is used for culling and the likes. If null,
+	/// a default front-facing raterization behaviour is used instead. This property will be ignored for compute materials.
+	/// </summary>
+	public MaterialRasterizerStateData? RasterizerState { get; init; } = null;
+
 
 	// BINDINGS:
 

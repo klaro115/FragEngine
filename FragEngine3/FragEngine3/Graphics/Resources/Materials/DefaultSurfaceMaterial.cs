@@ -19,9 +19,10 @@ public sealed class DefaultSurfaceMaterial : SurfaceMaterial
 	{
 		CBDefaultSurface	= 1,
 		BoundResources		= 2,
+		PipelineStates		= 4,
 		//...
 
-		ALL					= CBDefaultSurface | BoundResources
+		ALL					= CBDefaultSurface | BoundResources | PipelineStates
 	}
 
 	#endregion
@@ -98,7 +99,7 @@ public sealed class DefaultSurfaceMaterial : SurfaceMaterial
 		resSetUserBound?.Dispose();
 	}
 
-	public void MarkDirty() => dirtyFlags = DirtyFlags.ALL;
+	public override void MarkDirty() => dirtyFlags = DirtyFlags.ALL;
 	private void MarkResSetUserBoundDirty() => dirtyFlags |= DirtyFlags.BoundResources;
 
 	public override bool CreatePipeline(in SceneContext _sceneCtx, in CameraPassContext _cameraCtx, MeshVertexDataFlags _vertexDataFlags, out PipelineState? _outPipelineState, out bool _outIsFullyLoaded)
@@ -136,10 +137,34 @@ public sealed class DefaultSurfaceMaterial : SurfaceMaterial
 		Pipeline pipeline;
 		try
 		{
+			BlendStateDescription blendStateDesc = BlendStateDescription.SingleOverrideBlend;	//TODO
+
+			DepthStencilStateDescription depthStencilDesc = new(
+				depthStencilState.enableDepthTest,
+				depthStencilState.enableDepthWrite,
+				ComparisonKind.LessEqual,
+				depthStencilState.enableStencil,
+				depthStencilState.stencilFront,
+				depthStencilState.stencilBack,
+				depthStencilState.readMask,
+				depthStencilState.writeMask,
+				depthStencilState.referenceValue);
+
+			RasterizerStateDescription rasterizerDesc = new(
+				rasterizerState.enableCulling
+					? FaceCullMode.Back
+					: FaceCullMode.None,
+				PolygonFillMode.Solid,
+				rasterizerState.cullClockwise
+					? FrontFace.Clockwise
+					: FrontFace.CounterClockwise,
+				true,
+				false);
+
 			GraphicsPipelineDescription pipelineDesc = new(
-				BlendStateDescription.SingleOverrideBlend,
-				DepthStencilStateDescription.DepthOnlyLessEqual,		//TODO [IMPORTANT]: Add actual depth/stencil/blend/raterizer state descriptions to MaterialData, and use those here!
-				RasterizerStateDescription.Default,
+				blendStateDesc,
+				depthStencilDesc,
+				rasterizerDesc,
 				PrimitiveTopology.TriangleList,
 				shaderSetDesc,
 				resourceLayouts,
