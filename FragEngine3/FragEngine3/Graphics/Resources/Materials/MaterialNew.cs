@@ -25,6 +25,19 @@ public abstract class Material : Resource
 		materialType = _data.MaterialType;
 		renderMode = _data.RenderMode;
 		//maxSupportedVariantFlags = _data. ???			//TODO: Initialize this value and add appropriate fields or getter methods to MaterialData!
+
+		// Assign replacement shaders:
+		if (_data.Replacements is not null)
+		{
+			if (!string.IsNullOrEmpty(_data.Replacements.ShadowMap) && resourceManager.GetResource(_data.Replacements.ShadowMap, out ResourceHandle shadowMaterialHandle))
+			{
+				ShadowMaterialHandle = shadowMaterialHandle;
+			}
+			if (!string.IsNullOrEmpty(_data.Replacements.ShadowMap) && resourceManager.GetResource(_data.Replacements.ShadowMap, out ResourceHandle simplifiedMaterialHandle))
+			{
+				SimplifiedMaterialHandle = simplifiedMaterialHandle;
+			}
+		}
 	}
 
 	~Material()
@@ -123,7 +136,7 @@ public abstract class Material : Resource
 			_outResourceSet = null;
 			return false;
 		}
-		if (_boundResources is null || _boundResources.Length == 0)
+		if (_boundResources is null)// || _boundResources.Length == 0)
 		{
 			logger.LogError($"Cannot populate resource set for bound resources using null or empty resources array! (Resource key: {resourceKey})");
 			_outResourceSet = null;

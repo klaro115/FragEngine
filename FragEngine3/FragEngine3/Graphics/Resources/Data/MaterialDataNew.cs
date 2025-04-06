@@ -238,11 +238,11 @@ public sealed class MaterialDataNew
 		int boundCbCount = _resourcesBoundByMaterial is not null ? _resourcesBoundByMaterial.Length : 0;
 		int userResourceCount = Resources is not null ? Resources.Length : 0;
 		int totalResourceCount = boundCbCount + userResourceCount;
-		if (totalResourceCount == 0)
-		{
-			_outLayout = null;
-			return true;
-		}
+		//if (totalResourceCount == 0)
+		//{
+		//	_outLayout = null;
+		//	return true;
+		//}
 
 		ResourceLayoutElementDescription[] resLayoutElements = new ResourceLayoutElementDescription[totalResourceCount];
 

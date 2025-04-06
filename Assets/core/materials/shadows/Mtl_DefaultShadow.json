@@ -3,7 +3,7 @@
     "ResourceKey": "Mtl_DefaultShadow",
     "MaterialType": 0,
     "RenderMode": 1,
-    "TypeName": null,
+    "TypeName": "BasicSurfaceMaterial",
     "SerializedData": null,
 
     "Shaders": {
