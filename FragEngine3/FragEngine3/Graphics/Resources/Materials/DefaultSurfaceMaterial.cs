@@ -70,7 +70,7 @@ public sealed class DefaultSurfaceMaterial : SurfaceMaterial
 	/// <summary>
 	/// An array of all bound resources that are managed and provided by the material.
 	/// </summary>
-	private static readonly MaterialResourceDataNew[] materialBoundResourcesData =
+	private static readonly MaterialResourceData[] materialBoundResourcesData =
 	[
 		new()
 		{

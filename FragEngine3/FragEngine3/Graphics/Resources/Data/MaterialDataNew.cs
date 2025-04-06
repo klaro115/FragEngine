@@ -94,7 +94,7 @@ public sealed class MaterialDataNew
 	/// <summary>
 	/// An array of all constant buffers used by this material, including both system-provided and user-defined constants.
 	/// </summary>
-	public MaterialConstantBufferDataNew[]? Constants { get; init; } = null;
+	public MaterialConstantBufferData[]? Constants { get; init; } = null;
 
 	/// <summary>
 	/// An array of all texture, buffer, and sampler resources, excluding those managed internally by the engine.<para/>
@@ -103,7 +103,7 @@ public sealed class MaterialDataNew
 	/// System-provided resources should only be listed for user-defined and specialty material types where they need to
 	/// be bound manually.
 	/// </summary>
-	public MaterialResourceDataNew[]? Resources { get; init; } = null;
+	public MaterialResourceData[]? Resources { get; init; } = null;
 
 	#endregion
 	#region Constants
@@ -185,7 +185,7 @@ public sealed class MaterialDataNew
 		{
 			for (int i = 0; i < Constants.Length; i++)
 			{
-				MaterialConstantBufferDataNew? cbData = Constants[i];
+				MaterialConstantBufferData? cbData = Constants[i];
 				if (cbData is null || !cbData.IsValid())
 				{
 					_logger?.LogWarning($"Invalid MaterialData '{ResourceKey}': Constant buffer {i} is null or invalid.");
@@ -205,7 +205,7 @@ public sealed class MaterialDataNew
 		{
 			for (int i = 0; i < Resources.Length;i++)
 			{
-				MaterialResourceDataNew? resData = Resources[i];
+				MaterialResourceData? resData = Resources[i];
 				if (resData is null || !resData.IsValid())
 				{
 					_logger?.LogWarning($"Invalid MaterialData '{ResourceKey}': Bound resource {i} is null or invalid.");
@@ -225,7 +225,7 @@ public sealed class MaterialDataNew
 	/// <param name="_resourcesBoundByMaterial">An array of descriptions of resources that are bound and managed by the material,
 	/// and that are not stored in serializable data. These resources will precede any other bound resources in the layout.</param>
 	/// <returns>True if a resource layout was created successfully, or if no layout is needed, false on failure.</returns>
-	public bool CreateLayoutFromBoundResources(GraphicsCore _graphicsCore, out ResourceLayout? _outLayout, params MaterialResourceDataNew[] _resourcesBoundByMaterial)
+	public bool CreateLayoutFromBoundResources(GraphicsCore _graphicsCore, out ResourceLayout? _outLayout, params MaterialResourceData[] _resourcesBoundByMaterial)
 	{
 		if (_graphicsCore is null || !_graphicsCore.IsInitialized)
 		{
@@ -249,7 +249,7 @@ public sealed class MaterialDataNew
 		// Define layout elements from bound constant buffer sizes:
 		for (int i = 0; i < boundCbCount; ++i)
 		{
-			MaterialResourceDataNew cbData = _resourcesBoundByMaterial![i];
+			MaterialResourceData cbData = _resourcesBoundByMaterial![i];
 			ResourceLayoutElementDescription element = new(
 				cbData.SlotName,
 				cbData.ResourceKind,
@@ -260,7 +260,7 @@ public sealed class MaterialDataNew
 		// Define layout elements from resource bindings:
 		for (int i = 0; i < userResourceCount; ++i)
 		{
-			MaterialResourceDataNew resourceData = Resources![i];
+			MaterialResourceData resourceData = Resources![i];
 			ResourceLayoutElementDescription element = new(
 				resourceData.SlotName,
 				resourceData.ResourceKind,
@@ -314,7 +314,7 @@ public sealed class MaterialDataNew
 			for (int i = 0; i < userResourceCount; ++i)
 			{
 				int boundResourceIdx = _resourceCountBoundByMaterial + i;
-				MaterialResourceDataNew resourceData = Resources![i];
+				MaterialResourceData resourceData = Resources![i];
 				if (!MaterialUserBoundResourceSlot.CreateSlot(_outResourcesArray, boundResourceIdx, _funcMarkResourceSetDirty, resourceData.ResourceKind, out MaterialUserBoundResourceSlot? slot))
 				{
 					Logger.Instance?.LogError($"Failed to create binding slot for material's bound resource '{resourceData}'!");
@@ -345,7 +345,7 @@ public sealed class MaterialDataNew
 		string?[] resourceKeys = new string[boundResourceCount];
 		for (int i = 0; i < boundResourceCount; ++i)
 		{
-			MaterialResourceDataNew? resData = Resources[i];
+			MaterialResourceData? resData = Resources[i];
 			if (!string.IsNullOrEmpty(resData?.ResourceKey))
 			{
 				resourceKeys[i] = resData.ResourceKey;
