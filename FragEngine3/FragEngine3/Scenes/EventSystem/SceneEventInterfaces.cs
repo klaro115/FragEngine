@@ -46,7 +46,7 @@ public interface IOnEarlyUpdateListener : ISceneUpdateListener
 [SceneEventInterface(SceneEventType.MainUpdate)]
 public interface IOnMainUpdateListener : ISceneUpdateListener
 {
-	bool OnUpdate();				//TODO: Consider passing along a context object, with deltaTime and frame count ready to go?
+	bool OnUpdate();				//TODO [optional]: Consider passing along a context object, with deltaTime and frame count ready to go?
 }
 
 /// <summary>

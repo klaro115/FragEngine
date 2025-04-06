@@ -15,7 +15,7 @@ internal sealed class SceneDrawManager(Scene _scene) : IDisposable
 
 	public readonly Scene scene = _scene ?? throw new ArgumentNullException(nameof(_scene), "Scene may not be null!");
 
-	private readonly List<IRenderer> renderers = [];        //TODO [later]: Split into multiple renderer groups that may populate command lists in parallel, each in their own thread.
+	private readonly List<IRenderer> renderers = [];        //TODO [later]: Split into multiple renderer groups that may populate command lists in parallel, each in their own thread. => leave to graphics stack, or add override gatherer?
 
 	private readonly List<CameraComponent> cameras = new(4);
 	private readonly List<ILightSource> lights = new(64);

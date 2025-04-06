@@ -85,7 +85,7 @@ internal sealed class ForwardPlusLightsSceneObjects
 		{
 			if (renderer.IsVisible)
 			{
-				//TODO [later]: We'll just take all renderers for now, but they need to be excluded/culled if not visible by any camera.
+				//TODO [later]: We'll just take all renderers for now, but they need to be excluded/culled if not visible by any camera. => wait for spatial partitioning branch.
 
 				List<IRenderer>? rendererList = renderer.RenderMode switch
 				{

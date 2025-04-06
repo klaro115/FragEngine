@@ -29,7 +29,7 @@ public sealed class MaterialData
 	public MaterialShaderData Shaders { get; set; } = new();
 	public MaterialReplacementData Replacements { get; set; } = new();
 	public MaterialResourceData[]? Resources { get; set; } = null;
-	public MaterialConstantBufferData[]? ConstantBuffers { get; set; } = null;		//TODO: Not used yet, needs to map to and write constant buffers.
+	public MaterialConstantBufferData[]? ConstantBuffers { get; set; } = null;
 
 	#endregion
 	#region Methods

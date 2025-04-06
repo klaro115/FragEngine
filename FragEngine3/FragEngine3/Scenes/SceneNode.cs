@@ -93,7 +93,7 @@ public sealed partial class SceneNode : ISceneElement
 		}
 		if (!IsDisposed && !scene.IsDisposed)
 		{
-			//scene.UnregisterNodeRenderers(this);			//TODO: Find a better way to replicate this through the new SceneDrawManager!
+			//scene.UnregisterNodeRenderers(this);			//TODO: Find a better way to replicate this through the SceneDrawManager!
 		}
 
 		IsDisposed = true;
