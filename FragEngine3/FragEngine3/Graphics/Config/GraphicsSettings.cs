@@ -12,6 +12,7 @@ public sealed class GraphicsSettings
 	public bool Vsync { get; set; } = false;
 	public Vector2 Resolution { get; set; } = new Vector2(1280, 720);
 	public int MsaaCount { get; set; } = 1;
+	public double MaxFrameRate { get; set; } = 60.0;
 
 	// Lighting:
 	public uint MaxActiveLightCount { get; set; } = 128;
@@ -27,6 +28,7 @@ public sealed class GraphicsSettings
 			Vsync = Vsync,
 			Resolution = Resolution,
 			MsaaCount = MsaaCount,
+			MaxFrameRate = MaxFrameRate,
 
 			// Lighting:
 			MaxActiveLightCount = MaxActiveLightCount,

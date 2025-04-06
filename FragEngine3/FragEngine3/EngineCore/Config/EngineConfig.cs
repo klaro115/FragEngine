@@ -1,4 +1,6 @@
-﻿using FragEngine3.Graphics.Config;
+﻿using FragEngine3.EngineCore.Logging;
+using FragEngine3.Graphics.Config;
+using FragEngine3.Utility;
 
 namespace FragEngine3.EngineCore.Config;
 
@@ -7,10 +9,11 @@ public sealed class EngineConfig
 {
 	#region Properties
 
-	public string ApplicationName { get; set; } = "EngineTest";
-	public string MainWindowTitle { get; set; } = "EngineTest";
-	
-	public GraphicsConfig Graphics { get; set; } = new();
+	public required string ApplicationName { get; init; } = "EngineTest";
+	public required string MainWindowTitle { get; init; } = "EngineTest";
+
+	public required LoggerConfig Logger { get; init; } = new();
+	public required GraphicsConfig Graphics { get; init; } = new();
 	//...
 
 	#endregion
@@ -21,8 +24,15 @@ public sealed class EngineConfig
 	/// </summary>
 	public EngineConfig Clone()
 	{
+		string clonedApplicationName = ApplicationName.AddIncrementalIndexSuffix(1);
+		string clonedMainWindowName = MainWindowTitle.AddIncrementalIndexSuffix(1);
+
 		return new EngineConfig()
 		{
+			ApplicationName = clonedApplicationName,
+			MainWindowTitle = clonedMainWindowName,
+
+			Logger = Logger.Clone(),
 			Graphics = Graphics.Clone(),
 			//...
 		};

@@ -75,5 +75,41 @@ public static class StringExt
 		return false;
 	}
 
+	/// <summary>
+	/// Gets a new string with an incremental index suffixed to it. If the current string does not have a number suffix, a starting
+	/// index will be appended. If the current string already ends on a number, the output will have the next higher number.
+	/// </summary>
+	/// <param name="_txt">This string, which may or may not have a number suffix.</param>
+	/// <param name="_startIndexIfMissing">A starting index to start counting on, if the current string does not have a suffix yet.</param>
+	/// <returns>A new string with a number suffix added to it.</returns>
+	public static string AddIncrementalIndexSuffix(this string _txt, int _startIndexIfMissing = 1)
+	{
+		if (string.IsNullOrEmpty(_txt)) return string.Empty;
+
+		// Last character is not a number? Append starting index right away:
+		if (!char.IsAsciiDigit(_txt[^1]))
+		{
+			return $"{_txt}{_startIndexIfMissing}";
+		}
+
+		// Find start of number suffix:
+		int i;
+		for (i = _txt.Length - 1; i >= 0; i--)
+		{
+			char c = _txt[i];
+			if (!char.IsAsciiDigit(c))
+			{
+				break;
+			}
+		}
+
+		// Parse, then increment number suffix:
+		ReadOnlySpan<char> span = _txt.AsSpan(i);
+		int currentIndexSuffix = int.Parse(span);
+		int newIndexSuffix = currentIndexSuffix + 1;
+		
+		return $"{_txt}{newIndexSuffix}";
+	}
+
 	#endregion
 }

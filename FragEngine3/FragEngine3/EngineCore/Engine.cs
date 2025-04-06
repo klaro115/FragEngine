@@ -29,7 +29,7 @@ public sealed class Engine : IDisposable
 	public Engine(ApplicationLogic _applicationLogic, EngineConfig _config)
 	{
 		applicationLogic = _applicationLogic ?? throw new ArgumentNullException(nameof(_applicationLogic), "Application logic may not be null!");
-		config = _config?.Clone() ?? throw new ArgumentNullException(nameof(_config), "Engine config may not be null!");
+		EngineConfig = _config?.Clone() ?? throw new ArgumentNullException(nameof(_config), "Engine config may not be null!");
 
 		// Create logger before any other module:
 		Logger = new(this);
@@ -87,7 +87,6 @@ public sealed class Engine : IDisposable
 	#region Fields
 
 	private readonly ApplicationLogic applicationLogic;
-	private readonly EngineConfig config;
 
 	// State machine:
 	private EngineStateBase currentState;
@@ -104,6 +103,8 @@ public sealed class Engine : IDisposable
 
 	#endregion
 	#region Properties
+
+	// ENGIEN STATUS:
 
 	/// <summary>
 	/// Gets whether this engine has already been disposed.
@@ -122,6 +123,14 @@ public sealed class Engine : IDisposable
 	/// </summary>
 	public EngineState State { get; private set; } = EngineState.None;
 
+	/// <summary>
+	/// The main startup configuration of this engine instance.
+	/// </summary>
+	public EngineConfig EngineConfig { get; }
+
+
+	// ENGINE SYSTEMS:
+
 	public Logger Logger { get; init; } = null!;
 	public PlatformSystem PlatformSystem { get; init; } = null!;
 	public TimeManager TimeManager { get; init; } = null!;
@@ -133,6 +142,7 @@ public sealed class Engine : IDisposable
 	public JobManager JobManager { get; init; } = null!;
 	public HealthCheckSystem HealthCheckSystem { get; init; } = null!;
 	//...
+
 
 	public static Engine? Instance { get; private set; } = null;
 
@@ -171,12 +181,6 @@ public sealed class Engine : IDisposable
 
 		Logger?.Shutdown();
 	}
-
-	/// <summary>
-	/// Gets the engine's main configuration data.
-	/// </summary>
-	/// <returns>A deep copy of the config. The config is strictly immutable at run-time.</returns>
-	public EngineConfig GetEngineConfig() => config.Clone();
 
 	/// <summary>
 	/// Request the engine to stop the main loop and quit.<para/>

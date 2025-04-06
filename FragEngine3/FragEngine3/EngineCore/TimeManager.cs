@@ -1,4 +1,5 @@
-﻿using System.Diagnostics;
+﻿using FragEngine3.EngineCore.Config;
+using System.Diagnostics;
 
 namespace FragEngine3.EngineCore;
 
@@ -54,6 +55,8 @@ public sealed class TimeManager : IEngineSystem
 
 		stopwatch = new();
 		stopwatch.Start();
+
+		TargetFrameRate = _engine.EngineConfig.Graphics.FallbackGraphicsSettings.MaxFrameRate;
 	}
 
 	~TimeManager()

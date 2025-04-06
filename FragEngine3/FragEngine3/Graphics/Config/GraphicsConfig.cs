@@ -7,18 +7,18 @@ public sealed class GraphicsConfig
 
 	// WINDOW & DEVICE:
 
-	public bool PreferNativeFramework { get; set; } = true;
-	public WindowStyle WindowStyle { get; set; } = WindowStyle.Windowed;
-	public bool AllowWindowResize { get; set; } = false;
-	public bool AllowWindowClose { get; set; } = true;
-	public int DisplayIndex { get; set; } = 0;
-	public bool CenterWindowOnScreen { get; set; } = true;
+	public bool PreferNativeFramework { get; init; } = true;
+	public WindowStyle WindowStyle { get; init; } = WindowStyle.Windowed;
+	public bool AllowWindowResize { get; init; } = false;
+	public bool AllowWindowClose { get; init; } = true;
+	public int DisplayIndex { get; init; } = 0;
+	public bool CenterWindowOnScreen { get; init; } = true;
 	//...
 
 	// OUTPUT & SWAPCHAIN:
 
-	public int OutputBitDepth { get; set; } = 8;
-	public bool OutputIsSRGB { get; set; } = false;
+	public int OutputBitDepth { get; init; } = 8;
+	public bool OutputIsSRGB { get; init; } = false;
 	//...
 
 	// SETTINGS:

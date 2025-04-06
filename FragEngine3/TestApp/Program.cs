@@ -5,9 +5,26 @@ using TestApp.Application;
 
 Console.WriteLine("### Starting...\n");
 
-EngineConfig config = new();
-//config.Graphics.PreferNativeFramework = false;	// default to Vulkan
-config.Graphics.CenterWindowOnScreen = true;
+EngineConfig config = new()
+{
+	ApplicationName = "TestApp",
+	MainWindowTitle = "TestApp MainWindow",
+
+	Logger = new()
+	{
+		DeletePreviousLogsOnStartup = true,
+	},
+	Graphics = new()
+	{
+		PreferNativeFramework = true,
+		CenterWindowOnScreen = true,
+		FallbackGraphicsSettings = new()
+		{
+			Resolution = new(1280, 720),
+			MaxFrameRate = 120,
+		},
+	},
+};
 
 Engine? engine = null;
 try

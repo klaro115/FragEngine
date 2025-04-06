@@ -19,6 +19,8 @@ public sealed class Logger : ILogger, IEngineSystem
 		
 		logDirAbsPath = Path.Combine(applicationPath, LoggerConstants.LOG_FILE_DIR_REL_PATH);
 		logFileAbsPath = Path.Combine(logDirAbsPath, LoggerConstants.MAIN_LOG_FILE_NAME);
+
+		writeLogsEveryNEntries = Math.Max((int)_engine.EngineConfig.Logger.WriteLogsEveryNEntries, 1);
 	}
 
 	~Logger()
@@ -84,6 +86,23 @@ public sealed class Logger : ILogger, IEngineSystem
 		lock(lockObj)
 		{
 			entries.Clear();
+		}
+
+		// If configured, delete log file from previous launch:
+		if (Engine.EngineConfig.Logger.DeletePreviousLogsOnStartup)
+		{
+			try
+			{
+				if (File.Exists(logFileAbsPath))
+				{
+					File.Delete(logFileAbsPath);
+				}
+			}
+			catch (Exception ex)
+			{
+				Console.WriteLine($"Error! Failed to delete main log file from previous session!\nException type: '{ex.GetType()}'\nException message: '{ex.Message}'");
+				// ^Note: This is cause for warning, but does not warrant aborting the startup process.
+			}
 		}
 
 		// Ensure the log file and its parent directory exist:

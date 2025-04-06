@@ -31,8 +31,6 @@ public sealed class TestApplicationLogic : ApplicationLogic
 
 	protected override bool RunStartupLogic()
 	{
-		Engine.TimeManager.TargetFrameRate = 60;
-
 		return true;
 	}
 

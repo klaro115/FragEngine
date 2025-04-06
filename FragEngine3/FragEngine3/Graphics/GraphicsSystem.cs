@@ -38,12 +38,12 @@ public class GraphicsSystem : IEngineSystem
 
 		Engine = _engine;
 		logger = Engine.Logger;
-		config = Engine.GetEngineConfig();
+		config = Engine.EngineConfig;
 
 		// Try loading graphics settings from file, use default settings on failure:
 		if (!LoadGraphicsSettings(out _, true))
 		{
-			Settings = Engine.GetEngineConfig().Graphics.FallbackGraphicsSettings;
+			Settings = Engine.EngineConfig.Graphics.FallbackGraphicsSettings;
 		}
 
 		// Create main window and main graphics device:

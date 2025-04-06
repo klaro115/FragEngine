@@ -21,7 +21,7 @@ public abstract class GraphicsCore : IDisposable
 	{
 		graphicsSystem = _graphicsSystem ?? throw new ArgumentNullException(nameof(_graphicsSystem), "Graphics system may not be null!");
 		logger = graphicsSystem.Engine.Logger;
-		config = _config ?? graphicsSystem.Engine.GetEngineConfig();
+		config = _config ?? graphicsSystem.Engine.EngineConfig;
 	}
 	~GraphicsCore()
 	{
