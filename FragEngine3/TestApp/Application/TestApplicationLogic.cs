@@ -258,7 +258,7 @@ public sealed class TestApplicationLogic : ApplicationLogic
 			cone.SetMaterial("Mtl_DefaultSurface");
 		}
 
-		MeshPrimitiveFactory.CreateIcosahedronMesh("Icosahedron", Engine, 0.75f, false, out _, out _, out ResourceHandle d20Handle);
+		MeshPrimitiveFactory.CreateIcosahedronMesh("Icosahedron", Engine, 0.75f, true, out _, out _, out ResourceHandle d20Handle);
 		if (SceneSpawner.CreateStaticMeshRenderer(scene, out StaticMeshRendererComponent d20))
 		{
 			d20.node.Name = "D20";

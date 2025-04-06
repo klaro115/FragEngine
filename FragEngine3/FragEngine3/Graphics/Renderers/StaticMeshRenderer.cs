@@ -70,7 +70,8 @@ public sealed class StaticMeshRenderer : IPhysicalRenderer
 	// Graphics objects:
 	private readonly DeviceBuffer cbObject;
 	private ResourceSet? resSetObject = null;
-	private ResourceSet[]? allResourceSets = null;
+	private ResourceSet[]? allResourceSetsScene = null;
+	private ResourceSet[]? allResourceSetsShadow = null;
 	private VersionedMember<Pipeline?> pipelineScene = new(null, 0);
 	private VersionedMember<Pipeline?> pipelineShadow = new(null, 0);
 
@@ -326,7 +327,8 @@ public sealed class StaticMeshRenderer : IPhysicalRenderer
 			_cameraPassCtx,
 			materialScene!,
 			rendererVersionScene,
-			ref pipelineScene);
+			ref pipelineScene,
+			ref allResourceSetsScene);
 	}
 
 	public bool DrawShadowMap(SceneContext _sceneCtx, CameraPassContext _cameraPassCtx)
@@ -354,7 +356,8 @@ public sealed class StaticMeshRenderer : IPhysicalRenderer
 			_cameraPassCtx,
 			materialShadow!,
 			rendererVersionShadow,
-			ref pipelineShadow);
+			ref pipelineShadow,
+			ref allResourceSetsShadow);
 	}
 
 	private bool Draw_internal(
@@ -362,7 +365,8 @@ public sealed class StaticMeshRenderer : IPhysicalRenderer
 		CameraPassContext _cameraPassCtx,
 		Material _material,
 		ushort _rendererVersion,
-		ref VersionedMember<Pipeline?> _pipeline)
+		ref VersionedMember<Pipeline?> _pipeline,
+		ref ResourceSet[]? _allResourceSets)
 	{
 		if (IsDisposed)
 		{
@@ -398,16 +402,16 @@ public sealed class StaticMeshRenderer : IPhysicalRenderer
 		}
 
 		// Update all resource sets (bound and system):
-		if (!_material.Prepare(in _sceneCtx, in _cameraPassCtx, resSetObject, ref allResourceSets))
+		if (!_material.Prepare(in _sceneCtx, in _cameraPassCtx, resSetObject, ref _allResourceSets))
 		{
 			return false;
 		}
 
 		// Bind pipeline and resource sets:
 		_cameraPassCtx.CmdList.SetPipeline(_pipeline.Value);
-		for (uint i = 0; i < allResourceSets!.Length; ++i)
+		for (uint i = 0; i < _allResourceSets!.Length; ++i)
 		{
-			_cameraPassCtx.CmdList.SetGraphicsResourceSet(i, allResourceSets[i]);
+			_cameraPassCtx.CmdList.SetGraphicsResourceSet(i, _allResourceSets[i]);
 		}
 
 		// Bind geometry buffers:
