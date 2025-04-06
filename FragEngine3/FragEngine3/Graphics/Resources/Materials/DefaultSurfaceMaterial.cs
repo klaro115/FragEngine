@@ -137,34 +137,10 @@ public sealed class DefaultSurfaceMaterial : SurfaceMaterial
 		Pipeline pipeline;
 		try
 		{
-			BlendStateDescription blendStateDesc = BlendStateDescription.SingleOverrideBlend;	//TODO
-
-			DepthStencilStateDescription depthStencilDesc = new(
-				depthStencilState.enableDepthTest,
-				depthStencilState.enableDepthWrite,
-				ComparisonKind.LessEqual,
-				depthStencilState.enableStencil,
-				depthStencilState.stencilFront,
-				depthStencilState.stencilBack,
-				depthStencilState.readMask,
-				depthStencilState.writeMask,
-				depthStencilState.referenceValue);
-
-			RasterizerStateDescription rasterizerDesc = new(
-				rasterizerState.enableCulling
-					? FaceCullMode.Back
-					: FaceCullMode.None,
-				PolygonFillMode.Solid,
-				rasterizerState.cullClockwise
-					? FrontFace.Clockwise
-					: FrontFace.CounterClockwise,
-				true,
-				false);
-
 			GraphicsPipelineDescription pipelineDesc = new(
-				blendStateDesc,
-				depthStencilDesc,
-				rasterizerDesc,
+				blendState,
+				depthStencilState,
+				rasterizerState,
 				PrimitiveTopology.TriangleList,
 				shaderSetDesc,
 				resourceLayouts,

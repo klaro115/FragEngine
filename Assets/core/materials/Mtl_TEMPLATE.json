@@ -6,6 +6,8 @@
     "SerializedData": null,
 
     "BlendState": {
+        "AlphaIsTransparency": true,
+        "BlendFactor": "(1.0; 1.0; 1.0; 1.0)",
         "ZSortingBias": 0
     },
     "DepthStencilState": {

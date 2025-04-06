@@ -115,5 +115,30 @@ public static class GraphicsConstants
 		IndexedWeightedVertex.vertexLayoutDesc,	// [BoneIndices, BoneWeights]
 	];
 
+	/// <summary>
+	/// Default rasterizer state description for polygonal geometry that is solid (i.e. non-wireframe) and single-sided.
+	/// </summary>
+	public static readonly RasterizerStateDescription DEFAULT_RASTERIZER_STATE = new(
+		FaceCullMode.Back,
+		PolygonFillMode.Solid,
+		FrontFace.CounterClockwise,
+		true,
+		false);
+
+	/// <summary>
+	/// Default depth and stencil state description for opaque geometry.
+	/// </summary>
+	public static readonly DepthStencilStateDescription DEFAULT_DEPTH_STENCIL_STATE_OPAQUE = DepthStencilStateDescription.DepthOnlyLessEqual;
+
+	/// <summary>
+	/// Default blend state description for opaque geometry.
+	/// </summary>
+	public static readonly BlendStateDescription DEFAULT_BLEND_STATE_OPAQUE = BlendStateDescription.SingleOverrideBlend;
+
+	/// <summary>
+	/// Default blend state description for transparent alpha-blended geometry.
+	/// </summary>
+	public static readonly BlendStateDescription DEFAULT_BLEND_STATE_TRANSPARENT = BlendStateDescription.SingleAlphaBlend;
+
 	#endregion
 }

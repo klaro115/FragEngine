@@ -12,47 +12,6 @@ namespace FragEngine3.Graphics.Resources.Materials;
 /// </summary>
 public abstract class SurfaceMaterial : Material
 {
-	#region Types
-
-	public record struct DepthStencilDesc
-	{
-		public bool enableDepthTest;
-		public bool enableDepthWrite;
-
-		public bool enableStencil;
-		public StencilBehaviorDescription stencilFront;
-		public StencilBehaviorDescription stencilBack;
-		public byte readMask;
-		public byte writeMask;
-		public uint referenceValue;
-
-		public static DepthStencilDesc Default => new()
-		{
-			enableDepthTest = true,
-			enableDepthWrite = true,
-
-			enableStencil = false,
-			stencilFront = default,
-			stencilBack = default,
-			readMask = 0,
-			writeMask = 0,
-			referenceValue = 0,
-		};
-	}
-
-	public record struct RasterizerDesc
-	{
-		public bool enableCulling;
-		public bool cullClockwise;
-
-		public static RasterizerDesc Default => new()
-		{
-			enableCulling = true,
-			cullClockwise = false,
-		};
-	}
-
-	#endregion
 	#region Constructors
 
 	protected SurfaceMaterial(GraphicsCore _graphicsCore, ResourceHandle _resourceHandle, MaterialDataNew _data) : base(_graphicsCore, _resourceHandle, _data)
@@ -82,8 +41,9 @@ public abstract class SurfaceMaterial : Material
 		}
 
 		// Set depth/stencil states from data:
+		SetRasterizerStateFromMaterialData(_data.RasterizerState);
 		SetDepthStencilStatesFromMaterialData(_data.DepthStencilState);
-		SetRasterizerStatesFromMaterialData(_data.RasterizerState);
+		SetBlendStateFromMaterialData(_data.BlendState);
 	}
 
 	#endregion
@@ -100,8 +60,9 @@ public abstract class SurfaceMaterial : Material
 
 	// PIPELINE STATES:
 
-	protected DepthStencilDesc depthStencilState = DepthStencilDesc.Default;
-	protected RasterizerDesc rasterizerState = RasterizerDesc.Default;
+	protected RasterizerStateDescription rasterizerState = GraphicsConstants.DEFAULT_RASTERIZER_STATE;
+	protected DepthStencilStateDescription depthStencilState = GraphicsConstants.DEFAULT_DEPTH_STENCIL_STATE_OPAQUE;
+	protected BlendStateDescription blendState = GraphicsConstants.DEFAULT_BLEND_STATE_OPAQUE;
 
 	#endregion
 	#region Properties
@@ -128,15 +89,33 @@ public abstract class SurfaceMaterial : Material
 	public ResourceHandle PixelShaderHandle { get; protected set; } = ResourceHandle.None;
 
 	/// <summary>
+	/// Gets or sets the material's behaviour for polygon rasterization.<para/>
+	/// Note: If this value changes, all graphics pipelines using this material may have to be recreated.
+	/// </summary>
+	public RasterizerStateDescription RasterizerState
+	{
+		get => rasterizerState;
+		set
+		{
+			bool hasChanged = !rasterizerState.Equals(value);
+			rasterizerState = value;
+			if (hasChanged)
+			{
+				MarkDirty();
+			}
+		}
+	}
+
+	/// <summary>
 	/// Gets or sets the material's behaviour for depth maps and stencil buffers.<para/>
 	/// Note: If this value changes, all graphics pipelines using this material may have to be recreated.
 	/// </summary>
-	public DepthStencilDesc DepthStencilState
+	public DepthStencilStateDescription DepthStencilState
 	{
 		get => depthStencilState;
 		set
 		{
-			bool hasChanged = value != depthStencilState;
+			bool hasChanged = !depthStencilState.Equals(value);
 			depthStencilState = value;
 			if (hasChanged)
 			{
@@ -146,16 +125,16 @@ public abstract class SurfaceMaterial : Material
 	}
 
 	/// <summary>
-	/// Gets or sets the material's behaviour for polygon rasterization.<para/>
+	/// Gets or sets the material's behaviour for compositing opaque and/or transparent geometry.<para/>
 	/// Note: If this value changes, all graphics pipelines using this material may have to be recreated.
 	/// </summary>
-	public RasterizerDesc RasterizerState
+	public BlendStateDescription BlendState
 	{
-		get => rasterizerState;
+		get => blendState;
 		set
 		{
-			bool hasChanged = value != rasterizerState;
-			rasterizerState = value;
+			bool hasChanged = !blendState.Equals(value);
+			blendState = value;
 			if (hasChanged)
 			{
 				MarkDirty();
@@ -175,51 +154,63 @@ public abstract class SurfaceMaterial : Material
 			return false;
 		}
 
-		DepthStencilDesc newStateDesc = new()
-		{
-			enableDepthTest = _data.EnableDepthTest,
-			enableDepthWrite = _data.EnableDepthWrite,
+		StencilBehaviorDescription stencilFront = _data.StencilFront?.GetStencilBehaviourDesc() ?? default;
+		StencilBehaviorDescription stencilBack = _data.StencilBack?.GetStencilBehaviourDesc() ?? default;
 
-			enableStencil = _data.EnableStencil,
-			readMask = _data.StencilReadMask,
-			writeMask = _data.StencilWriteMask,
-			referenceValue = _data.StencilReferenceValue,
-		};
-		if (_data.StencilFront is not null)
-		{
-			depthStencilState.stencilFront = new(
-				_data.StencilFront.Fail,
-				_data.StencilFront.Pass,
-				_data.StencilFront.DepthFail,
-				_data.StencilFront.ComparisonKind);
-		}
-		if (_data.StencilBack is not null)
-		{
-			depthStencilState.stencilBack = new(
-				_data.StencilBack.Fail,
-				_data.StencilBack.Pass,
-				_data.StencilBack.DepthFail,
-				_data.StencilBack.ComparisonKind);
-		}
+		DepthStencilStateDescription newStateDesc = new(
+			_data.EnableDepthTest,
+			_data.EnableDepthWrite,
+			ComparisonKind.LessEqual,
+			_data.EnableStencil,
+			stencilFront,
+			stencilBack,
+			_data.StencilReadMask,
+			_data.StencilWriteMask,
+			_data.StencilReferenceValue);
 
 		DepthStencilState = newStateDesc;
 		return true;
 	}
 
-	public bool SetRasterizerStatesFromMaterialData(MaterialRasterizerStateData? _data)
+	public bool SetRasterizerStateFromMaterialData(MaterialRasterizerStateData? _data)
 	{
 		if (_data is null)
 		{
 			return false;
 		}
 
-		RasterizerDesc newStateDesc = new()
-		{
-			enableCulling = _data.EnableCulling,
-			cullClockwise = _data.CullClockwise,
-		};
+		FaceCullMode cullMode = _data.EnableCulling
+			? FaceCullMode.Back
+			: FaceCullMode.None;
+
+		FrontFace frontFace = _data.CullClockwise
+			? FrontFace.Clockwise
+			: FrontFace.CounterClockwise;
+
+		RasterizerStateDescription newStateDesc = new(
+			cullMode,
+			PolygonFillMode.Solid,
+			frontFace,
+			true,
+			false);
 
 		RasterizerState = newStateDesc;
+		return true;
+	}
+
+	public bool SetBlendStateFromMaterialData(MaterialBlendStateData? _data)
+	{
+		if (_data is null)
+		{
+			return false;
+		}
+
+		BlendStateDescription newStateDesc = new(
+			_data.BlendFactor,
+			_data.AlphaIsTransparency,
+			BlendAttachmentDescription.OverrideBlend);
+
+		BlendState = newStateDesc;
 		return true;
 	}
 
