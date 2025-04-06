@@ -29,11 +29,13 @@ public abstract class SurfaceMaterial : Material
 		PixelShaderHandle = handlePS;
 
 		// Optionally, try loading geometry and tesselation shaders:
-		if (resourceManager.GetResource(_data.Shaders.Geometry, out ResourceHandle handleGS))
+		if (!string.IsNullOrEmpty(_data.Shaders.Geometry) && resourceManager.GetResource(_data.Shaders.Geometry, out ResourceHandle handleGS))
 		{
 			GeometryShaderHandle = handleGS;
 		}
-		if (resourceManager.GetResource(_data.Shaders.TesselationCtrl, out ResourceHandle handleTCS) &&
+		if (!string.IsNullOrEmpty(_data.Shaders.TesselationCtrl) &&
+			!string.IsNullOrEmpty(_data.Shaders.TesselationEval) &&
+			resourceManager.GetResource(_data.Shaders.TesselationCtrl, out ResourceHandle handleTCS) &&
 			resourceManager.GetResource(_data.Shaders.TesselationEval, out ResourceHandle handleTES))
 		{
 			TesselationCtrlShaderHandle = handleTCS;

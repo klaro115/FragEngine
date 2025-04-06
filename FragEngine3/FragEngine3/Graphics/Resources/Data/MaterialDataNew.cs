@@ -17,6 +17,17 @@ public sealed class MaterialDataNew
 {
 	#region Properties
 
+	// FORMAT:
+
+	/// <summary>
+	/// The version of the material data format.<para/>
+	/// Note: This is not currently used, but was added to facilitate support of newer and older material specficiations
+	/// and importers in parallel. Support for older format versions will eventually be dropped, but this allows for some
+	/// leeway during an asset upgrade process.
+	/// </summary>
+	public float FormatVersion { get; init; } = CURRENT_FORMAT_VERSION;
+
+
 	// GENERAL:
 
 	/// <summary>
@@ -93,6 +104,14 @@ public sealed class MaterialDataNew
 	/// be bound manually.
 	/// </summary>
 	public MaterialResourceDataNew[]? Resources { get; init; } = null;
+
+	#endregion
+	#region Constants
+
+	/// <summary>
+	/// The version number of the current, most up-to-date version of the material data format and JSON schema.
+	/// </summary>
+	public const float CURRENT_FORMAT_VERSION = 1.0f;
 
 	#endregion
 	#region Methods
