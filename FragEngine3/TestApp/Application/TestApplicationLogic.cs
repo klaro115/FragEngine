@@ -166,7 +166,7 @@ public sealed class TestApplicationLogic : ApplicationLogic
 			light.node.Name = "Spotlight";
 			light.node.WorldPosition = new Vector3(0, 0, -3);
 			light.node.LocalRotation = Quaternion.Identity;
-			light.node.SetEnabled(false);
+			//light.node.SetEnabled(false);
 
 			light.LightIntensity = 10;
 			light.SpotAngleDegrees = 35;
@@ -191,6 +191,17 @@ public sealed class TestApplicationLogic : ApplicationLogic
 			light.node.SetEnabled(false);
 
 			light.LightIntensity = 7;
+		}
+
+		MeshPrimitiveFactory.CreateCubeMesh("Cube_Skybox", Engine, Vector3.One * 10, false, out _, out _, out ResourceHandle skyboxMesh);
+		if (SceneSpawner.CreateStaticMeshRenderer(scene, out StaticMeshRendererComponent skybox))
+		{
+			skybox.node.Name = "Skybox";
+			skybox.node.LocalPosition = camera.node.LocalPosition;
+			//skybox.node.SetEnabled(false);
+
+			skybox.SetMesh(skyboxMesh);
+			skybox.SetMaterial("Mtl_SkyboxGradient");
 		}
 
 		if (SceneSpawner.CreateStaticMeshRenderer(scene, out StaticMeshRendererComponent room))
@@ -461,6 +472,12 @@ public sealed class TestApplicationLogic : ApplicationLogic
 		{
 			LightComponent light = sunNode.GetComponent<LightComponent>()!;
 			light.IsStaticLight = !light.IsStaticLight;
+		}
+
+		// Update skybox position to remain centered around the main camera:
+		if (CameraComponent.MainCamera is not null && scene.FindNode("Skybox", out SceneNode? skyboxNode) && skyboxNode is not null)
+		{
+			skyboxNode.WorldPosition = CameraComponent.MainCamera.node.WorldPosition;
 		}
 
 		return true;

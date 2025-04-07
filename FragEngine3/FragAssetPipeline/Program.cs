@@ -54,6 +54,9 @@ internal static class Program
 	};
 	private static readonly string shaderDescriptionTxtTexList = shaderConfigTexLit.CreateDescriptionTxt();
 
+	private static readonly ShaderConfig shaderConfigMinimal = ShaderConfig.ConfigMinimal;
+	private static readonly string shaderDescriptionTxtMinimal = shaderConfigMinimal.CreateDescriptionTxt();
+
 	private static readonly ShaderProcess.Details[] details =
 	[
 		new("Basic_VS",                           "Basic_VS.hlsl",                                       "Main_Vertex", ShaderStages.Vertex,   flagsExt,   _bundlePrecompiledData: false) { descriptionTxt = shaderDescriptionTxt },
@@ -65,6 +68,7 @@ internal static class Program
 		new("DefaultShadow_PS",                   "shadows/DefaultShadow_PS.hlsl",                       "Main_Pixel",  ShaderStages.Fragment, flagsExt,   _bundlePrecompiledData: false) { descriptionTxt = shaderDescriptionTxt },
 		new("ForwardPlusLight_CompositeScene_PS", "composition/ForwardPlusLight_CompositeScene_PS.hlsl", "Main_Pixel",  ShaderStages.Fragment, flagsBasic, _bundlePrecompiledData: false) { descriptionTxt = shaderDescriptionTxt },
 		new("ForwardPlusLight_CompositeUI_PS",    "composition/ForwardPlusLight_CompositeUI_PS.hlsl",    "Main_Pixel",  ShaderStages.Fragment, flagsBasic, _bundlePrecompiledData: false) { descriptionTxt = shaderDescriptionTxt },
+		new("SkyboxGradient_PS",                  "skybox/SkyboxGradient_PS.hlsl",                       "Main_Pixel",  ShaderStages.Fragment, flagsBasic, _bundlePrecompiledData: false) { descriptionTxt = shaderDescriptionTxtMinimal },
 	];
 
 	#endregion

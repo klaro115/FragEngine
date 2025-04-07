@@ -32,7 +32,7 @@
         "StencilReferenceValue": 0
     },
     "RasterizerState": {
-        "EnableCulling": false,
+        "EnableCulling": true,
         "CullClockwise": false
     },
 
