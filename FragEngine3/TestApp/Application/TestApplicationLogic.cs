@@ -202,6 +202,7 @@ public sealed class TestApplicationLogic : ApplicationLogic
 
 			skybox.SetMesh(skyboxMesh);
 			skybox.SetMaterial("Mtl_SkyboxGradient");
+			skybox.DontDrawUnlessFullyLoaded = false;
 		}
 
 		if (SceneSpawner.CreateStaticMeshRenderer(scene, out StaticMeshRendererComponent room))

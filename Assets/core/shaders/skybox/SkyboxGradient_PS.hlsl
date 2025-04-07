@@ -52,7 +52,8 @@ half4 Main_Pixel(in VertexOutput_Basic inputBasic) : SV_Target0
 
     const float dotY = dot(pixelDir, float3(0, 1, 0));
     const float dotX = 1.0 - abs(dotY);
-    const float kUp = max(dotY, 0);
+    float kUp = 1 - max(dotY, 0);
+    kUp = 1 - kUp * kUp;
     const float kDown = max(-dotY, 0);
 
     const float4 colorGround = lerp(colorGroundH, colorGroundV, kDown);
