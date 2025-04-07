@@ -97,9 +97,7 @@ No support is planned for the foreseeable future. Android will have to wait unti
 ## Work In Progress
 
 - Refactor graphics architecture:
-    - Rework materials:
-        - Split material type into standard/user variants
-        - Support for user-supplied constant buffers
+    - Rework materials (cleanup & finishing touches)
 - Physics engine _(Bullet Physics)_
 - Linux support:
     - SPIR-V shader support **[Pipeline creation fails]**
