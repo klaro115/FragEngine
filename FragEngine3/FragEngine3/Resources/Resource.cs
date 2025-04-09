@@ -80,5 +80,26 @@ public abstract class Resource : IDisposable
 	/// <returns>Yields handles to all resources this resource depends on, including itself.</returns>
 	public abstract IEnumerator<ResourceHandle> GetResourceDependencies();
 
+	public static bool CompareKeys(Resource? _resourceA, Resource? _resourceB)
+	{
+		string resourceKeyA = _resourceA?.resourceKey ?? string.Empty;
+		string resourceKeyB = _resourceB?.resourceKey ?? string.Empty;
+		return resourceKeyA == resourceKeyB;
+	}
+
+	public static bool CompareKeys(Resource? _resourceA, ResourceHandle? _resourceB)
+	{
+		string resourceKeyA = _resourceA?.resourceKey ?? string.Empty;
+		string resourceKeyB = _resourceB?.resourceKey ?? string.Empty;
+		return resourceKeyA == resourceKeyB;
+	}
+
+	public static bool CompareKeys(ResourceHandle? _resourceA, ResourceHandle? _resourceB)
+	{
+		string resourceKeyA = _resourceA?.resourceKey ?? string.Empty;
+		string resourceKeyB = _resourceB?.resourceKey ?? string.Empty;
+		return resourceKeyA == resourceKeyB;
+	}
+
 	#endregion
 }

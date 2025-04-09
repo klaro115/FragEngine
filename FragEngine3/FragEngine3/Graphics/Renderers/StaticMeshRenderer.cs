@@ -114,9 +114,14 @@ public sealed class StaticMeshRenderer : IPhysicalRenderer
 		GC.SuppressFinalize(this);
 		Dispose(true);
 	}
-	private void Dispose(bool _)
+	private void Dispose(bool _disposing)
 	{
 		IsDisposed = true;
+
+		if (_disposing && materialScene is not null)
+		{
+			materialScene.ReplacementsChanged -= OnMaterialReplacementsChanged;
+		}
 
 		cbObject?.Dispose();
 		resSetObject?.Dispose();
@@ -217,8 +222,8 @@ public sealed class StaticMeshRenderer : IPhysicalRenderer
 		}
 
 		RenderMode prevRenderMode = RenderMode;
-		string prevSceneResourceKey = MaterialHandle.resourceKey ?? string.Empty;
-		string prevShadowResourceKey = ShadowMaterialHandle.resourceKey ?? string.Empty;
+		ResourceHandle prevMaterialHandle = MaterialHandle;
+		ResourceHandle prevShadowHandle = ShadowMaterialHandle;
 		materialScene = null;
 		materialShadow = null;
 		ShadowMaterialHandle = ResourceHandle.None;
@@ -238,18 +243,12 @@ public sealed class StaticMeshRenderer : IPhysicalRenderer
 			// If already loaded, assign scene material immediately:
 			if (MaterialHandle.IsLoaded)
 			{
-				materialScene = MaterialHandle.GetResource<Material>();
+				SetMaterial_Scene(MaterialHandle.GetResource<Material>());
 
 				// If no override shadow material is provided, use default from loaded scene material:
 				if (materialScene is not null && (_overrideShadowMaterial is null || !_overrideShadowMaterial.IsValid))
 				{
-					ShadowMaterialHandle = materialScene.ShadowMaterialHandle ?? ResourceHandle.None;
-					if (ShadowMaterialHandle.IsLoaded)
-					{
-						materialShadow = ShadowMaterialHandle.GetResource<Material>();
-					}
-
-					AreShadowResourcesAssigned = isMeshAssigned;
+					SetMaterial_Shadow(materialScene.ShadowMaterialHandle);
 				}
 			}
 
@@ -259,18 +258,12 @@ public sealed class StaticMeshRenderer : IPhysicalRenderer
 		// If an override shadow material is provided, assign it immediately:
 		if (_overrideShadowMaterial is not null && _overrideShadowMaterial.IsValid)
 		{
-			ShadowMaterialHandle = _overrideShadowMaterial;
-			if (ShadowMaterialHandle.IsLoaded)
-			{
-				materialShadow = ShadowMaterialHandle.GetResource<Material>();
-			}
-
-			AreShadowResourcesAssigned = isMeshAssigned;
+			SetMaterial_Shadow(_overrideShadowMaterial);
 		}
 
 		// Notify any users that the renderer's resources have changed:
-		bool materialSceneChanged = prevSceneResourceKey != MaterialHandle!.resourceKey;
-		bool materialShadowChanged = prevShadowResourceKey != ShadowMaterialHandle.resourceKey;
+		bool materialSceneChanged = Resource.CompareKeys(prevMaterialHandle, MaterialHandle);
+		bool materialShadowChanged = Resource.CompareKeys(prevShadowHandle, ShadowMaterialHandle);
 		bool renderModeChanged = prevRenderMode != RenderMode;
 		if (materialSceneChanged || materialShadowChanged)
 		{
@@ -284,6 +277,55 @@ public sealed class StaticMeshRenderer : IPhysicalRenderer
 			OnRenderModeChanged?.Invoke(this);
 		}
 		return true;
+	}
+
+	private void SetMaterial_Scene(Material? _newMaterial)
+	{
+		bool hasChanged = Resource.CompareKeys(materialScene, _newMaterial);
+
+		Material? prevMaterial = materialScene;
+		materialScene = _newMaterial;
+
+		if (hasChanged)
+		{
+			if (prevMaterial is not null && !prevMaterial.IsDisposed)
+			{
+				prevMaterial.ReplacementsChanged -= OnMaterialReplacementsChanged;
+			}
+			if (materialScene is not null)
+			{
+				materialScene.ReplacementsChanged += OnMaterialReplacementsChanged;
+			}
+
+			OnResourcesChanged?.Invoke(this);
+		}
+	}
+
+	private void SetMaterial_Shadow(ResourceHandle? _newMaterialHandle)
+	{
+		bool hasChanged = Resource.CompareKeys(materialShadow, _newMaterialHandle);
+
+		ShadowMaterialHandle = _newMaterialHandle ?? ResourceHandle.None;
+		if (ShadowMaterialHandle.IsLoaded)
+		{
+			materialShadow = ShadowMaterialHandle.GetResource<Material>();
+		}
+
+		bool isMeshAssigned = (mesh is not null && !mesh.IsDisposed) || MeshHandle.IsValid;
+		AreShadowResourcesAssigned = isMeshAssigned;
+
+		if (hasChanged)
+		{
+			OnResourcesChanged?.Invoke(this);
+		}
+	}
+
+	private void OnMaterialReplacementsChanged(Material _materialScene)
+	{
+		if (_materialScene == materialScene)
+		{
+			SetMaterial_Shadow(materialScene?.ShadowMaterialHandle);
+		}
 	}
 
 	public float GetZSortingDepth(Vector3 _viewportPosition, Vector3 _cameraDirection)

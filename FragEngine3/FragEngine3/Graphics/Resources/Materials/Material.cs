@@ -46,6 +46,19 @@ public abstract class Material : Resource
 	}
 
 	#endregion
+	#region Events
+
+	/// <summary>
+	/// Event that is triggered when the material's bound resources have changed.
+	/// </summary>
+	public event OnMaterialBoundResourcesChangedHandler? BoundResourcesChanged = null;
+
+	/// <summary>
+	/// Event that is triggered when the material's replacement materials (shadow or simplified) have changed.
+	/// </summary>
+	public event OnMaterialReplacementsChangedHandler? ReplacementsChanged = null;
+
+	#endregion
 	#region Fields
 
 	public readonly GraphicsCore graphicsCore;
@@ -187,11 +200,18 @@ public abstract class Material : Resource
 	/// <returns>True if the new replacement material could be loaded and assigned, false otherwise.</returns>
 	public bool SetShadowMaterial(ResourceHandle _handle, bool _loadImmediately = false)
 	{
+		bool hasChanged = CompareKeys(ShadowMaterialHandle, _handle);
+
 		// Null or invalid handles will unassign the shadow material:
 		if (_handle is null || !_handle.IsValid)
 		{
 			ShadowMaterialHandle = ResourceHandle.None;
 			ShadowMaterial = null;
+
+			if (hasChanged)
+			{
+				ReplacementsChanged?.Invoke(this);
+			}
 			return true;
 		}
 
@@ -205,6 +225,11 @@ public abstract class Material : Resource
 			ShadowMaterialHandle = ResourceHandle.None;
 			return false;
 		}
+
+		if (hasChanged)
+		{
+			ReplacementsChanged?.Invoke(this);
+		}
 		return true;
 	}
 
@@ -215,11 +240,18 @@ public abstract class Material : Resource
 	/// <returns>True if the new replacement material could be assigned, false otherwise.</returns>
 	public bool SetShadowMaterial(Material? _material)
 	{
+		bool hasChanged = CompareKeys(ShadowMaterial, _material);
+
 		// Null material will unassign the shadow material:
 		if (_material is null)
 		{
 			ShadowMaterialHandle = ResourceHandle.None;
 			ShadowMaterial = null;
+
+			if (hasChanged)
+			{
+				ReplacementsChanged?.Invoke(this);
+			}
 			return true;
 		}
 		if (_material.IsDisposed || !_material.IsLoaded)
@@ -227,6 +259,7 @@ public abstract class Material : Resource
 			logger.LogError("Cannot set shadow material replacement from disposed or unloaded material resource!");
 			return false;
 		}
+
 
 		// Try to retrieve a resource handle for the given material:
 		if (!resourceManager.GetResource(_material.resourceKey, out ResourceHandle handle))
@@ -237,6 +270,11 @@ public abstract class Material : Resource
 		
 		ShadowMaterialHandle = handle;
 		ShadowMaterial = _material;
+
+		if (hasChanged)
+		{
+			ReplacementsChanged?.Invoke(this);
+		}
 		return true;
 	}
 
