@@ -150,7 +150,7 @@ public sealed class TestApplicationLogic : ApplicationLogic
 
 			light.LightIntensity = 0.8f;
 			light.CastShadows = true;
-			light.ShadowCascades = 2;
+			light.ShadowCascades = 1;
 			light.ShadowNormalBias = 0.02f;
 			light.ShadowDepthBias = 0.01f;
 		}
@@ -166,7 +166,7 @@ public sealed class TestApplicationLogic : ApplicationLogic
 			light.node.Name = "Spotlight";
 			light.node.WorldPosition = new Vector3(0, 0, -3);
 			light.node.LocalRotation = Quaternion.Identity;
-			//light.node.SetEnabled(false);
+			light.node.SetEnabled(false);
 
 			light.LightIntensity = 10;
 			light.SpotAngleDegrees = 35;
@@ -209,7 +209,7 @@ public sealed class TestApplicationLogic : ApplicationLogic
 		{
 			room.node.Name = "Room";
 			room.node.LocalPosition = new Vector3(0, -1.5f, 4);
-			//room.node.SetEnabled(false);
+			room.node.SetEnabled(false);
 
 			room.SetMesh("LightingTestRoom.obj");
 			room.SetMaterial("Mtl_LightingTestRoom");
@@ -221,7 +221,7 @@ public sealed class TestApplicationLogic : ApplicationLogic
 			rabbit.node.LocalPosition = new Vector3(0, -1.5f, 2);
 			rabbit.node.LocalRotation = Quaternion.Identity;
 			rabbit.node.LocalScale = Vector3.One * 3;
-			//rabbit.node.SetEnabled(false);
+			rabbit.node.SetEnabled(false);
 
 			rabbit.SetMesh("Rabbit.obj");
 			rabbit.SetMaterial("Mtl_DefaultSurface");
@@ -249,7 +249,7 @@ public sealed class TestApplicationLogic : ApplicationLogic
 			cylinder.node.LocalPosition = new Vector3(-2.5f, 0, 2);
 			cylinder.node.LocalRotation = Quaternion.Identity;
 			cylinder.node.LocalScale = Vector3.One;
-			cylinder.node.SetEnabled(false);
+			//cylinder.node.SetEnabled(false);
 
 			cylinder.SetMesh(cylinderHandle);
 			cylinder.SetMaterial("Mtl_DefaultSurface");
@@ -262,7 +262,7 @@ public sealed class TestApplicationLogic : ApplicationLogic
 			cone.node.LocalPosition = new Vector3(0, 2, 2);
 			cone.node.LocalRotation = Quaternion.Identity;
 			cone.node.LocalScale = Vector3.One;
-			//cone.node.SetEnabled(false);
+			cone.node.SetEnabled(false);
 
 			cone.SetMesh(coneHandle);
 			cone.SetMaterial("Mtl_DefaultSurface");
@@ -288,12 +288,12 @@ public sealed class TestApplicationLogic : ApplicationLogic
 			plane.node.LocalPosition = new Vector3(0, -1.5f, 2);
 			plane.node.LocalRotation = Quaternion.Identity;
 			plane.node.LocalScale = Vector3.One;
-			plane.node.SetEnabled(false);
+			//plane.node.SetEnabled(false);
 
 			plane.SetMesh(planeHandle);
 			plane.SetMaterial("Mtl_BrickWall");
 			//plane.SetMaterial("Mtl_DefaultSurface");
-			plane.DontDrawUnlessFullyLoaded = true;
+			//plane.DontDrawUnlessFullyLoaded = true;
 		}
 		if (SceneSpawner.CreateStaticMeshRenderer(scene, out plane))
 		{
@@ -301,12 +301,12 @@ public sealed class TestApplicationLogic : ApplicationLogic
 			plane.node.LocalPosition = new Vector3(0, 1, 4.5f);
 			plane.node.SetRotationFromAxisAngle(Vector3.UnitX, -90, false, true);
 			plane.node.LocalScale = Vector3.One;
-			plane.node.SetEnabled(false);
+			//plane.node.SetEnabled(false);
 
 			plane.SetMesh(planeHandle);
 			plane.SetMaterial("Mtl_BrickWall");
 			//plane.SetMaterial("Mtl_DefaultSurface");
-			plane.DontDrawUnlessFullyLoaded = true;
+			//plane.DontDrawUnlessFullyLoaded = true;
 		}
 		if (SceneSpawner.CreateStaticMeshRenderer(scene, out plane))
 		{
@@ -314,11 +314,11 @@ public sealed class TestApplicationLogic : ApplicationLogic
 			plane.node.LocalPosition = new Vector3(-2.5f, 1, 2);
 			plane.node.SetRotationFromAxisAngle(Vector3.UnitZ, -90, false, true);
 			plane.node.LocalScale = Vector3.One;
-			plane.node.SetEnabled(false);
+			//plane.node.SetEnabled(false);
 
 			plane.SetMesh(planeHandle);
 			plane.SetMaterial("Mtl_BrickWall");
-			plane.DontDrawUnlessFullyLoaded = true;
+			//plane.DontDrawUnlessFullyLoaded = true;
 		}
 
 		MeshPrimitiveFactory.CreatePlaneMesh("Heightmap", Engine, new Vector2(2, 2), 30, true, out _, out _, out ResourceHandle heightmapHandle);
@@ -328,7 +328,7 @@ public sealed class TestApplicationLogic : ApplicationLogic
 			heightmap.node.LocalPosition = new Vector3(0, -1, -1);
 			heightmap.node.LocalRotation = Quaternion.Identity;
 			heightmap.node.LocalScale = Vector3.One;
-			//heightmap.node.SetEnabled(false);
+			heightmap.node.SetEnabled(false);
 
 			heightmap.SetMesh(heightmapHandle);
 			heightmap.SetMaterial("Mtl_Heightmap");
