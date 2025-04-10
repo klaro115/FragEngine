@@ -91,7 +91,7 @@ public sealed class StaticMeshRenderer : IPhysicalRenderer
 	public ResourceHandle ShadowMaterialHandle
 	{
 		get => shadowMaterialHandle;
-		private set => shadowMaterialHandle = value ?? ResourceHandle.None;
+		private set => shadowMaterialHandle = value;
 	}
 
 	public bool AreResourcesAssigned { get; private set; } = false;
@@ -211,7 +211,7 @@ public sealed class StaticMeshRenderer : IPhysicalRenderer
 	/// </summary>
 	/// <param name="_materialHandle">A resource handle for the material. If null or invalid, the material will be unassigned.</param>
 	/// <param name="_overrideShadowMaterial">An override material for rendering shadow maps. If non-null, this material replaces any
-	/// shadow material provided by the main material.</param>
+	/// shadow material provided by the main material. Note that assigning an invalid/empty handle that is non-null will disable shadows.</param>
 	/// <returns>True if the material was assigned, false otherwise.</returns>
 	public bool SetMaterial(ResourceHandle? _materialHandle, ResourceHandle? _overrideShadowMaterial = null)
 	{
@@ -221,110 +221,128 @@ public sealed class StaticMeshRenderer : IPhysicalRenderer
 			return false;
 		}
 
+		// Gather previous material set:
 		RenderMode prevRenderMode = RenderMode;
-		ResourceHandle prevMaterialHandle = MaterialHandle;
-		ResourceHandle prevShadowHandle = ShadowMaterialHandle;
-		materialScene = null;
-		materialShadow = null;
-		ShadowMaterialHandle = ResourceHandle.None;
+		ResourceHandle prevSceneMaterialHandle = MaterialHandle;
+		ResourceHandle prevShadowMaterialHandle = ShadowMaterialHandle;
+		Material? prevSceneMaterial = materialScene;
+		Material? prevShadowMaterial = materialShadow;
+
+		// Gather new material set:
+		RenderMode newRenderMode = RenderMode.Opaque;
+		ResourceHandle newSceneMaterialHandle = _materialHandle ?? ResourceHandle.None;
+		ResourceHandle newShadowMaterialHandle = _overrideShadowMaterial ?? ResourceHandle.None;
+		Material? newSceneMaterial = null;
+		Material? newShadowMaterial = null;
 		AreShadowResourcesAssigned = false;
-		bool isMeshAssigned = (mesh is not null && !mesh.IsDisposed) || MeshHandle.IsValid;
 
-		if (_materialHandle is null || !_materialHandle.IsValid)
+		if (newSceneMaterialHandle.IsValid && newSceneMaterialHandle.IsLoaded)
 		{
-			// Assigning a null or invalid handle will unassign current material:
-			MaterialHandle = ResourceHandle.None;
-			AreResourcesAssigned = false;
+			newSceneMaterial = newSceneMaterialHandle.GetResource<Material>(false);
 		}
-		else
+		if (newSceneMaterial is not null)
 		{
-			MaterialHandle = _materialHandle;
-
-			// If already loaded, assign scene material immediately:
-			if (MaterialHandle.IsLoaded)
+			newRenderMode = newSceneMaterial.renderMode;
+			if (_overrideShadowMaterial is null)
 			{
-				SetMaterial_Scene(MaterialHandle.GetResource<Material>());
-
-				// If no override shadow material is provided, use default from loaded scene material:
-				if (materialScene is not null && (_overrideShadowMaterial is null || !_overrideShadowMaterial.IsValid))
-				{
-					SetMaterial_Shadow(materialScene.ShadowMaterialHandle);
-				}
+				newShadowMaterialHandle = newSceneMaterial.ShadowMaterialHandle;
+				newShadowMaterial = newSceneMaterial.ShadowMaterial;
 			}
-
-			AreResourcesAssigned = isMeshAssigned;
+		}
+		if (newShadowMaterial is null && newShadowMaterialHandle.IsValid && newShadowMaterialHandle.IsLoaded)
+		{
+			newShadowMaterial = newShadowMaterialHandle.GetResource<Material>(false);
 		}
 
-		// If an override shadow material is provided, assign it immediately:
-		if (_overrideShadowMaterial is not null && _overrideShadowMaterial.IsValid)
+		// Check if materials have changed:
+		bool hasSceneMaterialChanged = !Resource.CompareKeys(prevSceneMaterialHandle, newSceneMaterialHandle);
+		bool hasShadowMaterialChanged = !Resource.CompareKeys(prevShadowMaterialHandle, newShadowMaterialHandle);
+
+		// Assign scene material:
+		if (hasSceneMaterialChanged)
 		{
-			SetMaterial_Shadow(_overrideShadowMaterial);
+			SetSceneMaterial(newSceneMaterialHandle, newSceneMaterial);
+		}
+
+		// Assign shadow material:
+		if (hasShadowMaterialChanged)
+		{
+			SetShadowMaterial(newShadowMaterialHandle, newShadowMaterial);
 		}
 
 		// Notify any users that the renderer's resources have changed:
-		bool materialSceneChanged = Resource.CompareKeys(prevMaterialHandle, MaterialHandle);
-		bool materialShadowChanged = Resource.CompareKeys(prevShadowHandle, ShadowMaterialHandle);
-		bool renderModeChanged = prevRenderMode != RenderMode;
-		if (materialSceneChanged || materialShadowChanged)
+		if (hasSceneMaterialChanged && hasShadowMaterialChanged)
 		{
-			if (materialSceneChanged) rendererVersionScene++;
-			if (materialShadowChanged) rendererVersionShadow++;
-
 			OnResourcesChanged?.Invoke(this);
 		}
-		if (renderModeChanged)
+		if (prevRenderMode != newRenderMode)
 		{
 			OnRenderModeChanged?.Invoke(this);
 		}
+
 		return true;
 	}
 
-	private void SetMaterial_Scene(Material? _newMaterial)
+	private void SetSceneMaterial(ResourceHandle _newHandle, Material? _newMaterial)
 	{
-		bool hasChanged = Resource.CompareKeys(materialScene, _newMaterial);
-
-		Material? prevMaterial = materialScene;
-		materialScene = _newMaterial;
-
+		// If changed, purge previously held resources:
+		bool hasChanged = !Resource.CompareKeys(materialScene, _newHandle);
 		if (hasChanged)
 		{
-			if (prevMaterial is not null && !prevMaterial.IsDisposed)
-			{
-				prevMaterial.ReplacementsChanged -= OnMaterialReplacementsChanged;
-			}
 			if (materialScene is not null)
 			{
-				materialScene.ReplacementsChanged += OnMaterialReplacementsChanged;
+				materialScene.ReplacementsChanged -= OnMaterialReplacementsChanged;
 			}
 
-			OnResourcesChanged?.Invoke(this);
+			rendererVersionScene++;
+
+			pipelineScene.DisposeValue();
+			pipelineScene = new(null);
+			allResourceSetsScene = null;
 		}
+
+		// Assign new material or handle:
+		MaterialHandle = _newHandle;
+		materialScene = _newMaterial;
+
+		// Subscribe to events:
+		if (hasChanged && materialScene is not null)
+		{
+			materialScene.ReplacementsChanged += OnMaterialReplacementsChanged;
+		}
+
+		// Check if the scene renderer is ready to draw:
+		bool isMeshAssigned = (mesh is not null && !mesh.IsDisposed) || MeshHandle.IsValid;
+		AreResourcesAssigned = (materialScene is not null || MaterialHandle.IsValid) && isMeshAssigned;
 	}
 
-	private void SetMaterial_Shadow(ResourceHandle? _newMaterialHandle)
+	private void SetShadowMaterial(ResourceHandle _newHandle, Material? _newMaterial)
 	{
-		bool hasChanged = Resource.CompareKeys(materialShadow, _newMaterialHandle);
-
-		ShadowMaterialHandle = _newMaterialHandle ?? ResourceHandle.None;
-		if (ShadowMaterialHandle.IsLoaded)
-		{
-			materialShadow = ShadowMaterialHandle.GetResource<Material>();
-		}
-
-		bool isMeshAssigned = (mesh is not null && !mesh.IsDisposed) || MeshHandle.IsValid;
-		AreShadowResourcesAssigned = isMeshAssigned;
-
+		// If changed, purge previously held resources:
+		bool hasChanged = !Resource.CompareKeys(materialShadow, _newHandle);
 		if (hasChanged)
 		{
-			OnResourcesChanged?.Invoke(this);
+			rendererVersionShadow++;
+
+			pipelineShadow.DisposeValue();
+			pipelineShadow = new(null);
+			allResourceSetsShadow = null;
 		}
+
+		// Assign new material or handle:
+		ShadowMaterialHandle = _newHandle;
+		materialShadow = _newMaterial;
+
+		// Check if the shadow renderer is ready to draw:
+		bool isMeshAssigned = (mesh is not null && !mesh.IsDisposed) || MeshHandle.IsValid;
+		AreShadowResourcesAssigned = (materialShadow is not null || ShadowMaterialHandle.IsValid) && isMeshAssigned;
 	}
 
 	private void OnMaterialReplacementsChanged(Material _materialScene)
 	{
 		if (_materialScene == materialScene)
 		{
-			SetMaterial_Shadow(materialScene?.ShadowMaterialHandle);
+			SetShadowMaterial(materialScene.ShadowMaterialHandle, null);
 		}
 	}
 
