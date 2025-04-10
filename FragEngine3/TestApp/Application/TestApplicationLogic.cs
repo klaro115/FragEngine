@@ -378,6 +378,18 @@ public sealed class TestApplicationLogic : ApplicationLogic
 			quad.SetMaterial("Mtl_DefaultSurface");
 		}
 
+		if (SceneSpawner.CreateStaticMeshRenderer(scene, out StaticMeshRendererComponent shadowMapVis))
+		{
+			shadowMapVis.node.Name = "ShadowMapVisualizer";
+			shadowMapVis.node.LocalPosition = new(1.5f, 0.5f, 3);
+			shadowMapVis.node.SetRotationFromYawPitchRoll(180, 0, 0, false, true);
+			shadowMapVis.node.LocalScale = Vector3.One * 1;
+			//shadowMapVis.node.SetEnabled(false);
+
+			shadowMapVis.SetMesh(quadHandle);
+			shadowMapVis.SetMaterial("Mtl_ShadowMapVisualizer");
+		}
+
 		return true;
 	}
 

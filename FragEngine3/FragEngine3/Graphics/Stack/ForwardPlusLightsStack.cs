@@ -407,6 +407,7 @@ public sealed class ForwardPlusLightsStack : IGraphicsStack
 			Pose cameraWorldPose = focalCamera.node.WorldTransformation;
 			_outRenderFocalRadius = LightConstants.directionalLightSize;
 			_outRenderFocalPoint = cameraWorldPose.position;
+			//_outRenderFocalPoint = Vector3.Zero;
 		}
 
 		// Update scene constant buffer:

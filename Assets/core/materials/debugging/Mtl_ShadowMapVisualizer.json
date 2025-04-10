@@ -1,0 +1,59 @@
+{
+    "FormatVersion": 1.0,
+    "ResourceKey": "Mtl_ShadowMapVisualizer",
+    "MaterialType": 0,
+    "RenderMode": 1,
+    "TypeName": "BasicSurfaceMaterial",
+    "SerializedData": null,
+
+    "BlendState": {
+        "AlphaIsTransparency": false,
+        "ZSortingBias": 0
+    },
+    "DepthStencilState": {
+        "EnableDepthTest": true,
+        "EnableDepthWrite": false,
+        "EnableStencil": false,
+        "StencilFront": {
+            "Fail": 0,
+            "Pass": 0,
+            "DepthFail": 0,
+            "ComparisonKind": 3
+        },
+        "StencilBack": {
+            "Fail": 0,
+            "Pass": 0,
+            "DepthFail": 0,
+            "ComparisonKind": 3
+        },
+        "StencilReadMask": 0,
+        "StencilWriteMask": 0,
+        "StencilReferenceValue": 0
+    },
+    "RasterizerState": {
+        "EnableCulling": true,
+        "CullClockwise": true
+    },
+
+    "Shaders": {
+        "IsSurfaceMaterial": true,
+        "Vertex": "DefaultSurface_VS",
+        "Pixel": "ShadowMapVisualizer_PS"
+    },
+    "Replacements": null,
+    "Constants": [
+        {
+            "SlotIndex": 0,
+            "Type": 1
+        },
+        {
+            "SlotIndex": 1,
+            "Type": 2
+        },
+        {
+            "SlotIndex": 2,
+            "Type": 4
+        }
+    ],
+    "Resources": null
+}
