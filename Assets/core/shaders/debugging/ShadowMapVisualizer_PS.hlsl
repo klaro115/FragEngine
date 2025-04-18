@@ -31,6 +31,12 @@ cbuffer CBObject : register(b2)
     float boundingRadius;           // Bounding sphere radius of the object.
 };
 
+cbuffer CBShadowMapVisualizer : register(b4)
+{
+    uint shadowMapIdx;
+    float3 padding;
+}
+
 /**************** VERTEX OUTPUT: ***************/
 
 struct VertexOutput_Basic
@@ -48,11 +54,9 @@ SamplerState SamplerShadowMaps : register(ps, s0);
 
 /******************* SHADERS: ******************/
 
-static const uint cascadeIdx = 1;
-
 half4 Main_Pixel(in VertexOutput_Basic inputBasic) : SV_Target0
 {
-    const float3 uv = float3(inputBasic.uv, cascadeIdx);
+    const float3 uv = float3(inputBasic.uv, shadowMapIdx);
 
     const float shadowDepth = TexShadowMaps.Sample(SamplerShadowMaps, uv);
 

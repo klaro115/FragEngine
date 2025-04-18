@@ -84,7 +84,7 @@ internal sealed class DirectionalLight : LightInstance
 			worldRot = cameraRot * worldRot;
 		}
 
-		// Transform from a world space position (relative to a given focal point), to orthographics projection space, to shadow map UV coordinates:
+		// Transform from a world space position (relative to a given focal point), to orthographic projection space, to shadow map UV coordinates:
 		Vector3 posOrigin = _shadingFocalPoint - lightDir * maxRange * 0.5f;
 		Pose originPose = new(posOrigin, worldRot, Vector3.One, false);
 		if (!Matrix4x4.Invert(originPose.Matrix, out Matrix4x4 mtxWorld2Local))

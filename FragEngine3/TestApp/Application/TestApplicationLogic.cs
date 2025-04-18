@@ -7,11 +7,13 @@ using FragEngine3.Graphics.Components;
 using FragEngine3.Graphics.Lighting;
 using FragEngine3.Graphics.Resources;
 using FragEngine3.Graphics.Resources.Data;
+using FragEngine3.Graphics.Resources.Materials;
 using FragEngine3.Graphics.Stack;
 using FragEngine3.Resources;
 using FragEngine3.Scenes;
 using FragEngine3.Scenes.Utility;
 using System.Numerics;
+using TestApp.Graphics;
 using Veldrid;
 using Veldrid.Sdl2;
 
@@ -144,13 +146,14 @@ public sealed class TestApplicationLogic : ApplicationLogic
 		{
 			light.node.Name = "Sun";
 			light.node.WorldPosition = new Vector3(0, 5, 0);
-			light.node.SetRotationFromYawPitchRoll(-22.5f, 45, 0, true, true);
+			//light.node.SetRotationFromYawPitchRoll(-22.5f, 45, 0, true, true);
 			//light.node.SetRotationFromYawPitchRoll(0, -25, 0, true, true);
+			light.node.SetRotationFromYawPitchRoll(0, 90, 0, true, true);
 			//light.node.SetEnabled(false);
 
 			light.LightIntensity = 0.8f;
 			light.CastShadows = true;
-			light.ShadowCascades = 1;
+			light.ShadowCascades = 2;
 			light.ShadowNormalBias = 0.02f;
 			light.ShadowDepthBias = 0.01f;
 		}
@@ -198,7 +201,7 @@ public sealed class TestApplicationLogic : ApplicationLogic
 		{
 			skybox.node.Name = "Skybox";
 			skybox.node.LocalPosition = camera.node.LocalPosition;
-			//skybox.node.SetEnabled(false);
+			skybox.node.SetEnabled(false);
 
 			skybox.SetMesh(skyboxMesh);
 			skybox.SetMaterial("Mtl_SkyboxGradient");
@@ -378,12 +381,23 @@ public sealed class TestApplicationLogic : ApplicationLogic
 			quad.SetMaterial("Mtl_DefaultSurface");
 		}
 
+		if (Engine.ResourceManager.GetAndLoadResource("Mtl_ShadowMapVisualizer", true, out ResourceHandle shadowMapVisMtlHandle))
+		{
+			CBShadowMapVisualizer cBShadowMapVisData = new();
+
+			BufferDescription bufCbShadowMapVisDesc = new(CBShadowMapVisualizer.packedByteSize, BufferUsage.UniformBuffer);
+			DeviceBuffer bufCbShadowMapVis = Engine.GraphicsSystem.graphicsCore.MainFactory.CreateBuffer(ref bufCbShadowMapVisDesc);
+			Engine.GraphicsSystem.graphicsCore.Device.UpdateBuffer(bufCbShadowMapVis, 0, cBShadowMapVisData);
+
+			BasicSurfaceMaterial material = shadowMapVisMtlHandle.GetResource<BasicSurfaceMaterial>()!;
+			material.SetResource(0, bufCbShadowMapVis);
+		}
 		if (SceneSpawner.CreateStaticMeshRenderer(scene, out StaticMeshRendererComponent shadowMapVis))
 		{
 			shadowMapVis.node.Name = "ShadowMapVisualizer";
 			shadowMapVis.node.LocalPosition = new(1.5f, 0.5f, 3);
 			shadowMapVis.node.SetRotationFromYawPitchRoll(180, 0, 0, false, true);
-			shadowMapVis.node.LocalScale = Vector3.One * 1;
+			shadowMapVis.node.LocalScale = Vector3.One * 1.5f;
 			//shadowMapVis.node.SetEnabled(false);
 
 			shadowMapVis.SetMesh(quadHandle);

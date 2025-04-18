@@ -3,6 +3,7 @@ using FragEngine3.Graphics.ConstantBuffers.Internal;
 using FragEngine3.Graphics.Contexts;
 using FragEngine3.Graphics.Internal;
 using FragEngine3.Graphics.Resources.Data;
+using FragEngine3.Graphics.Resources.Data.MaterialTypes;
 using FragEngine3.Resources;
 using Veldrid;
 
@@ -38,6 +39,13 @@ public abstract class Material : Resource
 				SimplifiedMaterialHandle = simplifiedMaterialHandle;
 			}
 		}
+
+		// Prepare custom constant buffers:
+		if (!CreateCustomConstantBufferSlots(_data, out customConstantBufferSlots))
+		{
+			Dispose();
+			return;
+		}
 	}
 
 	~Material()
@@ -68,7 +76,7 @@ public abstract class Material : Resource
 	public readonly RenderMode renderMode;
 	public readonly MeshVertexDataFlags maxSupportedVariantFlags;
 
-	protected ConstantBufferSlot[] customConstantBufferSlots = null!;
+	protected ConstantBufferSlot[] customConstantBufferSlots;
 
 	#endregion
 	#region Properties
@@ -105,6 +113,16 @@ public abstract class Material : Resource
 
 	#endregion
 	#region Methods
+
+	protected override void Dispose(bool _disposing)
+	{
+		base.Dispose(_disposing);
+
+		foreach (var slot in customConstantBufferSlots)
+		{
+			slot.Dispose();
+		}
+	}
 
 	/// <summary>
 	/// Creates a new graphics pipeline for a specific renderer's use-case.
@@ -170,6 +188,37 @@ public abstract class Material : Resource
 			_outResourceSet = null;
 			return false;
 		}
+	}
+
+	protected bool CreateCustomConstantBufferSlots(MaterialDataNew _data, out ConstantBufferSlot[] _outSlots)
+	{
+		if (_data.Constants is null || _data.Constants.Length == 0)
+		{
+			_outSlots = [];
+			return true;
+		}
+
+		int customCbCount = _data.Constants.Count(o => o.Type == ConstantBuffers.ConstantBufferType.Custom);
+		_outSlots = new ConstantBufferSlot[customCbCount];
+
+		int customSlotIdx = 0;
+		for (int i = 0; i < _data.Constants.Length; i++)
+		{
+			MaterialConstantBufferData cbData = _data.Constants[i];
+			if (cbData.Type != ConstantBuffers.ConstantBufferType.Custom)
+			{
+				continue;
+			}
+
+			if (!ConstantBufferSlot.CreateSlot(graphicsCore, cbData, out ConstantBufferSlot slot))
+			{
+				logger.LogError($"Failed to create custom constant buffer slot for CB {i} of material '{resourceKey}'!");
+				return false;
+			}
+
+			_outSlots[customSlotIdx++] = slot;
+		}
+		return true;
 	}
 
 	#endregion

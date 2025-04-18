@@ -53,6 +53,23 @@
         {
             "SlotIndex": 2,
             "Type": 4
+        },
+        {
+            "SlotIndex": 4,
+            "Type": 16,
+            "CustomTypeName": "TestApp.Graphics.CBShadowMapVisualizer",
+            "Values": [
+                {
+                    "Name": "shadowMapIdx",
+                    "Index": 0,
+                    "SerializedValue": "0"
+                },
+                {
+                    "Name": "padding",
+                    "Index": 1,
+                    "SerializedValue": "{0, 0, 0}"
+                }
+            ]
         }
     ],
     "Resources": null

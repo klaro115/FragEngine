@@ -1,4 +1,5 @@
 ﻿using FragEngine3.EngineCore;
+using FragEngine3.Graphics.Resources.Data.MaterialTypes;
 using FragEngine3.Utility;
 using Veldrid;
 
@@ -146,6 +147,35 @@ public sealed record ConstantBufferSlot : IDisposable
 	/// <param name="_outSlot">Outputs a new slot that is ready for use by a material. On failure, an invalid slot is output instead.</param>
 	/// <returns>True if the slot and its buffers could be created around the provided data type, false otherwise.</returns>
 	public static bool CreateSlot<T>(GraphicsCore _graphicsCore, uint _slotIndex, out ConstantBufferSlot _outSlot) where T : unmanaged => CreateSlot(_graphicsCore, _slotIndex, typeof(T), out _outSlot);
+
+	/// <summary>
+	/// Tries to create a new constant buffer slot and its underlying buffers and resources.
+	/// </summary>
+	/// <param name="_graphicsCore">The graphics core to whose pipelines the constant buffer may be bound.</param>
+	/// <param name="_data">Serializable description object of a material's constant buffer slot.</param>
+	/// <param name="_outSlot">Outputs a new slot that is ready for use by a material. On failure, an invalid slot is output instead.</param>
+	/// <returns>True if the slot and its buffers could be created around the provided data type, false otherwise.</returns>
+	public static bool CreateSlot(GraphicsCore _graphicsCore, MaterialConstantBufferData _data, out ConstantBufferSlot _outSlot)
+	{
+		Logger? logger = _graphicsCore?.graphicsSystem.Engine.Logger ?? Logger.Instance;
+
+		if (_data is null)
+		{
+			logger?.LogError("Cannot create constant buffer slot using null material data!");
+			_outSlot = Invalid;
+			return false;
+		}
+
+		if (!_data.TryGetDataType(out Type? dataType))
+		{
+			logger?.LogError("Cannot create constant buffer slot based on unknown or invalid CPU-side data type!");
+			_outSlot = Invalid;
+			return false;
+		}
+
+		bool success = CreateSlot(_graphicsCore!, _data.SlotIndex, dataType!, out _outSlot);
+		return success;
+	}
 
 	/// <summary>
 	/// Tries to create a new constant buffer slot and its underlying buffers and resources.
