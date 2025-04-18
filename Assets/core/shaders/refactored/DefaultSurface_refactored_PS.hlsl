@@ -41,11 +41,11 @@
 /****************** INCLUDES: ******************/
 //<INC>
 
-#include "./includes/VertexData/VertexOutput.hlsl"
-#include "./includes/Albedo.hlsl"
-#include "./includes/Normals.hlsl"
-#include "./includes/Parallax.hlsl"
-#include "./includes/Lighting/Lighting.hlsl"
+#include "../includes/VertexData/VertexOutput.hlsl"
+#include "../includes/Albedo.hlsl"
+#include "../includes/Normals.hlsl"
+#include "../includes/Parallax.hlsl"
+#include "../includes/Lighting/Lighting.hlsl"
 
 //</INC>
 /******************* SHADERS: ******************/

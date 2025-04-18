@@ -12,8 +12,8 @@
 /****************** INCLUDES: ******************/
 //<INC>
 
-#include "./includes/VertexData/VertexInput.hlsl"
-#include "./includes/VertexData/VertexOutput.hlsl"
+#include "../includes/VertexData/VertexInput.hlsl"
+#include "../includes/VertexData/VertexOutput.hlsl"
 
 //</INC>
 /******************* SHADERS: ******************/

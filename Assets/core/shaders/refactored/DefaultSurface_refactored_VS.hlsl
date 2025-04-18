@@ -12,13 +12,13 @@
 /****************** INCLUDES: ******************/
 //<INC>
 
-#include "./includes/VertexData/VertexInput.hlsl"
-#include "./includes/VertexData/VertexOutput.hlsl"
-#include "./includes/ConstantBuffers/CBCamera.hlsl"
-#include "./includes/ConstantBuffers/CBObject.hlsl"
+#include "../includes/VertexData/VertexInput.hlsl"
+#include "../includes/VertexData/VertexOutput.hlsl"
+#include "../includes/ConstantBuffers/CBCamera.hlsl"
+#include "../includes/ConstantBuffers/CBObject.hlsl"
 
 #ifdef VARIANT_ANIMATED
-#include "./includes/BoneAnimation.hlsl"
+#include "../includes/BoneAnimation.hlsl"
 #endif
 
 //</INC>

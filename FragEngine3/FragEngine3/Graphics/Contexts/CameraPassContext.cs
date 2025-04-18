@@ -14,14 +14,14 @@ public sealed class CameraPassContext
 	#region Fields
 
 	// References:
-	public required CameraInstance CameraInstance { get; init; } = null!;
-	public required CommandList CmdList { get; init; } = null!;
+	public required CameraInstance CameraInstance { get; init; }
+	public required CommandList CmdList { get; init; }
 
 	// Camera resources:
-	public required Framebuffer Framebuffer { get; init; } = null!;
-	public required ResourceSet ResSetCamera { get; init; } = null!;
-	public required DeviceBuffer CbCamera { get; init; } = null!;
-	public required LightDataBuffer LightDataBuffer { get; init; } = null!;
+	public required Framebuffer Framebuffer { get; init; }
+	public required ResourceSet ResSetCamera { get; init; }
+	public required DeviceBuffer CbCamera { get; init; }
+	public required LightDataBuffer LightDataBuffer { get; init; }
 	public required ushort CameraResourceVersion { get; init; }
 
 	// Parameters:
