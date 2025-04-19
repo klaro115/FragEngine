@@ -58,6 +58,32 @@
                     "SerializedValue": "0"
                 }
             ]
+        },
+        {
+            "SlotIndex": 4,
+            "Type": 16,
+            "Values": [
+                {
+                    "Name": "heightmapTiling",
+                    "Index": 0,
+                    "SerializedValue": "{1, 1, 1, 1}"
+                },
+                {
+                    "Name": "minAltitude",
+                    "Index": 1,
+                    "SerializedValue": "0.0"
+                },
+                {
+                    "Name": "maxAltitude",
+                    "Index": 2,
+                    "SerializedValue": "1.0"
+                },
+                {
+                    "Name": "altitudeRange",
+                    "Index": 3,
+                    "SerializedValue": "1.0"
+                },
+            ]
         }
     ],
     "Resources": [
