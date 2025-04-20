@@ -4,7 +4,6 @@ using Veldrid;
 namespace FragEngine3.Graphics.ConstantBuffers;
 
 [StructLayout(LayoutKind.Sequential, Pack = 4, Size = byteSize)]
-[ConstantBufferDataType(ConstantBufferType.CBScene, packedByteSize)]
 public struct CBScene
 {
 	#region Fields
@@ -17,10 +16,9 @@ public struct CBScene
 
 	// Time:
 	/*
-	public float engineRunTime;				// Time since engine started running, in seconds.
-	public float engineDeltaTime;           // Time duration of the engine's last update cycle, in seconds.
-	public uint engineFrameCount;           // Numver of the update cycles since engine started running.
-	public float engineSinTime;				// Sine function of the engine's run time = sin(t)
+	public float shaderTime;                // Timer value for time-based shader effects, in seconds. This mirrors to the time manager's ShaderTime.
+	public float deltaTime;                 // Time duration of the last main loop cycle, in seconds.
+	public uint frameCounter;               // Number of main loop cycles since application startup.
 	*/
 
 	#endregion
@@ -30,8 +28,13 @@ public struct CBScene
 		3 * 4 * sizeof(float) + // ambient light
 		2 * sizeof(uint) +      // light counts
 		sizeof(float);          // shadow fade		= 60 bytes
+		/*
+		2 * sizeof(float) +     // time values
+		sizeof(uint);           // frame count		= 72 bytes
+		*/
 
 	public const int packedByteSize = 64;
+	//public const int packedByteSize = 80;
 
 	public const string NAME_IN_SHADER = "CBScene";
 	public static readonly ResourceLayoutElementDescription resourceLayoutElementDesc = new(NAME_IN_SHADER, ResourceKind.UniformBuffer, ShaderStages.Fragment);

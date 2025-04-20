@@ -2,13 +2,54 @@
 
 namespace FragEngine3.EngineCore;
 
+/// <summary>
+/// The central time management service of the engine.
+/// This class provides timers, and calculates delta time and thread sleep durations for the main loop.
+/// </summary>
 public sealed class TimeManager : IEngineSystem
 {
+	#region Types
+
+	/// <summary>
+	/// Reset modes that dictate if and how long to wait befire resetting <see cref="ShaderTime"/>.
+	/// A delayed reset mode can be used to prevent visual artifacting in timer-based visual effects when the time value is reset to zero.
+	/// </summary>
+	public enum ShaderTimeResetMode
+	{
+		/// <summary>
+		/// Don't wait, reset immediately.
+		/// </summary>
+		None,
+
+		/// <summary>
+		/// Wait for the current minute of <see cref="RunTime"/> to end.
+		/// </summary>
+		WaitForEndOfMinute,
+		/// <summary>
+		/// Wait for the current hour of <see cref="RunTime"/> to end.
+		/// </summary>
+		WaitForEndOfHour,
+
+		/// <summary>
+		/// Wait until the sine function of time crosses zero. <code>sin(t) == 0</code>
+		/// </summary>
+		WaitForSinZero,
+		/// <summary>
+		/// Wait until the cosine function of time crosses zero. <code>cos(t) == 0</code>
+		/// </summary>
+		WaitForCosZero,
+	}
+
+	#endregion
 	#region Constructors
 
 	public TimeManager(Engine _engine)
 	{
 		Engine = _engine ?? throw new ArgumentNullException(nameof(_engine), "Engine may not be null!");
+
+		EngineStartupDateTimeUtc = DateTime.UtcNow;
+		EngineStateChangeDateTimeUtc = DateTime.UtcNow;
+		Engine.OnStateChanged += OnEngineStateChanged;
 
 		stopwatch = new();
 		stopwatch.Start();
@@ -27,6 +68,10 @@ public sealed class TimeManager : IEngineSystem
 	private TimeSpan targetFrameDuration = new(0, 0, 0, 0, 16, 667);
 	private double targetFrameRate = 60.0;
 
+	private bool isShaderTimeResetPending = false;
+	private TimeSpan shaderTimeStartOffset = TimeSpan.Zero;
+	private TimeSpan shaderTimeResetTarget = TimeSpan.Zero;
+
 	#endregion
 	#region Constants
 
@@ -40,6 +85,15 @@ public sealed class TimeManager : IEngineSystem
 
 	public Engine Engine { get; }
 
+	/// <summary>
+	/// Gets the date and time when the engine was started up, in UTC.
+	/// </summary>
+	public DateTime EngineStartupDateTimeUtc { get; }
+	/// <summary>
+	/// Gets the date and time of the last time the engine's state changed, in UTC.
+	/// </summary>
+	public DateTime EngineStateChangeDateTimeUtc { get; private set; }
+
 	public TimeSpan LastFrameStartTime { get; private set; } = TimeSpan.Zero;
 	public TimeSpan LastFrameEndTime { get; private set; } = TimeSpan.Zero;
 	public TimeSpan LastFrameDuration { get; private set; } = TimeSpan.Zero;
@@ -50,6 +104,9 @@ public sealed class TimeManager : IEngineSystem
 
 	public TimeSpan RunTime { get; private set; } = TimeSpan.Zero;
 	public long FrameCount { get; private set; } = 0;
+
+	public TimeSpan ShaderTime { get; private set; } = TimeSpan.Zero;
+	public float ShaderTimeSeconds { get; private set; } = 0.0f;
 
 	/// <summary>
 	/// Gets or sets the targeted frame duration of the engine's main loop. The program will try to lock
@@ -109,6 +166,11 @@ public sealed class TimeManager : IEngineSystem
 		DeltaTime = targetFrameDuration;
 	}
 
+	private void OnEngineStateChanged(EngineState _)
+	{
+		EngineStateChangeDateTimeUtc = DateTime.UtcNow;
+	}
+
 	internal bool BeginFrame()
 	{
 		if (IsDisposed)
@@ -134,9 +196,19 @@ public sealed class TimeManager : IEngineSystem
 			return false;
 		}
 
+		// Update engine running time:
 		TimeSpan newRunTime = stopwatch.Elapsed;
 		RunTime = newRunTime;
 
+		// Update shader time:
+		ShaderTime = RunTime - shaderTimeStartOffset;
+		ShaderTimeSeconds = (float)ShaderTime.TotalSeconds;
+		if (isShaderTimeResetPending && RunTime >= shaderTimeResetTarget)
+		{
+			ResetShaderTime_internal();
+		}
+
+		// Update delta time & sleep durations:
 		LastFrameEndTime = stopwatch.Elapsed;
 		LastFrameDuration = LastFrameEndTime - LastFrameStartTime;
 
@@ -151,6 +223,88 @@ public sealed class TimeManager : IEngineSystem
 			DeltaTime = LastFrameDuration;
 		}
 		return true;
+	}
+
+	/// <summary>
+	/// Request a reset of the <see cref="ShaderTime"/> to zero.<para/>
+	/// Note: Shaders receive time stamps only as a 32-bit floating number, with inaccuracy increasing as time passes.
+	/// This is fine for delta times, but not ideal for a continuous timer. You may therefore use this method to reset
+	/// the timer to zero, to prevent rounding errors and visual artifacting in long-running games whose shaders rely
+	/// on an high-resolution timer value.
+	/// </summary>
+	/// <param name="_resetMode">Enum value spacifying conditions for delaying the timer reset. An immediate reset may
+	/// lead to noticeable jumps/cuts in visual effects between frames; waiting for the timer to cross a threshold, or
+	/// for a function of time to cross zero, can mitigate this.</param>
+	/// <returns>True if the timer reset was scheduled or enacted, false otherwise.</returns>
+	public bool ResetShaderTime(ShaderTimeResetMode _resetMode = ShaderTimeResetMode.None)
+	{
+		if (IsDisposed)
+		{
+			Engine.Logger.LogError("Cannot reset shader time of disposed time manager!");
+			return false;
+		}
+
+		const double sinTimePeriodMs = Math.PI * 1000.0;
+
+		TimeSpan curTime = RunTime;
+		isShaderTimeResetPending = true;
+
+		switch (_resetMode)
+		{
+			// Immediate reset:
+			case ShaderTimeResetMode.None:
+				{
+					ResetShaderTime_internal();
+				}
+				return true;
+
+			// Unit of time:
+			case ShaderTimeResetMode.WaitForEndOfMinute:
+				{
+					shaderTimeResetTarget = new TimeSpan(curTime.Days, curTime.Hours, curTime.Minutes, 0) + TimeSpan.FromMinutes(1);
+				}
+				return true;
+			case ShaderTimeResetMode.WaitForEndOfHour:
+				{
+					shaderTimeResetTarget = new TimeSpan(curTime.Days, curTime.Hours, 0, 0) + TimeSpan.FromHours(1);
+				}
+				return true;
+
+			// Function of time:
+			case ShaderTimeResetMode.WaitForSinZero:
+				{
+					double nextHalfPeriodIndex = Math.Ceiling(curTime.TotalMilliseconds / sinTimePeriodMs);
+					double nextHalfPeriodMilliseconds = nextHalfPeriodIndex * sinTimePeriodMs;
+
+					shaderTimeResetTarget = TimeSpan.FromMilliseconds(nextHalfPeriodMilliseconds);
+				}
+				return true;
+			case ShaderTimeResetMode.WaitForCosZero:
+				{
+					double nextHalfPeriodIndex = Math.Ceiling(curTime.TotalMilliseconds / sinTimePeriodMs + 0.5);
+					double nextHalfPeriodMilliseconds = nextHalfPeriodIndex * sinTimePeriodMs;
+
+					shaderTimeResetTarget = TimeSpan.FromMilliseconds(nextHalfPeriodMilliseconds);
+				}
+				return true;
+
+			// Misc:
+			default:
+				{
+					isShaderTimeResetPending = false;
+				}
+				return false;
+		}
+	}
+
+	private void ResetShaderTime_internal()
+	{
+		isShaderTimeResetPending = false;
+		shaderTimeStartOffset = RunTime;
+		shaderTimeResetTarget = RunTime;
+
+		ShaderTime = TimeSpan.Zero;
+		ShaderTimeSeconds = 0.0f;
 	}
 
 	#endregion

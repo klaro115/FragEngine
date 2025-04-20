@@ -41,10 +41,7 @@ namespace FragEngine3.Graphics.Cameras
 				}
 			}
 
-			/*
 			TimeManager timeManager = _graphicsCore.graphicsSystem.Engine.TimeManager;
-			float engineRunTime = (float)timeManager.RunTime.TotalSeconds;
-			*/
 
 			_cbSceneData = new()
 			{
@@ -56,10 +53,9 @@ namespace FragEngine3.Graphics.Cameras
 
 				// Time:
 				/*
-				engineRunTime = engineRunTime,
-				engineDeltaTime = (float)timeManager.DeltaTime.TotalSeconds,
-				engineFrameCount = (uint)timeManager.FrameCount,
-				engineSinTime = MathF.Sin(engineRunTime),
+				shaderTime = timeManager.ShaderTimeSeconds,
+				deltaTime = (float)timeManager.DeltaTime.TotalSeconds,
+				frameCounter = (uint)(timeManager.FrameCount & 0xFFFFFFFFL),
 				*/
 			};
 
