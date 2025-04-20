@@ -25,6 +25,7 @@ public sealed class BspTreeBranch(uint _depth = 0, BspSplitAxis _splitAxis = Bsp
 	#endregion
 	#region Properties
 
+	public bool IsRootBranch => depth == 0;
 	public bool IsBranched { get; private set; } = false;
 
 	/// <summary>

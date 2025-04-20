@@ -1,4 +1,5 @@
 ﻿using FragEngine3.Scenes.SpatialTrees;
+using FragEngine3.Utility;
 using System.Numerics;
 
 namespace FragEngine3.Scenes;
@@ -104,6 +105,20 @@ public struct AABB
 	}
 
 	/// <summary>
+	/// Checks whether this bounding box contains the entire volume of another.
+	/// </summary>
+	/// <param name="_other">Another bounding box.</param>
+	/// <returns>True if the AABB fully contains the other, false otherwise.</returns>
+	public readonly bool Contains(in AABB _other)
+	{
+		bool contains =
+			FloatExt.Contains(minimum.X, maximum.X, _other.minimum.X, _other.maximum.X) &&
+			FloatExt.Contains(minimum.Y, maximum.Y, _other.minimum.Y, _other.maximum.Y) &&
+			FloatExt.Contains(minimum.Z, maximum.Z, _other.minimum.Z, _other.maximum.Z);
+		return contains;
+	}
+
+	/// <summary>
 	/// Clamps a position to the extends of this bounding box.
 	/// </summary>
 	/// <param name="_position">Coordinates of the point.</param>
@@ -123,16 +138,34 @@ public struct AABB
 		maximum = Vector3.Max(_other.maximum, maximum);
 	}
 
+	/// <summary>
+	/// Checks if this bounding box volume overlaps with another one.
+	/// </summary>
+	/// <param name="_other">The other bounding box, that may or may not overlap this one.</param>
+	/// <returns>True if they overlap, false if they don't.</returns>
 	public readonly bool Overlaps(in AABB _other)
 	{
-		//TODO
-		throw new NotImplementedException();
+		bool overlaps =
+			FloatExt.Overlaps(minimum.X, maximum.X, _other.minimum.X, _other.maximum.X) &&
+			FloatExt.Overlaps(minimum.Y, maximum.Y, _other.minimum.Y, _other.maximum.Y) &&
+			FloatExt.Overlaps(minimum.Z, maximum.Z, _other.minimum.Z, _other.maximum.Z);
+		return overlaps;
 	}
 
+	/// <summary>
+	/// Checks if this bounding box volume overlaps with another one, and measures the bounds of the overlapping region.
+	/// </summary>
+	/// <param name="_other">The other bounding box, that may or may not overlap this one.</param>
+	/// <param name="_overlapRegion">Outputs the bounds of the overlapping region, or an AABB with 0 volume if there is no overlap.</param>
+	/// <returns>True if they overlap, false if they don't.</returns>
 	public readonly bool GetOverlapRegion(in AABB _other, out AABB _overlapRegion)
 	{
-		//TODO
-		throw new NotImplementedException();
+		bool overlaps =
+			FloatExt.GetOverlap(minimum.X, maximum.X, _other.minimum.X, _other.maximum.X, out float minX, out float maxX) &
+			FloatExt.GetOverlap(minimum.Y, maximum.Y, _other.minimum.Y, _other.maximum.Y, out float minY, out float maxY) &
+			FloatExt.GetOverlap(minimum.Z, maximum.Z, _other.minimum.Z, _other.maximum.Z, out float minZ, out float maxZ);
+		_overlapRegion = new(minX, minY, minZ, maxX, maxY, maxZ);
+		return overlaps;
 	}
 
 	/// <summary>
