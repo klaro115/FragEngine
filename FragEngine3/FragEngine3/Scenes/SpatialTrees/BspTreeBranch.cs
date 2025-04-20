@@ -222,5 +222,21 @@ public sealed class BspTreeBranch(uint _depth = 0, BspSplitAxis _splitAxis = Bsp
 		}
 	}
 
+	public void GetObjectsInBounds(in AABB _boundingBox, List<ISpatialTreeObject> _dstObjects)
+	{
+		foreach (ISpatialTreeObject obj in objects)
+		{
+			if (_boundingBox.Overlaps(obj.CalculateAxisAlignedBoundingBox()))
+			{
+				_dstObjects.Add(obj);
+			}
+		}
+		if (IsBranched)
+		{
+			subBranchA!.GetObjectsInBounds(in  _boundingBox, _dstObjects);
+			subBranchB!.GetObjectsInBounds(in  _boundingBox, _dstObjects);
+		}
+	}
+
 	#endregion
 }

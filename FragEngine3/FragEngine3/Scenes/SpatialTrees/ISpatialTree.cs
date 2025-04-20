@@ -47,13 +47,20 @@ public interface ISpatialTree
 	/// <summary>
 	/// Retrieves all objects on this branch and all of its sub-branches.
 	/// </summary>
-	/// <param name="_dstAllObjects"></param>
+	/// <param name="_dstAllObjects">Destination list where all objects will be stored.</param>
 	void GetAllObjects(List<ISpatialTreeObject> _dstAllObjects);
 
 	/// <summary>
 	/// Gets an enumerator for iterating over all objects on this branch and all of its sub-branches.
 	/// </summary>
 	IEnumerator<ISpatialTreeObject> EnumerateAllObjects();
+
+	/// <summary>
+	/// Retrieves all objects on this branch and all of its sub-branches that overlap a given bounding box volume.
+	/// </summary>
+	/// <param name="_boundingBox">A bounding box volume within which some or all of the branch's objects may lie.</param>
+	/// <param name="_dstObjects">Destination list where resulting objects will be stored.</param>
+	void GetObjectsInBounds(in AABB _boundingBox, List<ISpatialTreeObject> _dstObjects);
 
 	#endregion
 }
