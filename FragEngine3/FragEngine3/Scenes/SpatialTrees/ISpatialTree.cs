@@ -1,5 +1,10 @@
 ﻿namespace FragEngine3.Scenes.SpatialTrees;
 
+/// <summary>
+/// Interface for hierarchical structures that may be used for spatial partitioning of objects.
+/// Types implementing this interface allow faster lookup of objects within a region of space,
+/// typically reducing computational complexity to O(Log(N)).
+/// </summary>
 public interface ISpatialTree
 {
 	#region Properties
