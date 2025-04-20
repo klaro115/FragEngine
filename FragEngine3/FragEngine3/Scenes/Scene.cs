@@ -2,6 +2,7 @@
 using FragEngine3.Graphics.Stack;
 using FragEngine3.Scenes.EventSystem;
 using FragEngine3.Scenes.SceneManagers;
+using FragEngine3.Scenes.SpatialTrees;
 
 namespace FragEngine3.Scenes;
 
@@ -37,6 +38,7 @@ public sealed class Scene : IDisposable
 
 	private readonly List<SceneBehaviour> sceneBehaviours = [];
 	private IGraphicsStack? graphicsStack = null;
+	private ISpatialTree? spatialPartitioning = null;
 
 	internal readonly SceneUpdateManager updateManager;
 	internal readonly SceneDrawManager drawManager;
@@ -73,7 +75,7 @@ public sealed class Scene : IDisposable
 		get => graphicsStack != null && !graphicsStack.IsDisposed ? graphicsStack : null;
 		set
 		{
-			if (value != null && value.IsDisposed)
+			if (value is not null && value.IsDisposed)
 			{
 				Logger.LogError("Scene graphics stack may not be disposed!");
 				return;
@@ -83,6 +85,21 @@ public sealed class Scene : IDisposable
 				graphicsStack.Dispose();
 			}
 			graphicsStack = value;
+		}
+	}
+
+	/// <summary>
+	/// Gets or sets the spatial partitioning structure used to accelerate culling lookups when rendering scene objects.<para/>
+	/// NOTE: If no spatial partitioning is assigned when a call to '<see cref="DrawScene"/>' arrives, a default BSP tree is created instead.
+	/// </summary>
+	public ISpatialTree? SpatialPartitioning
+	{
+		get => spatialPartitioning;
+		set
+		{
+			spatialPartitioning?.Clear();
+			spatialPartitioning = value ?? new BspTreeBranch(0);
+			spatialPartitioning.Clear();
 		}
 	}
 
@@ -448,6 +465,10 @@ public sealed class Scene : IDisposable
 			Logger.LogError("Cannot draw disposed scene!");
 			return false;
 		}
+
+		// Ensure scene rendering resources are fully asssigned:
+		graphicsStack ??= new ForwardPlusLightsStack(engine.GraphicsSystem.graphicsCore);
+		spatialPartitioning ??= new BspTreeBranch(0u);
 
 		// Update scene-wide behaviours via event:
 		foreach (SceneBehaviour behaviour in sceneBehaviours)
