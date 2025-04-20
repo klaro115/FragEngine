@@ -1,19 +1,27 @@
 ﻿using FragEngine3.EngineCore;
 using System.Numerics;
+using System.Runtime.CompilerServices;
 
 namespace FragEngine3.Scenes.SpatialTrees;
 
-public sealed class BspTreeBranch(uint _depth = 0, BspSplitAxis _splitAxis = BspSplitAxis.X, int _initialCapacity = BspTreeBranch.defaultObjectCapacity) : ISpatialTree
+public sealed class OctreeBranch(uint _depth = 0, int _initialCapacity = BspTreeBranch.defaultObjectCapacity) : ISpatialTree
 {
+	#region Types
+
+	[InlineArray(10)]
+	private struct BranchBuffer
+	{
+		public OctreeBranch? branch;
+	}
+
+	#endregion
 	#region Fields
 
 	public readonly uint depth = _depth;
-	public readonly BspSplitAxis splitAxis = _splitAxis;
 
 	public readonly List<ISpatialTreeObject> objects = new(_initialCapacity);
 
-	private BspTreeBranch? subBranchA = null;
-	private BspTreeBranch? subBranchB = null;
+	private BranchBuffer branches = new();
 
 	#endregion
 	#region Constants
@@ -40,14 +48,21 @@ public sealed class BspTreeBranch(uint _depth = 0, BspSplitAxis _splitAxis = Bsp
 	public void Clear(bool _discardSubBranches = false)
 	{
 		objects.Clear();
-		subBranchA?.Clear();
-		subBranchB?.Clear();
+		if (IsBranched)
+		{
+			foreach (OctreeBranch? subBranch in branches)
+			{
+				subBranch?.Clear();
+			}
+		}
 
 		if (_discardSubBranches)
 		{
 			IsBranched = false;
-			subBranchA = null;
-			subBranchB = null;
+			for (int i = 0; i < 8; ++i)
+			{
+				branches[i] = null;
+			}
 		}
 	}
 
@@ -71,15 +86,13 @@ public sealed class BspTreeBranch(uint _depth = 0, BspSplitAxis _splitAxis = Bsp
 
 		if (IsBranched)
 		{
-			if (subBranchA!.AddObject(_newObject, in _newObjectBounds, _allowFurtherBranching))
+			foreach (OctreeBranch? subBranch in branches)
 			{
-				ContentBounds.Expand(subBranchA.ContentBounds);
-				return true;
-			}
-			else if (subBranchB!.AddObject(_newObject, in _newObjectBounds, _allowFurtherBranching))
-			{
-				ContentBounds.Expand(subBranchB.ContentBounds);
-				return true;
+				if (subBranch!.AddObject(_newObject, in _newObjectBounds, _allowFurtherBranching))
+				{
+					ContentBounds.Expand(subBranch.ContentBounds);
+					return true;
+				}
 			}
 			return false;
 		}
@@ -97,28 +110,27 @@ public sealed class BspTreeBranch(uint _depth = 0, BspSplitAxis _splitAxis = Bsp
 
 		// Split branch into 2 sub-branches:
 		uint subBranchDepth = depth + 1;
-		BspSplitAxis subBranchSplitAxis = (BspSplitAxis)(((int)splitAxis + 1) % 3);
 		int subBranchInitCapacity = Math.Max(objects.Count / 2, defaultObjectCapacity);
-		Vector3 subBranchSplitCenter = PartitionBounds.ClampToBounds(ContentBounds.Center); // split through the content's middle.
 
-		PartitionBounds.Split(subBranchSplitCenter, subBranchSplitAxis, out AABB subBranchBoundsA, out AABB subBranchBoundsB);
-
-		subBranchA = new(subBranchDepth, subBranchSplitAxis, subBranchInitCapacity)
+		for (int i = 0; i < 8; ++i)
 		{
-			PartitionBounds = subBranchBoundsA,
-		};
-		subBranchB = new(subBranchDepth, subBranchSplitAxis, subBranchInitCapacity)
-		{
-			PartitionBounds = subBranchBoundsB,
-		};
+			AABB subBranchBounds = PartitionBounds.GetOctreePartition(i);
+			branches[i] = new(subBranchDepth, subBranchInitCapacity)
+			{
+				PartitionBounds = subBranchBounds,
+			};
+		}
 
 		// Distribute all objects into sub-branches:
 		foreach (ISpatialTreeObject obj in objects)
 		{
 			AABB objBounds = obj.CalculateAxisAlignedBoundingBox();
-			if (!subBranchA.AddObject(obj, in objBounds, false))
+			foreach (OctreeBranch? subBranch in branches)
 			{
-				subBranchB.AddObject(obj, in objBounds, false);
+				if (subBranch!.AddObject(obj, in objBounds, false))
+				{
+					break;
+				}
 			}
 		}
 
@@ -144,8 +156,17 @@ public sealed class BspTreeBranch(uint _depth = 0, BspSplitAxis _splitAxis = Bsp
 			return true;
 		}
 
-		bool removed = IsBranched && (subBranchA!.Remove_internal(_object) || subBranchB!.Remove_internal(_object));
-		return removed;
+		if (IsBranched)
+		{
+			foreach (OctreeBranch? subBranch in branches)
+			{
+				if (subBranch!.Remove_internal(_object))
+				{
+					return true;
+				}
+			}
+		}
+		return false;
 	}
 
 	public void RecalculateContentBounds(bool _recursive = true)
@@ -165,18 +186,22 @@ public sealed class BspTreeBranch(uint _depth = 0, BspSplitAxis _splitAxis = Bsp
 
 		if (hasBranches)
 		{
-			subBranchA!.RecalculateContentBounds(true);
-			subBranchB!.RecalculateContentBounds(true);
-
+			OctreeBranch subBranch = branches[0]!;
 			if (hasObjects)
 			{
-				ContentBounds.Expand(subBranchA.ContentBounds);
+				ContentBounds.Expand(subBranch.ContentBounds);
 			}
 			else
 			{
-				ContentBounds = subBranchA.ContentBounds;
+				ContentBounds = subBranch.ContentBounds;
 			}
-			ContentBounds.Expand(subBranchB.ContentBounds);
+
+			for (int i = 0; i < 8; i++)
+			{
+				subBranch = branches[i]!;
+				subBranch!.RecalculateContentBounds(true);
+				ContentBounds.Expand(subBranch.ContentBounds);
+			}
 		}
 
 		if (!hasObjects && !hasBranches)
@@ -193,8 +218,10 @@ public sealed class BspTreeBranch(uint _depth = 0, BspSplitAxis _splitAxis = Bsp
 		}
 		if (IsBranched)
 		{
-			subBranchA!.GetAllObjects(_dstAllObjects);
-			subBranchB!.GetAllObjects(_dstAllObjects);
+			foreach (OctreeBranch? subBranch in branches)
+			{
+				subBranch!.GetAllObjects(_dstAllObjects);
+			}
 		}
 	}
 
@@ -209,16 +236,13 @@ public sealed class BspTreeBranch(uint _depth = 0, BspSplitAxis _splitAxis = Bsp
 		}
 		if (IsBranched)
 		{
-			IEnumerator<ISpatialTreeObject> eA = subBranchA!.EnumerateAllObjects();
-			while (eA.MoveNext())
+			foreach (OctreeBranch? subBranch in branches)
 			{
-				yield return eA.Current;
-			}
-
-			IEnumerator<ISpatialTreeObject> eB = subBranchA!.EnumerateAllObjects();
-			while (eB.MoveNext())
-			{
-				yield return eB.Current;
+				IEnumerator<ISpatialTreeObject> eA = subBranch!.EnumerateAllObjects();
+				while (eA.MoveNext())
+				{
+					yield return eA.Current;
+				}
 			}
 		}
 	}
@@ -234,8 +258,10 @@ public sealed class BspTreeBranch(uint _depth = 0, BspSplitAxis _splitAxis = Bsp
 		}
 		if (IsBranched)
 		{
-			subBranchA!.GetObjectsInBounds(in  _boundingBox, _dstObjects);
-			subBranchB!.GetObjectsInBounds(in  _boundingBox, _dstObjects);
+			foreach (OctreeBranch? subBranch in branches)
+			{
+				subBranch!.GetObjectsInBounds(in _boundingBox, _dstObjects);
+			}
 		}
 	}
 

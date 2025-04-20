@@ -259,5 +259,22 @@ public struct AABB
 		}
 	}
 
+	/// <summary>
+	/// Gets a subsection of this bounding box volume that corresponds to 1 out of 8 octree quadrants.
+	/// </summary>
+	/// <param name="_partitionIdx">The index of the octree quadrant, must be in the range from 0 to 7.</param>
+	/// <returns>The bounding box volume of the specified quadrant. The size will be half of this AABB in all directions.</returns>
+	public readonly AABB GetOctreePartition(int _partitionIdx)
+	{
+		float offsetZ = (_partitionIdx & 0b100) != 0 ? 0.5f : 0.0f;
+		float offsetY = (_partitionIdx & 0b010) != 0 ? 0.5f : 0.0f;
+		float offsetX = (_partitionIdx & 0b001) != 0 ? 0.5f : 0.0f;
+
+		Vector3 size = Size * 0.5f;
+		Vector3 min = minimum + new Vector3(offsetX, offsetY, offsetZ) * size;
+		Vector3 max = maximum + size;
+		return new AABB(min, max);
+	}
+
 	#endregion
 }
