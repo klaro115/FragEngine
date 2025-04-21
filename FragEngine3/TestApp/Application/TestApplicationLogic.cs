@@ -71,7 +71,7 @@ public sealed class TestApplicationLogic : ApplicationLogic
 		{
 			UpdatedInEngineStates = EngineState.Running,
 			DrawnInEngineStates = EngineState.Running,
-			SpatialPartitioning = new OctreeBranch<IPhysicalRenderer>(0),
+			SpatialPartitioning = new UnpartitionedTree<IPhysicalRenderer>(0),
 		};
 
 		Engine.SceneManager.AddScene(scene);

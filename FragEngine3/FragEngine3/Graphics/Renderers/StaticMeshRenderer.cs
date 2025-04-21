@@ -493,8 +493,11 @@ public sealed class StaticMeshRenderer : IPhysicalRenderer
 
 	public AABB CalculateAxisAlignedBoundingBox()
 	{
-		//TODO
-		throw new NotImplementedException();
+		Vector3 boundingHalfSize = Vector3.One * BoundingRadius;
+		AABB boundingBox = new(
+			worldPose.position - boundingHalfSize,
+			worldPose.position + boundingHalfSize);		//TODO [later]: this is a lazy and pretty bad approach. => Transform actual mesh bounds from local to world space!
+		return boundingBox;
 	}
 
 	#endregion
