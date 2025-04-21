@@ -13,6 +13,7 @@ public sealed class Scene : IDisposable
 	public Scene(Engine _engine, string? _name = null)
 	{
 		engine = _engine ?? throw new ArgumentNullException(nameof(_engine), "Engine may not be null!");
+		logger = engine.Logger;
 		rootNode = new SceneNode(this)
 		{
 			LocalTransformation = Pose.Identity
@@ -33,6 +34,7 @@ public sealed class Scene : IDisposable
 	private string name = "Scene";
 
 	public readonly Engine engine;
+	private readonly Logger logger;
 	public readonly SceneNode rootNode;
 	public readonly SceneSettings settings = new();
 
@@ -61,23 +63,18 @@ public sealed class Scene : IDisposable
 	}
 
 	/// <summary>
-	/// Gets the engine's logging module for error and debug output.
-	/// </summary>
-	public Logger Logger => engine.Logger ?? Logger.Instance!;
-
-	/// <summary>
 	/// Gets or sets the graphics stack to use for drawing this scene. Must be non-null. When assigning a new stack, the previous one is disposed.<para/>
 	/// NOTE: If no stack is assigned when a call to '<see cref="DrawScene"/>' arrives, a default forward+light graphics stack without UI or post-processing pass
 	/// is created instead.
 	/// </summary>
 	public IGraphicsStack? GraphicsStack
 	{
-		get => graphicsStack != null && !graphicsStack.IsDisposed ? graphicsStack : null;
+		get => graphicsStack is not null && !graphicsStack.IsDisposed ? graphicsStack : null;
 		set
 		{
 			if (value is not null && value.IsDisposed)
 			{
-				Logger.LogError("Scene graphics stack may not be disposed!");
+				logger.LogError("Scene graphics stack may not be disposed!");
 				return;
 			}
 			if (graphicsStack != null && !graphicsStack.IsDisposed)
@@ -117,11 +114,11 @@ public sealed class Scene : IDisposable
 		{
 			if (value.HasFlag(EngineState.Startup) || value.HasFlag(EngineState.Shutdown))
 			{
-				Logger.LogError("Only update flags for Loading, Unloading, and Running engine states are allowed! Resetting corresponding flags.");
+				logger.LogError("Only update flags for Loading, Unloading, and Running engine states are allowed! Resetting corresponding flags.");
 				value &= ~(EngineState.Startup | EngineState.Shutdown);
 			}
-			if (updatedInEngineStates != 0 && value == 0) Logger.LogMessage($"Disabling updates of scene '{name}'...");
-			else if (updatedInEngineStates == 0 && value != 0) Logger.LogMessage($"Enabling updates of scene '{name}'...");
+			if (updatedInEngineStates != 0 && value == 0) logger.LogMessage($"Disabling updates of scene '{name}'...");
+			else if (updatedInEngineStates == 0 && value != 0) logger.LogMessage($"Enabling updates of scene '{name}'...");
 			updatedInEngineStates = value;
 		}
 	}
@@ -140,11 +137,11 @@ public sealed class Scene : IDisposable
 		{
 			if (value.HasFlag(EngineState.Startup) || value.HasFlag(EngineState.Shutdown))
 			{
-				Logger.LogError("Only update flags for Loading, Unloading, and Running engine states are allowed! Resetting corresponding flags.");
+				logger.LogError("Only update flags for Loading, Unloading, and Running engine states are allowed! Resetting corresponding flags.");
 				value &= ~(EngineState.Startup | EngineState.Shutdown);
 			}
-			if (drawnInEngineStates != 0 && value == 0) Logger.LogMessage($"Disabling drawing of scene '{name}'...");
-			else if (drawnInEngineStates == 0 && value != 0) Logger.LogMessage($"Enabling drawing of scene '{name}'...");
+			if (drawnInEngineStates != 0 && value == 0) logger.LogMessage($"Disabling drawing of scene '{name}'...");
+			else if (drawnInEngineStates == 0 && value != 0) logger.LogMessage($"Enabling drawing of scene '{name}'...");
 			drawnInEngineStates = value;
 		}
 	}
@@ -223,7 +220,7 @@ public sealed class Scene : IDisposable
 		{
 			foreach (SceneBehaviour behaviour in sceneBehaviours)
 			{
-				if (behaviour != null && !behaviour.IsDisposed && behaviour is T typedBehaviour)
+				if (behaviour is not null && !behaviour.IsDisposed && behaviour is T typedBehaviour)
 				{
 					_outBehaviour = typedBehaviour;
 					return true;
@@ -238,14 +235,14 @@ public sealed class Scene : IDisposable
 	{
 		if (IsDisposed)
 		{
-			Logger.LogError("Cannot create new scene behaviour on disposed scene!");
+			logger.LogError("Cannot create new scene behaviour on disposed scene!");
 			_outNewBehaviour = null;
 			return false;
 		}
 
 		if (!SceneBehaviourFactory.CreateBehaviour(this, out _outNewBehaviour, _params) || _outNewBehaviour == null)
 		{
-			Logger.LogError($"Failed to create new scene behaviour of type '{typeof(T)}' for scene '{name}'!");
+			logger.LogError($"Failed to create new scene behaviour of type '{typeof(T)}' for scene '{name}'!");
 			_outNewBehaviour = null;
 			return false;
 		}
@@ -258,17 +255,17 @@ public sealed class Scene : IDisposable
 	{
 		if (IsDisposed)
 		{
-			Logger.LogError("Cannot add behaviour to disposed scene!");
+			logger.LogError("Cannot add behaviour to disposed scene!");
 			return false;
 		}
-		if (_newBehaviour == null || _newBehaviour.IsDisposed)
+		if (_newBehaviour is null || _newBehaviour.IsDisposed)
 		{
-			Logger.LogError($"Cannot add null or disposed behaviour to disposed scene '{name}'!");
+			logger.LogError($"Cannot add null or disposed behaviour to disposed scene '{name}'!");
 			return false;
 		}
 		if (sceneBehaviours.Contains(_newBehaviour))
 		{
-			Logger.LogError($"Scene behaviour '{_newBehaviour}' was already added to scene '{name}'!");
+			logger.LogError($"Scene behaviour '{_newBehaviour}' was already added to scene '{name}'!");
 			return false;
 		}
 
@@ -358,9 +355,9 @@ public sealed class Scene : IDisposable
 	{
 		if (!IsDisposed)
 		{
-			if (_funcSelector == null)
+			if (_funcSelector is null)
 			{
-				Logger.LogError("Selector function delegate may not be null!");
+				logger.LogError("Selector function delegate may not be null!");
 				_outNode = null;
 				return false;
 			}
@@ -391,7 +388,7 @@ public sealed class Scene : IDisposable
 		if (!IsDisposed)
 		{
 			_outComponent = rootNode.GetComponentInChildren<T>(_enabledOnly);
-			if (_outComponent != null && !_outComponent.IsDisposed)
+			if (_outComponent is not null && !_outComponent.IsDisposed)
 			{
 				return true;
 			}
@@ -416,7 +413,7 @@ public sealed class Scene : IDisposable
 		while (e.MoveNext())
 		{
 			T? component = e.Current.GetComponent<T>();
-			if (component != null && !component.IsDisposed)
+			if (component is not null && !component.IsDisposed)
 			{
 				_targetList.Add(component);
 			}
@@ -451,7 +448,7 @@ public sealed class Scene : IDisposable
 	{
 		if (IsDisposed)
 		{
-			Logger.LogError("Cannot update disposed scene!");
+			logger.LogError("Cannot update disposed scene!");
 			return false;
 		}
 
@@ -462,7 +459,7 @@ public sealed class Scene : IDisposable
 	{
 		if (IsDisposed)
 		{
-			Logger.LogError("Cannot draw disposed scene!");
+			logger.LogError("Cannot draw disposed scene!");
 			return false;
 		}
 

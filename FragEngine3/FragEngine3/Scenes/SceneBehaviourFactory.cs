@@ -23,7 +23,7 @@ public static class SceneBehaviourFactory
 			_outBehaviour = newBehaviour as T;
 			if (_outBehaviour == null)
 			{
-				_scene.Logger.LogError($"Type mismatch when trying to create scene behaviour! Expected '{typeof(T)}', found '{newBehaviour.GetType()}'");
+				_scene.engine.Logger.LogError($"Type mismatch when trying to create scene behaviour! Expected '{typeof(T)}', found '{newBehaviour.GetType()}'");
 				newBehaviour.Dispose();
 				return false;
 			}
@@ -42,7 +42,7 @@ public static class SceneBehaviourFactory
 		}
 		catch (Exception ex)
 		{
-			_scene?.Logger.LogException($"Failed to parse behaviour type name '{_typeName}' for scene '{_scene.Name}'!", ex);
+			_scene?.engine.Logger.LogException($"Failed to parse behaviour type name '{_typeName}' for scene '{_scene.Name}'!", ex);
 			_outBehaviour = null;
 			return false;
 		}
@@ -53,7 +53,7 @@ public static class SceneBehaviourFactory
 		}
 		else
 		{
-			_scene.Logger.LogError($"Behaviour type name '{_typeName}' could not be found!");
+			_scene.engine.Logger.LogError($"Behaviour type name '{_typeName}' could not be found!");
 			_outBehaviour = null;
 			return false;
 		}
@@ -63,25 +63,25 @@ public static class SceneBehaviourFactory
 	{
 		if (_scene == null || _scene.IsDisposed)
 		{
-			_scene?.Logger.LogError($"Cannot create scene behaviour for null or disposed scene!");
+			_scene?.engine.Logger.LogError($"Cannot create scene behaviour for null or disposed scene!");
 			_outBehaviour = null;
 			return false;
 		}
 		if (_type == null)
 		{
-			_scene.Logger.LogError("Scene behaviour type may not be null!");
+			_scene.engine.Logger.LogError("Scene behaviour type may not be null!");
 			_outBehaviour = null;
 			return false;
 		}
 		if (_type.IsPrimitive || _type.IsValueType || _type.IsInterface)
 		{
-			_scene.Logger.LogError("Scene behaviour type may not be a primitive, value type, or interface!");
+			_scene.engine.Logger.LogError("Scene behaviour type may not be a primitive, value type, or interface!");
 			_outBehaviour = null;
 			return false;
 		}
 		if (_type.IsAbstract)
 		{
-			_scene.Logger.LogError($"Cannot create instance of abstract scene behaviour type '{_type}'!");
+			_scene.engine.Logger.LogError($"Cannot create instance of abstract scene behaviour type '{_type}'!");
 			_outBehaviour = null;
 			return false;
 		}
@@ -111,7 +111,7 @@ public static class SceneBehaviourFactory
 		}
 		catch (Exception ex)
 		{
-			_scene.Logger.LogException($"Failed to create instance of scene behaviour type '{_type}' for node '{_scene.Name}'!", ex);
+			_scene.engine.Logger.LogException($"Failed to create instance of scene behaviour type '{_type}' for node '{_scene.Name}'!", ex);
 			_outBehaviour = null;
 			return false;
 		}

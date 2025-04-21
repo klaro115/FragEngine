@@ -132,7 +132,7 @@ internal sealed class SceneUpdateManager(Scene _scene) : IDisposable
 	{
 		if (_newListener == null || _newListener.IsDisposed)
 		{
-			scene.Logger.LogError("Cannot register null or disposed scene event listener for update events!");
+			scene.engine.Logger.LogError("Cannot register null or disposed scene event listener for update events!");
 			return false;
 		}
 
@@ -169,7 +169,7 @@ internal sealed class SceneUpdateManager(Scene _scene) : IDisposable
 	{
 		if (_oldListener == null)
 		{
-			scene.Logger.LogError("Cannot unregister null scene event listener from update events!");
+			scene.engine.Logger.LogError("Cannot unregister null scene event listener from update events!");
 			return false;
 		}
 

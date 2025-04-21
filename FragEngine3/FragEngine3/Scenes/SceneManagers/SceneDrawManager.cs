@@ -70,16 +70,16 @@ internal sealed class SceneDrawManager(Scene _scene) : IDisposable
 		}
 
 		// If null, create and initialize default forward+light graphics stack:
-		if (scene.GraphicsStack == null || scene.GraphicsStack.IsDisposed)
+		if (scene.GraphicsStack is null || scene.GraphicsStack.IsDisposed)
 		{
-			scene.Logger.LogWarning($"Graphics stack of scene '{scene.Name}' is unassigned, creating default stack instead...");
+			scene.engine.Logger.LogWarning($"Graphics stack of scene '{scene.Name}' is unassigned, creating default stack instead...");
 			scene.GraphicsStack = new ForwardPlusLightsStack(scene.engine.GraphicsSystem.graphicsCore);
 		}
 
 		// Ensure the graphics stack is initialized before use:
 		if (!scene.GraphicsStack.IsInitialized && !scene.GraphicsStack.Initialize(scene))
 		{
-			scene.Logger.LogError($"Failed to initialize graphics stack of scene '{scene.Name}'!");
+			scene.engine.Logger.LogError($"Failed to initialize graphics stack of scene '{scene.Name}'!");
 			return false;
 		}
 
@@ -99,7 +99,7 @@ internal sealed class SceneDrawManager(Scene _scene) : IDisposable
 	{
 		if (_newRenderer is null || _newRenderer.IsDisposed)
 		{
-			scene.Logger.LogError("Cannot register null or disposed renderer for drawing!");
+			scene.engine.Logger.LogError("Cannot register null or disposed renderer for drawing!");
 			return false;
 		}
 
@@ -117,7 +117,7 @@ internal sealed class SceneDrawManager(Scene _scene) : IDisposable
 	{
 		if (_oldRenderer is null)
 		{
-			scene.Logger.LogError("Cannot unregister null renderer for drawing!");
+			scene.engine.Logger.LogError("Cannot unregister null renderer for drawing!");
 			return false;
 		}
 
@@ -132,7 +132,7 @@ internal sealed class SceneDrawManager(Scene _scene) : IDisposable
 	{
 		if (_newCamera is null || _newCamera.IsDisposed)
 		{
-			scene.Logger.LogError("Cannot register null or disposed camera in scene!");
+			scene.engine.Logger.LogError("Cannot register null or disposed camera in scene!");
 			return false;
 		}
 
@@ -150,7 +150,7 @@ internal sealed class SceneDrawManager(Scene _scene) : IDisposable
 	{
 		if (_oldCamera is null)
 		{
-			scene.Logger.LogError("Cannot unregister null camera from scene!");
+			scene.engine.Logger.LogError("Cannot unregister null camera from scene!");
 			return false;
 		}
 
@@ -165,7 +165,7 @@ internal sealed class SceneDrawManager(Scene _scene) : IDisposable
 	{
 		if (_newLight is null || _newLight.IsDisposed)
 		{
-			scene.Logger.LogError("Cannot register null or disposed light in scene!");
+			scene.engine.Logger.LogError("Cannot register null or disposed light in scene!");
 			return false;
 		}
 
@@ -183,7 +183,7 @@ internal sealed class SceneDrawManager(Scene _scene) : IDisposable
 	{
 		if (_oldLight is null)
 		{
-			scene.Logger.LogError("Cannot unregister null light from scene!");
+			scene.engine.Logger.LogError("Cannot unregister null light from scene!");
 			return false;
 		}
 
