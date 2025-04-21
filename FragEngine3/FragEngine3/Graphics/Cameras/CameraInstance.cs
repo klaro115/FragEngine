@@ -68,6 +68,18 @@ public sealed class CameraInstance : IDisposable
 	private CameraProjection projection = new();
 	private CameraClearing clearing = new();
 
+	private static readonly Vector3[] clipSpaceCorners =
+	[
+		new(-1, -1, 0),
+		new( 1, -1, 0),
+		new(-1,  1, 0),
+		new( 1,  1, 0),
+		new(-1, -1, 1),
+		new( 1, -1, 1),
+		new(-1,  1, 1),
+		new( 1,  1, 1),
+	];
+
 	#endregion
 	#region Properties
 
@@ -394,13 +406,21 @@ public sealed class CameraInstance : IDisposable
 		return Vector3.Transform(_screenCoord, projection.mtxPixel2World);
 	}
 
+	/// <summary>
+	/// Calculates a bounding box volume encompassing the entire viewport frustum.
+	/// </summary>
+	/// <returns>An axis-aligned bounding box.</returns>
 	public AABB CalculateViewportFrustumBounds()
 	{
 		Vector3 origin = mtxWorld.Translation;
 		AABB bounds = new(origin, origin);
 
-		//TODO [CRITICAL]: Calculate corner point positions of the projection frustum!
-
+		// Calculate corner point positions of the projection frustum:
+		for (int i = 0; i < 8; ++i)
+		{
+			Vector3 worldSpaceCorner = Vector3.Transform(clipSpaceCorners[i], projection.mtxClip2World);
+			bounds.Expand(worldSpaceCorner);
+		}
 		return bounds;
 	}
 

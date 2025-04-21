@@ -129,6 +129,16 @@ public struct AABB
 	}
 
 	/// <summary>
+	/// Expands the bounding box to enclose a point in space.
+	/// </summary>
+	/// <param name="_point">A position coordinate.</param>
+	public void Expand(Vector3 _point)
+	{
+		minimum = Vector3.Min(_point, minimum);
+		maximum = Vector3.Max(_point, maximum);
+	}
+
+	/// <summary>
 	/// Expands the bounding box to enclose all space contained within another bounding box.
 	/// </summary>
 	/// <param name="_other">Another bounding box.</param>

@@ -18,6 +18,7 @@ public struct CameraProjection()
 
 	public Matrix4x4 mtxWorld2Local = Matrix4x4.Identity;		// World space => Camera's local space
 	public Matrix4x4 mtxWorld2Clip = Matrix4x4.Identity;		// World space => Clip space
+	public Matrix4x4 mtxClip2World = Matrix4x4.Identity;		// Clip space => World space
 	public Matrix4x4 mtxClip2Pixel = Matrix4x4.Identity;		// Clip space => Pixel space
 
 	public Matrix4x4 mtxWorld2Pixel = Matrix4x4.Identity;		// World space => Pixel space
@@ -108,6 +109,9 @@ public struct CameraProjection()
 		{
 			mtxWorld2Clip *= Matrix4x4.CreateScale(1, -1, 1);
 		}
+
+		// Also calculate reverse projection, from clip space to world space:
+		Matrix4x4.Invert(mtxWorld2Clip, out mtxClip2World);
 	}
 
 	public void RecalculatePixelSpaceMatrices(uint _resolutionX, uint _resolutionY)
