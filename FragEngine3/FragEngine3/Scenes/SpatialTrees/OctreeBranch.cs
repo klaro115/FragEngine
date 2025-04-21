@@ -37,9 +37,6 @@ public sealed class OctreeBranch(uint _depth = 0, int _initialCapacity = OctreeB
 	public bool IsBranched { get; private set; } = false;
 
 	public AABB PartitionBounds { get; private set; } = AABB.One;
-	/// <summary>
-	/// Gets a bounding box enclosing all objects on this branch.
-	/// </summary>
 	public AABB ContentBounds { get; private set; } = AABB.Zero;
 
 	#endregion
@@ -47,6 +44,8 @@ public sealed class OctreeBranch(uint _depth = 0, int _initialCapacity = OctreeB
 
 	public void Clear(bool _discardSubBranches = false)
 	{
+		ContentBounds = new(PartitionBounds.minimum, Vector3.Zero);
+
 		objects.Clear();
 		if (IsBranched)
 		{

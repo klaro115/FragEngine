@@ -25,9 +25,6 @@ public sealed class UnpartitionedTree(int _initialCapacity = UnpartitionedTree.d
 	public bool IsRootBranch => true;
 
 	public AABB PartitionBounds => new(Vector3.One * -1.0e+8f, Vector3.One * 1.0e+8f);
-	/// <summary>
-	/// Gets a bounding box enclosing all objects on this branch.
-	/// </summary>
 	public AABB ContentBounds { get; private set; } = AABB.Zero;
 
 	/// <summary>
@@ -45,7 +42,11 @@ public sealed class UnpartitionedTree(int _initialCapacity = UnpartitionedTree.d
 	#endregion
 	#region Methods
 
-	public void Clear(bool _discardSubBranches = false) => objects.Clear();
+	public void Clear(bool _discardSubBranches = false)
+	{
+		ContentBounds = new(PartitionBounds.minimum, Vector3.Zero);
+		objects.Clear();
+	}
 
 	public bool AddObject(ISpatialTreeObject _newObject)
 	{

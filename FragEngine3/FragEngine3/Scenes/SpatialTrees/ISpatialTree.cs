@@ -19,6 +19,11 @@ public interface ISpatialTree
 	/// </summary>
 	AABB PartitionBounds { get; }
 
+	/// <summary>
+	/// Gets a bounding box enclosing all objects on this branch.
+	/// </summary>
+	public AABB ContentBounds { get; }
+
 	#endregion
 	#region Methods
 
