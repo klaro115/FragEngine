@@ -10,6 +10,7 @@ using FragEngine3.Graphics.Resources.Data;
 using FragEngine3.Graphics.Stack;
 using FragEngine3.Resources;
 using FragEngine3.Scenes;
+using FragEngine3.Scenes.SpatialTrees;
 using FragEngine3.Scenes.Utility;
 using System.Numerics;
 using Veldrid;
@@ -70,6 +71,7 @@ public sealed class TestApplicationLogic : ApplicationLogic
 		{
 			UpdatedInEngineStates = EngineState.Running,
 			DrawnInEngineStates = EngineState.Running,
+			SpatialPartitioning = new OctreeBranch(0),
 		};
 
 		Engine.SceneManager.AddScene(scene);

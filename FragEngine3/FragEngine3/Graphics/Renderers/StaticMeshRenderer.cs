@@ -104,6 +104,7 @@ public sealed class StaticMeshRenderer : IPhysicalRenderer
 
 	public Vector3 VisualCenterPoint => worldPose.position;
 	public float BoundingRadius => mesh is not null ? worldPose.scale.X * mesh.BoundingRadius : 0;
+	public uint SpatialPartitionGroupID { get; set; } = 0u;
 
 	#endregion
 	#region Methods

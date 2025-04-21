@@ -96,21 +96,24 @@ public sealed class BspTreeBranch(uint _depth = 0, BspSplitAxis _splitAxis = Bsp
 		}
 
 		// Split branch into 2 sub-branches:
-		uint subBranchDepth = depth + 1;
-		BspSplitAxis subBranchSplitAxis = (BspSplitAxis)(((int)splitAxis + 1) % 3);
-		int subBranchInitCapacity = Math.Max(objects.Count / 2, defaultObjectCapacity);
-		Vector3 subBranchSplitCenter = PartitionBounds.ClampToBounds(ContentBounds.Center); // split through the content's middle.
-
-		PartitionBounds.Split(subBranchSplitCenter, subBranchSplitAxis, out AABB subBranchBoundsA, out AABB subBranchBoundsB);
-
-		subBranchA = new(subBranchDepth, subBranchSplitAxis, subBranchInitCapacity)
+		if (subBranchA is null)
 		{
-			PartitionBounds = subBranchBoundsA,
-		};
-		subBranchB = new(subBranchDepth, subBranchSplitAxis, subBranchInitCapacity)
-		{
-			PartitionBounds = subBranchBoundsB,
-		};
+			uint subBranchDepth = depth + 1;
+			BspSplitAxis subBranchSplitAxis = (BspSplitAxis)(((int)splitAxis + 1) % 3);
+			int subBranchInitCapacity = Math.Max(objects.Count / 2, defaultObjectCapacity);
+			Vector3 subBranchSplitCenter = PartitionBounds.ClampToBounds(ContentBounds.Center); // split through the content's middle.
+
+			PartitionBounds.Split(subBranchSplitCenter, subBranchSplitAxis, out AABB subBranchBoundsA, out AABB subBranchBoundsB);
+
+			subBranchA = new(subBranchDepth, subBranchSplitAxis, subBranchInitCapacity)
+			{
+				PartitionBounds = subBranchBoundsA,
+			};
+			subBranchB = new(subBranchDepth, subBranchSplitAxis, subBranchInitCapacity)
+			{
+				PartitionBounds = subBranchBoundsB,
+			};
+		}
 
 		// Distribute all objects into sub-branches:
 		foreach (ISpatialTreeObject obj in objects)
@@ -118,7 +121,7 @@ public sealed class BspTreeBranch(uint _depth = 0, BspSplitAxis _splitAxis = Bsp
 			AABB objBounds = obj.CalculateAxisAlignedBoundingBox();
 			if (!subBranchA.AddObject(obj, in objBounds, false))
 			{
-				subBranchB.AddObject(obj, in objBounds, false);
+				subBranchB!.AddObject(obj, in objBounds, false);
 			}
 		}
 

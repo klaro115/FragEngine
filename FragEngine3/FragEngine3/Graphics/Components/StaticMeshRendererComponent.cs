@@ -68,6 +68,12 @@ public sealed class StaticMeshRendererComponent : Component, IPhysicalRenderer
 
 	public float BoundingRadius => instance.BoundingRadius;
 
+	public uint SpatialPartitionGroupID
+	{
+		get => instance.SpatialPartitionGroupID;
+		set => instance.SpatialPartitionGroupID = value;
+	}
+
 	#endregion
 	#region Methods
 

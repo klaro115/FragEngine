@@ -109,16 +109,19 @@ public sealed class OctreeBranch(uint _depth = 0, int _initialCapacity = BspTree
 		}
 
 		// Split branch into 2 sub-branches:
-		uint subBranchDepth = depth + 1;
-		int subBranchInitCapacity = Math.Max(objects.Count / 2, defaultObjectCapacity);
-
-		for (int i = 0; i < 8; ++i)
+		if (branches[0] is null)
 		{
-			AABB subBranchBounds = PartitionBounds.GetOctreePartition(i);
-			branches[i] = new(subBranchDepth, subBranchInitCapacity)
+			uint subBranchDepth = depth + 1;
+			int subBranchInitCapacity = Math.Max(objects.Count / 2, defaultObjectCapacity);
+
+			for (int i = 0; i < 8; ++i)
 			{
-				PartitionBounds = subBranchBounds,
-			};
+				AABB subBranchBounds = PartitionBounds.GetOctreePartition(i);
+				branches[i] = new(subBranchDepth, subBranchInitCapacity)
+				{
+					PartitionBounds = subBranchBounds,
+				};
+			}
 		}
 
 		// Distribute all objects into sub-branches:
