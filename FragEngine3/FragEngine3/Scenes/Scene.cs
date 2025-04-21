@@ -95,7 +95,7 @@ public sealed class Scene : IDisposable
 		set
 		{
 			spatialPartitioning?.Clear();
-			spatialPartitioning = value ?? new BspTreeBranch(0);
+			spatialPartitioning = value ?? CreateFallbackSpatialPartitioningTree(1);
 			spatialPartitioning.Clear();
 		}
 	}
@@ -465,7 +465,9 @@ public sealed class Scene : IDisposable
 
 		// Ensure scene rendering resources are fully asssigned:
 		graphicsStack ??= new ForwardPlusLightsStack(engine.GraphicsSystem.graphicsCore);
-		spatialPartitioning ??= new BspTreeBranch(0u);
+		spatialPartitioning ??= CreateFallbackSpatialPartitioningTree(drawManager.DrawListenerCount);
+
+		spatialPartitioning.Clear(false);
 
 		// Update scene-wide behaviours via event:
 		foreach (SceneBehaviour behaviour in sceneBehaviours)
@@ -477,6 +479,20 @@ public sealed class Scene : IDisposable
 		}
 
 		return drawManager.RunDrawStage();
+	}
+
+	/// <summary>
+	/// Creates a fallback spatial partitioning tree. This will be a very basic partitioning that is
+	/// deferred to if no more specialized structure has been assigned to a scene via <see cref="SpatialPartitioning"/>.
+	/// </summary>
+	/// <param name="_minInitialCapacity">The minimum number of objects we're expecting the tree to contain.</param>
+	/// <returns>A new instance of a basic spatial partitioning structure.</returns>
+	internal static ISpatialTree CreateFallbackSpatialPartitioningTree(int _minInitialCapacity)
+	{
+		int initialCapacity = Math.Max(UnpartitionedTree.defaultObjectCapacity, _minInitialCapacity);
+
+		ISpatialTree tree = new UnpartitionedTree(initialCapacity);
+		return tree;
 	}
 
 	#endregion

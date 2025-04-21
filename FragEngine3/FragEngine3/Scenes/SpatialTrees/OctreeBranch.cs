@@ -4,7 +4,7 @@ using System.Runtime.CompilerServices;
 
 namespace FragEngine3.Scenes.SpatialTrees;
 
-public sealed class OctreeBranch(uint _depth = 0, int _initialCapacity = BspTreeBranch.defaultObjectCapacity) : ISpatialTree
+public sealed class OctreeBranch(uint _depth = 0, int _initialCapacity = OctreeBranch.defaultObjectCapacity) : ISpatialTree
 {
 	#region Types
 
@@ -27,7 +27,7 @@ public sealed class OctreeBranch(uint _depth = 0, int _initialCapacity = BspTree
 	#region Constants
 
 	public const int defaultObjectCapacity = 16;
-	public const int minimumObjectsBeforeBranching = 4;
+	public const int minimumObjectsBeforeBranching = 5;
 	public const uint maximumTreeDepth = 5;
 
 	#endregion
