@@ -5,7 +5,7 @@
 /// Types implementing this interface allow faster lookup of objects within a region of space,
 /// typically reducing computational complexity to O(Log(N)).
 /// </summary>
-public interface ISpatialTree
+public interface ISpatialTree<T> where T : ISpatialTreeObject
 {
 	#region Properties
 
@@ -39,14 +39,14 @@ public interface ISpatialTree
 	/// </summary>
 	/// <param name="_newObject">The new object we wish to add.</param>
 	/// <returns>True if the object was added, false otherwise.</returns>
-	bool AddObject(ISpatialTreeObject _newObject);
+	bool AddObject(T _newObject);
 
 	/// <summary>
 	/// Removes an object from this tree or any of its sub-branches.
 	/// </summary>
 	/// <param name="_object">The object we wish to remove.</param>
 	/// <returns>True if the object was removed from the tree, false if it wasn't found or on error.</returns>
-	bool RemoveObject(ISpatialTreeObject _object);
+	bool RemoveObject(T _object);
 
 	/// <summary>
 	/// Recalculates the bounding box enclosing all objects on this branch.
@@ -58,19 +58,19 @@ public interface ISpatialTree
 	/// Retrieves all objects on this branch and all of its sub-branches.
 	/// </summary>
 	/// <param name="_dstAllObjects">Destination list where all objects will be stored.</param>
-	void GetAllObjects(List<ISpatialTreeObject> _dstAllObjects);
+	void GetAllObjects(List<T> _dstAllObjects);
 
 	/// <summary>
 	/// Gets an enumerator for iterating over all objects on this branch and all of its sub-branches.
 	/// </summary>
-	IEnumerator<ISpatialTreeObject> EnumerateAllObjects();
+	IEnumerator<T> EnumerateAllObjects();
 
 	/// <summary>
 	/// Retrieves all objects on this branch and all of its sub-branches that overlap a given bounding box volume.
 	/// </summary>
 	/// <param name="_boundingBox">A bounding box volume within which some or all of the branch's objects may lie.</param>
 	/// <param name="_dstObjects">Destination list where resulting objects will be stored.</param>
-	void GetObjectsInBounds(in AABB _boundingBox, List<ISpatialTreeObject> _dstObjects);
+	void GetObjectsInBounds(in AABB _boundingBox, List<T> _dstObjects);
 
 	#endregion
 }

@@ -3,17 +3,18 @@ using System.Numerics;
 
 namespace FragEngine3.Scenes.SpatialTrees;
 
-public sealed class BspTreeBranch(uint _depth = 0, BspSplitAxis _splitAxis = BspSplitAxis.X, int _initialCapacity = BspTreeBranch.defaultObjectCapacity) : ISpatialTree
+public sealed class BspTreeBranch<T>(uint _depth = 0, BspSplitAxis _splitAxis = BspSplitAxis.X, int _initialCapacity = BspTreeBranch<T>.defaultObjectCapacity) : ISpatialTree<T>
+	where T : ISpatialTreeObject
 {
 	#region Fields
 
 	public readonly uint depth = _depth;
 	public readonly BspSplitAxis splitAxis = _splitAxis;
 
-	public readonly List<ISpatialTreeObject> objects = new(_initialCapacity);
+	public readonly List<T> objects = new(_initialCapacity);
 
-	private BspTreeBranch? subBranchA = null;
-	private BspTreeBranch? subBranchB = null;
+	private BspTreeBranch<T>? subBranchA = null;
+	private BspTreeBranch<T>? subBranchB = null;
 
 	#endregion
 	#region Constants
@@ -36,7 +37,7 @@ public sealed class BspTreeBranch(uint _depth = 0, BspSplitAxis _splitAxis = Bsp
 
 	public void Clear(bool _discardSubBranches = false)
 	{
-		ContentBounds = new(PartitionBounds.minimum, Vector3.Zero);
+		ContentBounds = new(PartitionBounds.minimum, PartitionBounds.minimum);
 
 		objects.Clear();
 		subBranchA?.Clear();
@@ -50,7 +51,7 @@ public sealed class BspTreeBranch(uint _depth = 0, BspSplitAxis _splitAxis = Bsp
 		}
 	}
 
-	public bool AddObject(ISpatialTreeObject _newObject)
+	public bool AddObject(T _newObject)
 	{
 		if (_newObject is null)
 		{
@@ -61,7 +62,7 @@ public sealed class BspTreeBranch(uint _depth = 0, BspSplitAxis _splitAxis = Bsp
 		return AddObject(_newObject, in bounds, true);
 	}
 
-	private bool AddObject(ISpatialTreeObject _newObject, in AABB _newObjectBounds, bool _allowFurtherBranching)
+	private bool AddObject(T _newObject, in AABB _newObjectBounds, bool _allowFurtherBranching)
 	{
 		if (!PartitionBounds.Overlaps(in _newObjectBounds))
 		{
@@ -115,7 +116,7 @@ public sealed class BspTreeBranch(uint _depth = 0, BspSplitAxis _splitAxis = Bsp
 		}
 
 		// Distribute all objects into sub-branches:
-		foreach (ISpatialTreeObject obj in objects)
+		foreach (T obj in objects)
 		{
 			AABB objBounds = obj.CalculateAxisAlignedBoundingBox();
 			if (!subBranchA.AddObject(obj, in objBounds, false))
@@ -128,7 +129,7 @@ public sealed class BspTreeBranch(uint _depth = 0, BspSplitAxis _splitAxis = Bsp
 		return true;
 	}
 
-	public bool RemoveObject(ISpatialTreeObject _object)
+	public bool RemoveObject(T _object)
 	{
 		if (_object is null)
 		{
@@ -139,7 +140,7 @@ public sealed class BspTreeBranch(uint _depth = 0, BspSplitAxis _splitAxis = Bsp
 		return Remove_internal(_object);
 	}
 
-	private bool Remove_internal(ISpatialTreeObject _object)
+	private bool Remove_internal(T _object)
 	{
 		if (objects.Count != 0 && objects.Remove(_object))
 		{
@@ -183,11 +184,11 @@ public sealed class BspTreeBranch(uint _depth = 0, BspSplitAxis _splitAxis = Bsp
 
 		if (!hasObjects && !hasBranches)
 		{
-			ContentBounds = new(PartitionBounds.minimum, Vector3.Zero);
+			ContentBounds = new(PartitionBounds.minimum, PartitionBounds.minimum);
 		}
 	}
 
-	public void GetAllObjects(List<ISpatialTreeObject> _dstAllObjects)
+	public void GetAllObjects(List<T> _dstAllObjects)
 	{
 		if (objects.Count != 0)
 		{
@@ -200,24 +201,24 @@ public sealed class BspTreeBranch(uint _depth = 0, BspSplitAxis _splitAxis = Bsp
 		}
 	}
 
-	public IEnumerator<ISpatialTreeObject> EnumerateAllObjects()
+	public IEnumerator<T> EnumerateAllObjects()
 	{
 		if (objects.Count != 0)
 		{
-			foreach (ISpatialTreeObject obj in objects)
+			foreach (T obj in objects)
 			{
 				yield return obj;
 			}
 		}
 		if (IsBranched)
 		{
-			IEnumerator<ISpatialTreeObject> eA = subBranchA!.EnumerateAllObjects();
+			IEnumerator<T> eA = subBranchA!.EnumerateAllObjects();
 			while (eA.MoveNext())
 			{
 				yield return eA.Current;
 			}
 
-			IEnumerator<ISpatialTreeObject> eB = subBranchA!.EnumerateAllObjects();
+			IEnumerator<T> eB = subBranchA!.EnumerateAllObjects();
 			while (eB.MoveNext())
 			{
 				yield return eB.Current;
@@ -225,9 +226,9 @@ public sealed class BspTreeBranch(uint _depth = 0, BspSplitAxis _splitAxis = Bsp
 		}
 	}
 
-	public void GetObjectsInBounds(in AABB _boundingBox, List<ISpatialTreeObject> _dstObjects)
+	public void GetObjectsInBounds(in AABB _boundingBox, List<T> _dstObjects)
 	{
-		foreach (ISpatialTreeObject obj in objects)
+		foreach (T obj in objects)
 		{
 			if (_boundingBox.Overlaps(obj.CalculateAxisAlignedBoundingBox()))
 			{

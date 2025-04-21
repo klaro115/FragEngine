@@ -1,4 +1,5 @@
 ﻿using FragEngine3.EngineCore;
+using FragEngine3.Graphics;
 using FragEngine3.Graphics.Stack;
 using FragEngine3.Scenes.EventSystem;
 using FragEngine3.Scenes.SceneManagers;
@@ -40,7 +41,7 @@ public sealed class Scene : IDisposable
 
 	private readonly List<SceneBehaviour> sceneBehaviours = [];
 	private IGraphicsStack? graphicsStack = null;
-	private ISpatialTree? spatialPartitioning = null;
+	private ISpatialTree<IPhysicalRenderer>? spatialPartitioning = null;
 
 	internal readonly SceneUpdateManager updateManager;
 	internal readonly SceneDrawManager drawManager;
@@ -89,7 +90,7 @@ public sealed class Scene : IDisposable
 	/// Gets or sets the spatial partitioning structure used to accelerate culling lookups when rendering scene objects.<para/>
 	/// NOTE: If no spatial partitioning is assigned when a call to '<see cref="DrawScene"/>' arrives, a default BSP tree is created instead.
 	/// </summary>
-	public ISpatialTree? SpatialPartitioning
+	public ISpatialTree<IPhysicalRenderer>? SpatialPartitioning
 	{
 		get => spatialPartitioning;
 		set
@@ -487,11 +488,11 @@ public sealed class Scene : IDisposable
 	/// </summary>
 	/// <param name="_minInitialCapacity">The minimum number of objects we're expecting the tree to contain.</param>
 	/// <returns>A new instance of a basic spatial partitioning structure.</returns>
-	internal static ISpatialTree CreateFallbackSpatialPartitioningTree(int _minInitialCapacity)
+	internal static ISpatialTree<IPhysicalRenderer> CreateFallbackSpatialPartitioningTree(int _minInitialCapacity)
 	{
-		int initialCapacity = Math.Max(UnpartitionedTree.defaultObjectCapacity, _minInitialCapacity);
+		int initialCapacity = Math.Max(UnpartitionedTree<IPhysicalRenderer>.defaultObjectCapacity, _minInitialCapacity);
 
-		ISpatialTree tree = new UnpartitionedTree(initialCapacity);
+		ISpatialTree<IPhysicalRenderer> tree = new UnpartitionedTree<IPhysicalRenderer>(initialCapacity);
 		return tree;
 	}
 

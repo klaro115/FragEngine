@@ -8,11 +8,11 @@ namespace FragEngine3.Scenes.SpatialTrees;
 /// If your scene contains less than 10-ish simple objects, this is the way to go.
 /// </summary>
 /// <param name="_initialCapacity">The initial number of objects to allocate in the internal list.</param>
-public sealed class UnpartitionedTree(int _initialCapacity = UnpartitionedTree.defaultObjectCapacity) : ISpatialTree
+public sealed class UnpartitionedTree<T>(int _initialCapacity = UnpartitionedTree<T>.defaultObjectCapacity) : ISpatialTree<T> where T : ISpatialTreeObject
 {
 	#region Fields
 
-	private readonly List<ISpatialTreeObject> objects = new(_initialCapacity);
+	private readonly List<T> objects = new(_initialCapacity);
 
 	#endregion
 	#region Constants
@@ -37,18 +37,18 @@ public sealed class UnpartitionedTree(int _initialCapacity = UnpartitionedTree.d
 	/// Warning: This will not perform any boundary checks!
 	/// </summary>
 	/// <param name="_index">The index of the object.</param>
-	public ISpatialTreeObject this[int _index] => objects[_index];
+	public T this[int _index] => objects[_index];
 	
 	#endregion
 	#region Methods
 
 	public void Clear(bool _discardSubBranches = false)
 	{
-		ContentBounds = new(PartitionBounds.minimum, Vector3.Zero);
+		ContentBounds = new(PartitionBounds.minimum, PartitionBounds.minimum);
 		objects.Clear();
 	}
 
-	public bool AddObject(ISpatialTreeObject _newObject)
+	public bool AddObject(T _newObject)
 	{
 		if (_newObject is null)
 		{
@@ -62,7 +62,7 @@ public sealed class UnpartitionedTree(int _initialCapacity = UnpartitionedTree.d
 		return true;
 	}
 
-	public bool RemoveObject(ISpatialTreeObject _object)
+	public bool RemoveObject(T _object)
 	{
 		if (_object is null)
 		{
@@ -77,7 +77,7 @@ public sealed class UnpartitionedTree(int _initialCapacity = UnpartitionedTree.d
 	{
 		if (ObjectCount == 0)
 		{
-			ContentBounds = new(PartitionBounds.minimum, Vector3.Zero);
+			ContentBounds = new(PartitionBounds.minimum, PartitionBounds.minimum);
 			return;
 		}
 
@@ -90,13 +90,13 @@ public sealed class UnpartitionedTree(int _initialCapacity = UnpartitionedTree.d
 		}
 	}
 
-	public void GetAllObjects(List<ISpatialTreeObject> _dstAllObjects) => _dstAllObjects.AddRange(objects);
+	public void GetAllObjects(List<T> _dstAllObjects) => _dstAllObjects.AddRange(objects);
 
-	public IEnumerator<ISpatialTreeObject> EnumerateAllObjects() => objects.GetEnumerator();
+	public IEnumerator<T> EnumerateAllObjects() => objects.GetEnumerator();
 
-	public void GetObjectsInBounds(in AABB _boundingBox, List<ISpatialTreeObject> _dstObjects)
+	public void GetObjectsInBounds(in AABB _boundingBox, List<T> _dstObjects)
 	{
-		foreach (ISpatialTreeObject obj in objects)
+		foreach (T obj in objects)
 		{
 			AABB bounds = obj.CalculateAxisAlignedBoundingBox();
 			if (_boundingBox.Overlaps(in bounds))

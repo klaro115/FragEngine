@@ -1,18 +1,17 @@
 ﻿using FragEngine3.EngineCore;
-using System.Numerics;
 
 namespace FragEngine3.Scenes.SpatialTrees;
 
 /// <summary>
 /// A spatial partitioning structure that is based on pre-defined groups. Each group can have its own
 /// sub-tree, and groups are identified by an ID. Objects are automatically assigned to a group based
-/// on the value of their '<see cref="ISpatialTreeObject.SpatialPartitionGroupID"/>'. Any objects that
+/// on the value of their '<see cref="T.SpatialPartitionGroupID"/>'. Any objects that
 /// have an unknown ID or whose ID is zero will be assigned to a global fallback Octree partition instead.<para/>
 /// Note: This partitioning scheme was added mainly for semantic partitioning around nested static
 /// structures in the world. Groups could be individual buildings in a city, with each buildings having
 /// its own sub-tree using whichever partitioning scheme is most efficient for its room layout.
 /// </summary>
-public sealed class NestedGroupedTree : ISpatialTree
+public sealed class NestedGroupedTree<T> : ISpatialTree<T> where T : ISpatialTreeObject
 {
 	#region Constructors
 
@@ -32,8 +31,8 @@ public sealed class NestedGroupedTree : ISpatialTree
 	#endregion
 	#region Fields
 
-	private readonly Dictionary<uint, ISpatialTree> groups;
-	private readonly OctreeBranch fallback;
+	private readonly Dictionary<uint, ISpatialTree<T>> groups;
+	private readonly OctreeBranch<T> fallback;
 
 	#endregion
 	#region Constants
@@ -62,9 +61,9 @@ public sealed class NestedGroupedTree : ISpatialTree
 
 	public void Clear(bool _discardSubBranches = false)
 	{
-		ContentBounds = new(PartitionBounds.minimum, Vector3.Zero);
+		ContentBounds = new(PartitionBounds.minimum, PartitionBounds.minimum);
 
-		foreach (ISpatialTree group in groups.Values)
+		foreach (ISpatialTree<T> group in groups.Values)
 		{
 			group.Clear(_discardSubBranches);
 		}
@@ -75,14 +74,14 @@ public sealed class NestedGroupedTree : ISpatialTree
 		}
 	}
 
-	public bool AddObject(ISpatialTreeObject _newObject)
+	public bool AddObject(T _newObject)
 	{
 		if (_newObject is null)
 		{
 			return false;
 		}
 
-		if (groups.TryGetValue(_newObject.SpatialPartitionGroupID, out ISpatialTree? group))
+		if (groups.TryGetValue(_newObject.SpatialPartitionGroupID, out ISpatialTree<T>? group))
 		{
 			if (group.AddObject(_newObject))
 			{
@@ -98,14 +97,14 @@ public sealed class NestedGroupedTree : ISpatialTree
 		return added;
 	}
 
-	public bool RemoveObject(ISpatialTreeObject _object)
+	public bool RemoveObject(T _object)
 	{
 		if (_object is null)
 		{
 			return false;
 		}
 
-		if (groups.TryGetValue(_object.SpatialPartitionGroupID, out ISpatialTree? group))
+		if (groups.TryGetValue(_object.SpatialPartitionGroupID, out ISpatialTree<T>? group))
 		{
 			if (group.RemoveObject(_object))
 			{
@@ -117,7 +116,7 @@ public sealed class NestedGroupedTree : ISpatialTree
 		return removed;
 	}
 
-	public bool AddGroup(uint _groupID, ISpatialTree _groupPartitioningTree)
+	public bool AddGroup(uint _groupID, ISpatialTree<T> _groupPartitioningTree)
 	{
 		if (_groupID == 0u)
 		{
@@ -126,7 +125,7 @@ public sealed class NestedGroupedTree : ISpatialTree
 		}
 		if (groups.ContainsKey(_groupID))
 		{
-			Logger.Instance?.LogError($"Invalid ID; {nameof(NestedGroupedTree)} already has a group with ID {_groupID}!");
+			Logger.Instance?.LogError($"Invalid ID; {nameof(NestedGroupedTree<T>)} already has a group with ID {_groupID}!");
 			return false;
 		}
 		
@@ -145,16 +144,16 @@ public sealed class NestedGroupedTree : ISpatialTree
 		fallback.RecalculateContentBounds(_recursive);
 		ContentBounds = fallback.ContentBounds;
 
-		foreach (ISpatialTree group in groups.Values)
+		foreach (ISpatialTree<T> group in groups.Values)
 		{
 			group.RecalculateContentBounds(_recursive);
 			ContentBounds.Expand(group.ContentBounds);
 		}
 	}
 
-	public void GetAllObjects(List<ISpatialTreeObject> _dstAllObjects)
+	public void GetAllObjects(List<T> _dstAllObjects)
 	{
-		foreach (ISpatialTree group in groups.Values)
+		foreach (ISpatialTree<T> group in groups.Values)
 		{
 			group.GetAllObjects(_dstAllObjects);
 		}
@@ -162,10 +161,10 @@ public sealed class NestedGroupedTree : ISpatialTree
 		fallback.GetAllObjects(_dstAllObjects);
 	}
 
-	public IEnumerator<ISpatialTreeObject> EnumerateAllObjects()
+	public IEnumerator<T> EnumerateAllObjects()
 	{
-		IEnumerator<ISpatialTreeObject> e;
-		foreach (ISpatialTree group in groups.Values)
+		IEnumerator<T> e;
+		foreach (ISpatialTree<T> group in groups.Values)
 		{
 			e = group.EnumerateAllObjects();
 			while (e.MoveNext())
@@ -181,9 +180,9 @@ public sealed class NestedGroupedTree : ISpatialTree
 		}
 	}
 
-	public void GetObjectsInBounds(in AABB _boundingBox, List<ISpatialTreeObject> _dstObjects)
+	public void GetObjectsInBounds(in AABB _boundingBox, List<T> _dstObjects)
 	{
-		foreach (ISpatialTree group in groups.Values)
+		foreach (ISpatialTree<T> group in groups.Values)
 		{
 			group.GetObjectsInBounds(in _boundingBox, _dstObjects);
 		}

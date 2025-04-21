@@ -1,17 +1,17 @@
 ﻿using FragEngine3.EngineCore;
-using System.Numerics;
 using System.Runtime.CompilerServices;
 
 namespace FragEngine3.Scenes.SpatialTrees;
 
-public sealed class OctreeBranch(uint _depth = 0, int _initialCapacity = OctreeBranch.defaultObjectCapacity) : ISpatialTree
+public sealed class OctreeBranch<T>(uint _depth = 0, int _initialCapacity = OctreeBranch<T>.defaultObjectCapacity) : ISpatialTree<T>
+	where T : ISpatialTreeObject
 {
 	#region Types
 
 	[InlineArray(10)]
 	private struct BranchBuffer
 	{
-		public OctreeBranch? branch;
+		public OctreeBranch<T>? branch;
 	}
 
 	#endregion
@@ -19,7 +19,7 @@ public sealed class OctreeBranch(uint _depth = 0, int _initialCapacity = OctreeB
 
 	public readonly uint depth = _depth;
 
-	public readonly List<ISpatialTreeObject> objects = new(_initialCapacity);
+	public readonly List<T> objects = new(_initialCapacity);
 
 	private BranchBuffer branches = new();
 
@@ -44,12 +44,12 @@ public sealed class OctreeBranch(uint _depth = 0, int _initialCapacity = OctreeB
 
 	public void Clear(bool _discardSubBranches = false)
 	{
-		ContentBounds = new(PartitionBounds.minimum, Vector3.Zero);
+		ContentBounds = new(PartitionBounds.minimum, PartitionBounds.minimum);
 
 		objects.Clear();
 		if (IsBranched)
 		{
-			foreach (OctreeBranch? subBranch in branches)
+			foreach (OctreeBranch<T>? subBranch in branches)
 			{
 				subBranch?.Clear();
 			}
@@ -65,7 +65,7 @@ public sealed class OctreeBranch(uint _depth = 0, int _initialCapacity = OctreeB
 		}
 	}
 
-	public bool AddObject(ISpatialTreeObject _newObject)
+	public bool AddObject(T _newObject)
 	{
 		if (_newObject is null)
 		{
@@ -76,7 +76,7 @@ public sealed class OctreeBranch(uint _depth = 0, int _initialCapacity = OctreeB
 		return AddObject(_newObject, in bounds, true);
 	}
 
-	private bool AddObject(ISpatialTreeObject _newObject, in AABB _newObjectBounds, bool _allowFurtherBranching)
+	private bool AddObject(T _newObject, in AABB _newObjectBounds, bool _allowFurtherBranching)
 	{
 		if (!PartitionBounds.Overlaps(in _newObjectBounds))
 		{
@@ -85,7 +85,7 @@ public sealed class OctreeBranch(uint _depth = 0, int _initialCapacity = OctreeB
 
 		if (IsBranched)
 		{
-			foreach (OctreeBranch? subBranch in branches)
+			foreach (OctreeBranch<T>? subBranch in branches)
 			{
 				if (subBranch!.AddObject(_newObject, in _newObjectBounds, _allowFurtherBranching))
 				{
@@ -124,10 +124,10 @@ public sealed class OctreeBranch(uint _depth = 0, int _initialCapacity = OctreeB
 		}
 
 		// Distribute all objects into sub-branches:
-		foreach (ISpatialTreeObject obj in objects)
+		foreach (T obj in objects)
 		{
 			AABB objBounds = obj.CalculateAxisAlignedBoundingBox();
-			foreach (OctreeBranch? subBranch in branches)
+			foreach (OctreeBranch<T>? subBranch in branches)
 			{
 				if (subBranch!.AddObject(obj, in objBounds, false))
 				{
@@ -140,7 +140,7 @@ public sealed class OctreeBranch(uint _depth = 0, int _initialCapacity = OctreeB
 		return true;
 	}
 
-	public bool RemoveObject(ISpatialTreeObject _object)
+	public bool RemoveObject(T _object)
 	{
 		if (_object is null)
 		{
@@ -151,7 +151,7 @@ public sealed class OctreeBranch(uint _depth = 0, int _initialCapacity = OctreeB
 		return Remove_internal(_object);
 	}
 
-	private bool Remove_internal(ISpatialTreeObject _object)
+	private bool Remove_internal(T _object)
 	{
 		if (objects.Count != 0 && objects.Remove(_object))
 		{
@@ -160,7 +160,7 @@ public sealed class OctreeBranch(uint _depth = 0, int _initialCapacity = OctreeB
 
 		if (IsBranched)
 		{
-			foreach (OctreeBranch? subBranch in branches)
+			foreach (OctreeBranch<T>? subBranch in branches)
 			{
 				if (subBranch!.Remove_internal(_object))
 				{
@@ -188,7 +188,7 @@ public sealed class OctreeBranch(uint _depth = 0, int _initialCapacity = OctreeB
 
 		if (hasBranches)
 		{
-			OctreeBranch subBranch = branches[0]!;
+			OctreeBranch<T> subBranch = branches[0]!;
 			if (hasObjects)
 			{
 				ContentBounds.Expand(subBranch.ContentBounds);
@@ -208,11 +208,11 @@ public sealed class OctreeBranch(uint _depth = 0, int _initialCapacity = OctreeB
 
 		if (!hasObjects && !hasBranches)
 		{
-			ContentBounds = new(PartitionBounds.minimum, Vector3.Zero);
+			ContentBounds = new(PartitionBounds.minimum, PartitionBounds.minimum);
 		}
 	}
 
-	public void GetAllObjects(List<ISpatialTreeObject> _dstAllObjects)
+	public void GetAllObjects(List<T> _dstAllObjects)
 	{
 		if (objects.Count != 0)
 		{
@@ -220,27 +220,27 @@ public sealed class OctreeBranch(uint _depth = 0, int _initialCapacity = OctreeB
 		}
 		if (IsBranched)
 		{
-			foreach (OctreeBranch? subBranch in branches)
+			foreach (OctreeBranch<T>? subBranch in branches)
 			{
 				subBranch!.GetAllObjects(_dstAllObjects);
 			}
 		}
 	}
 
-	public IEnumerator<ISpatialTreeObject> EnumerateAllObjects()
+	public IEnumerator<T> EnumerateAllObjects()
 	{
 		if (objects.Count != 0)
 		{
-			foreach (ISpatialTreeObject obj in objects)
+			foreach (T obj in objects)
 			{
 				yield return obj;
 			}
 		}
 		if (IsBranched)
 		{
-			foreach (OctreeBranch? subBranch in branches)
+			foreach (OctreeBranch<T>? subBranch in branches)
 			{
-				IEnumerator<ISpatialTreeObject> eA = subBranch!.EnumerateAllObjects();
+				IEnumerator<T> eA = subBranch!.EnumerateAllObjects();
 				while (eA.MoveNext())
 				{
 					yield return eA.Current;
@@ -249,9 +249,9 @@ public sealed class OctreeBranch(uint _depth = 0, int _initialCapacity = OctreeB
 		}
 	}
 
-	public void GetObjectsInBounds(in AABB _boundingBox, List<ISpatialTreeObject> _dstObjects)
+	public void GetObjectsInBounds(in AABB _boundingBox, List<T> _dstObjects)
 	{
-		foreach (ISpatialTreeObject obj in objects)
+		foreach (T obj in objects)
 		{
 			if (_boundingBox.Overlaps(obj.CalculateAxisAlignedBoundingBox()))
 			{
@@ -260,7 +260,7 @@ public sealed class OctreeBranch(uint _depth = 0, int _initialCapacity = OctreeB
 		}
 		if (IsBranched)
 		{
-			foreach (OctreeBranch? subBranch in branches)
+			foreach (OctreeBranch<T>? subBranch in branches)
 			{
 				subBranch!.GetObjectsInBounds(in _boundingBox, _dstObjects);
 			}
