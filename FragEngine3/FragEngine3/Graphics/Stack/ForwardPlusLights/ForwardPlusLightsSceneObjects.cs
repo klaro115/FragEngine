@@ -1,5 +1,6 @@
 ﻿using FragEngine3.Graphics.Components;
 using FragEngine3.Graphics.Lighting.Data;
+using FragEngine3.Scenes;
 
 namespace FragEngine3.Graphics.Stack.ForwardPlusLights;
 
@@ -10,6 +11,9 @@ internal sealed class ForwardPlusLightsSceneObjects
 	public readonly List<CameraComponent> activeCameras = new(2);
 	public readonly List<ILightSource> activeLights = new(10);
 	public readonly List<ILightSource> activeLightsShadowMapped = new(5);
+
+	private readonly List<IPhysicalRenderer> partitionedRenderers = new(128);
+	private readonly List<IRenderer> unpartitionedRenderers = new(128);
 
 	public readonly List<IRenderer> activeRenderersOpaque = new(64);
 	public readonly List<IRenderer> activeRenderersTransparent = new(64);
@@ -34,6 +38,10 @@ internal sealed class ForwardPlusLightsSceneObjects
 		activeCameras.Clear();
 		activeLights.Clear();
 		activeLightsShadowMapped.Clear();
+
+		partitionedRenderers.Clear();
+		unpartitionedRenderers.Clear();
+
 		activeRenderersOpaque.Clear();
 		activeRenderersTransparent.Clear();
 		activeRenderersUI.Clear();
@@ -41,16 +49,21 @@ internal sealed class ForwardPlusLightsSceneObjects
 	}
 
 	public void PrepareScene(
+		Scene _scene,
 		in List<IRenderer> _renderers,
 		in IList<CameraComponent> _cameras,
 		in IList<ILightSource> _lights)
 	{
 		// Identify only active cameras and visible light sources:
+		AABB allCameraFrustumBounds = AABB.Zero;
 		foreach (CameraComponent camera in _cameras)
 		{
 			if (!camera.IsDisposed && camera.layerMask != 0 && camera.node.IsEnabledInHierarchy())
 			{
 				activeCameras.Add(camera);
+
+				AABB cameraFrustumBounds = camera.CalculateViewportFrustumBounds();
+				cameraFrustumBounds.Expand(in cameraFrustumBounds);
 			}
 		}
 
@@ -80,22 +93,47 @@ internal sealed class ForwardPlusLightsSceneObjects
 			}
 		}
 
-		// Identify only visible renderers:
+		// Use spatial partitioning to only draw objects within the camera frustum:
+		_scene.SpatialPartitioning!.Clear();
 		foreach (IRenderer renderer in _renderers)
 		{
 			if (renderer.IsVisible)
 			{
-				//TODO [later]: We'll just take all renderers for now, but they need to be excluded/culled if not visible by any camera.
-
-				List<IRenderer>? rendererList = renderer.RenderMode switch
+				if (renderer is IPhysicalRenderer physicalRenderer)
 				{
-					RenderMode.Opaque => activeRenderersOpaque,
-					RenderMode.Transparent => activeRenderersTransparent,
-					RenderMode.UI => activeRenderersUI,
-					_ => null,
-				};
-				rendererList?.Add(renderer);
+					_scene.SpatialPartitioning.AddObject(physicalRenderer);
+				}
+				else
+				{
+					unpartitionedRenderers.Add(renderer);
+				}
 			}
+		}
+
+		_scene.SpatialPartitioning.GetObjectsInBounds(in allCameraFrustumBounds, partitionedRenderers);
+
+		// Identify only visible renderers:
+		foreach (IPhysicalRenderer renderer in partitionedRenderers)
+		{
+			List<IRenderer>? rendererList = renderer.RenderMode switch
+			{
+				RenderMode.Opaque => activeRenderersOpaque,
+				RenderMode.Transparent => activeRenderersTransparent,
+				RenderMode.UI => activeRenderersUI,
+				_ => null,
+			};
+			rendererList?.Add(renderer);
+		}
+		foreach (IRenderer renderer in unpartitionedRenderers)
+		{
+			List<IRenderer>? rendererList = renderer.RenderMode switch
+			{
+				RenderMode.Opaque => activeRenderersOpaque,
+				RenderMode.Transparent => activeRenderersTransparent,
+				RenderMode.UI => activeRenderersUI,
+				_ => null,
+			};
+			rendererList?.Add(renderer);
 		}
 		activeShadowCasters.AddRange(activeRenderersOpaque);
 		activeShadowCasters.AddRange(activeRenderersTransparent);

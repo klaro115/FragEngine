@@ -394,6 +394,7 @@ public sealed class ForwardPlusLightsStack : IGraphicsStack
 
 		// Prepare and sort cameras, light sources, and renderers:
 		sceneObjects.PrepareScene(
+			Scene!,
 			in _renderers,
 			in _cameras,
 			in _lights);

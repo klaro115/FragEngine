@@ -1,5 +1,6 @@
 ﻿using System.Numerics;
 using FragEngine3.EngineCore;
+using FragEngine3.Scenes;
 using Veldrid;
 
 namespace FragEngine3.Graphics.Cameras;
@@ -391,6 +392,16 @@ public sealed class CameraInstance : IDisposable
 			projection.RecalculateAllMatrices(in mtxWorld, output.resolutionX, output.resolutionY);
 		}
 		return Vector3.Transform(_screenCoord, projection.mtxPixel2World);
+	}
+
+	public AABB CalculateViewportFrustumBounds()
+	{
+		Vector3 origin = mtxWorld.Translation;
+		AABB bounds = new(origin, origin);
+
+		//TODO [CRITICAL]: Calculate corner point positions of the projection frustum!
+
+		return bounds;
 	}
 
 	#endregion

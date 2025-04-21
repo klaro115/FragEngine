@@ -499,6 +499,8 @@ public sealed class CameraComponent : Component, IOnNodeDestroyedListener, IOnCo
 		return instance.EndDrawing();
 	}
 
+	public AABB CalculateViewportFrustumBounds() => instance.CalculateViewportFrustumBounds();
+
 	public override bool LoadFromData(in ComponentData _componentData, in Dictionary<int, ISceneElement> _idDataMap)
 	{
 		if (string.IsNullOrEmpty(_componentData.SerializedData))
