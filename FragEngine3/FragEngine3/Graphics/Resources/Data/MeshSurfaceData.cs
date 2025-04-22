@@ -35,12 +35,12 @@ public sealed class MeshSurfaceData
     /// <summary>
     /// Gets the number of vertices in this mesh, based in basic vertex data only.
     /// </summary>
-    public int VertexCount => verticesBasic != null ? verticesBasic.Length : 0;
+    public int VertexCount => verticesBasic is not null ? verticesBasic.Length : 0;
     /// <summary>
     /// Gets the number of triangle indices in this mesh. This should be a multiple of 3. If both 16-bit and 32-bit index
     /// buffers are assigned, the 16-bit indices will be preferred and its length returned.
     /// </summary>
-    public int IndexCount => indices16 != null ? indices16.Length : indices32 != null ? indices32.Length : 0;
+    public int IndexCount => indices16 is not null ? indices16.Length : indices32 is not null ? indices32.Length : 0;
     /// <summary>
     /// Gets the number of triangles defined by the index buffer of this mesh. Trailing incomplete triangles with fewer
     /// than 3 indices will be ignored.
@@ -51,14 +51,14 @@ public sealed class MeshSurfaceData
     /// Gets whether this mesh has extended vertex data. True if extended data buffer is non-null and contains at least
     /// the same number of elements as the basic vertex buffer.
     /// </summary>
-    public bool HasExtendedVertexData => verticesExt != null && verticesExt.Length >= VertexCount;
+    public bool HasExtendedVertexData => verticesExt is not null && verticesExt.Length >= VertexCount;
     /// <summary>
     /// Gets the index format to be used for this mesh, either 16-bit or 32-bit.<para/>
     /// NOTE: If both 16-bit and 32-bit buffers are assigned, 16-bit will be preferred. Unassign the 16-bit buffer to
     /// force usage of an assigned 32-bit index buffer. Meshes with more than 65K vertices must use the 32-bit index
     /// format.
     /// </summary>
-    public IndexFormat IndexFormat => indices16 != null ? IndexFormat.UInt16 : IndexFormat.UInt32;
+    public IndexFormat IndexFormat => indices16 is not null ? IndexFormat.UInt16 : IndexFormat.UInt32;
 
     #endregion
     #region Methods
@@ -71,7 +71,7 @@ public sealed class MeshSurfaceData
     {
         return new()
         {
-            verticesBasic = verticesBasic != null ? (BasicVertex[])verticesBasic.Clone() : [],
+            verticesBasic = verticesBasic is not null ? (BasicVertex[])verticesBasic.Clone() : [],
             verticesExt = verticesExt,
 
             indices16 = (ushort[]?)indices16?.Clone(),
@@ -81,7 +81,7 @@ public sealed class MeshSurfaceData
 
     public bool SetBasicVertexData(IList<Vector3> _positions, IList<Vector3> _normals, IList<Vector2> _uvs, int _overrideVertexCount = -1)
     {
-        if (_positions == null || _normals == null || _uvs == null)
+        if (_positions is null || _normals is null || _uvs is null)
         {
             Logger.Instance?.LogError("Cannot set basic vertex data from null data arrays!");
             return false;
@@ -91,7 +91,7 @@ public sealed class MeshSurfaceData
             ? Math.Min(Math.Min(_positions.Count, _normals.Count), _uvs.Count)
             : _overrideVertexCount;
 
-        if (verticesBasic == null || verticesBasic.Length != newVertexCount)
+        if (verticesBasic is null || verticesBasic.Length != newVertexCount)
         {
             verticesBasic = new BasicVertex[newVertexCount];
         }
@@ -110,7 +110,7 @@ public sealed class MeshSurfaceData
 
     public bool SetExtendedVertexData(IList<Vector3> _tangents, IList<Vector2> _uvs2, int _overrideVertexCount = -1)
     {
-        if (_tangents == null || _uvs2 == null)
+        if (_tangents is null || _uvs2 is null)
         {
             Logger.Instance?.LogError("Cannot set extended vertex data from null data arrays!");
             return false;
@@ -120,7 +120,7 @@ public sealed class MeshSurfaceData
             ? Math.Min(_tangents.Count, _uvs2.Count)
             : _overrideVertexCount;
 
-        if (verticesExt == null || verticesExt.Length != newVertexCount)
+        if (verticesExt is null || verticesExt.Length != newVertexCount)
         {
             verticesExt = new ExtendedVertex[newVertexCount];
         }
@@ -138,7 +138,7 @@ public sealed class MeshSurfaceData
 
     public bool SetIndexData(IList<int> _indices, int _overrideIndexCount = -1)
     {
-        if (_indices == null)
+        if (_indices is null)
         {
             Logger.Instance?.LogError("Cannot set index data from null source array! (32-bit indices)");
             return false;
@@ -150,7 +150,7 @@ public sealed class MeshSurfaceData
             return false;
         }
 
-        if (indices32 == null || indices32.Length != newIndexCount)
+        if (indices32 is null || indices32.Length != newIndexCount)
         {
             indices32 = new int[newIndexCount];
         }
@@ -171,7 +171,7 @@ public sealed class MeshSurfaceData
 
     public bool SetIndexData(IList<ushort> _indices, int _overrideIndexCount = -1)
     {
-        if (_indices == null)
+        if (_indices is null)
         {
             Logger.Instance?.LogError("Cannot set index data from null source array! (16-bit indices)");
             return false;
@@ -186,7 +186,7 @@ public sealed class MeshSurfaceData
         // Enforce 32-bit indices if more than 65K vertices:
         if (VertexCount > ushort.MaxValue)
         {
-            if (indices32 == null || indices32.Length != newIndexCount)
+            if (indices32 is null || indices32.Length != newIndexCount)
             {
                 indices32 = new int[newIndexCount];
             }
@@ -200,7 +200,7 @@ public sealed class MeshSurfaceData
         // Keep using 16-bit indices if fewer than 65K vertices:
         else
         {
-            if (indices16 == null || indices16.Length != newIndexCount)
+            if (indices16 is null || indices16.Length != newIndexCount)
             {
                 indices16 = new ushort[newIndexCount];
             }
@@ -224,27 +224,26 @@ public sealed class MeshSurfaceData
     /// <summary>
     /// Calculates the bounding box minima and maxima coordinates of vertices within this mesh.
     /// </summary>
-    /// <param name="_outMin">Outputs the minima for vertex coordinates along all 3 axes.</param>
-    /// <param name="_outMax">Outputs the maxima for vertex coordinates along all 3 axes.</param>
+    /// <param name="_outBounds">Outputs the bounding box enclosing all vertex coordinates along all 3 axes.</param>
     /// <returns>True if the mesh contains vertices, false if no vertex data is set.</returns>
-    public bool CalculateBoundingBox(out Vector3 _outMin, out Vector3 _outMax)
+    public bool CalculateBoundingBox(out AABB _outBounds)
     {
         if (VertexCount == 0)
         {
-            _outMin = Vector3.Zero;
-            _outMax = Vector3.Zero;
+            _outBounds = AABB.Zero;
             return false;
         }
 
-        _outMin = new Vector3(1.0e+8f, 1.0e+8f, 1.0e+8f);
-        _outMax = new Vector3(-1.0e+8f, -1.0e+8f, -1.0e+8f);
+		Vector3 min = new Vector3(1.0e+8f, 1.0e+8f, 1.0e+8f);
+        Vector3 max = new Vector3(-1.0e+8f, -1.0e+8f, -1.0e+8f);
 
         for (int i = 0; i < verticesBasic.Length; ++i)
         {
             Vector3 pos = verticesBasic[i].position;
-            _outMin = Vector3.Min(_outMin, pos);
-            _outMax = Vector3.Max(_outMax, pos);
+            min = Vector3.Min(min, pos);
+            max = Vector3.Max(max, pos);
         }
+        _outBounds = new(min, max);
         return true;
     }
 
@@ -300,7 +299,6 @@ public sealed class MeshSurfaceData
                 BasicVertex vb = verticesBasic[i];
                 ExtendedVertex ve = verticesExt![i];
 
-
                 vb.position = Vector3.Transform(vb.position, _mtxTransformation);
                 vb.normal = Vector3.TransformNormal(vb.normal, _mtxTransformation);
                 ve.tangent = Vector3.TransformNormal(ve.tangent, _mtxTransformation);
@@ -328,14 +326,14 @@ public sealed class MeshSurfaceData
     /// </summary>
     public void NormalizeVectors()
     {
-        if (verticesBasic != null)
+        if (verticesBasic is not null)
         {
             for (int i = 0; i < verticesBasic.Length; ++i)
             {
                 verticesBasic[i].normal = Vector3.Normalize(verticesBasic[i].normal);
             }
         }
-        if (verticesExt != null)
+        if (verticesExt is not null)
         {
             for (int i = 0; i < verticesExt.Length; ++i)
             {
@@ -356,7 +354,7 @@ public sealed class MeshSurfaceData
         int indexCount = IndexCount;
 
         // Flip order of the 2nd and 3rd index of each triangle:
-        if (indices16 != null && indices16.Length >= 3)
+        if (indices16 is not null && indices16.Length >= 3)
         {
             for (int i = 0; i < indexCount; i += 3)
             {
@@ -366,7 +364,7 @@ public sealed class MeshSurfaceData
                 indices16[i + 2] = idx1;
             }
         }
-        else if (indices32 != null && indices32.Length >= 3)
+        else if (indices32 is not null && indices32.Length >= 3)
         {
             for (int i = 0; i < indexCount; i += 3)
             {

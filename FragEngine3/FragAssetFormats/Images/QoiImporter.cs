@@ -96,8 +96,11 @@ public sealed class QoiImporter : IImageImporter
 		_outRawImage.pixelData_RgbaByte = new RgbaByte[pixelCount];
 
 		RgbaByte[] pixels = _outRawImage.pixelData_RgbaByte;
-		RgbaByte[] colorTable = new RgbaByte[64];
-		Array.Fill(colorTable, new RgbaByte(0, 0, 0, 0));
+		Span<RgbaByte> colorTable = stackalloc RgbaByte[64];
+		for (int i = 0; i < 64; ++i)
+		{
+			colorTable[i] = new RgbaByte(0, 0, 0, 0);
+		}
 
 		RgbaByte curColor = new(0, 0, 0, 255);
 		int x;

@@ -374,7 +374,7 @@ public sealed class ObjImporter : IModelImporter
 		if (_buffers.charLength < 7) return false;
 
 		VertexIndices vi = VertexIndices.none;
-		VertexIndices[] curFaceIndices = new VertexIndices[4];
+		Span<VertexIndices> curFaceIndices = stackalloc VertexIndices[4];
 		int vertexIdx = 0;  // 0..3
 		int indexType = 0;  // 0=P, 1=T, 2=N
 
