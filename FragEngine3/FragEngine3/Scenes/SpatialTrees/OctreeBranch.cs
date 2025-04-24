@@ -1,4 +1,5 @@
 ﻿using FragEngine3.EngineCore;
+using System.Collections;
 using System.Runtime.CompilerServices;
 
 namespace FragEngine3.Scenes.SpatialTrees;
@@ -39,6 +40,8 @@ public sealed class OctreeBranch<T>(uint _depth = 0, int _initialCapacity = Octr
 	public AABB PartitionBounds { get; private set; } = AABB.One;
 	public AABB ContentBounds { get; private set; } = AABB.Zero;
 
+	public int ObjectCount { get; private set; } = 0;
+
 	#endregion
 	#region Methods
 
@@ -47,6 +50,8 @@ public sealed class OctreeBranch<T>(uint _depth = 0, int _initialCapacity = Octr
 		ContentBounds = new(PartitionBounds.minimum, PartitionBounds.minimum);
 
 		objects.Clear();
+		ObjectCount = 0;
+
 		if (IsBranched)
 		{
 			foreach (OctreeBranch<T>? subBranch in branches)
@@ -90,6 +95,7 @@ public sealed class OctreeBranch<T>(uint _depth = 0, int _initialCapacity = Octr
 				if (subBranch!.AddObject(_newObject, in _newObjectBounds, _allowFurtherBranching))
 				{
 					ContentBounds.Expand(subBranch.ContentBounds);
+					ObjectCount++;
 					return true;
 				}
 			}
@@ -98,6 +104,7 @@ public sealed class OctreeBranch<T>(uint _depth = 0, int _initialCapacity = Octr
 
 		objects.Add(_newObject);
 		ContentBounds.Expand(in _newObjectBounds);
+		ObjectCount++;
 
 		if (!_allowFurtherBranching ||
 			objects.Count < minimumObjectsBeforeBranching ||
@@ -155,6 +162,7 @@ public sealed class OctreeBranch<T>(uint _depth = 0, int _initialCapacity = Octr
 	{
 		if (objects.Count != 0 && objects.Remove(_object))
 		{
+			ObjectCount--;
 			return true;
 		}
 
@@ -164,6 +172,7 @@ public sealed class OctreeBranch<T>(uint _depth = 0, int _initialCapacity = Octr
 			{
 				if (subBranch!.Remove_internal(_object))
 				{
+					ObjectCount--;
 					return true;
 				}
 			}
@@ -227,7 +236,7 @@ public sealed class OctreeBranch<T>(uint _depth = 0, int _initialCapacity = Octr
 		}
 	}
 
-	public IEnumerator<T> EnumerateAllObjects()
+	public IEnumerator<T> GetEnumerator()
 	{
 		if (objects.Count != 0)
 		{
@@ -240,7 +249,7 @@ public sealed class OctreeBranch<T>(uint _depth = 0, int _initialCapacity = Octr
 		{
 			foreach (OctreeBranch<T>? subBranch in branches)
 			{
-				IEnumerator<T> eA = subBranch!.EnumerateAllObjects();
+				IEnumerator<T> eA = subBranch!.GetEnumerator();
 				while (eA.MoveNext())
 				{
 					yield return eA.Current;
@@ -248,6 +257,7 @@ public sealed class OctreeBranch<T>(uint _depth = 0, int _initialCapacity = Octr
 			}
 		}
 	}
+	IEnumerator IEnumerable.GetEnumerator() => GetEnumerator();
 
 	public void GetObjectsInBounds(in AABB _boundingBox, List<T> _dstObjects)
 	{

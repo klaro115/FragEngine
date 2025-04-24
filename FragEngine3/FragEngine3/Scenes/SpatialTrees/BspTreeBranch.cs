@@ -1,4 +1,5 @@
 ﻿using FragEngine3.EngineCore;
+using System.Collections;
 using System.Numerics;
 
 namespace FragEngine3.Scenes.SpatialTrees;
@@ -32,6 +33,8 @@ public sealed class BspTreeBranch<T>(uint _depth = 0, BspSplitAxis _splitAxis = 
 	public AABB PartitionBounds { get; private set; } = AABB.One;
 	public AABB ContentBounds { get; private set; } = AABB.Zero;
 
+	public int ObjectCount { get; private set; } = 0;
+
 	#endregion
 	#region Methods
 
@@ -40,6 +43,8 @@ public sealed class BspTreeBranch<T>(uint _depth = 0, BspSplitAxis _splitAxis = 
 		ContentBounds = new(PartitionBounds.minimum, PartitionBounds.minimum);
 
 		objects.Clear();
+		ObjectCount = 0;
+
 		subBranchA?.Clear();
 		subBranchB?.Clear();
 
@@ -74,11 +79,13 @@ public sealed class BspTreeBranch<T>(uint _depth = 0, BspSplitAxis _splitAxis = 
 			if (subBranchA!.AddObject(_newObject, in _newObjectBounds, _allowFurtherBranching))
 			{
 				ContentBounds.Expand(subBranchA.ContentBounds);
+				ObjectCount++;
 				return true;
 			}
 			else if (subBranchB!.AddObject(_newObject, in _newObjectBounds, _allowFurtherBranching))
 			{
 				ContentBounds.Expand(subBranchB.ContentBounds);
+				ObjectCount++;
 				return true;
 			}
 			return false;
@@ -86,6 +93,7 @@ public sealed class BspTreeBranch<T>(uint _depth = 0, BspSplitAxis _splitAxis = 
 
 		objects.Add(_newObject);
 		ContentBounds.Expand(in _newObjectBounds);
+		ObjectCount++;
 
 		if (!_allowFurtherBranching ||
 			objects.Count < minimumObjectsBeforeBranching ||
@@ -144,10 +152,15 @@ public sealed class BspTreeBranch<T>(uint _depth = 0, BspSplitAxis _splitAxis = 
 	{
 		if (objects.Count != 0 && objects.Remove(_object))
 		{
+			ObjectCount--;
 			return true;
 		}
 
 		bool removed = IsBranched && (subBranchA!.Remove_internal(_object) || subBranchB!.Remove_internal(_object));
+		if (removed)
+		{
+			ObjectCount--;
+		}
 		return removed;
 	}
 
@@ -201,7 +214,7 @@ public sealed class BspTreeBranch<T>(uint _depth = 0, BspSplitAxis _splitAxis = 
 		}
 	}
 
-	public IEnumerator<T> EnumerateAllObjects()
+	public IEnumerator<T> GetEnumerator()
 	{
 		if (objects.Count != 0)
 		{
@@ -212,19 +225,20 @@ public sealed class BspTreeBranch<T>(uint _depth = 0, BspSplitAxis _splitAxis = 
 		}
 		if (IsBranched)
 		{
-			IEnumerator<T> eA = subBranchA!.EnumerateAllObjects();
+			IEnumerator<T> eA = subBranchA!.GetEnumerator();
 			while (eA.MoveNext())
 			{
 				yield return eA.Current;
 			}
 
-			IEnumerator<T> eB = subBranchA!.EnumerateAllObjects();
+			IEnumerator<T> eB = subBranchA!.GetEnumerator();
 			while (eB.MoveNext())
 			{
 				yield return eB.Current;
 			}
 		}
 	}
+	IEnumerator IEnumerable.GetEnumerator() => GetEnumerator();
 
 	public void GetObjectsInBounds(in AABB _boundingBox, List<T> _dstObjects)
 	{

@@ -1,4 +1,5 @@
 ﻿using FragEngine3.EngineCore;
+using System.Collections;
 
 namespace FragEngine3.Scenes.SpatialTrees;
 
@@ -56,12 +57,15 @@ public sealed class NestedGroupedTree<T> : ISpatialTree<T> where T : ISpatialTre
 	/// </summary>
 	public int GroupCount => groups.Count;
 
+	public int ObjectCount { get; private set; } = 0;
+
 	#endregion
 	#region Methods
 
 	public void Clear(bool _discardSubBranches = false)
 	{
 		ContentBounds = new(PartitionBounds.minimum, PartitionBounds.minimum);
+		ObjectCount = 0;
 
 		foreach (ISpatialTree<T> group in groups.Values)
 		{
@@ -85,6 +89,7 @@ public sealed class NestedGroupedTree<T> : ISpatialTree<T> where T : ISpatialTre
 		{
 			if (group.AddObject(_newObject))
 			{
+				ObjectCount++;
 				return true;
 			}
 		}
@@ -93,6 +98,7 @@ public sealed class NestedGroupedTree<T> : ISpatialTree<T> where T : ISpatialTre
 		if (added)
 		{
 			ContentBounds.Expand(_newObject.CalculateAxisAlignedBoundingBox());
+			ObjectCount++;
 		}
 		return added;
 	}
@@ -108,11 +114,16 @@ public sealed class NestedGroupedTree<T> : ISpatialTree<T> where T : ISpatialTre
 		{
 			if (group.RemoveObject(_object))
 			{
+				ObjectCount--;
 				return true;
 			}
 		}
 		
 		bool removed = fallback.RemoveObject(_object);
+		if (removed)
+		{
+			ObjectCount--;
+		}
 		return removed;
 	}
 
@@ -135,6 +146,10 @@ public sealed class NestedGroupedTree<T> : ISpatialTree<T> where T : ISpatialTre
 		if (_groupPartitioningTree.ContentBounds.Volume > 0)
 		{
 			ContentBounds.Expand(_groupPartitioningTree.ContentBounds);
+		}
+		if (_groupPartitioningTree.ObjectCount > 0)
+		{
+			ObjectCount += _groupPartitioningTree.ObjectCount;
 		}
 		return true;
 	}
@@ -161,24 +176,25 @@ public sealed class NestedGroupedTree<T> : ISpatialTree<T> where T : ISpatialTre
 		fallback.GetAllObjects(_dstAllObjects);
 	}
 
-	public IEnumerator<T> EnumerateAllObjects()
+	public IEnumerator<T> GetEnumerator()
 	{
 		IEnumerator<T> e;
 		foreach (ISpatialTree<T> group in groups.Values)
 		{
-			e = group.EnumerateAllObjects();
+			e = group.GetEnumerator();
 			while (e.MoveNext())
 			{
 				yield return e.Current;
 			}
 		}
 
-		e = fallback.EnumerateAllObjects();
+		e = fallback.GetEnumerator();
 		while (e.MoveNext())
 		{
 			yield return e.Current;
 		}
 	}
+	IEnumerator IEnumerable.GetEnumerator() => GetEnumerator();
 
 	public void GetObjectsInBounds(in AABB _boundingBox, List<T> _dstObjects)
 	{

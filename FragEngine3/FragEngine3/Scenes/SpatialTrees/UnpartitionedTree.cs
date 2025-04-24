@@ -1,4 +1,5 @@
-﻿using System.Numerics;
+﻿using System.Collections;
+using System.Numerics;
 
 namespace FragEngine3.Scenes.SpatialTrees;
 
@@ -7,12 +8,35 @@ namespace FragEngine3.Scenes.SpatialTrees;
 /// situations where an API requires a spatial tree, but actual spatial partitioning would just introduce unnecessary overhead.
 /// If your scene contains less than 10-ish simple objects, this is the way to go.
 /// </summary>
-/// <param name="_initialCapacity">The initial number of objects to allocate in the internal list.</param>
-public sealed class UnpartitionedTree<T>(int _initialCapacity = UnpartitionedTree<T>.defaultObjectCapacity) : ISpatialTree<T> where T : ISpatialTreeObject
+public sealed class UnpartitionedTree<T> : ISpatialTree<T> where T : ISpatialTreeObject
 {
+	#region Constructors
+
+	/// <summary>
+	/// Creates a new unpartitioned spatial tree.
+	/// </summary>
+	/// <param name="_initialCapacity">The initial number of objects to allocate in the internal list.</param>
+	public UnpartitionedTree(int _initialCapacity = defaultObjectCapacity)
+	{
+		objects = new(_initialCapacity);
+		emptyListOnClear = true;
+	}
+	/// <summary>
+	/// Creates a new unpartitioned spatial tree.
+	/// </summary>
+	/// <param name="_objectsList">An existing list to use as internal object storage.</param>
+	/// <param name="_emptyListOnClear">Whether to remove all elements from the list when <see cref="Clear(bool)"/> is called.</param>
+	public UnpartitionedTree(List<T> _objectsList, bool _emptyListOnClear = true)
+	{
+		objects = _objectsList;
+		emptyListOnClear = _emptyListOnClear;
+	}
+
+	#endregion
 	#region Fields
 
-	private readonly List<T> objects = new(_initialCapacity);
+	private readonly List<T> objects;
+	private readonly bool emptyListOnClear;
 
 	#endregion
 	#region Constants
@@ -27,9 +51,6 @@ public sealed class UnpartitionedTree<T>(int _initialCapacity = UnpartitionedTre
 	public AABB PartitionBounds => new(Vector3.One * -1.0e+8f, Vector3.One * 1.0e+8f);
 	public AABB ContentBounds { get; private set; } = AABB.Zero;
 
-	/// <summary>
-	/// Gets the total number of objects in the structure.
-	/// </summary>
 	public int ObjectCount => objects.Count;
 
 	/// <summary>
@@ -45,7 +66,10 @@ public sealed class UnpartitionedTree<T>(int _initialCapacity = UnpartitionedTre
 	public void Clear(bool _discardSubBranches = false)
 	{
 		ContentBounds = new(PartitionBounds.minimum, PartitionBounds.minimum);
-		objects.Clear();
+		if (emptyListOnClear)
+		{
+			objects.Clear();
+		}
 	}
 
 	public bool AddObject(T _newObject)
@@ -92,7 +116,8 @@ public sealed class UnpartitionedTree<T>(int _initialCapacity = UnpartitionedTre
 
 	public void GetAllObjects(List<T> _dstAllObjects) => _dstAllObjects.AddRange(objects);
 
-	public IEnumerator<T> EnumerateAllObjects() => objects.GetEnumerator();
+	public IEnumerator<T> GetEnumerator() => objects.GetEnumerator();
+	IEnumerator IEnumerable.GetEnumerator() => objects.GetEnumerator();
 
 	public void GetObjectsInBounds(in AABB _boundingBox, List<T> _dstObjects)
 	{

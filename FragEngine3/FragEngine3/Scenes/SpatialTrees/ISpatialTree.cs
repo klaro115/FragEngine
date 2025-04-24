@@ -5,7 +5,7 @@
 /// Types implementing this interface allow faster lookup of objects within a region of space,
 /// typically reducing computational complexity to O(Log(N)).
 /// </summary>
-public interface ISpatialTree<T> where T : ISpatialTreeObject
+public interface ISpatialTree<T> : IEnumerable<T> where T : ISpatialTreeObject
 {
 	#region Properties
 
@@ -23,6 +23,11 @@ public interface ISpatialTree<T> where T : ISpatialTreeObject
 	/// Gets a bounding box enclosing all objects on this branch.
 	/// </summary>
 	public AABB ContentBounds { get; }
+
+	/// <summary>
+	/// Gets the total number of objects in this spatial partitioning tree.
+	/// </summary>
+	public int ObjectCount { get; }
 
 	#endregion
 	#region Methods
@@ -59,11 +64,6 @@ public interface ISpatialTree<T> where T : ISpatialTreeObject
 	/// </summary>
 	/// <param name="_dstAllObjects">Destination list where all objects will be stored.</param>
 	void GetAllObjects(List<T> _dstAllObjects);
-
-	/// <summary>
-	/// Gets an enumerator for iterating over all objects on this branch and all of its sub-branches.
-	/// </summary>
-	IEnumerator<T> EnumerateAllObjects();
 
 	/// <summary>
 	/// Retrieves all objects on this branch and all of its sub-branches that overlap a given bounding box volume.
