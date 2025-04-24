@@ -8,6 +8,7 @@ using FragEngine3.Graphics.PostProcessing;
 using FragEngine3.Graphics.Stack.ForwardPlusLights;
 using FragEngine3.Graphics.Utility;
 using FragEngine3.Scenes;
+using FragEngine3.Scenes.SpatialTrees;
 using System.Numerics;
 using Veldrid;
 
@@ -276,7 +277,7 @@ public sealed class ForwardPlusLightsStack : IGraphicsStack
 		return true;
 	}
 
-	public bool DrawStack(Scene _scene, List<IRenderer> _renderers, in IList<CameraComponent> _cameras, in IList<ILightSource> _lights)
+	public bool DrawStack(Scene _scene, List<IRenderer> _renderers, List<IRenderer> _unpartitionedRenderers, in IList<CameraComponent> _cameras, in IList<ILightSource> _lights)
 	{
 		if (!IsInitialized)
 		{
@@ -315,7 +316,8 @@ public sealed class ForwardPlusLightsStack : IGraphicsStack
 
 		// Prepare global resources for drawing the scene and sort out non-visible objects:
 		success &= BeginDrawScene(
-			in _renderers,
+			_scene.SpatialPartitioning!,
+			in _unpartitionedRenderers,
 			in _cameras,
 			in _lights,
 			maxActiveLightCount,
@@ -372,7 +374,8 @@ public sealed class ForwardPlusLightsStack : IGraphicsStack
 	}
 
 	private bool BeginDrawScene(
-		in List<IRenderer> _renderers,
+		in ISpatialTree<IPhysicalRenderer> _spatialPartitioning,
+		in List<IRenderer> _unpartitionedRenderers,
 		in IList<CameraComponent> _cameras,
 		in IList<ILightSource> _lights,
 		uint _maxActiveLightCount,
@@ -395,7 +398,8 @@ public sealed class ForwardPlusLightsStack : IGraphicsStack
 		// Prepare and sort cameras, light sources, and renderers:
 		sceneObjects.PrepareScene(
 			Scene!,
-			in _renderers,
+			in _spatialPartitioning,
+			in _unpartitionedRenderers,
 			in _cameras,
 			in _lights);
 

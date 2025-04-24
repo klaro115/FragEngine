@@ -41,7 +41,7 @@ public sealed class Scene : IDisposable
 
 	private readonly List<SceneBehaviour> sceneBehaviours = [];
 	private IGraphicsStack? graphicsStack = null;
-	private ISpatialTree<IPhysicalRenderer>? spatialPartitioning = null;
+	private ISpatialTree<IPhysicalRenderer>? spatialPartitioning = null;	//TODO: Replace property with semaphore-protected thread-safe getter-setter methods!
 
 	internal readonly SceneUpdateManager updateManager;
 	internal readonly SceneDrawManager drawManager;

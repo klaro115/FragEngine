@@ -1,6 +1,7 @@
 ﻿using FragEngine3.Graphics.Components;
 using FragEngine3.Graphics.Lighting.Data;
 using FragEngine3.Scenes;
+using FragEngine3.Scenes.SpatialTrees;
 
 namespace FragEngine3.Graphics.Stack.ForwardPlusLights;
 
@@ -12,8 +13,8 @@ internal sealed class ForwardPlusLightsSceneObjects
 	public readonly List<ILightSource> activeLights = new(10);
 	public readonly List<ILightSource> activeLightsShadowMapped = new(5);
 
+	private List<IRenderer> unpartitionedRenderers = new(128);
 	private readonly List<IPhysicalRenderer> partitionedRenderers = new(128);
-	private readonly List<IRenderer> unpartitionedRenderers = new(128);
 
 	public readonly List<IRenderer> activeRenderersOpaque = new(64);
 	public readonly List<IRenderer> activeRenderersTransparent = new(64);
@@ -30,6 +31,8 @@ internal sealed class ForwardPlusLightsSceneObjects
 	public uint ActiveShadowMappedLightsCount => (uint)activeLightsShadowMapped.Count;
 	public int ActiveShadowCasterCount => activeShadowCasters.Count;
 
+	public ISpatialTree<IPhysicalRenderer> SpatialPartitioning { get; private set; } = new UnpartitionedTree<IPhysicalRenderer>();
+
 	#endregion
 	#region Methods
 
@@ -40,7 +43,6 @@ internal sealed class ForwardPlusLightsSceneObjects
 		activeLightsShadowMapped.Clear();
 
 		partitionedRenderers.Clear();
-		unpartitionedRenderers.Clear();
 
 		activeRenderersOpaque.Clear();
 		activeRenderersTransparent.Clear();
@@ -50,10 +52,14 @@ internal sealed class ForwardPlusLightsSceneObjects
 
 	public void PrepareScene(
 		Scene _scene,
-		in List<IRenderer> _renderers,
+		in ISpatialTree<IPhysicalRenderer> _spatialPartitioning,
+		in List<IRenderer> _unpartitionedRenderers,
 		in IList<CameraComponent> _cameras,
 		in IList<ILightSource> _lights)
 	{
+		SpatialPartitioning = _spatialPartitioning;
+		unpartitionedRenderers = _unpartitionedRenderers;
+
 		// Identify only active cameras and visible light sources:
 		AABB allCameraFrustumBounds = AABB.Zero;
 		foreach (CameraComponent camera in _cameras)
@@ -93,27 +99,11 @@ internal sealed class ForwardPlusLightsSceneObjects
 			}
 		}
 
-		// Use spatial partitioning to only draw objects within the camera frustum:
-		_scene.SpatialPartitioning!.Clear();
-		foreach (IRenderer renderer in _renderers)
-		{
-			if (renderer.IsVisible)
-			{
-				if (renderer is IPhysicalRenderer physicalRenderer)
-				{
-					_scene.SpatialPartitioning.AddObject(physicalRenderer);
-				}
-				else
-				{
-					unpartitionedRenderers.Add(renderer);
-				}
-			}
-		}
-
-		_scene.SpatialPartitioning.GetObjectsInBounds(in allCameraFrustumBounds, partitionedRenderers);
+		// Pre-filter physical renderers usingb spatial partitioning:
+		SpatialPartitioning.GetObjectsInBounds(allCameraFrustumBounds, partitionedRenderers);
 
 		// Identify only visible renderers:
-		foreach (IPhysicalRenderer renderer in partitionedRenderers)
+		foreach (IRenderer renderer in unpartitionedRenderers)
 		{
 			List<IRenderer>? rendererList = renderer.RenderMode switch
 			{
@@ -124,7 +114,7 @@ internal sealed class ForwardPlusLightsSceneObjects
 			};
 			rendererList?.Add(renderer);
 		}
-		foreach (IRenderer renderer in unpartitionedRenderers)
+		foreach (IPhysicalRenderer renderer in partitionedRenderers)
 		{
 			List<IRenderer>? rendererList = renderer.RenderMode switch
 			{

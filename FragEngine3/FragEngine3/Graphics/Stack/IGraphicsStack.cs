@@ -65,14 +65,24 @@ public interface IGraphicsStack : IDisposable
 	/// <summary>
 	/// Draw all renderers within a scene.
 	/// </summary>
-	/// <param name="_scene">The scene which we want to render, may not be null.</param>
+	/// <param name="_scene">The scene which we want to render, may not be null.<para/>
+	/// Note: The <see cref="Scene.SpatialPartitioning"/> instance already contains the
+	/// subset of all visible physical renderers in the scene.</param>
 	/// <param name="_renderers">A list of all renderers within the given scene. May not
 	/// be null.</param>
+	/// <param name="_unpartitionedRenderers">A list of all visible renderers within the
+	/// scene that were not added to the scene's spatial partitioning tree. Most of these
+	/// renderers are non-physical (i.e. compute or screen-space) effect.</param>
 	/// <param name="_cameras">List of all camera components within the scene.</param>
 	/// <param name="_lights">List of all light components within the scene.</param>
 	/// <returns>True if the scene and its nodes were rendered successfully, false
 	/// otherwise.</returns>
-	bool DrawStack(Scene _scene, List<IRenderer> _renderers, in IList<CameraComponent> _cameras, in IList<ILightSource> _lights);
+	bool DrawStack(
+		Scene _scene,
+		List<IRenderer> _renderers,
+		List<IRenderer> _unpartitionedRenderers,
+		in IList<CameraComponent> _cameras,
+		in IList<ILightSource> _lights);
 
 	#endregion
 }
