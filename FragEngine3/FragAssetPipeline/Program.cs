@@ -65,6 +65,11 @@ internal static class Program
 		new("ForwardPlusLight_CompositeUI_PS",    "composition/ForwardPlusLight_CompositeUI_PS.hlsl",    "Main_Pixel",  ShaderStages.Fragment, flagsBasic, _bundlePrecompiledData: false) { descriptionTxt = shaderDescriptionTxt },
 	];
 
+	private static readonly string[] preprocessedModelNames =
+	[
+		"RoadDescending.fbx"
+	];
+
 	#endregion
 	#region Methods
 
@@ -106,7 +111,8 @@ internal static class Program
 		ProcessShaders(inputAssetsAbsDir, outputAssetsAbsDir, resourceFilePaths);
 
 		PrintStatus("\n## PROCESSING MODELS:");
-		ProcessGenericResources(inputAssetsAbsDir, outputAssetsAbsDir, "models", resourceFilePaths);
+		ProcessModels(inputAssetsAbsDir, outputAssetsAbsDir, resourceFilePaths);
+		//ProcessGenericResources(inputAssetsAbsDir, outputAssetsAbsDir, "models", resourceFilePaths);
 
 		PrintStatus("\n## PROCESSING TEXTURES:");
 		ProcessGenericResources(inputAssetsAbsDir, outputAssetsAbsDir, "textures", resourceFilePaths);
@@ -199,6 +205,28 @@ internal static class Program
 			Console.WriteLine($"Processing of all {totalShaderCount} shader resources succeeded.");
 		}
 		return successCount == totalShaderCount;
+	}
+
+	private static bool ProcessModels(string _inputAssetDir, string _outputAssetDir, List<string> _dstResourceFilePaths)
+	{
+		string inputModelDir = Path.Combine(_inputAssetDir, "models");
+		string outputModelDir = Path.Combine(_outputAssetDir, "models");
+
+		// Ensure input and output directories exist; create output if missing:
+		if (!Directory.Exists(inputModelDir))
+		{
+			PrintError($"Input directory for model process does not exist! Path: '{inputModelDir}'");
+			return false;
+		}
+		if (!Directory.Exists(outputModelDir))
+		{
+			Directory.CreateDirectory(outputModelDir);
+		}
+
+		//TODO 1: Add 3D model process.
+		//TODO 2: Treat model files in `preprocessedModelNames` seperately => convert them, copy all others.
+
+		return GenericResourceProcess.PrepareResources(inputModelDir, outputModelDir, _dstResourceFilePaths);
 	}
 
 	private static bool ProcessGenericResources(string _inputAssetDir, string _outputAssetDir, string _assetCategoryDirName, List<string> _dstResourceFilePaths)

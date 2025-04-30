@@ -115,7 +115,7 @@ public sealed class SceneManager(Engine _engine) : IEngineSystem
 		if (removed)
 		{
 			BroadcastEvent(SceneEventType.OnSceneRemoved, _scene, true);
-			OnSceneAdded?.Invoke(_scene);
+			OnSceneRemoved?.Invoke(_scene);
 			// NOTE: 'OnSceneUnloaded' should be called before by whomever issued this call for removal, and after unloading all scene contents.
 		}
 		else

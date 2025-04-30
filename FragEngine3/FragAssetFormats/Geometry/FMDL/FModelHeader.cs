@@ -1,4 +1,5 @@
-﻿using FragEngine3.Graphics.Resources.Import;
+﻿using FragEngine3.Graphics.Resources;
+using FragEngine3.Graphics.Resources.Import;
 using FragEngine3.Utility;
 
 namespace FragAssetFormats.Geometry.FMDL;
@@ -67,6 +68,7 @@ public struct FModelHeader
 
 	public uint magicNumbers;
 	public FormatVersion formatVersion;
+	public uint fileByteSize;
 
 	// GEOMETRY INFO:
 
@@ -90,8 +92,11 @@ public struct FModelHeader
 	#endregion
 	#region Constants
 
-	public const ushort MINIMUM_HEADER_DATA_SIZE = 60;              // 0x3C
-	public const ushort MINIMUM_HEADER_STRING_SIZE = 77;            // 0x4D
+	public const ushort MINIMUM_HEADER_DATA_SIZE = 64;              // 0x3C
+	public const ushort MINIMUM_HEADER_STRING_SIZE = 82;            // 0x52
+
+	public const uint MINIMUM_DATA_BLOCKS_SIZE = BasicVertex.byteSize + 3 * sizeof(ushort);
+	public const uint MINIMUM_FILE_SIZE = MINIMUM_HEADER_STRING_SIZE + MINIMUM_DATA_BLOCKS_SIZE;
 
 	public const uint MAGIC_NUMBERS = ((uint)'F' << 0) | ((uint)'M' << 8) | ((uint)'D' << 16) | ((uint)'L' << 24);
 
@@ -163,6 +168,19 @@ public struct FModelHeader
 		return hasValidBounds;
 	}
 
+	public readonly bool CalculateUncompressedFileSize(out uint _outFileByteSize)
+	{
+		if (!CalculateTotalVertexDataSizes(out uint totalVertexBlocksSize, out _, out _) ||
+			!CalculateTotalIndexDataSizes(out uint totalIndexBlockSize, out _, out _))
+		{
+			_outFileByteSize = 0;
+			return false;
+		}
+
+		_outFileByteSize = MINIMUM_HEADER_STRING_SIZE + totalVertexBlocksSize + totalIndexBlockSize;
+		return _outFileByteSize >= MINIMUM_FILE_SIZE;
+	}
+
 	public static bool ReadFmdlHeader(in ImporterContext _importCtx, BinaryReader _reader, out FModelHeader _outHeader)
 	{
 		if (_reader is null)
@@ -172,6 +190,7 @@ public struct FModelHeader
 			return false;
 		}
 
+		// Check magic numbers:
 		uint magicNumbers = _reader.ReadUInt32();
 		_reader.ReadByte();
 		if (magicNumbers != MAGIC_NUMBERS)
@@ -203,7 +222,18 @@ public struct FModelHeader
 			_importCtx.Logger.LogWarning($"Minor format version mismatch in FMDL 3D model file. (Model: {version}, Importer: {FormatVersion.Current})");
 		}
 
-		// Prepare header structure:
+		// Read and verify file size:
+		uint fileByteSize = _reader.ReadHexUint32();
+		_reader.ReadByte();
+
+		if (fileByteSize < MINIMUM_FILE_SIZE)
+		{
+			_importCtx.Logger.LogError($"Invalid file size in FMDL 3D model file; total byte size is too low! ({fileByteSize} < {MINIMUM_FILE_SIZE})");
+			_outHeader = default;
+			return false;
+		}
+
+		// Read geometry info:
 		uint vertexCount = _reader.ReadHexUint32();
 		_reader.ReadByte();
 		uint triangleCount = _reader.ReadHexUint32();
@@ -216,6 +246,7 @@ public struct FModelHeader
 		{
 			magicNumbers = magicNumbers,
 			formatVersion = version,
+			fileByteSize = fileByteSize,
 
 			vertexCount = vertexCount,
 			triangleCount = triangleCount,
@@ -274,7 +305,7 @@ public struct FModelHeader
 	{
 		if (_writer is null)
 		{
-			_exportCtx.Logger.LogError("Cannot write model data header to null binary writer!");
+			_exportCtx.Logger.LogError("Cannot write FMDL file header to null binary writer!");
 			return false;
 		}
 
@@ -283,6 +314,9 @@ public struct FModelHeader
 		_writer.Write((byte)'_');
 
 		_writer.WriteUint8ToHex(CURRENT_VERSION);
+		_writer.Write((byte)'_');
+
+		_writer.WriteUint32ToHex(fileByteSize);
 		_writer.Write((byte)'_');
 
 		// Geometry info: (15 bytes)

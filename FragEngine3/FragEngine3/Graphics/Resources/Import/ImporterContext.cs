@@ -53,6 +53,11 @@ public sealed class ImporterContext
 	/// </summary>
 	public bool PreferHDR { get; init; } = true;
 
+	/// <summary>
+	/// Flags of all types of data that should be compressed when exporting a resource, or that you expect compression on when importing.
+	/// </summary>
+	public CompressedDataFlags PreferDataCompression { get; init; } = CompressedDataFlags.DontUseCompression;
+
 	#endregion
 	#region Methods
 
