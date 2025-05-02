@@ -1,5 +1,7 @@
-﻿using FragAssetPipeline.Processes;
+﻿using FragAssetPipeline.Common;
+using FragAssetPipeline.Processes;
 using FragEngine3.Graphics.Resources;
+using FragEngine3.Graphics.Resources.Import;
 using FragEngine3.Graphics.Resources.Shaders;
 using Veldrid;
 
@@ -67,8 +69,26 @@ internal static class Program
 
 	private static readonly string[] preprocessedModelNames =
 	[
-		"RoadDescending.fbx"
+		"RoadDescending"
 	];
+	private static readonly string[] alwaysPreprocessedModelFormats =
+	[
+		".blend",
+		".fbx",
+	];
+
+	private static readonly ImporterContext importerCtx = new()
+	{
+		Logger = new ConsoleLogger(),
+		JsonOptions = new()
+		{
+			WriteIndented = true,
+		},
+		PreferNiceFormatting = true,
+		PreferHighBitDepth = true,
+		PreferHDR = true,
+		PreferDataCompression = CompressedDataFlags.DontUseCompression,
+	};
 
 	#endregion
 	#region Methods
@@ -212,21 +232,13 @@ internal static class Program
 		string inputModelDir = Path.Combine(_inputAssetDir, "models");
 		string outputModelDir = Path.Combine(_outputAssetDir, "models");
 
-		// Ensure input and output directories exist; create output if missing:
-		if (!Directory.Exists(inputModelDir))
-		{
-			PrintError($"Input directory for model process does not exist! Path: '{inputModelDir}'");
-			return false;
-		}
-		if (!Directory.Exists(outputModelDir))
-		{
-			Directory.CreateDirectory(outputModelDir);
-		}
-
-		//TODO 1: Add 3D model process.
-		//TODO 2: Treat model files in `preprocessedModelNames` seperately => convert them, copy all others.
-
-		return GenericResourceProcess.PrepareResources(inputModelDir, outputModelDir, _dstResourceFilePaths);
+		return ModelProcess.PrepareResources(
+			importerCtx,
+			inputModelDir,
+			outputModelDir,
+			_dstResourceFilePaths,
+			preprocessedModelNames,
+			alwaysPreprocessedModelFormats);
 	}
 
 	private static bool ProcessGenericResources(string _inputAssetDir, string _outputAssetDir, string _assetCategoryDirName, List<string> _dstResourceFilePaths)

@@ -50,7 +50,7 @@ public interface IModelExporter : IGraphicsResourceImporter
 	#endregion
 	#region Methods
 
-	bool ExportShaderData(in ImporterContext _exportCtx, MeshSurfaceData _surfaceData, Stream _outputResourceStream);
+	bool ExportModelData(in ImporterContext _exportCtx, MeshSurfaceData _surfaceData, Stream _outputResourceStream);
 
 	#endregion
 }

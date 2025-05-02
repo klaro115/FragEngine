@@ -42,7 +42,7 @@ public sealed class FModelExporter : IModelExporter
 
 	public IReadOnlyCollection<string> GetSupportedFileFormatExtensions() => supportedFormatExtensions;
 
-	public bool ExportShaderData(in ImporterContext _exportCtx, MeshSurfaceData _surfaceData, Stream _outputResourceStream)
+	public bool ExportModelData(in ImporterContext _exportCtx, MeshSurfaceData _surfaceData, Stream _outputResourceStream)
 	{
 		if (_exportCtx is null)
 		{
@@ -82,6 +82,12 @@ public sealed class FModelExporter : IModelExporter
 		byte[]? indexData = _surfaceData.IndexFormat == Veldrid.IndexFormat.UInt32
 			? WriteGeometryDataArrayToByteBuffer(_surfaceData.indices32, actualVertexCount, sizeof(int))
 			: WriteGeometryDataArrayToByteBuffer(_surfaceData.indices16, actualVertexCount, sizeof(ushort));
+
+		if (vertexDataBasic is null || actualVertexCount == 0)
+		{
+			_exportCtx.Logger.LogError("Cannot write model data with zero vertices!");
+			return false;
+		}
 
 		//TODO: Insert data compression here.
 

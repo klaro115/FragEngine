@@ -6,12 +6,12 @@ internal static class GenericResourceProcess
 {
 	#region Methods
 
-	public static bool PrepareResources(string inputFolderAbsPath, string _outputFolderAbsPath, List<string> _dstResourceFilePaths)
+	public static bool PrepareResources(string _inputFolderAbsPath, string _outputFolderAbsPath, List<string> _dstResourceFilePaths)
 	{
 		// Ensure input and output directories exist; create output if missing:
-		if (!Directory.Exists(inputFolderAbsPath))
+		if (!Directory.Exists(_inputFolderAbsPath))
 		{
-			Program.PrintError($"Input directory for generic resource process does not exist! Path: '{inputFolderAbsPath}'");
+			Program.PrintError($"Input directory for generic resource process does not exist! Path: '{_inputFolderAbsPath}'");
 			return false;
 		}
 		if (!Directory.Exists(_outputFolderAbsPath))
@@ -19,7 +19,7 @@ internal static class GenericResourceProcess
 			Directory.CreateDirectory(_outputFolderAbsPath);
 		}
 
-		string[] metadataFilePaths = Directory.GetFiles(inputFolderAbsPath, "*.fres", SearchOption.AllDirectories);
+		string[] metadataFilePaths = Directory.GetFiles(_inputFolderAbsPath, "*.fres", SearchOption.AllDirectories);
 		if (metadataFilePaths.Length == 0)
 		{
 			Program.PrintWarning("Skipping generic resource process; process requires at least 1 resource file in input directory.");
@@ -49,7 +49,7 @@ internal static class GenericResourceProcess
 				continue;
 			}
 
-			string dstFolderDir = Path.Combine(_outputFolderAbsPath, Path.GetRelativePath(inputFolderAbsPath, srcMetadataDirPath));
+			string dstFolderDir = Path.Combine(_outputFolderAbsPath, Path.GetRelativePath(_inputFolderAbsPath, srcMetadataDirPath));
 			if (!Directory.Exists(dstFolderDir))
 			{
 				Directory.CreateDirectory(dstFolderDir);
