@@ -200,7 +200,7 @@ internal static class ModelProcess
 		}
 
 		// Always recreate/update metadata file if the source format was not already FMDL:
-		string srcDataFileExt = Path.GetExtension(_srcDataFilePath!);
+		string srcDataFileExt = Path.GetExtension(_srcDataFilePath!).ToLowerInvariant();
 		bool convertDataFile = srcDataFileExt != ".fmdl";
 		if (convertDataFile)
 		{
@@ -215,7 +215,7 @@ internal static class ModelProcess
 		{
 			// Import and parse surface data using a generic ASSIMP-based importer:
 			using FileStream srcDataFileStream = new(_srcDataFilePath!, FileMode.Open, FileAccess.Read);
-			if (!assimpImporter.ImportSurfaceData(in _exportCtx, srcDataFileStream, out MeshSurfaceData? surfaceData))
+			if (!assimpImporter.ImportSurfaceData(in _exportCtx, srcDataFileStream, out MeshSurfaceData? surfaceData, srcDataFileExt))
 			{
 				_exportCtx.Logger.LogError($"Failed to import model surface data from source format!\nFile path: '{_srcDataFilePath}'");
 				_outOutputMetadataFilePath = null;

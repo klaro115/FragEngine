@@ -30,7 +30,7 @@ public class FbxImporter : IModelImporter
 
 	public IReadOnlyCollection<string> GetSupportedFileFormatExtensions() => supportedFormatExtensions;
 
-	public bool ImportSurfaceData(in ImporterContext _importCtx, Stream _resourceFileStream, out MeshSurfaceData? _outSurfaceData)  // INCOMPLETE!	
+	public bool ImportSurfaceData(in ImporterContext _importCtx, Stream _resourceFileStream, out MeshSurfaceData? _outSurfaceData, string? _fileExtension = null)  // INCOMPLETE!	
 	{
 		if (_resourceFileStream is null || !_resourceFileStream.CanRead)
 		{

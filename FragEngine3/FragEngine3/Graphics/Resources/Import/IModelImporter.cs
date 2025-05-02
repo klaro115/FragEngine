@@ -29,7 +29,7 @@ public interface IModelImporter : IGraphicsResourceImporter
 	#endregion
 	#region Methods
 
-	bool ImportSurfaceData(in ImporterContext _importCtx, Stream _resourceFileStream, out MeshSurfaceData? _outSurfaceData);
+	bool ImportSurfaceData(in ImporterContext _importCtx, Stream _resourceFileStream, out MeshSurfaceData? _outSurfaceData, string? _fileExtension = null);
 
 	#endregion
 }

@@ -100,7 +100,7 @@ public sealed class ObjImporter : IModelImporter
 
 	public IReadOnlyCollection<string> GetSupportedFileFormatExtensions() => supportedFileExtensions;
 
-	public bool ImportSurfaceData(in ImporterContext _importCtx, Stream _resourceFileStream, out MeshSurfaceData? _outSurfaceData) //TODO: Output a list of submeshes as individual meshes instead, or implement composite mesh type.
+	public bool ImportSurfaceData(in ImporterContext _importCtx, Stream _resourceFileStream, out MeshSurfaceData? _outSurfaceData, string? _fileExtension = null) //TODO: Output a list of submeshes as individual meshes instead, or implement composite mesh type.
 	{
 		if (_resourceFileStream == null)
 		{
