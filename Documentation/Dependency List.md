@@ -43,7 +43,7 @@ The following is a list of all direct code dependencies that the Fragment engine
 - [FragEngine3](#lib-fragengine3)
 
 #### NuGet Packages
-- [AssimpNet](https://www.nuget.org/packages/AssimpNet) `4.1.0` _(wrapper: MIT, Assimp: 3-clause BSD)_
+- [AssimpNetter](https://www.nuget.org/packages/AssimpNetter) `5.4.3.3` _(wrapper: MIT, Assimp: 3-clause BSD)_
 - [Vortice.Dxc](https://www.nuget.org/packages/Vortice.Dxc/3.6.0-beta) `3.6.2` _(MIT)_
 
 <br>

@@ -1,4 +1,5 @@
 ﻿using FragAssetFormats.Geometry.FMDL;
+using FragAssetPipeline.Resources.Models;
 using FragEngine3.EngineCore;
 using FragEngine3.Graphics.Resources.Data;
 using FragEngine3.Graphics.Resources.Import;
@@ -11,6 +12,7 @@ internal static class ModelProcess
 {
 	#region Fields
 
+	private static readonly AssimpImporter assimpImporter = new();
 	private static readonly FModelExporter fmdlExporter = new();
 
 	#endregion
@@ -211,12 +213,18 @@ internal static class ModelProcess
 		// Convert data file:
 		if (convertDataFile)
 		{
-			//TODO: Import and parse surface data using ASSIMP.
-			MeshSurfaceData surfaceData = new();	//TEMP
+			// Import and parse surface data using a generic ASSIMP-based importer:
+			using FileStream srcDataFileStream = new(_srcDataFilePath!, FileMode.Open, FileAccess.Read);
+			if (!assimpImporter.ImportSurfaceData(in _exportCtx, srcDataFileStream, out MeshSurfaceData? surfaceData))
+			{
+				_exportCtx.Logger.LogError($"Failed to import model surface data from source format!\nFile path: '{_srcDataFilePath}'");
+				_outOutputMetadataFilePath = null;
+				return false;
+			}
 
 			// Export to FMDL format:
 			using FileStream outputDataFileStream = new(_outOutputDataFilePath, FileMode.Create, FileAccess.Write);
-			if (!fmdlExporter.ExportModelData(_exportCtx, surfaceData, outputDataFileStream))
+			if (!fmdlExporter.ExportModelData(_exportCtx, surfaceData!, outputDataFileStream))
 			{
 				_exportCtx.Logger.LogError($"Failed to export model surface data to FMDL format!\nFile path: '{_srcDataFilePath}'");
 				_outOutputMetadataFilePath = null;
