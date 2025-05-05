@@ -199,6 +199,25 @@ internal static class ModelProcess
 			}
 		}
 
+		// Try to determine resource key from metadata or data file name:
+		string? resourceKey = null;
+		if (hasMetadataFilePath && ResourceFileData.DeserializeFromFile(_srcMetadataFilePath!, out ResourceFileData fileHandleData))
+		{
+			if (fileHandleData.IsComplete())
+			{
+				resourceKey = fileHandleData.Resources![0].ResourceKey;
+			}
+			else
+			{
+				generateMetadataFile = true;
+			}
+		}
+		if (string.IsNullOrEmpty(resourceKey))
+		{
+			string resourceKeyNameBase = hasMetadataFilePath ? _srcMetadataFilePath! : _srcDataFilePath!;
+			resourceKey = Path.GetFileNameWithoutExtension(resourceKeyNameBase);
+		}
+
 		// Always recreate/update metadata file if the source format was not already FMDL:
 		string srcDataFileExt = Path.GetExtension(_srcDataFilePath!).ToLowerInvariant();
 		bool convertDataFile = srcDataFileExt != ".fmdl";
@@ -215,7 +234,7 @@ internal static class ModelProcess
 		{
 			// Import and parse surface data using a generic ASSIMP-based importer:
 			using FileStream srcDataFileStream = new(_srcDataFilePath!, FileMode.Open, FileAccess.Read);
-			if (!assimpImporter.ImportSurfaceData(in _exportCtx, srcDataFileStream, out MeshSurfaceData? surfaceData, srcDataFileExt))
+			if (!assimpImporter.ImportSurfaceData(in _exportCtx, srcDataFileStream, resourceKey, out MeshSurfaceData? surfaceData, srcDataFileExt))
 			{
 				_exportCtx.Logger.LogError($"Failed to import model surface data from source format!\nFile path: '{_srcDataFilePath}'");
 				_outOutputMetadataFilePath = null;

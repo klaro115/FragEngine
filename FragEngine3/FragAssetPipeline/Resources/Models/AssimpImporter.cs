@@ -2,7 +2,6 @@
 using FragEngine3.Graphics.Resources;
 using FragEngine3.Graphics.Resources.Data;
 using FragEngine3.Graphics.Resources.Import;
-using FragEngine3.Resources;
 using System.Numerics;
 
 namespace FragAssetPipeline.Resources.Models;
@@ -38,6 +37,7 @@ public sealed class AssimpImporter : IModelImporter
 
 	public MeshVertexDataFlags SupportedVertexData => MeshVertexDataFlags.BasicSurfaceData | MeshVertexDataFlags.ExtendedSurfaceData;
 
+	public bool CanImportSubMeshes => true;
 	public bool CanImportAnimations => false;
 	public bool CanImportMaterials => false;
 	public bool CanImportTextures => false;
@@ -47,35 +47,28 @@ public sealed class AssimpImporter : IModelImporter
 
 	public IReadOnlyCollection<string> GetSupportedFileFormatExtensions() => supportedFileFormatExtensions;
 
-	public bool ImportSurfaceData(in ImporterContext _importCtx, Stream _resourceFileStream, out MeshSurfaceData? _outSurfaceData, string? _fileExtension = null)
+	public bool ImportSurfaceData(in ImporterContext _importCtx, Stream _resourceFileStream, string _resourceKey, out MeshSurfaceData? _outSurfaceData, string? _fileExtension = null)
 	{
-		using AssimpContext assimpCtx = new();
-
-		Scene scene;
-		try
+		if (!TryImportScene(in _importCtx, _resourceFileStream, out Scene? scene, _fileExtension))
 		{
-			scene = assimpCtx.ImportFileFromStream(_resourceFileStream, PostProcessSteps.Triangulate | PostProcessSteps.SortByPrimitiveType, _fileExtension);
-		}
-		catch (Exception ex)
-		{
-			_importCtx.Logger.LogException("Assimp failed to import 3D model file from stream!", ex);
 			_outSurfaceData = null;
 			return false;
 		}
 
-		if (!scene.HasMeshes)
+		Assimp.Mesh? mesh;
+		if (scene!.MeshCount > 1)
 		{
-			_importCtx.Logger.LogError("Scene imported from 3D model file does not contain any meshes!");
-			_outSurfaceData = null;
-			return false;
+			mesh = scene!.Meshes.FirstOrDefault(o => o.PrimitiveType.HasFlag(PrimitiveType.Triangle) && _resourceKey.EndsWith(o.Name, StringComparison.InvariantCultureIgnoreCase));
+		}
+		else
+		{
+			mesh = scene!.Meshes.FirstOrDefault(o => o.PrimitiveType.HasFlag(PrimitiveType.Triangle));
 		}
 
 		// Extract surface geometry data from mesh:
-		Assimp.Mesh? mesh = scene.Meshes.FirstOrDefault(o => o.PrimitiveType.HasFlag(PrimitiveType.Triangle));
-
 		if (mesh is null)
 		{
-			_importCtx.Logger.LogError("Scene does not contain any meshed with triangular polygon primitive topology!");
+			_importCtx.Logger.LogError($"Scene does not contain any meshes with triangular polygon primitive topology and mesh name '{_resourceKey}'!");
 			_outSurfaceData = null;
 			return false;
 		}
@@ -178,9 +171,52 @@ public sealed class AssimpImporter : IModelImporter
 		return isValid;
 	}
 
-	public IEnumerator<ResourceHandle> EnumerateSubresources(ImporterContext _importCtx, Stream _resourceFileStream)
+	public IEnumerator<string> EnumerateSubresources(ImporterContext _importCtx, Stream _resourceFileStream, string _resourceKeyBase, string? _fileExtension = null)
 	{
-		yield break;
+		if (!TryImportScene(in _importCtx, _resourceFileStream, out Scene? scene, _fileExtension))
+		{		
+			yield break;
+		}
+
+		if (scene!.MeshCount <= 1)
+		{
+			yield return _resourceKeyBase;
+			yield break;
+		}
+
+		foreach (Assimp.Mesh mesh in scene!.Meshes)
+		{
+			if (mesh.HasVertices && mesh.HasFaces)
+			{
+				string resourceKey = $"{_resourceKeyBase}_{mesh.Name}";
+				yield return resourceKey;
+			}
+		}
+	}
+
+	private static bool TryImportScene(in ImporterContext _importCtx, Stream _resourceFileStream, out Scene? _outScene, string? _fileExtension)
+	{
+		using AssimpContext assimpCtx = new();
+
+		try
+		{
+			_outScene = assimpCtx.ImportFileFromStream(_resourceFileStream, PostProcessSteps.Triangulate | PostProcessSteps.SortByPrimitiveType, _fileExtension);
+		}
+		catch (Exception ex)
+		{
+			_importCtx.Logger.LogException("Assimp failed to import scene from 3D model file stream!", ex);
+			_outScene = null;
+			return false;
+		}
+
+		if (!_outScene.HasMeshes)
+		{
+			_importCtx.Logger.LogError("Scene imported from 3D model file does not contain any meshes!");
+			_outScene = null;
+			return false;
+		}
+
+		return true;
 	}
 
 	#endregion

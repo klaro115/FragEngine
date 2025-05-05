@@ -1,7 +1,6 @@
 ﻿using FragEngine3.Graphics.Resources;
 using FragEngine3.Graphics.Resources.Data;
 using FragEngine3.Graphics.Resources.Import;
-using FragEngine3.Resources;
 using System.Numerics;
 using System.Text;
 
@@ -55,7 +54,7 @@ public sealed class ObjImporter : IModelImporter
 		public static bool operator ==(VertexIndices a, VertexIndices b) => a.Equals(b);
 		public static bool operator !=(VertexIndices a, VertexIndices b) => !a.Equals(b);
 
-		public override readonly int GetHashCode() => position << 16 | normal ^ uv;
+		public override readonly int GetHashCode() => (position << 16) | (normal ^ uv);
 	}
 
 	private sealed class SubMesh
@@ -79,12 +78,13 @@ public sealed class ObjImporter : IModelImporter
 	#endregion
 	#region Fields
 
-	private static readonly string[] supportedFileExtensions = [".obj"];
+	private static readonly string[] supportedFileExtensions = [ ".obj" ];
 
 	#endregion
 	#region Properties
 
 	public MeshVertexDataFlags SupportedVertexData => MeshVertexDataFlags.BasicSurfaceData;
+	public bool CanImportSubMeshes => false;	//TODO [later]: add support for sub-meshes.
 	public bool CanImportAnimations => false;
 	public bool CanImportMaterials => false;
 	public bool CanImportTextures => false;
@@ -100,7 +100,7 @@ public sealed class ObjImporter : IModelImporter
 
 	public IReadOnlyCollection<string> GetSupportedFileFormatExtensions() => supportedFileExtensions;
 
-	public bool ImportSurfaceData(in ImporterContext _importCtx, Stream _resourceFileStream, out MeshSurfaceData? _outSurfaceData, string? _fileExtension = null) //TODO: Output a list of submeshes as individual meshes instead, or implement composite mesh type.
+	public bool ImportSurfaceData(in ImporterContext _importCtx, Stream _resourceFileStream, string _resourceKey, out MeshSurfaceData? _outSurfaceData, string? _fileExtension = null)
 	{
 		if (_resourceFileStream == null)
 		{
@@ -484,9 +484,9 @@ public sealed class ObjImporter : IModelImporter
 		return true;
 	}
 
-	public IEnumerator<ResourceHandle> EnumerateSubresources(ImporterContext _importCtx, Stream _resourceFileStream)
+	public IEnumerator<string> EnumerateSubresources(ImporterContext _importCtx, Stream _resourceFileStream, string _resourceKeyBase, string? _fileExtension = null)
 	{
-		throw new NotImplementedException();
+		yield return _resourceKeyBase;
 	}
 
 	#endregion

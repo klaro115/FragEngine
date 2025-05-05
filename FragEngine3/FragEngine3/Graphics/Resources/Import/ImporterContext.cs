@@ -1,5 +1,6 @@
 ﻿using FragEngine3.EngineCore.Logging;
 using FragEngine3.Graphics.Resources.Shaders;
+using FragEngine3.Resources;
 using System.Globalization;
 using System.Text.Json;
 
@@ -17,6 +18,11 @@ public sealed class ImporterContext
 	/// A logger instance to use for outputting error and warning messages during import or export.
 	/// </summary>
 	public required ILogger Logger { get; init; }
+
+	/// <summary>
+	/// A resource manager instance to use for registering additional sub-resources or auxillary files for dependency import.
+	/// </summary>
+	public IResourceManager? ResourceManager { get; init; }
 
 	/// <summary>
 	/// Options for JSON serialization. If null, default options will be used.
