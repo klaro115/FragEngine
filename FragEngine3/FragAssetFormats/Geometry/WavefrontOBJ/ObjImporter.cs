@@ -102,7 +102,7 @@ public sealed class ObjImporter : IModelImporter
 
 	public bool ImportSurfaceData(in ImporterContext _importCtx, Stream _resourceFileStream, string _resourceKey, out MeshSurfaceData? _outSurfaceData, string? _fileExtension = null)
 	{
-		if (_resourceFileStream == null)
+		if (_resourceFileStream is null)
 		{
 			_importCtx.Logger.LogError("Cannot import OBJ model from null stream!");
 			_outSurfaceData = null;

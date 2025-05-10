@@ -2,7 +2,6 @@
 using FragEngine3.Graphics.Resources.Data;
 using FragEngine3.Graphics.Resources.Export;
 using FragEngine3.Graphics.Resources.Import;
-using FragEngine3.Resources;
 //using System.IO.Compression;
 using System.Runtime.InteropServices;
 
