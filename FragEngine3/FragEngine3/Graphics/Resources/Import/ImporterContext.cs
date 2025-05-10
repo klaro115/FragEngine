@@ -58,6 +58,13 @@ public sealed class ImporterContext
 	/// Whether to prefer HDR images or videos over SDR.
 	/// </summary>
 	public bool PreferHDR { get; init; } = true;
+	/// <summary>
+	/// Whether to bake the offset or relative position of sub-resources to the resulting resource's data.<para/>
+	/// Example: In 3D model import, the transformations of sub-meshes within a 3D scene will be be applied directly to the geometry.
+	/// If false, resources created from sub-meshes will will be exported in the sub-mesh's local space, while sub-mesh hierarchy
+	/// information and transformations are discarded.
+	/// </summary>
+	public bool BakeSubResourceOffsets { get; init; } = false;
 
 	/// <summary>
 	/// Flags of all types of data that should be compressed when exporting a resource, or that you expect compression on when importing.

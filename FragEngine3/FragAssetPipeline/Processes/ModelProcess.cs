@@ -10,6 +10,26 @@ namespace FragAssetPipeline.Processes;
 
 internal static class ModelProcess
 {
+	#region Types
+
+	private sealed class MeshResourceData
+	{
+		public required string ResourceKey { get; init; }
+		public required string DataFilePath { get; init; }
+		public required MeshSurfaceData? SurfaceData { get; init; }
+	}
+
+	public readonly struct OutputFilePaths(string _metadataFilePath, string _dataFilePath)
+	{
+		public readonly string metadataFilePath = _metadataFilePath;
+		public readonly string dataFilePath = _dataFilePath;
+
+		public readonly bool IsValid => !string.IsNullOrEmpty(metadataFilePath) && !string.IsNullOrEmpty(dataFilePath);
+
+		public static OutputFilePaths None => new(string.Empty, string.Empty);
+	}
+
+	#endregion
 	#region Fields
 
 	private static readonly FModelExporter fmdlExporter = new();
@@ -84,11 +104,11 @@ internal static class ModelProcess
 		{
 			totalResourceCount++;
 
+			List<OutputFilePaths>? outputFilePaths;
 			try
 			{
-				if (ProcessModelResource(_exportCtx, _inputFolderAbsPath, _outputFolderAbsPath, metadataFilePath, preprocessedModelNames, alwaysPreprocessedModelFormats, out _, out string? outputMetadataFilePath))
+				if (ProcessModelResource(_exportCtx, _inputFolderAbsPath, _outputFolderAbsPath, metadataFilePath, preprocessedModelNames, alwaysPreprocessedModelFormats, out outputFilePaths))
 				{
-					_dstResourceFilePaths.Add(outputMetadataFilePath!);
 					successCount++;
 				}
 			}
@@ -96,6 +116,11 @@ internal static class ModelProcess
 			{
 				_exportCtx.Logger.LogException($"Failed to process model resource! File path: '{metadataFilePath}'", ex);
 				continue;
+			}
+
+			foreach (OutputFilePaths ofp in outputFilePaths!)
+			{
+				_dstResourceFilePaths.Add(ofp.metadataFilePath);
 			}
 		}
 
@@ -118,15 +143,13 @@ internal static class ModelProcess
 		string metadataFilePath,
 		IList<string>? preprocessedModelNames,
 		IList<string>? alwaysPreprocessedModelFormats,
-		out string? outputDataFilePath,
-		out string? outputMetadataFilePath)
+		out List<OutputFilePaths>? outputFilePaths)
 	{
 		// Try reading contents of metadata file:
 		if (!ResourceFileData.DeserializeFromFile(metadataFilePath, out ResourceFileData resMetadata))
 		{
 			_exportCtx.Logger.LogError($"Failed to deserialize metadata file for model resource! File path: '{metadataFilePath}'");
-			outputDataFilePath = null;
-			outputMetadataFilePath = null;
+			outputFilePaths = null;
 			return false;
 		}
 
@@ -158,11 +181,11 @@ internal static class ModelProcess
 		bool success = true;
 		if (convertDataFile)
 		{
-			success &= ConvertResourceToFmdlFormat(_exportCtx, dataFilePath, metadataFilePath, outputDirPath, out outputDataFilePath, out outputMetadataFilePath);
+			success &= ConvertResourceToFmdlFormat(_exportCtx, dataFilePath, metadataFilePath, outputDirPath, out outputFilePaths);
 		}
 		else
 		{
-			success &= CopyResourceToDestination(_exportCtx, dataFilePath, metadataFilePath, outputDirPath, out outputDataFilePath, out outputMetadataFilePath);
+			success &= CopyResourceToDestination(_exportCtx, dataFilePath, metadataFilePath, outputDirPath, out outputFilePaths);
 		}
 		return success;
 	}
@@ -172,16 +195,14 @@ internal static class ModelProcess
 		string? _srcDataFilePath,
 		string? _srcMetadataFilePath,
 		string _outputDirPath,
-		out string? _outOutputDataFilePath,
-		out string? _outOutputMetadataFilePath)
+		out List<OutputFilePaths>? outputFilePaths)
 	{
 		bool hasDataFilePath = !string.IsNullOrEmpty(_srcDataFilePath);
 		bool hasMetadataFilePath = !string.IsNullOrEmpty(_srcMetadataFilePath);
 		if (!hasDataFilePath && !hasMetadataFilePath)
 		{
 			_exportCtx.Logger.LogError("Cannot copy model resource files without data or metadata file paths!");
-			_outOutputDataFilePath = null;
-			_outOutputMetadataFilePath = null;
+			outputFilePaths = null;
 			return false;
 		}
 
@@ -219,8 +240,7 @@ internal static class ModelProcess
 			if (!dataFileFound)
 			{
 				_exportCtx.Logger.LogError($"Cannot find data file of model resource! File path: '{_srcMetadataFilePath}'");
-				_outOutputDataFilePath = null;
-				_outOutputMetadataFilePath = null;
+				outputFilePaths = null;
 				return false;
 			}
 		}
@@ -253,62 +273,94 @@ internal static class ModelProcess
 		}
 
 		srcFileName = Path.GetFileNameWithoutExtension(srcFileName);
-		_outOutputDataFilePath = Path.Combine(_outputDirPath, $"{srcFileName}.fmdl");
+		string outputDataFilePath = Path.Combine(_outputDirPath, $"{srcFileName}.fmdl");
 
-		// Convert data file:
+		List<MeshResourceData> meshResourceData = [];
+
+		// A) Convert data file:
 		if (convertDataFile)
 		{
 			// Import and parse surface data using a generic ASSIMP-based importer:
 			if (!DataImporter!.ImportModelData(_srcDataFilePath!, resourceKey, null, out Dictionary<string, MeshSurfaceData>? subMeshDict))
 			{
 				_exportCtx.Logger.LogError($"Failed to import model surface data from source format!\nFile path: '{_srcDataFilePath}'");
-				_outOutputMetadataFilePath = null;
+				outputFilePaths = null;
 				return false;
 			}
+			generateMetadataFile |= subMeshDict!.Count > 1;
 
-			MeshSurfaceData? surfaceData = subMeshDict!.FirstOrDefault(o => o.Key == resourceKey).Value;	//TEMP
-			if (surfaceData is null)
+			foreach (var kvp in subMeshDict!)
 			{
-				_exportCtx.Logger.LogError($"Failed to import model surface data for the requested sub-mesh!\nFile path: '{_srcDataFilePath}'");	//TEMP
-				_outOutputMetadataFilePath = null;
-				return false;
+				string dataFilePath = Path.Combine(_outputDirPath, $"{kvp.Key}.fmdl");
+				MeshResourceData subMeshData = new()
+				{
+					ResourceKey = kvp.Key,
+					DataFilePath = dataFilePath,
+					SurfaceData = kvp.Value,
+				};
+				meshResourceData.Add(subMeshData);
 			}
 
-			// Export to FMDL format:
-			using FileStream outputDataFileStream = new(_outOutputDataFilePath, FileMode.Create, FileAccess.Write);
-			if (!fmdlExporter.ExportModelData(_exportCtx, surfaceData!, outputDataFileStream))
+			// Export sub-meshes to FMDL format:
+			foreach (MeshResourceData subMeshData in meshResourceData)
 			{
-				_exportCtx.Logger.LogError($"Failed to export model surface data to FMDL format!\nFile path: '{_srcDataFilePath}'");
-				_outOutputMetadataFilePath = null;
-				return false;
+				using FileStream outputDataFileStream = new(subMeshData.DataFilePath, FileMode.Create, FileAccess.Write);
+
+				if (!fmdlExporter.ExportModelData(_exportCtx, subMeshData.SurfaceData!, outputDataFileStream))
+				{
+					_exportCtx.Logger.LogError($"Failed to export model surface data to FMDL format!\nSub-Mesh: '{subMeshData.ResourceKey}'\nFile path: '{_srcDataFilePath}'");
+					outputFilePaths = null;
+					return false;
+				}
 			}
 		}
+		// B) Copy data file as-is:
 		else
 		{
+			MeshResourceData data = new()
+			{
+				ResourceKey = resourceKey,
+				DataFilePath = outputDataFilePath,
+				SurfaceData = null,
+			};
+			meshResourceData.Add(data);
+
 			try
 			{
-				File.Copy(_srcDataFilePath!, _outOutputDataFilePath!, true);
+				File.Copy(_srcDataFilePath!, outputDataFilePath!, true);
 			}
 			catch (Exception ex)
 			{
 				_exportCtx.Logger.LogException($"Failed to copy metadata file of model resource to output directory! File path: '{_srcMetadataFilePath}'", ex);
-				_outOutputMetadataFilePath = null;
+				outputFilePaths = null;
 				return false;
 			}
 		}
+
+		outputFilePaths = new(meshResourceData.Count);
 
 		// If missing or outdated, create metdata file now:
 		bool success = true;
 		if (generateMetadataFile)
 		{
-			success &= GenerateMetadataFile(_exportCtx, _outOutputDataFilePath, out _outOutputMetadataFilePath);
+			foreach (MeshResourceData subMeshData in meshResourceData)
+			{
+				bool result = GenerateMetadataFile(_exportCtx, subMeshData.DataFilePath, out string? outputMetadataFilePath);
+				if (result)
+				{
+					outputFilePaths.Add(new(outputMetadataFilePath!, subMeshData.DataFilePath));
+				}
+				success &= result;
+			}
 		}
 		else
 		{
-			_outOutputMetadataFilePath = Path.ChangeExtension(_outOutputDataFilePath, ".fres");
+			string outputMetadataFilePath = Path.ChangeExtension(outputDataFilePath, ".fres");
 			try
 			{
-				File.Copy(_srcMetadataFilePath!, _outOutputMetadataFilePath!, true);
+				File.Copy(_srcMetadataFilePath!, outputMetadataFilePath!, true);
+
+				outputFilePaths.Add(new(outputMetadataFilePath, outputDataFilePath));
 			}
 			catch (Exception ex)
 			{
@@ -324,14 +376,12 @@ internal static class ModelProcess
 		string? _srcDataFilePath,
 		string? _srcMetadataFilePath,
 		string _outputDirPath,
-		out string? _outOutputDataFilePath,
-		out string? _outOutputMetadataFilePath)
+		out List<OutputFilePaths>? outputFilePaths)
 	{
 		if (string.IsNullOrEmpty(_srcDataFilePath) && string.IsNullOrEmpty(_srcMetadataFilePath))
 		{
 			_exportCtx.Logger.LogError("Cannot copy model resource files without data or metadata file paths!");
-			_outOutputDataFilePath = null;
-			_outOutputMetadataFilePath = null;
+			outputFilePaths = null;
 			return false;
 		}
 
@@ -364,23 +414,23 @@ internal static class ModelProcess
 			if (!dataFileFound)
 			{
 				_exportCtx.Logger.LogError($"Cannot find data file of model resource! File path: '{_srcMetadataFilePath}'");
-				_outOutputDataFilePath = null;
-				_outOutputMetadataFilePath = null;
+				outputFilePaths = null;
 				return false;
 			}
 		}
 
 		// Copy data file:
 		string srcDataFileName = Path.GetFileName(_srcDataFilePath!);
-		_outOutputDataFilePath = Path.Combine(_outputDirPath, srcDataFileName);
+		string outputDataFilePath = Path.Combine(_outputDirPath, srcDataFileName);
+		string outputMetadataFilePath;
 		try
 		{
-			File.Copy(_srcDataFilePath!, _outOutputDataFilePath!, true);
+			File.Copy(_srcDataFilePath!, outputDataFilePath!, true);
 		}
 		catch (Exception ex)
 		{
 			_exportCtx.Logger.LogException($"Failed to copy metadata file of model resource to output directory!\nFile path: '{_srcMetadataFilePath}'", ex);
-			_outOutputMetadataFilePath = null;
+			outputFilePaths = null;
 			return false;
 		}
 
@@ -388,14 +438,14 @@ internal static class ModelProcess
 		bool success = true;
 		if (generateMetadataFile)
 		{
-			success &= GenerateMetadataFile(_exportCtx, _outOutputDataFilePath, out _outOutputMetadataFilePath);
+			success &= GenerateMetadataFile(_exportCtx, outputDataFilePath, out outputMetadataFilePath!);
 		}
 		else
 		{
-			_outOutputMetadataFilePath = Path.ChangeExtension(_outOutputDataFilePath, ".fres");
+			outputMetadataFilePath = Path.ChangeExtension(outputDataFilePath, ".fres");
 			try
 			{
-				File.Copy(_srcMetadataFilePath!, _outOutputMetadataFilePath!, true);
+				File.Copy(_srcMetadataFilePath!, outputMetadataFilePath!, true);
 			}
 			catch (Exception ex)
 			{
@@ -403,6 +453,11 @@ internal static class ModelProcess
 				success = false;
 			}
 		}
+
+		outputFilePaths =
+		[
+			new(outputMetadataFilePath, outputDataFilePath),
+		];
 		return success;
 	}
 
