@@ -159,9 +159,9 @@ public struct FModelHeader
 			return false;
 		}
 
-		_outTotalDataSize = verticesBasic.byteSize;
-		_outStartOffset = verticesBasic.offset;
-		_outEndOffset = verticesBasic.offset + verticesBasic.byteSize;
+		_outTotalDataSize = indices.byteSize;
+		_outStartOffset = indices.offset;
+		_outEndOffset = indices.offset + indices.byteSize;
 
 		// Check if those values operate in valid ranges:
 		bool hasValidBounds = _outStartOffset >= MINIMUM_HEADER_STRING_SIZE && _outEndOffset > _outStartOffset;
@@ -240,7 +240,12 @@ public struct FModelHeader
 		_reader.ReadByte();
 		uint reserved = _reader.ReadHexUint32();
 		_reader.ReadByte();
-		_reader.ReadByte();
+
+		// Read compression info:
+		bool isVertexDataCompressed = _reader.ReadByte() != '0';
+		bool isIndexDataCompressed = _reader.ReadByte() != '0';
+		_reader.ReadByte(); // '\r'
+		_reader.ReadByte(); // '\n'
 
 		_outHeader = new()
 		{
@@ -291,7 +296,7 @@ public struct FModelHeader
 			return false;
 		}
 
-		bool areVertexAndIndexOverlapping = !(vertexStartOffset > indexEndOffset || vertexEndOffset < indexStartOffset);
+		bool areVertexAndIndexOverlapping = !(vertexStartOffset >= indexEndOffset || vertexEndOffset <= indexStartOffset);
 		if (areVertexAndIndexOverlapping)
 		{
 			_importCtx.Logger.LogError("Offsets and sizes of vertex and index data in FMDL file are overlapping!");

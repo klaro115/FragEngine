@@ -63,6 +63,7 @@ public sealed class FModelExporter : IModelExporter
 		}
 
 		CalculateUncompressedGeometrySize(_surfaceData, out int actualVertexCount, out int totalUncompressedGeometrySize);
+		int actualIndexCount = _surfaceData.TriangleCount * 3;
 
 		/*
 		MemoryStream? compressedGeometryStream = null;
@@ -82,8 +83,8 @@ public sealed class FModelExporter : IModelExporter
 		byte[] vertexDataBasic = WriteGeometryDataArrayToByteBuffer(_surfaceData.verticesBasic, actualVertexCount, (int)BasicVertex.byteSize)!;
 		byte[]? vertexDataExt = WriteGeometryDataArrayToByteBuffer(_surfaceData.verticesExt, actualVertexCount, (int)ExtendedVertex.byteSize);
 		byte[]? indexData = _surfaceData.IndexFormat == Veldrid.IndexFormat.UInt32
-			? WriteGeometryDataArrayToByteBuffer(_surfaceData.indices32, actualVertexCount, sizeof(int))
-			: WriteGeometryDataArrayToByteBuffer(_surfaceData.indices16, actualVertexCount, sizeof(ushort));
+			? WriteGeometryDataArrayToByteBuffer(_surfaceData.indices32, actualIndexCount, sizeof(int))
+			: WriteGeometryDataArrayToByteBuffer(_surfaceData.indices16, actualIndexCount, sizeof(ushort));
 
 		if (vertexDataBasic is null || actualVertexCount == 0)
 		{

@@ -333,7 +333,7 @@ public sealed class TestApplicationLogic : ApplicationLogic
 			fbxRenderer.node.LocalScale = Vector3.One * 0.5f;
 			//fbxRenderer.node.SetEnabled(false);
 		
-			fbxRenderer.SetMesh("Cube.obj");
+			fbxRenderer.SetMesh("Cube");
 			//fbxRenderer.SetMesh("Plane.fbx");
 			fbxRenderer.SetMaterial("Mtl_DefaultSurface");
 		}
