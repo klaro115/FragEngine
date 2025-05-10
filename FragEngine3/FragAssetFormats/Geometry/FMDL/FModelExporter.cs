@@ -2,6 +2,8 @@
 using FragEngine3.Graphics.Resources.Data;
 using FragEngine3.Graphics.Resources.Export;
 using FragEngine3.Graphics.Resources.Import;
+using FragEngine3.Utility;
+
 //using System.IO.Compression;
 using System.Runtime.InteropServices;
 
@@ -146,6 +148,7 @@ public sealed class FModelExporter : IModelExporter
 		}
 
 		// Write header to file:
+		long fileStartPosition = _outputResourceStream.Position;
 		using BinaryWriter writer = new(_outputResourceStream);
 
 		if (!fileHeader.WriteFmdlHeader(in _exportCtx, writer))
@@ -154,14 +157,18 @@ public sealed class FModelExporter : IModelExporter
 			return false;
 		}
 
-		// Write block data to file.
+		// Write block data to file:
+		writer.JumpToPosition(fileStartPosition + vertexBasicOffset, true);
 		writer.Write(vertexDataBasic);
+
 		if (vertexDataExt is not null)
 		{
+			writer.JumpToPosition(fileStartPosition + vertexExtOffset, true);
 			writer.Write(vertexDataExt);
 		}
 		if (indexData is not null)
 		{
+			writer.JumpToPosition(fileStartPosition + indexOffset, true);
 			writer.Write(indexData);
 		}
 

@@ -92,8 +92,7 @@ public struct FModelHeader
 	#endregion
 	#region Constants
 
-	public const ushort MINIMUM_HEADER_DATA_SIZE = 64;              // 0x3C
-	public const ushort MINIMUM_HEADER_STRING_SIZE = 82;            // 0x52
+	public const ushort MINIMUM_HEADER_STRING_SIZE = 139;           // 0x8B
 
 	public const uint MINIMUM_DATA_BLOCKS_SIZE = BasicVertex.byteSize + 3 * sizeof(ushort);
 	public const uint MINIMUM_FILE_SIZE = MINIMUM_HEADER_STRING_SIZE + MINIMUM_DATA_BLOCKS_SIZE;
