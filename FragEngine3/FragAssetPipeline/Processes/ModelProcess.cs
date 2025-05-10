@@ -12,11 +12,32 @@ internal static class ModelProcess
 {
 	#region Fields
 
-	private static readonly AssimpImporter assimpImporter = new();
 	private static readonly FModelExporter fmdlExporter = new();
 
 	#endregion
+	#region Properties
+
+	public static bool IsInitialized { get; private set; } = false;
+
+	public static ModelDataImporter? DataImporter { get; private set; } = null;
+
+	#endregion
 	#region Methods
+
+	public static bool Initialize(ImporterContext _importCtx)
+	{
+		DataImporter = new(_importCtx);
+		IsInitialized = true;
+		return true;
+	}
+
+	public static void Shutdown()
+	{
+		IsInitialized = false;
+
+		DataImporter?.Dispose();
+		DataImporter = null;
+	}
 
 	public static bool PrepareResources(
 		ImporterContext _exportCtx,
@@ -29,6 +50,11 @@ internal static class ModelProcess
 		if (_exportCtx is null)
 		{
 			Console.WriteLine("Error! Cannot process 3D model resources using null exporter context!");
+			return false;
+		}
+		if (!IsInitialized && !Initialize(_exportCtx))
+		{
+			Console.WriteLine("Error! Failed to initialize model process!");
 			return false;
 		}
 
@@ -233,10 +259,17 @@ internal static class ModelProcess
 		if (convertDataFile)
 		{
 			// Import and parse surface data using a generic ASSIMP-based importer:
-			using FileStream srcDataFileStream = new(_srcDataFilePath!, FileMode.Open, FileAccess.Read);
-			if (!assimpImporter.ImportSurfaceData(in _exportCtx, srcDataFileStream, resourceKey, out MeshSurfaceData? surfaceData, srcDataFileExt))
+			if (!DataImporter!.ImportModelData(_srcDataFilePath!, resourceKey, null, out Dictionary<string, MeshSurfaceData>? subMeshDict))
 			{
 				_exportCtx.Logger.LogError($"Failed to import model surface data from source format!\nFile path: '{_srcDataFilePath}'");
+				_outOutputMetadataFilePath = null;
+				return false;
+			}
+
+			MeshSurfaceData? surfaceData = subMeshDict!.FirstOrDefault(o => o.Key == resourceKey).Value;	//TEMP
+			if (surfaceData is null)
+			{
+				_exportCtx.Logger.LogError($"Failed to import model surface data for the requested sub-mesh!\nFile path: '{_srcDataFilePath}'");	//TEMP
 				_outOutputMetadataFilePath = null;
 				return false;
 			}

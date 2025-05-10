@@ -1,5 +1,6 @@
 ﻿using FragAssetPipeline.Common;
 using FragAssetPipeline.Processes;
+using FragAssetPipeline.Resources.Models;
 using FragEngine3.Graphics.Resources;
 using FragEngine3.Graphics.Resources.Import;
 using FragEngine3.Graphics.Resources.Shaders;
@@ -174,8 +175,9 @@ internal static class Program
 
 	private static bool ProcessShaders(string _inputAssetDir, string _outputAssetDir, List<string> _dstResourceFilePaths)
 	{
-		string inputShaderDir = Path.Combine(_inputAssetDir, "shaders");
-		string outputShaderDir = Path.Combine(_outputAssetDir, "shaders");
+		const string shaderDirName = "shaders";
+		string inputShaderDir = Path.Combine(_inputAssetDir, shaderDirName);
+		string outputShaderDir = Path.Combine(_outputAssetDir, shaderDirName);
 
 		// Ensure input and output directories exist; create output if missing:
 		if (!Directory.Exists(inputShaderDir))
@@ -229,16 +231,29 @@ internal static class Program
 
 	private static bool ProcessModels(string _inputAssetDir, string _outputAssetDir, List<string> _dstResourceFilePaths)
 	{
-		string inputModelDir = Path.Combine(_inputAssetDir, "models");
-		string outputModelDir = Path.Combine(_outputAssetDir, "models");
+		const string modelDirName = "models";
+		string inputModelDir = Path.Combine(_inputAssetDir, modelDirName);
+		string outputModelDir = Path.Combine(_outputAssetDir, modelDirName);
 
-		return ModelProcess.PrepareResources(
-			importerCtx,
-			inputModelDir,
-			outputModelDir,
-			_dstResourceFilePaths,
-			preprocessedModelNames,
-			alwaysPreprocessedModelFormats);
+		bool success = ModelProcess.Initialize(importerCtx);
+
+		if (success)
+		{
+			success &= ModelProcess.DataImporter!.RegisterImporter(new AssimpImporter());
+			//...
+
+			success &= ModelProcess.PrepareResources(
+				importerCtx,
+				inputModelDir,
+				outputModelDir,
+				_dstResourceFilePaths,
+				preprocessedModelNames,
+				alwaysPreprocessedModelFormats);
+		}
+
+		ModelProcess.Shutdown();
+
+		return success;
 	}
 
 	private static bool ProcessGenericResources(string _inputAssetDir, string _outputAssetDir, string _assetCategoryDirName, List<string> _dstResourceFilePaths)
