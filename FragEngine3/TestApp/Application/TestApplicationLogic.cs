@@ -218,7 +218,7 @@ public sealed class TestApplicationLogic : ApplicationLogic
 			rabbit.DontDrawUnlessFullyLoaded = true;
 		}
 
-		MeshPrimitiveFactory.CreateCubeMesh("Cube", Engine, new(2, 2, 2), true, out _, out _, out ResourceHandle cubeHandle);
+		MeshPrimitiveFactory.CreateCubeMesh("Cube2", Engine, new(2, 2, 2), true, out _, out _, out ResourceHandle cubeHandle);
 		if (SceneSpawner.CreateStaticMeshRenderer(scene, out StaticMeshRendererComponent cube))
 		{
 			cube.node.Name = "Cube";
@@ -271,7 +271,7 @@ public sealed class TestApplicationLogic : ApplicationLogic
 			d20.SetMaterial("Mtl_DefaultSurface");
 		}
 
-		MeshPrimitiveFactory.CreatePlaneMesh("Plane", Engine, new Vector2(5, 5), 1, true, out _, out _, out ResourceHandle planeHandle);
+		MeshPrimitiveFactory.CreatePlaneMesh("Plane5", Engine, new Vector2(5, 5), 1, true, out _, out _, out ResourceHandle planeHandle);
 		if (SceneSpawner.CreateStaticMeshRenderer(scene, out StaticMeshRendererComponent plane))
 		{
 			plane.node.Name = "Ground";
@@ -328,10 +328,10 @@ public sealed class TestApplicationLogic : ApplicationLogic
 		if (SceneSpawner.CreateStaticMeshRenderer(scene, out StaticMeshRendererComponent fbxRenderer))
 		{
 			fbxRenderer.node.Name = "FBX";
-			fbxRenderer.node.LocalPosition = new(0, 0, 1);
+			fbxRenderer.node.LocalPosition = new(0, 1.5f, 5);
 			fbxRenderer.node.SetRotationFromYawPitchRoll(0, 0, 0, false, true);
 			fbxRenderer.node.LocalScale = Vector3.One * 0.5f;
-			fbxRenderer.node.SetEnabled(false);
+			//fbxRenderer.node.SetEnabled(false);
 		
 			fbxRenderer.SetMesh("Cube.obj");
 			//fbxRenderer.SetMesh("Plane.fbx");
@@ -489,9 +489,14 @@ public sealed class TestApplicationLogic : ApplicationLogic
 				Directory.CreateDirectory(saveDirPath);
 			}
 			string saveFilePath = Path.Combine(saveDirPath, "test.json");
-			SceneSerializer.SaveSceneToFile(Engine.SceneManager.MainScene!, saveFilePath, out _, false, false);
-
-			Engine.Logger.LogMessage("Saved main scene to file.");
+			if (SceneSerializer.SaveSceneToFile(Engine.SceneManager.MainScene!, saveFilePath, out _, false, false))
+			{
+				Engine.Logger.LogMessage("Saved main scene to file.");
+			}
+			else
+			{
+				Engine.Logger.LogError("Failed to save scene to file!");
+			}
 		}
 		catch (Exception ex)
 		{

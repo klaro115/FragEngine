@@ -7,6 +7,9 @@ using System.Runtime.InteropServices;
 
 namespace FragAssetFormats.Geometry.FMDL;
 
+/// <summary>
+/// Exporter for the engine's native FMDL 3D file format.
+/// </summary>
 public sealed class FModelExporter : IModelExporter
 {
 	#region Fields

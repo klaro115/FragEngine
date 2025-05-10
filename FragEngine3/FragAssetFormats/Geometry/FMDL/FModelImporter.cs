@@ -7,6 +7,9 @@ using Veldrid;
 
 namespace FragAssetFormats.Geometry.FMDL;
 
+/// <summary>
+/// Importer for the engine's native FMDL 3D file format.
+/// </summary>
 public sealed class FModelImporter : IModelImporter
 {
 	#region Fields
