@@ -1,8 +1,11 @@
-﻿using FragEngine3.Graphics.Resources;
+﻿using FragEngine3.EngineCore.Logging;
+using FragEngine3.Graphics.Resources;
 using FragEngine3.Graphics.Resources.Data;
 using FragEngine3.Graphics.Resources.Export;
 using FragEngine3.Graphics.Resources.Import;
 using FragEngine3.Utility;
+using System.IO.Compression;
+
 
 //using System.IO.Compression;
 using System.Runtime.InteropServices;
@@ -38,8 +41,9 @@ public sealed class FModelExporter : IModelExporter
 	#endregion
 	#region Constants
 
-	private const CompressedDataFlags geometryCompressionFlags = CompressedDataFlags.Geometry_VertexData | CompressedDataFlags.Geometry_IndexData;
-	private const int minGeometrySizeForCompression = 2048;
+	private const uint minVertexByteSizeForCompression = 1024;
+	private const uint minIndexByteSizeForCompression = 512;
+	private const uint minViableByteSizeForCompression = 256;
 
 	#endregion
 	#region Methods
@@ -67,20 +71,6 @@ public sealed class FModelExporter : IModelExporter
 		CalculateUncompressedGeometrySize(_surfaceData, out int actualVertexCount, out int totalUncompressedGeometrySize);
 		int actualIndexCount = _surfaceData.TriangleCount * 3;
 
-		/*
-		MemoryStream? compressedGeometryStream = null;
-		byte[]? intermediateBuffer = null;
-		if (totalUncompressedGeometrySize >= minGeometrySizeForCompression && (_exportCtx.PreferDataCompression & geometryCompressionFlags) != 0)
-		{
-			intermediateBuffer = new byte[totalUncompressedGeometrySize];
-			compressedGeometryStream = new(totalUncompressedGeometrySize);
-
-			//using DeflateStream compressionStream = new(intermediateStream, CompressionMode.Compress, false);
-
-			//TODO
-		}
-		*/
-
 		// Write geometry data to byte arrays:
 		byte[] vertexDataBasic = WriteGeometryDataArrayToByteBuffer(_surfaceData.verticesBasic, actualVertexCount, (int)BasicVertex.byteSize)!;
 		byte[]? vertexDataExt = WriteGeometryDataArrayToByteBuffer(_surfaceData.verticesExt, actualVertexCount, (int)ExtendedVertex.byteSize);
@@ -94,15 +84,39 @@ public sealed class FModelExporter : IModelExporter
 			return false;
 		}
 
-		//TODO: Insert data compression here.
-
-		// Calculate block sizes and offsets:
-		uint vertexBasicOffset = FModelHeader.MINIMUM_HEADER_STRING_SIZE;
+		// Calculate uncompressed block sizes:
 		uint vertexBasicByteSize = (uint)vertexDataBasic.Length;
-		uint vertexExtOffset = vertexBasicOffset + vertexBasicByteSize;
 		uint vertexExtByteSize = vertexDataExt is not null ? (uint)vertexDataExt.Length : 0;
-		uint indexOffset = vertexExtOffset + vertexExtByteSize;
+		uint vertexTotalByteSize = vertexBasicByteSize + vertexExtByteSize;
 		uint indexByteSize = indexData is not null ? (uint)indexData.Length : 0;
+
+		// Try compressing geometry data: (only if requested and if data is large enough)
+		bool forceCompression = _exportCtx.PreferDataCompression.HasFlag(CompressedDataFlags.ForceCompression);
+		bool isVertexDataCompressed = false;
+		bool isIndexDataCompressed = false;
+		if (_exportCtx.PreferDataCompression.HasFlag(CompressedDataFlags.Geometry_VertexData) && (vertexTotalByteSize >= minVertexByteSizeForCompression || forceCompression))
+		{
+			if (isVertexDataCompressed = TryCompressByteData(_exportCtx.Logger, out byte[]? compressedData, forceCompression, vertexDataBasic, vertexDataExt))
+			{
+				vertexDataBasic = compressedData!;
+				vertexDataExt = null;
+				vertexBasicByteSize = (uint)compressedData!.Length;
+				vertexExtByteSize = 0;
+			}
+		}
+		if (_exportCtx.PreferDataCompression.HasFlag(CompressedDataFlags.Geometry_IndexData) && (indexByteSize >= minIndexByteSizeForCompression || forceCompression))
+		{
+			if (isIndexDataCompressed = TryCompressByteData(_exportCtx.Logger, out byte[]? compressedData, forceCompression, indexData))
+			{
+				indexData = compressedData!;
+				indexByteSize = (uint)compressedData!.Length;
+			}
+		}
+
+		// Calculate block offsets:
+		uint vertexBasicOffset = FModelHeader.MINIMUM_HEADER_STRING_SIZE;
+		uint vertexExtOffset = vertexBasicOffset + vertexBasicByteSize;
+		uint indexOffset = vertexExtOffset + vertexExtByteSize;
 
 		// Assemble header:
 		FModelHeader fileHeader = new()
@@ -118,8 +132,8 @@ public sealed class FModelExporter : IModelExporter
 			reserved = 0u,
 
 			// Compression info:
-			isVertexDataCompressed = false,
-			isIndexDataCompressed = false,
+			isVertexDataCompressed = isVertexDataCompressed,
+			isIndexDataCompressed = isIndexDataCompressed,
 
 			// Data blocks:
 			verticesBasic = new()
@@ -211,6 +225,60 @@ public sealed class FModelExporter : IModelExporter
 			Marshal.Copy((nint)pData, dstBuffer, 0, dataByteSize);
 		}
 		return dstBuffer;
+	}
+
+	private static bool TryCompressByteData(ILogger _logger, out byte[]? _outCompressedData, bool _useCompressionEvenIfOuputIsLarger, params byte[]?[] _uncompressedData)
+	{
+		if (_uncompressedData is null || _uncompressedData.Length == 0)
+		{
+			_outCompressedData = null;
+			return false;
+		}
+
+		// Calculate total uncompressed byte size:
+		uint totalUncompressedSize = 0;
+		foreach (byte[]? blockBytes in _uncompressedData)
+		{
+			uint blockSize = blockBytes is not null ? (uint)blockBytes.Length : 0u;
+			totalUncompressedSize += blockSize;
+		}
+
+		// Original data too small to warrant compression? Abort here:
+		if (totalUncompressedSize <= 1)
+		{
+			_outCompressedData = null;
+			return false;
+		}
+		if (totalUncompressedSize < minViableByteSizeForCompression && !_useCompressionEvenIfOuputIsLarger)
+		{
+			_outCompressedData = null;
+			return false;
+		}
+
+		// Try compressing data to stream:
+		using MemoryStream outputStream = new((int)totalUncompressedSize);
+		using DeflateStream compressionStream = new(outputStream, CompressionMode.Compress);
+
+		try
+		{
+			foreach (byte[]? blockBytes in _uncompressedData)
+			{
+				if (blockBytes is not null)
+				{
+					compressionStream.Write(blockBytes, 0, blockBytes.Length);
+				}
+			}
+			
+			compressionStream.Close();
+			_outCompressedData = outputStream.ToArray();
+			return true;
+		}
+		catch (Exception ex)
+		{
+			_logger.LogException("Failed to compress geometry data for FMDL export!", ex);
+			_outCompressedData = null;
+			return false;
+		}
 	}
 
 	public IEnumerator<string> EnumerateSubresources(ImporterContext _importCtx, Stream _resourceFileStream, string _resourceKeyBase, string? _fileExtension = null)
