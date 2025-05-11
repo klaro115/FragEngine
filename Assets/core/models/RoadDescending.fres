@@ -1,5 +1,5 @@
 {
-    "DataFilePath": "./LightingTestRoom.obj",
+    "DataFilePath": "./RoadDescending.fbx",
     "DataFileType": 0,
     "DataFileSize": 0,
     "UncompressedFileSize": 0,
@@ -9,7 +9,7 @@
     "Resources":
     [
         {
-            "ResourceKey": "LightingTestRoom",
+            "ResourceKey": "RoadDescending",
             "ResourceType": 7,
             "PlatformFlags": 0,
             "DataOffset": 0,

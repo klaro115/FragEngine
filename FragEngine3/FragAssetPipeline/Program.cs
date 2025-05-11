@@ -1,5 +1,8 @@
-﻿using FragAssetPipeline.Processes;
+﻿using FragAssetPipeline.Common;
+using FragAssetPipeline.Processes;
+using FragAssetPipeline.Resources.Models;
 using FragEngine3.Graphics.Resources;
+using FragEngine3.Graphics.Resources.Import;
 using FragEngine3.Graphics.Resources.Shaders;
 using Veldrid;
 
@@ -65,6 +68,32 @@ internal static class Program
 		new("ForwardPlusLight_CompositeUI_PS",    "composition/ForwardPlusLight_CompositeUI_PS.hlsl",    "Main_Pixel",  ShaderStages.Fragment, flagsBasic, _bundlePrecompiledData: false) { descriptionTxt = shaderDescriptionTxt },
 	];
 
+	private static readonly string[] preprocessedModelNames =
+	[
+		"LightingTestRoom",
+		"Rabbit",
+		"RoadDescending",
+	];
+	private static readonly string[] alwaysPreprocessedModelFormats =
+	[
+		".blend",
+		".fbx",
+	];
+
+	private static readonly ImporterContext importerCtx = new()
+	{
+		Logger = new ConsoleLogger(),
+		JsonOptions = new()
+		{
+			WriteIndented = true,
+		},
+		PreferNiceFormatting = true,
+		PreferHighBitDepth = true,
+		PreferHDR = true,
+		CompressionBehaviour = CompressionBehaviourFlags.PreferCompression | CompressionBehaviourFlags.ForceCompression | CompressionBehaviourFlags.OptimizeDataTypes,
+		CompressedDataTypes = CompressedDataFlags.Geometry_VertexData | CompressedDataFlags.Geometry_IndexData,
+	};
+
 	#endregion
 	#region Methods
 
@@ -106,7 +135,8 @@ internal static class Program
 		ProcessShaders(inputAssetsAbsDir, outputAssetsAbsDir, resourceFilePaths);
 
 		PrintStatus("\n## PROCESSING MODELS:");
-		ProcessGenericResources(inputAssetsAbsDir, outputAssetsAbsDir, "models", resourceFilePaths);
+		ProcessModels(inputAssetsAbsDir, outputAssetsAbsDir, resourceFilePaths);
+		//ProcessGenericResources(inputAssetsAbsDir, outputAssetsAbsDir, "models", resourceFilePaths);
 
 		PrintStatus("\n## PROCESSING TEXTURES:");
 		ProcessGenericResources(inputAssetsAbsDir, outputAssetsAbsDir, "textures", resourceFilePaths);
@@ -148,8 +178,9 @@ internal static class Program
 
 	private static bool ProcessShaders(string _inputAssetDir, string _outputAssetDir, List<string> _dstResourceFilePaths)
 	{
-		string inputShaderDir = Path.Combine(_inputAssetDir, "shaders");
-		string outputShaderDir = Path.Combine(_outputAssetDir, "shaders");
+		const string shaderDirName = "shaders";
+		string inputShaderDir = Path.Combine(_inputAssetDir, shaderDirName);
+		string outputShaderDir = Path.Combine(_outputAssetDir, shaderDirName);
 
 		// Ensure input and output directories exist; create output if missing:
 		if (!Directory.Exists(inputShaderDir))
@@ -199,6 +230,33 @@ internal static class Program
 			Console.WriteLine($"Processing of all {totalShaderCount} shader resources succeeded.");
 		}
 		return successCount == totalShaderCount;
+	}
+
+	private static bool ProcessModels(string _inputAssetDir, string _outputAssetDir, List<string> _dstResourceFilePaths)
+	{
+		const string modelDirName = "models";
+		string inputModelDir = Path.Combine(_inputAssetDir, modelDirName);
+		string outputModelDir = Path.Combine(_outputAssetDir, modelDirName);
+
+		bool success = ModelProcess.Initialize(importerCtx);
+
+		if (success)
+		{
+			success &= ModelProcess.DataImporter!.RegisterImporter(new AssimpImporter());
+			//...
+
+			success &= ModelProcess.PrepareResources(
+				importerCtx,
+				inputModelDir,
+				outputModelDir,
+				_dstResourceFilePaths,
+				preprocessedModelNames,
+				alwaysPreprocessedModelFormats);
+		}
+
+		ModelProcess.Shutdown();
+
+		return success;
 	}
 
 	private static bool ProcessGenericResources(string _inputAssetDir, string _outputAssetDir, string _assetCategoryDirName, List<string> _dstResourceFilePaths)

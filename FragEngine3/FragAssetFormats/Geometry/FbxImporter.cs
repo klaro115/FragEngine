@@ -2,7 +2,6 @@
 using FragEngine3.Graphics.Resources;
 using FragEngine3.Graphics.Resources.Data;
 using FragEngine3.Graphics.Resources.Import;
-using FragEngine3.Resources;
 using System.Numerics;
 
 namespace FragAssetFormats.Geometry;
@@ -21,6 +20,9 @@ public class FbxImporter : IModelImporter
 
 	public MeshVertexDataFlags SupportedVertexData => MeshVertexDataFlags.BasicSurfaceData | MeshVertexDataFlags.ExtendedSurfaceData;
 
+	public bool Supports16BitIndices => true;
+	public bool Supports32BitIndices => true;
+	public bool CanImportSubMeshes => false;
 	public bool CanImportAnimations => false;
 	public bool CanImportMaterials => false;
 	public bool CanImportTextures => false;
@@ -30,7 +32,7 @@ public class FbxImporter : IModelImporter
 
 	public IReadOnlyCollection<string> GetSupportedFileFormatExtensions() => supportedFormatExtensions;
 
-	public bool ImportSurfaceData(in ImporterContext _importCtx, Stream _resourceFileStream, out MeshSurfaceData? _outSurfaceData)  // INCOMPLETE!	
+	public bool ImportSurfaceData(in ImporterContext _importCtx, Stream _resourceFileStream, string _resourceKey, out MeshSurfaceData? _outSurfaceData, string? _fileExtension = null)  // INCOMPLETE!	
 	{
 		if (_resourceFileStream is null || !_resourceFileStream.CanRead)
 		{
@@ -119,9 +121,9 @@ public class FbxImporter : IModelImporter
 		return true;
 	}
 
-	public IEnumerator<ResourceHandle> EnumerateSubresources(ImporterContext _importCtx, Stream _resourceFileStream)
+	public IEnumerator<string> EnumerateSubresources(ImporterContext _importCtx, Stream _resourceFileStream, string _resourceKeyBase, string? _fileExtension = null)
 	{
-		yield break;
+		yield return _resourceKeyBase;
 	}
 
 	#endregion

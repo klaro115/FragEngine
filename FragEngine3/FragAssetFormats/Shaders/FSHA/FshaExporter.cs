@@ -416,9 +416,9 @@ public class FshaExporter : IShaderExporter
 		}
 	}
 
-	public IEnumerator<ResourceHandle> EnumerateSubresources(ImporterContext _importCtx, Stream _resourceFileStream)
+	public IEnumerator<string> EnumerateSubresources(ImporterContext _importCtx, Stream _resourceFileStream, string _resourceKeyBase, string? _fileExtension = null)
 	{
-		yield break;
+		yield return _resourceKeyBase;
 	}
 
 	#endregion
