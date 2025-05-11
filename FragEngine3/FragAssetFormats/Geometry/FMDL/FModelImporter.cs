@@ -2,6 +2,7 @@
 using FragEngine3.Graphics.Resources.Data;
 using FragEngine3.Graphics.Resources.Import;
 using FragEngine3.Utility;
+using System.IO.Compression;
 using System.Runtime.InteropServices;
 using Veldrid;
 
@@ -57,43 +58,27 @@ public sealed class FModelImporter : IModelImporter
 			return false;
 		}
 
-		// Read basic vertex data:
-		BasicVertex[]? verticesBasic = ReadGeometryDataArrayFromByteStream<BasicVertex>(
-			reader,
-			fileHeader.vertexCount,
-			BasicVertex.byteSize,
-			fileStartPosition,
-			fileHeader.verticesBasic);
-
-		if (verticesBasic is null || verticesBasic.Length == 0)
+		// Read vertex data:
+		BasicVertex[]? verticesBasic = null;
+		ExtendedVertex[]? verticesExt = null;
+		if (fileHeader.isVertexDataCompressed)
 		{
-			_importCtx.Logger.LogError("FMDL 3D model file does not contain any basic vertex data!");
-			_outSurfaceData = null;
-			return false;
+			// Compressed:
+			if (!ReadCompressedVertexData(in _importCtx, in fileHeader, _resourceFileStream, fileStartPosition, out verticesBasic, out verticesExt))
+			{
+				_outSurfaceData = null;
+				return false;
+			}
 		}
-
-		// Read extended vertex data:
-		ExtendedVertex[]? verticesExt = ReadGeometryDataArrayFromByteStream<ExtendedVertex>(
-			reader,
-			fileHeader.vertexCount,
-			ExtendedVertex.byteSize,
-			fileStartPosition,
-			fileHeader.verticesExt);
-
-		/*
-		IndexedWeightedVertex[]? verticesBlend = ReadGeometryDataArrayFromByteStream<IndexedWeightedVertex>(
-			reader,
-			fileHeader.vertexCount,
-			IndexedWeightedVertex.byteSize,
-			fileStartPosition,
-			fileHeader.verticesBlend);
-		IndexedWeightedVertex[]? verticesAnim = ReadGeometryDataArrayFromByteStream<IndexedWeightedVertex>(
-			reader,
-			fileHeader.vertexCount,
-			IndexedWeightedVertex.byteSize,
-			fileStartPosition,
-			fileHeader.verticesAnim);
-		*/
+		else
+		{
+			// Uncompressed:
+			if (!ReadUncompressedVertexData(in _importCtx, in fileHeader, reader, fileStartPosition, out verticesBasic, out verticesExt))
+			{
+				_outSurfaceData = null;
+				return false;
+			}
+		}
 
 		// Read index data:
 		uint indexCount = fileHeader.triangleCount * 3;
@@ -126,7 +111,7 @@ public sealed class FModelImporter : IModelImporter
 		// Assemble mesh surface data object:
 		_outSurfaceData = new()
 		{
-			verticesBasic = verticesBasic,
+			verticesBasic = verticesBasic!,
 			verticesExt = verticesExt,
 
 			indices16 = indices16,
@@ -137,6 +122,117 @@ public sealed class FModelImporter : IModelImporter
 		return isValid;
 	}
 
+	private bool ReadCompressedVertexData(
+		in ImporterContext _importCtx,
+		in FModelHeader _fileHeader,
+		Stream _resourceFileStream,
+		long _fileStartPosition,
+		out BasicVertex[]? _outVerticesBasic,
+		out ExtendedVertex[]? _outVerticesExt
+		/* ... */)
+	{
+		// Calculate data sizes and offsets:
+		int compressedSizeTotal = (int)_fileHeader.verticesBasic.byteSize;
+		uint expectedSizeBasic = _fileHeader.vertexCount * BasicVertex.byteSize;
+		uint expectedSizeExt = _fileHeader.vertexDataFlags.HasFlag(MeshVertexDataFlags.ExtendedSurfaceData)
+			? _fileHeader.vertexCount * BasicVertex.byteSize
+			: 0;
+		uint expectedSizeTotal = expectedSizeBasic + expectedSizeExt;
+		uint expectedOffsetExt = expectedSizeBasic;
+
+		// Try decompressing vertex data:
+		_resourceFileStream.Position = _fileStartPosition + _fileHeader.verticesBasic.offset;
+
+		using MemoryStream uncompressedStream = new((int)expectedSizeTotal);
+		using DeflateStream decompressionStream = new(_resourceFileStream, CompressionMode.Decompress, true);
+
+		try
+		{
+			decompressionStream.CopyTo(uncompressedStream, compressedSizeTotal);
+			decompressionStream.Flush();
+
+			// Treat decompressed stream as its own resource file stream:
+			uncompressedStream.Position = 0;
+			FModelHeader subFileHeader = _fileHeader with
+			{
+				verticesBasic = new()
+				{
+					offset = 0,
+					byteSize = expectedSizeBasic,
+				},
+				verticesExt = new()
+				{
+					offset = expectedOffsetExt,
+					byteSize = expectedSizeExt,
+				},
+				
+			};
+			using BinaryReader reader = new(uncompressedStream);
+
+			// Read decompressed vertex data as usual:
+			bool success = ReadUncompressedVertexData(in _importCtx, in subFileHeader, reader, 0, out _outVerticesBasic, out _outVerticesExt);
+			return success;
+		}
+		catch (Exception ex)
+		{
+			_importCtx.Logger.LogException("Failed to decompress vertex geometry data for FMDL export!", ex);
+			_outVerticesBasic = null;
+			_outVerticesExt = null;
+			return false;
+		}
+	}
+
+	private bool ReadUncompressedVertexData(
+		in ImporterContext _importCtx,
+		in FModelHeader _fileHeader,
+		BinaryReader _reader,
+		long _fileStartPosition,
+		out BasicVertex[]? _outVerticesBasic,
+		out ExtendedVertex[]? _outVerticesExt
+		/* ... */)
+	{
+		// Read basic vertex data:
+		_outVerticesBasic = ReadGeometryDataArrayFromByteStream<BasicVertex>(
+			_reader,
+			_fileHeader.vertexCount,
+			BasicVertex.byteSize,
+			_fileStartPosition,
+			_fileHeader.verticesBasic);
+
+		if (_outVerticesBasic is null || _outVerticesBasic.Length == 0)
+		{
+			_importCtx.Logger.LogError("FMDL 3D model file does not contain any basic vertex data!");
+			_outVerticesBasic = null;
+			_outVerticesExt = null;
+			return false;
+		}
+
+		// Read extended vertex data:
+		_outVerticesExt = ReadGeometryDataArrayFromByteStream<ExtendedVertex>(
+			_reader,
+			_fileHeader.vertexCount,
+			ExtendedVertex.byteSize,
+			_fileStartPosition,
+			_fileHeader.verticesExt);
+
+		/*
+		IndexedWeightedVertex[]? verticesBlend = ReadGeometryDataArrayFromByteStream<IndexedWeightedVertex>(
+			reader,
+			fileHeader.vertexCount,
+			IndexedWeightedVertex.byteSize,
+			fileStartPosition,
+			fileHeader.verticesBlend);
+		IndexedWeightedVertex[]? verticesAnim = ReadGeometryDataArrayFromByteStream<IndexedWeightedVertex>(
+			reader,
+			fileHeader.vertexCount,
+			IndexedWeightedVertex.byteSize,
+			fileStartPosition,
+			fileHeader.verticesAnim);
+		*/
+
+		return true;
+	}
+
 	private unsafe T[]? ReadGeometryDataArrayFromByteStream<T>(
 		BinaryReader _reader,
 		uint _dataCount,
@@ -145,7 +241,7 @@ public sealed class FModelImporter : IModelImporter
 		FModelHeader.DataBlock _dataBlock) where T : unmanaged
 	{
 		int expectedDataSize = (int)(_dataElementSize * _dataCount);
-		if (_dataBlock.IsEmpty || _dataBlock.byteSize < expectedDataSize)
+		if (_dataBlock.byteSize == 0 || _dataBlock.byteSize < expectedDataSize)
 		{
 			return null;
 		}

@@ -68,7 +68,7 @@ public sealed class FModelExporter : IModelExporter
 			return false;
 		}
 
-		CalculateUncompressedGeometrySize(_surfaceData, out int actualVertexCount, out int totalUncompressedGeometrySize);
+		CalculateUncompressedGeometrySize(_surfaceData, out int actualVertexCount, out int _);
 		int actualIndexCount = _surfaceData.TriangleCount * 3;
 
 		// Write geometry data to byte arrays:

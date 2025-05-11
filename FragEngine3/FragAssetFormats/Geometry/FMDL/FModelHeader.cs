@@ -75,6 +75,7 @@ public struct FModelHeader
 	public uint vertexCount;
 	public uint triangleCount;
 	public uint reserved;
+	public MeshVertexDataFlags vertexDataFlags;
 
 	// COMPRESSION INFO:
 
@@ -92,15 +93,15 @@ public struct FModelHeader
 	#endregion
 	#region Constants
 
-	public const ushort MINIMUM_HEADER_STRING_SIZE = 139;           // 0x8B
+	public const ushort MINIMUM_HEADER_STRING_SIZE = 144;           // 0x90
 
 	public const uint MINIMUM_DATA_BLOCKS_SIZE = BasicVertex.byteSize + 3 * sizeof(ushort);
 	public const uint MINIMUM_FILE_SIZE = MINIMUM_HEADER_STRING_SIZE + MINIMUM_DATA_BLOCKS_SIZE;
 
 	public const uint MAGIC_NUMBERS = ((uint)'F' << 0) | ((uint)'M' << 8) | ((uint)'D' << 16) | ((uint)'L' << 24);
 
-	public const byte CURRENT_VERSION = 0x00 << 4 | 0x01;           // v0.1
-	public const byte MINIMUM_SUPPORTED_VERSION = 0x00 << 4 | 0x01; // v0.1
+	public const byte CURRENT_VERSION = 0x00 << 4 | 0x02;           // v0.2
+	public const byte MINIMUM_SUPPORTED_VERSION = 0x00 << 4 | 0x02; // v0.2
 
 	#endregion
 	#region Methods
@@ -240,9 +241,17 @@ public struct FModelHeader
 		uint reserved = _reader.ReadHexUint32();
 		_reader.ReadByte();
 
+		// Read vertex data flags:
+		MeshVertexDataFlags vertexDataFlags = MeshVertexDataFlags.BasicSurfaceData;
+		_reader.ReadByte(); // 'V'
+		if (ReadBoolean01(_reader)) vertexDataFlags |= MeshVertexDataFlags.ExtendedSurfaceData;
+		if (ReadBoolean01(_reader)) vertexDataFlags |= MeshVertexDataFlags.BlendShapes;
+		if (ReadBoolean01(_reader)) vertexDataFlags |= MeshVertexDataFlags.Animations;
+		_reader.ReadByte();
+
 		// Read compression info:
-		bool isVertexDataCompressed = _reader.ReadByte() != '0';
-		bool isIndexDataCompressed = _reader.ReadByte() != '0';
+		bool isVertexDataCompressed = ReadBoolean01(_reader);
+		bool isIndexDataCompressed = ReadBoolean01(_reader);
 		_reader.ReadByte(); // '\r'
 		_reader.ReadByte(); // '\n'
 
@@ -255,6 +264,10 @@ public struct FModelHeader
 			vertexCount = vertexCount,
 			triangleCount = triangleCount,
 			reserved = reserved,
+			vertexDataFlags = vertexDataFlags,
+
+			isVertexDataCompressed = isVertexDataCompressed,
+			isIndexDataCompressed = isIndexDataCompressed,
 		};
 
 		// Read vertex blocks:
@@ -313,7 +326,7 @@ public struct FModelHeader
 			return false;
 		}
 
-		// Format info: (7 bytes)
+		// Format info: (17 bytes)
 		_writer.Write(MAGIC_NUMBERS);
 		_writer.Write((byte)'_');
 
@@ -323,7 +336,7 @@ public struct FModelHeader
 		_writer.WriteUint32ToHex(fileByteSize);
 		_writer.Write((byte)'_');
 
-		// Geometry info: (15 bytes)
+		// Geometry info: (27 bytes)
 		_writer.WriteUint32ToHex(vertexCount);
 		_writer.Write((byte)'_');
 		_writer.WriteUint32ToHex(triangleCount);
@@ -331,14 +344,21 @@ public struct FModelHeader
 		_writer.WriteUint32ToHex(reserved);
 		_writer.Write((byte)'_');
 
+		// Vertex data flags: (5 bytes)
+		_writer.Write((byte)'V');
+		WriteBoolean01(_writer, vertexDataFlags.HasFlag(MeshVertexDataFlags.ExtendedSurfaceData));
+		WriteBoolean01(_writer, vertexDataFlags.HasFlag(MeshVertexDataFlags.BlendShapes));
+		WriteBoolean01(_writer, vertexDataFlags.HasFlag(MeshVertexDataFlags.Animations));
+		_writer.Write((byte)'_');
+
 		// Compression info: (4 bytes)
-		_writer.Write(isVertexDataCompressed ? (byte)'1' : (byte)'0');
-		_writer.Write(isIndexDataCompressed ? (byte)'1' : (byte)'0');
+		WriteBoolean01(_writer, isVertexDataCompressed);
+		WriteBoolean01(_writer, isIndexDataCompressed);
 
 		_writer.Write((byte)'\r');
 		_writer.Write((byte)'\n');
 
-		// Data blocks: (49 bytes)
+		// Data blocks: (71 bytes)
 		verticesBasic.Write(_writer);
 		_writer.Write((byte)'_');
 		verticesExt.Write(_writer);
@@ -354,6 +374,16 @@ public struct FModelHeader
 		_writer.Write((byte)'\n');
 		
 		return true;
+	}
+
+	private static void WriteBoolean01(BinaryWriter _writer, bool _value)
+	{
+		_writer.Write(_value ? (byte)'1' : (byte)'0');
+	}
+
+	private static bool ReadBoolean01(BinaryReader _reader)
+	{
+		return _reader.ReadByte() != (byte)'0';
 	}
 
 	#endregion
