@@ -3,6 +3,7 @@ using FragEngine3.Graphics.Resources.Data;
 using FragEngine3.Graphics.Resources.Import;
 using FragEngine3.Utility;
 using System.IO.Compression;
+using System.Reflection.PortableExecutable;
 using System.Runtime.InteropServices;
 using Veldrid;
 
@@ -88,31 +89,25 @@ public sealed class FModelImporter : IModelImporter
 		}
 
 		// Read index data:
-		uint indexCount = fileHeader.triangleCount * 3;
-		IndexFormat indexFormat = fileHeader.vertexCount > ushort.MaxValue
-			? IndexFormat.UInt32
-			: IndexFormat.UInt16;
-
-		ushort[]? indices16 = null;
-		int[]? indices32 = null;
-
-		if (indexFormat == IndexFormat.UInt32)
+		ushort[]? indices16;
+		int[]? indices32;
+		if (fileHeader.isIndexDataCompressed)
 		{
-			indices32 = ReadGeometryDataArrayFromByteStream<int>(
-				reader,
-				indexCount,
-				sizeof(int),
-				fileStartPosition,
-				fileHeader.indices);
+			if (!ReadCompressedIndexData(in _importCtx, in fileHeader, _resourceFileStream, fileStartPosition, out indices16, out indices32))
+			{
+				_importCtx.Logger.LogError("Failed to read compressed index data of FMDL file!");
+				_outSurfaceData = null;
+				return false;
+			}
 		}
 		else
 		{
-			indices16 = ReadGeometryDataArrayFromByteStream<ushort>(
-				reader,
-				indexCount,
-				sizeof(ushort),
-				fileStartPosition,
-				fileHeader.indices);
+			if (!ReadUncompressedIndexData(in fileHeader, reader, fileStartPosition, out indices16, out indices32))
+			{
+				_importCtx.Logger.LogError("Failed to read uncompressed index data of FMDL file!");
+				_outSurfaceData = null;
+				return false;
+			}
 		}
 
 		// Assemble mesh surface data object:
@@ -172,7 +167,7 @@ public sealed class FModelImporter : IModelImporter
 					offset = expectedOffsetExt,
 					byteSize = expectedSizeExt,
 				},
-				
+				//...
 			};
 			using BinaryReader reader = new(uncompressedStream);
 
@@ -182,7 +177,7 @@ public sealed class FModelImporter : IModelImporter
 		}
 		catch (Exception ex)
 		{
-			_importCtx.Logger.LogException("Failed to decompress vertex geometry data for FMDL export!", ex);
+			_importCtx.Logger.LogException("Failed to decompress vertex geometry data for FMDL import!", ex);
 			_outVerticesBasic = null;
 			_outVerticesExt = null;
 			return false;
@@ -247,6 +242,94 @@ public sealed class FModelImporter : IModelImporter
 		*/
 
 		return true;
+	}
+
+	private bool ReadCompressedIndexData(
+		in ImporterContext _importCtx,
+		in FModelHeader _fileHeader,
+		Stream _resourceFileStream,
+		long _fileStartPosition,
+		out ushort[]? _outIndices16,
+		out int[]? _outIndices32)
+	{
+		// Calculate data sizes and offsets:
+		uint indexCount = _fileHeader.triangleCount * 3;
+		uint indexByteSize = _fileHeader.vertexCount > ushort.MaxValue
+			? (uint)sizeof(int)
+			: sizeof(ushort);
+		int compressedSizeTotal = (int)_fileHeader.indices.byteSize;
+		uint expectedSize = indexCount * indexByteSize;
+
+		// Try decompressing index data:
+		_resourceFileStream.Position = _fileStartPosition + _fileHeader.indices.offset;
+
+		using MemoryStream uncompressedStream = new((int)expectedSize);
+		using DeflateStream decompressionStream = new(_resourceFileStream, CompressionMode.Decompress, true);
+
+		try
+		{
+			decompressionStream.CopyTo(uncompressedStream, compressedSizeTotal);
+			decompressionStream.Flush();
+
+			// Treat decompressed stream as its own resource file stream:
+			uncompressedStream.Position = 0;
+			FModelHeader subFileHeader = _fileHeader with
+			{
+				indices = new()
+				{
+					offset = 0,
+					byteSize = expectedSize,
+				},
+			};
+			using BinaryReader reader = new(uncompressedStream);
+
+			// Read decompressed index data as usual:
+			bool success = ReadUncompressedIndexData(in subFileHeader, reader, 0, out _outIndices16, out _outIndices32);
+			return success;
+		}
+		catch (Exception ex)
+		{
+			_importCtx.Logger.LogException("Failed to decompress index geometry data for FMDL import!", ex);
+			_outIndices16 = null;
+			_outIndices32 = null;
+			return false;
+		}
+	}
+
+	private bool ReadUncompressedIndexData(
+		in FModelHeader _fileHeader,
+		BinaryReader _reader,
+		long _fileStartPosition,
+		out ushort[]? _outIndices16,
+		out int[]? _outIndices32)
+	{
+		uint indexCount = _fileHeader.triangleCount * 3;
+		IndexFormat indexFormat = _fileHeader.vertexCount > ushort.MaxValue
+			? IndexFormat.UInt32
+			: IndexFormat.UInt16;
+
+		if (indexFormat == IndexFormat.UInt32)
+		{
+			_outIndices16 = null;
+			_outIndices32 = ReadGeometryDataArrayFromByteStream<int>(
+				_reader,
+				indexCount,
+				sizeof(int),
+				_fileStartPosition,
+				_fileHeader.indices);
+		}
+		else
+		{
+			_outIndices32 = null;
+			_outIndices16 = ReadGeometryDataArrayFromByteStream<ushort>(
+				_reader,
+				indexCount,
+				sizeof(ushort),
+				_fileStartPosition,
+				_fileHeader.indices);
+		}
+
+		return _outIndices16 is not null || _outIndices32 is not null;
 	}
 
 	private unsafe T[]? ReadGeometryDataArrayFromByteStream<T>(

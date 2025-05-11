@@ -70,7 +70,9 @@ internal static class Program
 
 	private static readonly string[] preprocessedModelNames =
 	[
-		"RoadDescending"
+		"LightingTestRoom",
+		"Rabbit",
+		"RoadDescending",
 	];
 	private static readonly string[] alwaysPreprocessedModelFormats =
 	[
@@ -89,7 +91,7 @@ internal static class Program
 		PreferHighBitDepth = true,
 		PreferHDR = true,
 		CompressionBehaviour = CompressionBehaviourFlags.PreferCompression | CompressionBehaviourFlags.ForceCompression | CompressionBehaviourFlags.OptimizeDataTypes,
-		CompressedDataTypes = CompressedDataFlags.Geometry_VertexData,
+		CompressedDataTypes = CompressedDataFlags.Geometry_VertexData | CompressedDataFlags.Geometry_IndexData,
 	};
 
 	#endregion

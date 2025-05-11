@@ -9,7 +9,7 @@
     "Resources":
     [
         {
-            "ResourceKey": "RoadDescending.fbx",
+            "ResourceKey": "RoadDescending",
             "ResourceType": 7,
             "PlatformFlags": 0,
             "DataOffset": 0,

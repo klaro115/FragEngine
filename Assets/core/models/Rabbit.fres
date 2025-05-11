@@ -9,7 +9,7 @@
     "Resources":
     [
         {
-            "ResourceKey": "Rabbit.obj",
+            "ResourceKey": "Rabbit",
             "ResourceType": 7,
             "PlatformFlags": 0,
             "DataOffset": 0,

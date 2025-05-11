@@ -102,7 +102,7 @@ public sealed class TestApplicationLogic : ApplicationLogic
 	protected override bool BeginRunningState()
 	{
 		// Import 3D models:
-		//Engine.ResourceManager.GetAndLoadResource("Cube.obj", true, out _);
+		//Engine.ResourceManager.GetAndLoadResource("Cube", true, out _);
 
 		Scene scene = Engine.SceneManager.MainScene!;
 		
@@ -201,7 +201,7 @@ public sealed class TestApplicationLogic : ApplicationLogic
 			room.node.LocalPosition = new Vector3(0, -1.5f, 4);
 			//room.node.SetEnabled(false);
 
-			room.SetMesh("LightingTestRoom.obj");
+			room.SetMesh("LightingTestRoom");
 			room.SetMaterial("Mtl_LightingTestRoom");
 		}
 
@@ -213,7 +213,7 @@ public sealed class TestApplicationLogic : ApplicationLogic
 			rabbit.node.LocalScale = Vector3.One * 3;
 			//rabbit.node.SetEnabled(false);
 
-			rabbit.SetMesh("Rabbit.obj");
+			rabbit.SetMesh("Rabbit");
 			rabbit.SetMaterial("Mtl_DefaultSurface");
 			rabbit.DontDrawUnlessFullyLoaded = true;
 		}

@@ -9,7 +9,7 @@
     "Resources":
     [
         {
-            "ResourceKey": "LightingTestRoom.obj",
+            "ResourceKey": "LightingTestRoom",
             "ResourceType": 7,
             "PlatformFlags": 0,
             "DataOffset": 0,
