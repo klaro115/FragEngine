@@ -84,6 +84,8 @@ public sealed class ObjImporter : IModelImporter
 	#region Properties
 
 	public MeshVertexDataFlags SupportedVertexData => MeshVertexDataFlags.BasicSurfaceData;
+	public bool Supports16BitIndices => true;
+	public bool Supports32BitIndices => true;
 	public bool CanImportSubMeshes => false;	//TODO [later]: add support for sub-meshes.
 	public bool CanImportAnimations => false;
 	public bool CanImportMaterials => false;

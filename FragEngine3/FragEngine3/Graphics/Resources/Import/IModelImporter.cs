@@ -9,14 +9,29 @@ public interface IModelImporter : IGraphicsResourceImporter
 {
 	#region Properties
 
+	// GEOMETRY SUPPORT:
+
 	/// <summary>
 	/// Gets flags of all vertex data types that this importer is capable of reading from file.
 	/// </summary>
 	MeshVertexDataFlags SupportedVertexData { get; }
 	/// <summary>
+	/// Gets whether the exporter can parse and output triangle indices in 16-bit format.<para/>
+	/// Note: Meshes with 16-bit triangle indices can contain up to 65336 vertices.
+	/// </summary>
+	bool Supports16BitIndices { get; }
+	/// <summary>
+	/// Gets whether the exporter can parse and output triangle indices in 32-bit format.<para/>
+	/// Note: Meshes with 32-bit triangle indices can contain up to 4.29 billion vertices.
+	/// </summary>
+	bool Supports32BitIndices { get; }
+	/// <summary>
 	/// Gets whether this importer can import sub-meshes from a model file. If false, all geometry in a file will always be combined into a single mesh.
 	/// </summary>
 	bool CanImportSubMeshes { get; }
+
+	// ANIMATION SUPPORT:
+
 	/// <summary>
 	/// Gets whether this importer can read animations from a model file.
 	/// </summary>

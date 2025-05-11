@@ -5,9 +5,6 @@ using FragEngine3.Graphics.Resources.Export;
 using FragEngine3.Graphics.Resources.Import;
 using FragEngine3.Utility;
 using System.IO.Compression;
-
-
-//using System.IO.Compression;
 using System.Runtime.InteropServices;
 
 namespace FragAssetFormats.Geometry.FMDL;
@@ -91,10 +88,14 @@ public sealed class FModelExporter : IModelExporter
 		uint indexByteSize = indexData is not null ? (uint)indexData.Length : 0;
 
 		// Try compressing geometry data: (only if requested and if data is large enough)
-		bool forceCompression = _exportCtx.PreferDataCompression.HasFlag(CompressedDataFlags.ForceCompression);
+		bool allowCompression = _exportCtx.CompressionBehaviour.HasFlag(CompressionBehaviourFlags.PreferCompression);
+		bool forceCompression = allowCompression && _exportCtx.CompressionBehaviour.HasFlag(CompressionBehaviourFlags.ForceCompression);
+		bool allowVertexCompression = allowCompression && _exportCtx.CompressedDataTypes.HasFlag(CompressedDataFlags.Geometry_VertexData);
+		bool allowIndexCompression = allowCompression && _exportCtx.CompressedDataTypes.HasFlag(CompressedDataFlags.Geometry_IndexData);
+
 		bool isVertexDataCompressed = false;
 		bool isIndexDataCompressed = false;
-		if (_exportCtx.PreferDataCompression.HasFlag(CompressedDataFlags.Geometry_VertexData) && (vertexTotalByteSize >= minVertexByteSizeForCompression || forceCompression))
+		if (allowVertexCompression && (vertexTotalByteSize >= minVertexByteSizeForCompression || forceCompression))
 		{
 			if (isVertexDataCompressed = TryCompressByteData(_exportCtx.Logger, out byte[]? compressedData, forceCompression, vertexDataBasic, vertexDataExt))
 			{
@@ -104,7 +105,7 @@ public sealed class FModelExporter : IModelExporter
 				vertexExtByteSize = 0;
 			}
 		}
-		if (_exportCtx.PreferDataCompression.HasFlag(CompressedDataFlags.Geometry_IndexData) && (indexByteSize >= minIndexByteSizeForCompression || forceCompression))
+		if (allowIndexCompression && (indexByteSize >= minIndexByteSizeForCompression || forceCompression))
 		{
 			if (isIndexDataCompressed = TryCompressByteData(_exportCtx.Logger, out byte[]? compressedData, forceCompression, indexData))
 			{
@@ -217,6 +218,7 @@ public sealed class FModelExporter : IModelExporter
 			return null;
 		}
 
+		// Write block data to byte array as-is:
 		int dataByteSize = _dataCount * _dataElementSize;
 		byte[] dstBuffer = new byte[dataByteSize];
 

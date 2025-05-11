@@ -88,7 +88,8 @@ internal static class Program
 		PreferNiceFormatting = true,
 		PreferHighBitDepth = true,
 		PreferHDR = true,
-		PreferDataCompression = CompressedDataFlags.Geometry_VertexData | CompressedDataFlags.ForceCompression,
+		CompressionBehaviour = CompressionBehaviourFlags.PreferCompression | CompressionBehaviourFlags.ForceCompression | CompressionBehaviourFlags.OptimizeDataTypes,
+		CompressedDataTypes = CompressedDataFlags.Geometry_VertexData,
 	};
 
 	#endregion

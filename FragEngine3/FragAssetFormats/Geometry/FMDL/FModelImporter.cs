@@ -20,9 +20,16 @@ public sealed class FModelImporter : IModelImporter
 	#endregion
 	#region Properties
 
+	// GEOMETRY SUPPORT:
+	
 	public MeshVertexDataFlags SupportedVertexData => MeshVertexDataFlags.BasicSurfaceData | MeshVertexDataFlags.ExtendedSurfaceData;
 
+	public bool Supports16BitIndices => true;
+	public bool Supports32BitIndices => true;
 	public bool CanImportSubMeshes => false;
+
+	// ANIMATION SUPPORT:
+
 	public bool CanImportAnimations => false;
 	public bool CanImportMaterials => false;
 	public bool CanImportTextures => false;
@@ -208,26 +215,35 @@ public sealed class FModelImporter : IModelImporter
 		}
 
 		// Read extended vertex data:
-		_outVerticesExt = ReadGeometryDataArrayFromByteStream<ExtendedVertex>(
-			_reader,
-			_fileHeader.vertexCount,
-			ExtendedVertex.byteSize,
-			_fileStartPosition,
-			_fileHeader.verticesExt);
+		_outVerticesExt = _fileHeader.vertexDataFlags.HasFlag(MeshVertexDataFlags.ExtendedSurfaceData)
+			? ReadGeometryDataArrayFromByteStream<ExtendedVertex>(
+				_reader,
+				_fileHeader.vertexCount,
+				ExtendedVertex.byteSize,
+				_fileStartPosition,
+				_fileHeader.verticesExt)
+			: null;
 
 		/*
-		IndexedWeightedVertex[]? verticesBlend = ReadGeometryDataArrayFromByteStream<IndexedWeightedVertex>(
-			reader,
-			fileHeader.vertexCount,
-			IndexedWeightedVertex.byteSize,
-			fileStartPosition,
-			fileHeader.verticesBlend);
-		IndexedWeightedVertex[]? verticesAnim = ReadGeometryDataArrayFromByteStream<IndexedWeightedVertex>(
-			reader,
-			fileHeader.vertexCount,
-			IndexedWeightedVertex.byteSize,
-			fileStartPosition,
-			fileHeader.verticesAnim);
+		// Read blend shape data:
+		IndexedWeightedVertex[]? verticesBlend = fileHeader.vertexDataFlags.HasFlag(MeshVertexDataFlags.BlendShapes)
+			? ReadGeometryDataArrayFromByteStream<IndexedWeightedVertex>(
+				reader,
+				fileHeader.vertexCount,
+				IndexedWeightedVertex.byteSize,
+				fileStartPosition,
+				fileHeader.verticesBlend)
+			: null;
+
+		// Read bone animation weights:
+		IndexedWeightedVertex[]? verticesAnim = fileHeader.vertexDataFlags.HasFlag(MeshVertexDataFlags.Animations)
+			? ReadGeometryDataArrayFromByteStream<IndexedWeightedVertex>(
+				reader,
+				fileHeader.vertexCount,
+				IndexedWeightedVertex.byteSize,
+				fileStartPosition,
+				fileHeader.verticesAnim)
+			: null;
 		*/
 
 		return true;
@@ -240,15 +256,18 @@ public sealed class FModelImporter : IModelImporter
 		long _fileStartPosition,
 		FModelHeader.DataBlock _dataBlock) where T : unmanaged
 	{
+		// Check if the block contains any data:
 		int expectedDataSize = (int)(_dataElementSize * _dataCount);
 		if (_dataBlock.byteSize == 0 || _dataBlock.byteSize < expectedDataSize)
 		{
 			return null;
 		}
 
+		// Advance reader to the block's starting position:
 		long dataBlockStartPosition = _fileStartPosition + _dataBlock.offset;
 		_reader.JumpToPosition(dataBlockStartPosition);
 
+		// Read contents from byte array as-is:
 		byte[] dataBlockContent = _reader.ReadBytes(expectedDataSize);
 		T[] dstBuffer = new T[_dataCount];
 

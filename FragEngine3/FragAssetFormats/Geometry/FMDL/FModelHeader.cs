@@ -4,6 +4,9 @@ using FragEngine3.Utility;
 
 namespace FragAssetFormats.Geometry.FMDL;
 
+/// <summary>
+/// Structure representing the file header of a 3D model file in FMDL format.
+/// </summary>
 [Serializable]
 public struct FModelHeader
 {
@@ -53,7 +56,7 @@ public struct FModelHeader
 			};
 		}
 
-		internal readonly void Write(BinaryWriter _writer) // (9 bytes)
+		internal readonly void Write(BinaryWriter _writer) // (17 bytes)
 		{
 			_writer.WriteUint32ToHex(offset);
 			_writer.Write((byte)'_');
@@ -79,7 +82,7 @@ public struct FModelHeader
 
 	// COMPRESSION INFO:
 
-	public bool isVertexDataCompressed;
+	public bool isVertexDataCompressed; // compressed via deflate algorithm.
 	public bool isIndexDataCompressed;
 
 	// DATA BLOCKS:
@@ -123,19 +126,19 @@ public struct FModelHeader
 		_outEndOffset = verticesBasic.offset + verticesBasic.byteSize;
 
 		// Expand bounds from optional vertex data:
-		if (!verticesExt.IsEmpty)
+		if (!verticesExt.IsEmpty && vertexDataFlags.HasFlag(MeshVertexDataFlags.ExtendedSurfaceData))
 		{
 			_outTotalDataSize += verticesExt.byteSize;
 			_outStartOffset = Math.Min(verticesExt.offset, _outStartOffset);
 			_outEndOffset = Math.Max(verticesExt.offset + verticesExt.byteSize, _outEndOffset);
 		}
-		if (!verticesBlend.IsEmpty)
+		if (!verticesBlend.IsEmpty && vertexDataFlags.HasFlag(MeshVertexDataFlags.BlendShapes))
 		{
 			_outTotalDataSize += verticesBlend.byteSize;
 			_outStartOffset = Math.Min(verticesBlend.offset, _outStartOffset);
 			_outEndOffset = Math.Max(verticesBlend.offset + verticesBlend.byteSize, _outEndOffset);
 		}
-		if (!verticesAnim.IsEmpty)
+		if (!verticesAnim.IsEmpty && vertexDataFlags.HasFlag(MeshVertexDataFlags.Animations))
 		{
 			_outTotalDataSize += verticesAnim.byteSize;
 			_outStartOffset = Math.Min(verticesAnim.offset, _outStartOffset);

@@ -37,6 +37,8 @@ public sealed class AssimpImporter : IModelImporter
 
 	public MeshVertexDataFlags SupportedVertexData => MeshVertexDataFlags.BasicSurfaceData | MeshVertexDataFlags.ExtendedSurfaceData;
 
+	public bool Supports16BitIndices => true;
+	public bool Supports32BitIndices => true;
 	public bool CanImportSubMeshes => true;
 	public bool CanImportAnimations => false;
 	public bool CanImportMaterials => false;

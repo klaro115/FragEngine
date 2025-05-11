@@ -67,9 +67,14 @@ public sealed class ImporterContext
 	public bool BakeSubResourceOffsets { get; init; } = false;
 
 	/// <summary>
+	/// Flags of compression behaviours. This dictates whether compression is at all applied on export, and how aggressively data
+	/// should be compressed and optimized.
+	/// </summary>
+	public CompressionBehaviourFlags CompressionBehaviour { get; init; } = CompressionBehaviourFlags.PreferCompression | CompressionBehaviourFlags.OptimizeDataTypes;
+	/// <summary>
 	/// Flags of all types of data that should be compressed when exporting a resource, or that you expect compression on when importing.
 	/// </summary>
-	public CompressedDataFlags PreferDataCompression { get; init; } = CompressedDataFlags.DontUseCompression;
+	public CompressedDataFlags CompressedDataTypes { get; init; } = CompressedDataFlags.ALL;
 
 	#endregion
 	#region Methods

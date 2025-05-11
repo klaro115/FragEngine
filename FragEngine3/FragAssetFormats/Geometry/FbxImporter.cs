@@ -20,6 +20,8 @@ public class FbxImporter : IModelImporter
 
 	public MeshVertexDataFlags SupportedVertexData => MeshVertexDataFlags.BasicSurfaceData | MeshVertexDataFlags.ExtendedSurfaceData;
 
+	public bool Supports16BitIndices => true;
+	public bool Supports32BitIndices => true;
 	public bool CanImportSubMeshes => false;
 	public bool CanImportAnimations => false;
 	public bool CanImportMaterials => false;
