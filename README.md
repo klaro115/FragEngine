@@ -110,7 +110,6 @@ No support is planned for the foreseeable future. Android will have to wait unti
 - Lighting system:
     - Indirect lighting **[awaiting graphics refactoring]**
 - File format support:
-    - FBX _(3D geometry)_
     - DDS _(textures)_
 
 <br>
