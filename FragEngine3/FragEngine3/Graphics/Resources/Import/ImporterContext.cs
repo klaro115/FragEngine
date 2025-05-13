@@ -1,5 +1,6 @@
 ﻿using FragEngine3.EngineCore.Logging;
 using FragEngine3.Graphics.Resources.Shaders;
+using FragEngine3.Resources;
 using System.Globalization;
 using System.Text.Json;
 
@@ -17,6 +18,11 @@ public sealed class ImporterContext
 	/// A logger instance to use for outputting error and warning messages during import or export.
 	/// </summary>
 	public required ILogger Logger { get; init; }
+
+	/// <summary>
+	/// A resource manager instance to use for registering additional sub-resources or auxillary files for dependency import.
+	/// </summary>
+	public IResourceManager? ResourceManager { get; init; }
 
 	/// <summary>
 	/// Options for JSON serialization. If null, default options will be used.
@@ -52,6 +58,23 @@ public sealed class ImporterContext
 	/// Whether to prefer HDR images or videos over SDR.
 	/// </summary>
 	public bool PreferHDR { get; init; } = true;
+	/// <summary>
+	/// Whether to bake the offset or relative position of sub-resources to the resulting resource's data.<para/>
+	/// Example: In 3D model import, the transformations of sub-meshes within a 3D scene will be be applied directly to the geometry.
+	/// If false, resources created from sub-meshes will will be exported in the sub-mesh's local space, while sub-mesh hierarchy
+	/// information and transformations are discarded.
+	/// </summary>
+	public bool BakeSubResourceOffsets { get; init; } = false;
+
+	/// <summary>
+	/// Flags of compression behaviours. This dictates whether compression is at all applied on export, and how aggressively data
+	/// should be compressed and optimized.
+	/// </summary>
+	public CompressionBehaviourFlags CompressionBehaviour { get; init; } = CompressionBehaviourFlags.PreferCompression | CompressionBehaviourFlags.OptimizeDataTypes;
+	/// <summary>
+	/// Flags of all types of data that should be compressed when exporting a resource, or that you expect compression on when importing.
+	/// </summary>
+	public CompressedDataFlags CompressedDataTypes { get; init; } = CompressedDataFlags.ALL;
 
 	#endregion
 	#region Methods

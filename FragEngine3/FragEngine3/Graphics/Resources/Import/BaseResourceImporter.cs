@@ -146,7 +146,7 @@ public abstract class BaseResourceImporter<TImporter> : BaseResourceImporter
 	/// <summary>
 	/// Registers a new type of importer.
 	/// </summary>
-	/// <param name="_newImporter">The new model importer instance. Upon successful addition, ownership of the importer is passed to this instance.
+	/// <param name="_newImporter">The new resource importer instance. Upon successful addition, ownership of the importer is passed to this instance.
 	/// If the importer instance implements the <see cref="IDisposable"/> interface, it will be disposed safely once this object expires.</param>
 	/// <returns>True if the model importer was registered for importing of at least one file format.</returns>
 	public bool RegisterImporter(TImporter _newImporter)
@@ -156,7 +156,7 @@ public abstract class BaseResourceImporter<TImporter> : BaseResourceImporter
 			logger.LogError($"Cannot register null importer of type '{typeof(TImporter).Name}'!");
 			return false;
 		}
-		if (importers.Contains(_newImporter))
+		if (importers.Any(o => o.GetType() == _newImporter.GetType()))
 		{
 			logger.LogError($"Cannot register importer '{_newImporter}' multiple times!");
 			return false;

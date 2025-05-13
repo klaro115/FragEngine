@@ -52,7 +52,7 @@ public sealed class ModelImporter(ResourceManager _resourceManager, GraphicsCore
 			// Import from stream, identifying file format from extension:
 			string formatExt = Path.GetExtension(fileHandle.dataFilePath);
 
-			if (!ImportModelData(stream, formatExt, out _outSurfaceData))
+			if (!ImportModelData(stream, _handle.resourceKey, formatExt, out _outSurfaceData))
 			{
 				logger.LogError($"Failed to import model data for resource handle '{_handle}'!");
 				_outSurfaceData = null;
@@ -87,6 +87,7 @@ public sealed class ModelImporter(ResourceManager _resourceManager, GraphicsCore
 
 	public bool ImportModelData(
 		Stream _stream,
+		string _resourceKey,
 		string _formatExt,
 		out MeshSurfaceData? _outSurfaceData
 		/* out ... */)
@@ -113,7 +114,7 @@ public sealed class ModelImporter(ResourceManager _resourceManager, GraphicsCore
 			return false;
 		}
 
-		bool success = importer.ImportSurfaceData(in importCtx, _stream, out _outSurfaceData);
+		bool success = importer.ImportSurfaceData(in importCtx, _stream, _resourceKey, out _outSurfaceData, _formatExt);
 		return success;
 	}
 

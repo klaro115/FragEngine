@@ -1,5 +1,6 @@
-﻿using FragAssetFormats.Geometry.WavefrontOBJ;
-using FragAssetFormats.Geometry;
+﻿using FragAssetFormats.Geometry;
+using FragAssetFormats.Geometry.FMDL;
+using FragAssetFormats.Geometry.WavefrontOBJ;
 using FragAssetFormats.Images;
 using FragAssetFormats.Shaders.FSHA;
 using FragEngine3.EngineCore;
@@ -28,6 +29,7 @@ public static class EngineExt
 		bool success = true;
 
 		// 3D formats:
+		success &= _engine.GraphicsResourceLoader.RegisterModelImporter(new FModelImporter());
 		success &= _engine.GraphicsResourceLoader.RegisterModelImporter(new ObjImporter());
 		success &= _engine.GraphicsResourceLoader.RegisterModelImporter(new FbxImporter());
 

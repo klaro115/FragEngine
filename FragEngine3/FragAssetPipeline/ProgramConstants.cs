@@ -1,6 +1,6 @@
 ﻿namespace FragAssetPipeline;
 
-public static class ProgramConstants
+public static class ProgramConstants	//TODO: Replace most of these by an embedded config file, along the lines of "appsettings.json".
 {
 	#region Constants Input
 

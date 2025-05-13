@@ -17,11 +17,24 @@ public sealed class MeshSurfaceData
 {
     #region Fields
 
+    /// <summary>
+    /// Array of basic vertex data. Each element contains position, normals, and texture coordinates for one vertex.
+    /// </summary>
     public BasicVertex[] verticesBasic = [];
+    /// <summary>
+    /// Optional. Array of extended vertex data. Each element contains tangents, and secondary texture coordinates for
+    /// one vertex. If non-null, the number of elements must be greater than or equal to <see cref="verticesBasic"/>.
+    /// </summary>
     public ExtendedVertex[]? verticesExt = null;
 
+    /// <summary>
+    /// Array of 16-bit indices for triangular polygonal faces. Each face is defined by 3 vertex indices.
+    /// </summary>
     public ushort[]? indices16 = null;
-    public int[]? indices32 = null;
+	/// <summary>
+	/// Array of 32-bit indices for triangular polygonal faces. Each face is defined by 3 vertex indices.
+	/// </summary>
+	public int[]? indices32 = null;
 
     #endregion
     #region Properties

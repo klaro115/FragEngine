@@ -103,6 +103,9 @@ public sealed class ResourceHandle : IEquatable<ResourceHandle>
 
 	public readonly ResourceManager resourceManager;
 
+	/// <summary>
+	/// A unique identifier, serving both as name and ID of the resource.
+	/// </summary>
 	public readonly string resourceKey;
 	public readonly ResourceType resourceType;
 	public readonly string? importFlags;

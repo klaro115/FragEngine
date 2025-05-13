@@ -2,7 +2,10 @@
 
 namespace FragEngine3.Resources;
 
-internal static class ResourceFileConstants
+/// <summary>
+/// Helper class with constants and lookup tables for dealing with resource files and file formats.
+/// </summary>
+public static class ResourceFileConstants
 {
 	#region Fields
 
@@ -71,6 +74,7 @@ internal static class ResourceFileConstants
 			".blend",
 			".dae",
 			".fbx",		// partial custom importer
+			".fmdl",	// custom file format
 			".gltf",
 			".mb",
 			".ma",
@@ -169,7 +173,7 @@ internal static class ResourceFileConstants
 	/// NOTE: Not all known format extensions are supported, but all unknown extensions are definitely unsupported by the engine.
 	/// </summary>
 	/// <param name="_ext">A file format extension. Must be non-null and lower-case.</param>
-	/// <returns></returns>
+	/// <returns>True if the extension is known, false otherwise.</returns>
 	public static bool IsFileExtensionKnown(string _ext)
 	{
 		if (!string.IsNullOrEmpty(_ext))
@@ -180,6 +184,24 @@ internal static class ResourceFileConstants
 			}
 		}
 		return false;
+	}
+
+	/// <summary>
+	/// Gets an enumerator for file extensions of all known formats for a given resource type.<para/>
+	/// NOTE: Not all known format extensions are supported, but all unknown extensions are definitely unsupported by the engine.
+	/// </summary>
+	/// <param name="_resourceType">The type of resource whose fiel extensions you need.</param>
+	public static IEnumerator<string> EnumerateExtensionsForResourceType(ResourceType _resourceType)
+	{
+		if (!resourceTypeExtensionDict.TryGetValue(_resourceType, out FrozenSet<string>? extensions))
+		{
+			yield break;
+		}
+
+		foreach (var extension in extensions)
+		{
+			yield return extension;
+		}
 	}
 
 	#endregion
