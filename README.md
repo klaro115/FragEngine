@@ -107,7 +107,6 @@ No support is planned for the foreseeable future. Android will have to wait unti
 - Lighting system:
     - Indirect lighting **[awaiting graphics refactoring]**
 - File format support:
-    - FBX _(3D geometry)_
     - DDS _(textures)_
 
 <br>
@@ -146,10 +145,6 @@ The following is a rough and very short-sighted roadmap of features that are goi
 - Scene Management:
     - World origin shift
 - Particle systems
-- File format support: **[redundant due to asset pipeline?]**
-    - FBX _(blend shapes, bone animation)_
-    - GLTF
-    - ...
 - Additional I/O support:
     - Webcams _(probably via WMF on Windows?)_
     - Gamepads

@@ -9,11 +9,11 @@ The following is a list of all direct code dependencies that the Fragment engine
     - [Frameworks](#frameworks-1)
     - [Projects](#projects)
     - [NuGet Packages](#nuget-packages-1)
-    - [Secondary Dependencies](#secondary-dependencies)
 - [_Exe:_ FragAssetPipeline](#exe-fragassetpipeline)
     - [Frameworks](#frameworks-2)
     - [Projects](#projects-1)
     - [NuGet Packages](#nuget-packages-2)
+    - [Secondary Dependencies](#secondary-dependencies)
 - [_Exe:_ TestApp](#exe-testapp)
     - [Frameworks](#frameworks-3)
     - [Projects](#projects-2)
@@ -47,11 +47,7 @@ The following is a list of all direct code dependencies that the Fragment engine
 - [FragEngine3](#lib-fragengine3)
 
 #### NuGet Packages
-- [AssimpNet](https://www.nuget.org/packages/AssimpNet) `4.1.0` _(MIT)_
 - [Magick.NET-Q16-AnyCPU](https://www.nuget.org/packages/Magick.NET-Q16-AnyCPU) `14.6.0` _(Apache 2.0)_
-
-#### Secondary Dependencies
-- [Assimp](https://assimp.org/) `4.1.0` _(3-clause BSD)_
 
 <br>
 
@@ -65,7 +61,11 @@ The following is a list of all direct code dependencies that the Fragment engine
 - [FragEngine3](#lib-fragengine3)
 
 #### NuGet Packages
+- [AssimpNetter](https://www.nuget.org/packages/AssimpNetter) `5.4.3.3` _(MIT)_
 - [Vortice.Dxc](https://www.nuget.org/packages/Vortice.Dxc/3.6.0-beta) `3.6.2` _(MIT)_
+
+#### Secondary Dependencies
+- [Assimp](https://assimp.org/) `4.1.0` _(3-clause BSD)_
 
 <br>
 

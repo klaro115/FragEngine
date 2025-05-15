@@ -74,9 +74,9 @@ public sealed class DefaultMaterialImporter : IMaterialImporter
 		}
 	}
 
-	public IEnumerator<ResourceHandle> EnumerateSubresources(ImporterContext _importCtx, Stream _resourceFileStream)
+	public IEnumerator<string> EnumerateSubresources(ImporterContext _importCtx, Stream _resourceFileStream, string _resourceKeyBase, string? _fileExtension = null)
 	{
-		throw new NotImplementedException();
+		yield return _resourceKeyBase;
 	}
 
 	#endregion

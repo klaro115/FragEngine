@@ -63,7 +63,7 @@ public sealed class FshaFileHeader
 
 	public const ushort MINIMUM_HEADER_SIZE = 55;           // 0x37
 
-	public const uint MAGIC_NUMBERS = (byte)'F' << 0 | (byte)'S' << 8 | (byte)'H' << 16 | (byte)'A' << 24;
+	public const uint MAGIC_NUMBERS = (uint)'F' << 0 | (uint)'S' << 8 | (uint)'H' << 16 | (uint)'A' << 24;
 
 	public const byte CURRENT_VERSION = 0x00 << 4 | 0x02; // v0.2
 
@@ -81,7 +81,7 @@ public sealed class FshaFileHeader
 	{
 		if (_reader is null)
 		{
-			_importCtx.Logger.LogError("Cannot read shader data");
+			_importCtx.Logger.LogError("Cannot read shader data using null binary reader!");
 			_outHeader = null!;
 			return false;
 		}
