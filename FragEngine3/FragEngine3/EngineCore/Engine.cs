@@ -45,6 +45,7 @@ public sealed class Engine : IDisposable
 		InputManager = new InputManager(this);
 		GraphicsSystem = new GraphicsSystem(this);
 		GraphicsResourceLoader = new GraphicsResourceLoader(this);
+		GraphicsTypeRegistry = new GraphicsTypeRegistry(this);
 		SceneManager = new SceneManager(this);
 		JobManager = new JobManager(this);
 		HealthCheckSystem = new HealthCheckSystem(this);
@@ -131,16 +132,17 @@ public sealed class Engine : IDisposable
 
 	// ENGINE SYSTEMS:
 
-	public Logger Logger { get; init; } = null!;
-	public PlatformSystem PlatformSystem { get; init; } = null!;
-	public TimeManager TimeManager { get; init; } = null!;
-	public ResourceManager ResourceManager { get; init; } = null!;
-	public InputManager InputManager { get; init; } = null!;
-	public GraphicsSystem GraphicsSystem { get; init; } = null!;
-	public GraphicsResourceLoader GraphicsResourceLoader { get; init; } = null!;
-	public SceneManager SceneManager { get; init; } = null!;
-	public JobManager JobManager { get; init; } = null!;
-	public HealthCheckSystem HealthCheckSystem { get; init; } = null!;
+	public Logger Logger { get; } = null!;
+	public PlatformSystem PlatformSystem { get; } = null!;
+	public TimeManager TimeManager { get; } = null!;
+	public ResourceManager ResourceManager { get; } = null!;
+	public InputManager InputManager { get; } = null!;
+	public GraphicsSystem GraphicsSystem { get; } = null!;
+	public GraphicsResourceLoader GraphicsResourceLoader { get; } = null!;
+	public GraphicsTypeRegistry GraphicsTypeRegistry { get; } = null!;
+	public SceneManager SceneManager { get; } = null!;
+	public JobManager JobManager { get; } = null!;
+	public HealthCheckSystem HealthCheckSystem { get; } = null!;
 	//...
 
 

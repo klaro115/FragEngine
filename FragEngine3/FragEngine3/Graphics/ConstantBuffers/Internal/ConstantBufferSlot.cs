@@ -157,16 +157,26 @@ public sealed record ConstantBufferSlot : IDisposable
 	/// <returns>True if the slot and its buffers could be created around the provided data type, false otherwise.</returns>
 	public static bool CreateSlot(GraphicsCore _graphicsCore, MaterialConstantBufferData _data, out ConstantBufferSlot _outSlot)
 	{
-		Logger? logger = _graphicsCore?.graphicsSystem.Engine.Logger ?? Logger.Instance;
-
-		if (_data is null)
+		if (_graphicsCore is null)
 		{
-			logger?.LogError("Cannot create constant buffer slot using null material data!");
+			Logger.Instance?.LogError("Cannot create constant buffer slot using null graphics core!");
 			_outSlot = Invalid;
 			return false;
 		}
 
-		if (!_data.TryGetDataType(out Type? dataType))
+		Logger? logger = _graphicsCore.graphicsSystem.Engine.Logger;
+
+		if (_data is null)
+		{
+			logger.LogError("Cannot create constant buffer slot using null material data!");
+			_outSlot = Invalid;
+			return false;
+		}
+
+		GraphicsTypeRegistry typeRegistry = _graphicsCore.graphicsSystem.Engine.GraphicsTypeRegistry;
+
+		if (!_data.TryGetDataType(out Type? dataType) &&
+			!typeRegistry.TryGetConstantBufferDataType(_data.CustomTypeName!, out dataType))
 		{
 			logger?.LogError("Cannot create constant buffer slot based on unknown or invalid CPU-side data type!");
 			_outSlot = Invalid;

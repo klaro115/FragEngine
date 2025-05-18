@@ -110,11 +110,15 @@ public sealed class MaterialConstantBufferData
 	}
 
 	/// <summary>
-	/// Tries to retrieve a CPU-side type that may be used to represent the constant buffer's data.
+	/// Tries to retrieve a CPU-side type that may be used to represent the constant buffer's data.<para/>
+	/// NOTE: This will only identify types within the engine's code assembly. For custom data types, you should
+	/// query '<see cref="GraphicsTypeRegistry.TryGetConstantBufferDataType(string, out System.Type?)"/>' using
+	/// '<see cref="CustomTypeName"/>' instead or as a fallback to this method.
 	/// </summary>
 	/// <param name="_outDataType">Outputs the corresponding data type. Null if no fitting type was found.</param>
+	/// <param name="_logErrors">Whether to log errors or warnings. If false, exceptions will be logged anyways.</param>
 	/// <returns>True if a type could be identified, false otherwise.</returns>
-	public bool TryGetDataType(out Type? _outDataType)
+	public bool TryGetDataType(out Type? _outDataType, bool _logErrors = true)
 	{
 		// Internal and default types can be resolved immediately:
 		switch (Type)
@@ -148,7 +152,7 @@ public sealed class MaterialConstantBufferData
 
 		try
 		{
-			_outDataType = System.Type.GetType(CustomTypeName, false, false);		//TODO [CRITICAL]: This is not good enough! Types outside of FragEngine3 assembly are not found! Add type registry service instead!
+			_outDataType = System.Type.GetType(CustomTypeName, false, false);
 		}
 		catch (Exception ex)
 		{
@@ -160,12 +164,18 @@ public sealed class MaterialConstantBufferData
 		// Perform a superficial check if this type is valid as CPU-side CB data:
 		if (_outDataType is null)
 		{
-			Logger.Instance?.LogWarning($"Could not find custom constant buffer type '{CustomTypeName}'.");
+			if (_logErrors && Logger.Instance is not null)
+			{
+				Logger.Instance.LogWarning($"Could not find custom constant buffer type '{CustomTypeName}'.");
+			}
 			return false;
 		}
 		if (!_outDataType.IsValueType)
 		{
-			Logger.Instance?.LogWarning($"Custom constant buffer type '{CustomTypeName}' is not an unmanaged type.");
+			if (_logErrors && Logger.Instance is not null)
+			{
+				Logger.Instance.LogWarning($"Custom constant buffer type '{CustomTypeName}' is not an unmanaged type.");
+			}
 			return false;
 		}
 

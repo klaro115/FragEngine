@@ -2,6 +2,7 @@
 using FragEngine3.EngineCore;
 using FragEngine3.EngineCore.Config;
 using TestApp.Application;
+using TestApp.Extensions;
 
 Console.WriteLine("### Starting...\n");
 
@@ -32,8 +33,9 @@ try
 	engine = new(new TestApplicationLogic(), config);
 	//engine = new(new TestEmptyAppLogic(), config);
 
-	// Register services and importers:
+	// Register data types, services and importers:
 	engine.RegisterAssetFormatImporters();
+	engine.RegisterTestAppTypes();
 
 	engine.Run();
 }
