@@ -1,4 +1,4 @@
-﻿using FragEngine3.EngineCore;
+﻿//using FragEngine3.EngineCore;
 using FragEngine3.Graphics.ConstantBuffers;
 using FragEngine3.Graphics.Contexts;
 using FragEngine3.Graphics.Lighting.Internal;
@@ -26,17 +26,8 @@ namespace FragEngine3.Graphics.Cameras
 			{
 				_outCbSceneChanged = true;
 
-				try
+				if (!CreateConstantBuffer_CBScene(_graphicsCore, out _cbScene))
 				{
-					BufferDescription bufferDesc = new(CBScene.packedByteSize, BufferUsage.UniformBuffer | BufferUsage.Dynamic);
-
-					_cbScene = _graphicsCore.MainFactory.CreateBuffer(ref bufferDesc);
-					_cbScene.Name = CBScene.NAME_IN_SHADER;
-					return true;
-				}
-				catch (Exception ex)
-				{
-					_graphicsCore.graphicsSystem.Engine.Logger.LogException("Failed to create scene constant buffer (CBScene)!", ex);
 					return false;
 				}
 			}
@@ -63,6 +54,24 @@ namespace FragEngine3.Graphics.Cameras
 			_graphicsCore.Device.UpdateBuffer(_cbScene, 0, ref _cbSceneData, CBScene.byteSize);
 
 			return true;
+		}
+
+		public static bool CreateConstantBuffer_CBScene(GraphicsCore _graphicsCore, out DeviceBuffer? _outCbScene)
+		{
+			try
+			{
+				BufferDescription bufferDesc = new(CBScene.packedByteSize, BufferUsage.UniformBuffer | BufferUsage.Dynamic);
+
+				_outCbScene = _graphicsCore.MainFactory.CreateBuffer(ref bufferDesc);
+				_outCbScene.Name = CBScene.NAME_IN_SHADER;
+				return true;
+			}
+			catch (Exception ex)
+			{
+				_graphicsCore.graphicsSystem.Engine.Logger.LogException("Failed to create scene constant buffer (CBScene)!", ex);
+				_outCbScene = null;
+				return false;
+			}
 		}
 
 		public static bool UpdateConstantBuffer_CBCamera(		// Called once per camera pass.
