@@ -8,7 +8,7 @@ using Veldrid;
 
 namespace FragEngine3.Graphics.Lighting.Internal;
 
-internal sealed class ShadowCascadeResources(LightInstance _light, uint _shadowCascadeIdx) : IDisposable
+internal sealed class ShadowCascadeResources(Light _light, uint _shadowCascadeIdx) : IDisposable
 {
 	#region Constructors
 
@@ -27,7 +27,7 @@ internal sealed class ShadowCascadeResources(LightInstance _light, uint _shadowC
 
 	private readonly GraphicsCore core = _light.GraphicsCore;
 
-	public readonly LightInstance light = _light;
+	public readonly Light light = _light;
 	public readonly uint shadowCascadeIdx = _shadowCascadeIdx;
 
 	private CBCamera shadowCbCameraData = default;

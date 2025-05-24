@@ -6,7 +6,7 @@ using System.Numerics;
 
 namespace FragEngine3.Graphics.Lighting.Instances;
 
-internal sealed class PointLight : LightInstance
+internal sealed class PointLight : Light
 {
 	#region Constructors
 

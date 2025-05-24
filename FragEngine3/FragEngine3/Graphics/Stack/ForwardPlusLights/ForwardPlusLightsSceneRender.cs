@@ -36,108 +36,18 @@ internal sealed class ForwardPlusLightsSceneRender(ForwardPlusLightsStack _stack
 
 		List<ILightSource> visibleLights = new((int)sceneObjects.ActiveLightCount);
 
-		for (uint i = 0; i < sceneObjects.ActiveCamerasCount; ++i)
+		for (uint cameraIdx = 0; cameraIdx < sceneObjects.ActiveCamerasCount; ++cameraIdx)
 		{
-			CameraComponent camera = sceneObjects.activeCameras[(int)i];
+			CameraComponent camera = sceneObjects.activeCameras[(int)cameraIdx];
 
-			// Pre-filter lights to only include those are actually visible by current camera:
-			visibleLights.Clear();
-			foreach (ILightSource light in sceneObjects.activeLights)
+			if (!DrawSceneCamera(
+				in _sceneCtx,
+				in cmdList,
+				in camera,
+				cameraIdx,
+				visibleLights,
+				_rebuildAllResSetCamera))
 			{
-				if (light.CheckVisibilityByCamera(in camera))
-				{
-					visibleLights.Add(light);
-				}
-			}
-			uint visibleLightCount = (uint)visibleLights.Count;
-
-			// Try drawing the camera's frame:
-			try
-			{
-				if (!camera.BeginFrame(visibleLightCount, out bool bufLightsChanged))
-				{
-					success = false;
-					continue;
-				}
-
-				bool rebuildResSetCamera = _rebuildAllResSetCamera || bufLightsChanged;
-				bool result = true;
-
-				result &= camera.SetOverrideCameraTarget(null);
-
-				// Upload per-camera light data to GPU buffer:
-				for (uint j = 0; j < visibleLightCount; ++j)
-				{
-					camera.LightDataBuffer.SetLightData(j, in sceneObjects.activeLightData[j]);
-				}
-				camera.LightDataBuffer.FinalizeBufLights(cmdList);
-
-				// Draw scene geometry and UI passes:
-				result &= DrawSceneRenderers(in _sceneCtx, cmdList, camera, RenderMode.Opaque, sceneObjects.activeRenderersOpaque, true, rebuildResSetCamera, i);
-				result &= DrawSceneRenderers(in _sceneCtx, cmdList, camera, RenderMode.Transparent, sceneObjects.activeRenderersTransparent, false, rebuildResSetCamera, i);
-				result &= DrawSceneRenderers(in _sceneCtx, cmdList, camera, RenderMode.UI, sceneObjects.activeRenderersUI, false, rebuildResSetCamera, i);
-
-				// Scene compositing:
-				Framebuffer sceneFramebuffer = null!;           //TODO [later]: Add all-in-one compositing option, in case no post-processing is needed on scene render.
-				if (result)
-				{
-					result &= composition.CompositeSceneOutput(
-						in _sceneCtx,
-						camera,
-						rebuildResSetCamera,
-						i,
-						out sceneFramebuffer);
-				}
-
-				// Post-processing on scene render:
-				if (result && stack.PostProcessingStackScene is not null)
-				{
-					result &= DrawPostProcessingStack(
-						in _sceneCtx,
-						in cmdList,
-						in sceneFramebuffer,
-						camera,
-						stack.PostProcessingStackScene,
-						RenderMode.PostProcessing_Scene,
-						_rebuildAllResSetCamera,
-						i,
-						out sceneFramebuffer);
-				}
-
-				// UI compositing:
-				Framebuffer finalFramebuffer = null!;
-				if (result)
-				{
-					result &= composition.CompositeFinalOutput(
-						in _sceneCtx,
-						in sceneFramebuffer,
-						camera,
-						rebuildResSetCamera,
-						i,
-						out finalFramebuffer);
-				}
-
-				// Post-processing on final image:
-				if (result && stack.PostProcessingStackFinal is not null)
-				{
-					result &= DrawPostProcessingStack(
-						in _sceneCtx,
-						in cmdList,
-						in finalFramebuffer,
-						camera,
-						stack.PostProcessingStackFinal,
-						RenderMode.PostProcessing_PostUI,
-						_rebuildAllResSetCamera,
-						i,
-						out _);
-				}
-
-				result &= camera.EndFrame();
-				success &= result;
-			}
-			catch (Exception ex)
-			{
-				logger.LogException($"An unhandled exception was caught while drawing scene camera {i}!", ex);
 				success = false;
 				break;
 			}
@@ -148,6 +58,115 @@ internal sealed class ForwardPlusLightsSceneRender(ForwardPlusLightsStack _stack
 		success &= core.CommitCommandList(cmdList);
 
 		return success;
+	}
+
+	private bool DrawSceneCamera(
+		in SceneContext _sceneCtx,
+		in CommandList _cmdList,
+		in CameraComponent _camera,
+		uint _cameraIdx,
+		List<ILightSource> _visibleLightsBuffer,
+		bool _rebuildAllResSetCamera)
+	{
+		// Pre-filter lights to only include those are actually visible by current camera:
+		_visibleLightsBuffer.Clear();
+		foreach (ILightSource light in sceneObjects.activeLights)
+		{
+			if (light.CheckVisibilityByCamera(in _camera))
+			{
+				_visibleLightsBuffer.Add(light);
+			}
+		}
+		uint visibleLightCount = (uint)_visibleLightsBuffer.Count;
+
+		// Try drawing the camera's frame:
+		try
+		{
+			if (!_camera.BeginFrame(visibleLightCount, out bool bufLightsChanged))
+			{
+				return false;
+			}
+
+			bool rebuildResSetCamera = _rebuildAllResSetCamera || bufLightsChanged;
+			bool result = true;
+
+			result &= _camera.SetOverrideCameraTarget(null);
+
+			// Upload per-camera light data to GPU buffer:
+			for (uint j = 0; j < visibleLightCount; ++j)
+			{
+				_camera.LightDataBuffer.SetLightData(j, in sceneObjects.activeLightData[j]);
+			}
+			_camera.LightDataBuffer.FinalizeBufLights(_cmdList);
+
+			// Draw scene geometry and UI passes:
+			result &= DrawSceneRenderers(in _sceneCtx, _cmdList, _camera, RenderMode.Opaque, sceneObjects.activeRenderersOpaque, true, rebuildResSetCamera, _cameraIdx);
+			result &= DrawSceneRenderers(in _sceneCtx, _cmdList, _camera, RenderMode.Transparent, sceneObjects.activeRenderersTransparent, false, rebuildResSetCamera, _cameraIdx);
+			result &= DrawSceneRenderers(in _sceneCtx, _cmdList, _camera, RenderMode.UI, sceneObjects.activeRenderersUI, false, rebuildResSetCamera, _cameraIdx);
+
+			// Scene compositing:
+			Framebuffer sceneFramebuffer = null!;           //TODO [later]: Add all-in-one compositing option, in case no post-processing is needed on scene render.
+			if (result)
+			{
+				result &= composition.CompositeSceneOutput(
+					in _sceneCtx,
+					_camera,
+					rebuildResSetCamera,
+					_cameraIdx,
+					out sceneFramebuffer);
+			}
+
+			// Post-processing on scene render:
+			if (result && stack.PostProcessingStackScene is not null)
+			{
+				result &= DrawPostProcessingStack(
+					in _sceneCtx,
+					in _cmdList,
+					in sceneFramebuffer,
+					_camera,
+					stack.PostProcessingStackScene,
+					RenderMode.PostProcessing_Scene,
+					_rebuildAllResSetCamera,
+					_cameraIdx,
+					out sceneFramebuffer);
+			}
+
+			// UI compositing:
+			Framebuffer finalFramebuffer = null!;
+			if (result)
+			{
+				result &= composition.CompositeFinalOutput(
+					in _sceneCtx,
+					in sceneFramebuffer,
+					_camera,
+					rebuildResSetCamera,
+					_cameraIdx,
+					out finalFramebuffer);
+			}
+
+			// Post-processing on final image:
+			if (result && stack.PostProcessingStackFinal is not null)
+			{
+				result &= DrawPostProcessingStack(
+					in _sceneCtx,
+					in _cmdList,
+					in finalFramebuffer,
+					_camera,
+					stack.PostProcessingStackFinal,
+					RenderMode.PostProcessing_PostUI,
+					_rebuildAllResSetCamera,
+					_cameraIdx,
+					out _);
+			}
+
+			result &= _camera.EndFrame();
+			return result;
+		}
+		catch (Exception ex)
+		{
+			logger.LogException($"An unhandled exception was caught while drawing scene camera {_cameraIdx}!", ex);
+			return false;
+		}
 	}
 
 	private bool DrawSceneRenderers(

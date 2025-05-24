@@ -11,7 +11,7 @@ using Veldrid;
 
 namespace FragEngine3.Graphics.Lighting;
 
-internal abstract class LightInstance(GraphicsCore _core) : ILightSource
+internal abstract class Light(GraphicsCore _core) : ILightSource
 {
 	#region Types
 
@@ -27,7 +27,7 @@ internal abstract class LightInstance(GraphicsCore _core) : ILightSource
 	#endregion
 	#region Constructors
 
-	~LightInstance()
+	~Light()
 	{
 		Dispose(false);
 	}

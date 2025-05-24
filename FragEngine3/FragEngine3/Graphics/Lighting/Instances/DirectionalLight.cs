@@ -7,7 +7,7 @@ using System.Numerics;
 
 namespace FragEngine3.Graphics.Lighting.Instances;
 
-internal sealed class DirectionalLight : LightInstance
+internal sealed class DirectionalLight : Light
 {
 	#region Constructors
 
@@ -93,6 +93,13 @@ internal sealed class DirectionalLight : LightInstance
 		}
 		Matrix4x4 mtxLocal2Clip = Matrix4x4.CreateOrthographicLeftHanded(maxDirectionalRange, maxDirectionalRange, 0.01f, maxRange);
 		Matrix4x4 mtxWorld2Clip = mtxWorld2Local * mtxLocal2Clip;
+
+		//TEST (Test to see if the first cascade map is used instead of a higher one)
+		//if (_cascadeIdx == 0)
+		//{
+		//	mtxWorld2Clip = Matrix4x4.CreateScale(0.0001f);
+		//}
+		//TEST
 
 		mtxWorld2Clip *= Matrix4x4.CreateScale(1, -1, 1);
 		return mtxWorld2Clip;

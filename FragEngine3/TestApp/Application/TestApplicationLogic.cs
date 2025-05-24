@@ -153,15 +153,21 @@ public sealed class TestApplicationLogic : ApplicationLogic
 
 			light.LightIntensity = 0.8f;
 			light.CastShadows = true;
-			light.ShadowCascades = 2;
+			light.ShadowCascades = 0;
 			light.ShadowNormalBias = 0.02f;
 			light.ShadowDepthBias = 0.01f;
 		}
 		if (SceneSpawner.CreateLight(scene, LightType.Directional, out light))
 		{
 			light.node.WorldPosition = new Vector3(0, 5, 0);
-			light.node.SetRotationFromYawPitchRoll(-70, -30, 0, true, true);
-			light.node.SetEnabled(false);
+			light.node.SetRotationFromYawPitchRoll(-70, 20, 0, true, true);
+			//light.node.SetEnabled(false);
+
+			light.LightIntensity = 0.4f;
+			light.CastShadows = true;
+			light.ShadowCascades = 0;
+			light.ShadowNormalBias = 0.02f;
+			light.ShadowDepthBias = 0.01f;
 		}
 		// Create a spot light:
 		if (SceneSpawner.CreateLight(scene, LightType.Spot, out light))
@@ -383,7 +389,10 @@ public sealed class TestApplicationLogic : ApplicationLogic
 
 		if (Engine.ResourceManager.GetAndLoadResource("Mtl_ShadowMapVisualizer", true, out ResourceHandle shadowMapVisMtlHandle))
 		{
-			CBShadowMapVisualizer cBShadowMapVisData = new();
+			CBShadowMapVisualizer cBShadowMapVisData = new()
+			{
+				shadowMapIdx = 1u,
+			};
 
 			BufferDescription bufCbShadowMapVisDesc = new(CBShadowMapVisualizer.packedByteSize, BufferUsage.UniformBuffer);
 			DeviceBuffer bufCbShadowMapVis = Engine.GraphicsSystem.graphicsCore.MainFactory.CreateBuffer(ref bufCbShadowMapVisDesc);
