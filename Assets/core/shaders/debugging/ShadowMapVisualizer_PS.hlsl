@@ -56,9 +56,15 @@ SamplerState SamplerShadowMaps : register(ps, s0);
 
 half4 Main_Pixel(in VertexOutput_Basic inputBasic) : SV_Target0
 {
-    const float3 uv = float3(inputBasic.uv, shadowMapIdx);
+    const float3 uv = float3(1.0 - inputBasic.uv.x, inputBasic.uv.y, shadowMapIdx);
 
     const float shadowDepth = TexShadowMaps.Sample(SamplerShadowMaps, uv);
 
-    return half4(shadowDepth, shadowDepth, shadowDepth, 1);
+    const float2 centerOffset = uv.xy - float2(0.5, 0.5);
+    const float centerDistSq = dot(centerOffset, centerOffset);
+
+    const half4 finalColor = centerDistSq >= 0.015 * 0.015
+        ? half4(shadowDepth, shadowDepth, shadowDepth, 1)
+        : half4(1, 0, 0, 1);
+    return finalColor;
 };

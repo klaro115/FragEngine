@@ -23,7 +23,7 @@ public abstract class StructSizeHelper
 	/// <summary>
 	/// Tries to determine the byte size of an unmanaged struct type.
 	/// </summary>
-	/// <param name="_structType"></param>
+	/// <param name="_structType">The type of the struct whose byte size we want to know.</param>
 	/// <returns>The size of the given struct type, in bytes. Negative or zero on failure.</returns>
 	/// <exception cref="ArgumentNullException">Struct type may not be null.</exception>
 	/// <exception cref="ArgumentException">Type is not an unmanaged value type.</exception>
@@ -69,6 +69,10 @@ public abstract class StructSizeHelper
 				{
 					return constByteSize;
 				}
+				else if (value is uint constByteSizeU)
+				{
+					return (int)constByteSizeU;
+				}
 			}
 		}
 		catch (Exception ex)
@@ -92,14 +96,18 @@ public abstract class StructSizeHelper
 		// Logical:
 		else if (_type == typeof(bool))			_outSize = sizeof(bool);
 
-		// Integer scalars:
+		// Unsigned integer scalars:
 		else if (_type == typeof(byte))			_outSize = sizeof(byte);
 		else if (_type == typeof(ushort))		_outSize = sizeof(ushort);
 		else if (_type == typeof(uint))			_outSize = sizeof(uint);
+		else if (_type == typeof(ulong))		_outSize = sizeof(ulong);
+		else if (_type == typeof(char))			_outSize = sizeof(char);
+
+		// Signed integer scalars:
 		else if (_type == typeof(sbyte))		_outSize = sizeof(sbyte);
 		else if (_type == typeof(short))		_outSize = sizeof(short);
 		else if (_type == typeof(int))			_outSize = sizeof(int);
-		else if (_type == typeof(char))			_outSize = sizeof(char);
+		else if (_type == typeof(long))			_outSize = sizeof(long);
 
 		// Float scalars:
 		else if (_type == typeof(float))		_outSize = sizeof(float);
