@@ -16,7 +16,7 @@ public sealed class DefaultGraphicsStack : IGraphicsStack
 
 		resources = new(_graphicsCore);
 		shadowMapStack = new(_graphicsCore, resources);
-		sceneRenderStack = new();
+		sceneRenderStack = new(_graphicsCore);
 		postProcessingStack = new();
 		compositionStack = new();
 	}
@@ -96,6 +96,8 @@ public sealed class DefaultGraphicsStack : IGraphicsStack
 		Shutdown();
 
 		bool success = Initialize(lastDrawnScene!);
+
+		sceneRenderStack.Reset();
 		return success;
 	}
 
