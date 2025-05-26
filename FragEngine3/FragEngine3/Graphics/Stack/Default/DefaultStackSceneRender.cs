@@ -29,8 +29,7 @@ internal sealed class DefaultStackSceneRender(GraphicsCore _graphicsCore)
 
 		public void Add(IRenderer _renderer)
 		{
-			List<IRenderer>? targetList = null;
-			targetList = _renderer.RenderMode switch
+			List<IRenderer>? targetList = _renderer.RenderMode switch
 			{
 				RenderMode.Opaque => opaqueList,
 				RenderMode.Transparent => transparentList,
@@ -61,14 +60,14 @@ internal sealed class DefaultStackSceneRender(GraphicsCore _graphicsCore)
 
 	public bool DrawAllSceneCameras(
 		in SceneContext _sceneCtx,
-		Scene _scene,
+		//Scene _scene,						//TEMP: Scene reference might be needed later, once spatial partitioning has been added.
 		in List<IRenderer> _renderers,
 		in IList<CameraComponent> _cameras,
 		in IList<ILightSource> _lights,
 		uint _lightCount,
 		uint _lightCountShadowMapped)
 	{
-		List<CameraComponent> activeCameras = _cameras.Where(o => !o.IsDisposed && o.layerMask != 0 && o.node.IsEnabledInHierarchy()).ToList();
+		List<CameraComponent> activeCameras = _cameras.Where(static o => !o.IsDisposed && o.layerMask != 0 && o.node.IsEnabledInHierarchy()).ToList();
 		if (activeCameras.Count == 0)
 		{
 			logger.LogWarning("Scene contains no active cameras, cannot draw graphics stack.");

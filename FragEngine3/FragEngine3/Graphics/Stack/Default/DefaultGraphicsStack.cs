@@ -18,7 +18,7 @@ public sealed class DefaultGraphicsStack : IGraphicsStack
 		shadowMapStack = new(_graphicsCore, resources);
 		sceneRenderStack = new(_graphicsCore);
 		postProcessingStack = new();
-		compositionStack = new();
+		compositionStack = new(logger);
 	}
 
 	#endregion
@@ -54,6 +54,7 @@ public sealed class DefaultGraphicsStack : IGraphicsStack
 	{
 		IsDisposed = true;
 
+		compositionStack.Dispose();
 		resources.Dispose();
 	}
 
@@ -75,6 +76,11 @@ public sealed class DefaultGraphicsStack : IGraphicsStack
 			return false;
 		}
 
+		if (!compositionStack.Initialize(_scene))
+		{
+			return false;
+		}
+
 		isInitialized = true;
 		return true;
 	}
@@ -86,6 +92,7 @@ public sealed class DefaultGraphicsStack : IGraphicsStack
 			EndDrawing();
 		}
 
+		compositionStack.Shutdown();
 		resources.Shutdown();
 
 		isInitialized = false;
@@ -138,7 +145,7 @@ public sealed class DefaultGraphicsStack : IGraphicsStack
 		}
 		if (success)
 		{		
-			success &= sceneRenderStack.DrawAllSceneCameras(in sceneCtx!, _scene, in _renderers, in _cameras, in _lights, lightCount, lightCountShadowMapped);
+			success &= sceneRenderStack.DrawAllSceneCameras(in sceneCtx!, /* _scene, */ in _renderers, in _cameras, in _lights, lightCount, lightCountShadowMapped);
 		}
 
 		// Scene post-processing:
