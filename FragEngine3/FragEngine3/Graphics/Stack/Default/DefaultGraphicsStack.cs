@@ -18,7 +18,7 @@ public sealed class DefaultGraphicsStack : IGraphicsStack
 		shadowMapStack = new(_graphicsCore, resources);
 		sceneRenderStack = new(_graphicsCore);
 		postProcessingStack = new();
-		compositionStack = new(logger);
+		compositionStack = new(_graphicsCore);
 	}
 
 	#endregion
