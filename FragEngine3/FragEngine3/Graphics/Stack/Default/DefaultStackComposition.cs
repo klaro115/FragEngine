@@ -1,4 +1,5 @@
 ﻿using FragEngine3.EngineCore;
+using FragEngine3.Graphics.Cameras.Internal;
 using FragEngine3.Graphics.Components;
 using FragEngine3.Graphics.Contexts;
 using FragEngine3.Graphics.Resources;
@@ -152,9 +153,9 @@ internal sealed class DefaultStackComposition(GraphicsCore _graphicsCore) : IDis
 			return true;
 		}
 
-		if (!_scene.FindNode(nodeNameCompositionScene, out SceneNode? node) || node is null)
+		if (!_scene.FindNode(_nodeName, out SceneNode? node) || node is null)
 		{
-			node = _scene.rootNode.CreateChild(nodeNameCompositionScene);
+			node = _scene.rootNode.CreateChild(_nodeName);
 		}
 		node.WorldTransformation = Pose.Identity;
 
@@ -211,6 +212,14 @@ internal sealed class DefaultStackComposition(GraphicsCore _graphicsCore) : IDis
 			logger.LogError("Cannot composite rendering scene output of default graphics stack using uninitialized composition module!");
 			return false;
 		}
+
+		if (!_camera.GetOrCreateCameraTarget(RenderMode.Opaque, out CameraTarget targetOpaque) ||
+			!_camera.GetOrCreateCameraTarget(RenderMode.Transparent, out CameraTarget targetTransparent))
+		{
+			logger.LogError("Cannot composite rendering scene output of default graphics stack; render targets missing for opaque or transparent pass!");
+			return false;
+		}
+
 		if (cmdListScene is null && !graphicsCore.CreateCommandList(out cmdListScene))
 		{
 			logger.LogError("Cannot composite rendering scene output of default graphics stack without command list!");
@@ -222,12 +231,24 @@ internal sealed class DefaultStackComposition(GraphicsCore _graphicsCore) : IDis
 
 		success &= _camera.GetOrCreateCameraTarget(RenderMode.Composition, out _);
 
-		success &= _camera.BeginPass(in _sceneCtx, cmdListScene, RenderMode.Composition, true, _cameraIdx, 0, 0, out CameraPassContext cameraPassCtx, _rebuildResSetCamera);
+		success &= _camera.BeginPass(
+			in _sceneCtx,
+			cmdListScene,
+			RenderMode.Composition,
+			true,
+			_cameraIdx,
+			0,
+			0,
+			out CameraPassContext cameraPassCtx,
+			_rebuildResSetCamera);
 
-		//TODO
+		Material material = rendererScene!.MaterialHandle.GetResource<Material>(true, true)!;
+		success &= material.SetResource("TexOpaqueColor", targetOpaque.texColorTarget);
+		success &= material.SetResource("TexOpaqueDepth", targetOpaque.texDepthTarget);
+		success &= material.SetResource("TexTransparentColor", targetTransparent.texColorTarget);
+		success &= material.SetResource("TexTransparentDepth", targetTransparent.texDepthTarget);   //TODO [later]: Query slot indices by name during initialization, then use those at run-time.
 
-
-
+		success &= rendererScene!.Draw(_sceneCtx, cameraPassCtx);
 
 		success &= _camera.EndPass();
 
