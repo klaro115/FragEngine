@@ -1,9 +1,11 @@
 ﻿using FragEngine3.EngineCore;
 using FragEngine3.Graphics.Components;
+using FragEngine3.Graphics.Contexts;
 using FragEngine3.Graphics.Resources;
 using FragEngine3.Graphics.Resources.Materials;
 using FragEngine3.Resources;
 using FragEngine3.Scenes;
+using Veldrid;
 
 namespace FragEngine3.Graphics.Stack.Default;
 
@@ -29,6 +31,9 @@ internal sealed class DefaultStackComposition(GraphicsCore _graphicsCore) : IDis
 	private StaticMeshRendererComponent? rendererUI = null;
 
 	private ResourceHandle meshFullscreenQuad = ResourceHandle.None;
+
+	private CommandList? cmdListScene = null;
+	private CommandList? cmdListUI = null;
 
 	#endregion
 	#region Properties
@@ -65,6 +70,9 @@ internal sealed class DefaultStackComposition(GraphicsCore _graphicsCore) : IDis
 		{
 			Shutdown();
 		}
+
+		cmdListScene?.Dispose();
+		cmdListUI?.Dispose();
 	}
 
 	public bool Initialize(Scene _scene)
@@ -102,7 +110,7 @@ internal sealed class DefaultStackComposition(GraphicsCore _graphicsCore) : IDis
 			return false;
 		}
 
-		//TODO: Register listeners for lifecycle events of renderer components
+		//TODO [later]: Register listeners for lifecycle events of renderer components
 
 		isInitialized = true;
 		return true;
@@ -171,11 +179,71 @@ internal sealed class DefaultStackComposition(GraphicsCore _graphicsCore) : IDis
 		return success;
 	}
 
-	public bool CompositeOutput()
+	public bool CompositeSceneOutput(
+		in SceneContext _sceneCtx,
+		in IList<CameraComponent> _cameras,
+		bool _rebuildResSetCamera)
+	{
+		bool success = true;
+
+		for (int cameraIdx = 0; cameraIdx < _cameras.Count; ++cameraIdx)
+		{
+			CameraComponent camera = _cameras[cameraIdx];
+
+			success &= CompositeSceneOutput(
+				in _sceneCtx,
+				in camera,
+				(uint)cameraIdx,
+				_rebuildResSetCamera);
+		}
+
+		return success;
+	}
+
+	private bool CompositeSceneOutput(
+		in SceneContext _sceneCtx,
+		in CameraComponent _camera,
+		uint _cameraIdx,
+		bool _rebuildResSetCamera)
 	{
 		if (!IsInitialized)
 		{
-			logger.LogError("Cannot composite rendering output of default graphics stack using uninitialized composition module!");
+			logger.LogError("Cannot composite rendering scene output of default graphics stack using uninitialized composition module!");
+			return false;
+		}
+		if (cmdListScene is null && !graphicsCore.CreateCommandList(out cmdListScene))
+		{
+			logger.LogError("Cannot composite rendering scene output of default graphics stack without command list!");
+			return false;
+		}
+		cmdListScene!.Begin();
+
+		bool success = true;
+
+		success &= _camera.GetOrCreateCameraTarget(RenderMode.Composition, out _);
+
+		success &= _camera.BeginPass(in _sceneCtx, cmdListScene, RenderMode.Composition, true, _cameraIdx, 0, 0, out CameraPassContext cameraPassCtx, _rebuildResSetCamera);
+
+		//TODO
+
+
+
+
+		success &= _camera.EndPass();
+
+		cmdListScene!.End();
+		if (success)
+		{
+			success = graphicsCore.CommitCommandList(cmdListScene);		
+		}
+		return success;
+	}
+
+	public bool CompositeFinalOutput()
+	{
+		if (!IsInitialized)
+		{
+			logger.LogError("Cannot composite rendering final output of default graphics stack using uninitialized composition module!");
 			return false;
 		}
 

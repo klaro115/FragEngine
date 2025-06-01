@@ -9,6 +9,7 @@ using FragEngine3.Graphics.Resources;
 using FragEngine3.Graphics.Resources.Data;
 using FragEngine3.Graphics.Resources.Materials;
 using FragEngine3.Graphics.Stack;
+using FragEngine3.Graphics.Stack.Default;
 using FragEngine3.Resources;
 using FragEngine3.Scenes;
 using FragEngine3.Scenes.Utility;
@@ -82,7 +83,8 @@ public sealed class TestApplicationLogic : ApplicationLogic
 		// Create scene's graphics stack:
 		if (Engine.SceneManager.MainScene is not null)
 		{
-			ForwardPlusLightsStack stack = new(Engine.GraphicsSystem.graphicsCore);
+			//ForwardPlusLightsStack stack = new(Engine.GraphicsSystem.graphicsCore);
+			DefaultGraphicsStack stack = new(Engine.GraphicsSystem.graphicsCore);
 
 			Engine.SceneManager.MainScene.GraphicsStack = stack;
 		}

@@ -50,6 +50,8 @@ internal sealed class DefaultStackShadowMaps(GraphicsCore _graphicsCore, Default
 			return false;
 		}
 
+		//TODO [later]: Sort out all lights whose shadow maps are not visible to any of the scene's active cameras!
+
 		List<ILightSource> shadowCastingLights = _lights.Where(o => o.IsVisible && o.CastShadows).ToList();
 		_outLightCountShadowMapped = (uint)shadowCastingLights.Count;
 		if (_outLightCountShadowMapped == 0)

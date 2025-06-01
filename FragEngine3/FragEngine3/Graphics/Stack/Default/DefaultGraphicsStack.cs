@@ -143,9 +143,16 @@ public sealed class DefaultGraphicsStack : IGraphicsStack
 		{
 			success &= resources.CreateSceneContext(_scene, lightCount, lightCountShadowMapped, 0, out sceneCtx);
 		}
+		bool rebuildResSetCamera = false;
 		if (success)
 		{		
-			success &= sceneRenderStack.DrawAllSceneCameras(in sceneCtx!, /* _scene, */ in _renderers, in _cameras, in _lights, lightCount, lightCountShadowMapped);
+			success &= sceneRenderStack.DrawAllSceneCameras(in sceneCtx!, /* _scene, */ in _renderers, in _cameras, in _lights, lightCount, lightCountShadowMapped, out rebuildResSetCamera);
+		}
+
+		// Scene composition:
+		if (success)
+		{
+			success &= compositionStack.CompositeSceneOutput(in sceneCtx!, in _cameras, rebuildResSetCamera);
 		}
 
 		// Scene post-processing:
@@ -157,7 +164,7 @@ public sealed class DefaultGraphicsStack : IGraphicsStack
 		// Output composition:
 		if (success)
 		{
-			success &= compositionStack.CompositeOutput();
+			success &= compositionStack.CompositeFinalOutput();
 		}
 
 		if (!EndDrawing())

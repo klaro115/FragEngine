@@ -1,14 +1,22 @@
 ﻿using FragEngine3.EngineCore;
 using FragEngine3.Graphics.Components;
 using FragEngine3.Graphics.Contexts;
+using FragEngine3.Graphics.Lighting;
 using FragEngine3.Graphics.Lighting.Data;
-using FragEngine3.Scenes;
 using Veldrid;
 
 namespace FragEngine3.Graphics.Stack.Default;
 
-internal sealed class DefaultStackSceneRender(GraphicsCore _graphicsCore)
+internal sealed class DefaultStackSceneRender(GraphicsCore _graphicsCore) : IDisposable
 {
+	#region Constructors
+
+	~DefaultStackSceneRender()
+	{
+		if (!IsDisposed) Dispose(false);
+	}
+
+	#endregion
 	#region Types
 
 	private sealed class PassRendererLists(int _initialCapacity)
@@ -46,16 +54,50 @@ internal sealed class DefaultStackSceneRender(GraphicsCore _graphicsCore)
 	private readonly GraphicsCore graphicsCore = _graphicsCore;
 	private readonly Logger logger = _graphicsCore.graphicsSystem.Engine.Logger;
 
+	private readonly Stack<CommandList> commandListPool = new(4);
+	private readonly Stack<CommandList> commandListsInUse = new(4);
 	private readonly Stack<PassRendererLists> rendererListPool = new(4);
 	private readonly PassRendererLists emptyRendererList = new(0);
 
 	#endregion
+	#region Properties
+
+	public bool IsDisposed { get; private set; } = false;
+
+	#endregion
 	#region Methods
+
+	public void Dispose()
+	{
+		GC.SuppressFinalize(this);
+		Dispose(true);
+	}
+
+	private void Dispose(bool _)
+	{
+		IsDisposed = true;
+
+		while (commandListPool.TryPop(out CommandList? cmdList))
+		{
+			cmdList?.Dispose();
+		}
+		while (commandListsInUse.TryPop(out CommandList? cmdList))
+		{
+			cmdList?.Dispose();
+		}
+		commandListPool.Clear();
+		commandListsInUse.Clear();
+	}
 
 	public void Reset()
 	{
 		rendererListPool.Clear();
 		emptyRendererList.Clear();
+
+		while (commandListsInUse.TryPop(out CommandList? cmdList))
+		{
+			commandListPool.Push(cmdList);
+		}
 	}
 
 	public bool DrawAllSceneCameras(
@@ -65,8 +107,21 @@ internal sealed class DefaultStackSceneRender(GraphicsCore _graphicsCore)
 		in IList<CameraComponent> _cameras,
 		in IList<ILightSource> _lights,
 		uint _lightCount,
-		uint _lightCountShadowMapped)
+		uint _lightCountShadowMapped,
+		out bool _outRebuildResSetCamera)
 	{
+		_outRebuildResSetCamera = false;
+		if (IsDisposed)
+		{
+			logger.LogError("Cannot draw scene cameras using graphics stack scene renderer module that is disposed!");
+			return false;
+		}
+
+		while (commandListsInUse.TryPop(out CommandList? cmdList))
+		{
+			commandListPool.Push(cmdList);
+		}
+
 		List<CameraComponent> activeCameras = _cameras.Where(static o => !o.IsDisposed && o.layerMask != 0 && o.node.IsEnabledInHierarchy()).ToList();
 		if (activeCameras.Count == 0)
 		{
@@ -86,7 +141,9 @@ internal sealed class DefaultStackSceneRender(GraphicsCore _graphicsCore)
 				in _renderers,
 				in _lights,
 				_lightCount,
-				_lightCountShadowMapped);
+				_lightCountShadowMapped,
+				out bool rebuildResSetCamera);
+			_outRebuildResSetCamera |= rebuildResSetCamera;
 		}
 
 		return success;
@@ -99,35 +156,43 @@ internal sealed class DefaultStackSceneRender(GraphicsCore _graphicsCore)
 		in List<IRenderer> _renderers,
 		in IList<ILightSource> _lights,
 		uint _totalLightCount,
-		uint _totalLightCountShadowMapped)
+		uint _totalLightCountShadowMapped,
+		out bool _outRebuildResSetCamera)
 	{
-		if (!graphicsCore.CreateCommandList(out CommandList? cmdList))
-		{
-			logger.LogError("Failed to create command list for drawing scene camera!");
-			return false;
-		}
-
 		// Identify visible renderers, and sort them by render mode:
 		if (!GetRenderersVisibleToCamera(in _camera, in _renderers, out PassRendererLists? visibleRenderers))
 		{
 			logger.LogError($"Failed to identify renderers that are visible by scene camera! Camera: '{_camera}'");
+			_outRebuildResSetCamera = false;
+			return false;
+		}
+
+		if (!GetOrCreateCommandList(out CommandList? cmdList))
+		{
+			logger.LogError("Failed to create command list for drawing scene camera!");
+			AbortUsingCommandList(cmdList!);
+			_outRebuildResSetCamera = false;
 			return false;
 		}
 
 		// Identify visible lights, and register them in the camera's 'BufLights' buffer:
-		if (!ProcessLightsVisibleToCamera(in cmdList!, in _camera, in _lights, out uint visibleLightCount, out uint visibleLightCountShadowMapped))
+		if (!ProcessLightsVisibleToCamera(in cmdList!, in _camera, in _lights, out uint visibleLightCount, out uint visibleLightCountShadowMapped, out bool recreatedBufLights))
 		{
 			logger.LogError($"Failed to identify light sources that are visible by scene camera! Camera: '{_camera}'");
+			AbortUsingCommandList(cmdList!);
+			_outRebuildResSetCamera = recreatedBufLights;
 			return false;
 		}
 
 		if (!_camera.BeginFrame(
 			_totalLightCount,
-			out bool rebuildResSetCamera))
+			out _outRebuildResSetCamera))
 		{
 			logger.LogError("Failed to begin drawing camera frame!");
+			AbortUsingCommandList(cmdList!);
 			return false;
 		}
+		_outRebuildResSetCamera |= recreatedBufLights;
 
 		bool success = true;
 
@@ -148,7 +213,7 @@ internal sealed class DefaultStackSceneRender(GraphicsCore _graphicsCore)
 					true,
 					visibleLightCount,
 					visibleLightCountShadowMapped,
-					rebuildResSetCamera);
+					_outRebuildResSetCamera);
 			}
 			// 2. Transparent geometry:
 			if (success && visibleRenderers.transparentList.Count != 0)
@@ -163,7 +228,7 @@ internal sealed class DefaultStackSceneRender(GraphicsCore _graphicsCore)
 					false,
 					visibleLightCount,
 					visibleLightCountShadowMapped,
-					rebuildResSetCamera);
+					_outRebuildResSetCamera);
 			}
 			// 3. Opaque geometry:
 			if (success && visibleRenderers.volumetricList.Count != 0)
@@ -178,7 +243,7 @@ internal sealed class DefaultStackSceneRender(GraphicsCore _graphicsCore)
 					false,
 					visibleLightCount,
 					visibleLightCountShadowMapped,
-					rebuildResSetCamera);
+					_outRebuildResSetCamera);
 			}
 			//...
 
@@ -199,7 +264,7 @@ internal sealed class DefaultStackSceneRender(GraphicsCore _graphicsCore)
 				true,
 				_totalLightCount,
 				_totalLightCountShadowMapped,
-				rebuildResSetCamera);
+				_outRebuildResSetCamera);
 		}
 
 		if (success)
@@ -211,6 +276,9 @@ internal sealed class DefaultStackSceneRender(GraphicsCore _graphicsCore)
 		{
 			success &= graphicsCore.CommitCommandList(cmdList!);
 		}
+
+		cmdList!.End();
+		commandListsInUse.Push(cmdList!);
 		return success;
 	}
 
@@ -250,8 +318,31 @@ internal sealed class DefaultStackSceneRender(GraphicsCore _graphicsCore)
 		}
 
 		// End frame:
-		succes &= _camera.EndFrame();
+		succes &= _camera.EndPass();
 		return succes;
+	}
+
+	private bool GetOrCreateCommandList(out CommandList? _outCmdList)
+	{
+		bool result;
+		if (!(result = commandListPool.TryPop(out _outCmdList)))
+		{
+			result = graphicsCore.CreateCommandList(out _outCmdList);
+		}
+
+		if (result)
+		{
+			_outCmdList!.Begin();
+		}
+		return result;
+	}
+
+	private void AbortUsingCommandList(CommandList _cmdList)
+	{
+		if (_cmdList is null || _cmdList.IsDisposed) return;
+
+		_cmdList.End();
+		commandListPool.Push(_cmdList);
 	}
 
 	private bool GetRenderersVisibleToCamera(in CameraComponent _camera, in List<IRenderer> _allRenderers, out PassRendererLists? _outVisibleRenderers)
@@ -291,33 +382,48 @@ internal sealed class DefaultStackSceneRender(GraphicsCore _graphicsCore)
 		return true;
 	}
 
-	private bool ProcessLightsVisibleToCamera(in CommandList _cmdList, in CameraComponent _camera, in IList<ILightSource> _allLights, out uint _outVisibleLightCount, out uint _outVisibleLightCountShadowMapped)
+	private bool ProcessLightsVisibleToCamera(in CommandList _cmdList, in CameraComponent _camera, in IList<ILightSource> _allLights, out uint _outVisibleLightCount, out uint _outVisibleLightCountShadowMapped, out bool _outRecreatedBufLights)
 	{
-		_outVisibleLightCount = 0;
 		_outVisibleLightCountShadowMapped = 0;
 		if (_allLights.Count == 0)
 		{
+			_outVisibleLightCount = 0;
+			_outRecreatedBufLights = false;
 			return true;
 		}
 
 		bool success = true;
 
 		// Identify all light sources that are active, and that will have an effect within visual range:
+		List<ILightSource> visibleLights = new(_allLights.Count);
 		foreach (ILightSource light in _allLights)
 		{
 			if (light.IsVisible && (light.LayerMask & _camera.layerMask) != 0)  //TODO/TEMP [later]: For non-directional lights, add spatial partitioning lookup here.
 			{
-				LightSourceData data = light.GetLightSourceData();
-				if (!_camera.LightDataBuffer.SetLightData(_outVisibleLightCount, in data))
-				{
-					success = false;
-					break;
-				}
+				visibleLights.Add(light);
 				if (light.CastShadows)
 				{
 					_outVisibleLightCountShadowMapped++;
 				}
-				_outVisibleLightCount++;
+			}
+		}
+		_outVisibleLightCount = (uint)visibleLights.Count;
+
+		if (!_camera.LightDataBuffer.PrepareBufLights(_outVisibleLightCount, out _outRecreatedBufLights))
+		{
+			return false;
+		}
+
+		// Gather GPU buffer data describing each of the visible light sources:
+		for (int lightIdx = 0; lightIdx < visibleLights.Count; lightIdx++)
+		{
+			ILightSource light = visibleLights[lightIdx];
+			LightSourceData data = light.GetLightSourceData();
+
+			if (!_camera.LightDataBuffer.SetLightData((uint)lightIdx, in data))
+			{
+				success = false;
+				break;
 			}
 		}
 
