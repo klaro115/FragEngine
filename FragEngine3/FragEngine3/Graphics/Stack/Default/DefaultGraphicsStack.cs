@@ -54,6 +54,7 @@ public sealed class DefaultGraphicsStack : IGraphicsStack
 	{
 		IsDisposed = true;
 
+		shadowMapStack.Dispose();
 		compositionStack.Dispose();
 		resources.Dispose();
 	}
@@ -92,6 +93,7 @@ public sealed class DefaultGraphicsStack : IGraphicsStack
 			EndDrawing();
 		}
 
+		shadowMapStack.Shutdown();
 		compositionStack.Shutdown();
 		resources.Shutdown();
 

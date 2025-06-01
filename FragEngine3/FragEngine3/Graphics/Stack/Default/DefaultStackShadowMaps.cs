@@ -1,6 +1,7 @@
 ﻿using FragEngine3.EngineCore;
 using FragEngine3.Graphics.Components;
 using FragEngine3.Graphics.Contexts;
+using FragEngine3.Graphics.Internal;
 using FragEngine3.Graphics.Lighting;
 using FragEngine3.Scenes;
 using System.Numerics;
@@ -8,16 +9,49 @@ using Veldrid;
 
 namespace FragEngine3.Graphics.Stack.Default;
 
-internal sealed class DefaultStackShadowMaps(GraphicsCore _graphicsCore, DefaultStackResources _resources)
+internal sealed class DefaultStackShadowMaps(GraphicsCore _graphicsCore, DefaultStackResources _resources) : IDisposable
 {
+	#region Constructors
+
+	~DefaultStackShadowMaps()
+	{
+		if (!IsDisposed) Dispose(false);
+	}
+
+	#endregion
 	#region Fields
 
 	private readonly GraphicsCore graphicsCore = _graphicsCore;
 	private readonly Logger logger = _graphicsCore.graphicsSystem.Engine.Logger;
 	private readonly DefaultStackResources resources = _resources;
 
+	private readonly CommandListPool cmdListPool = new(_graphicsCore);
+
+	#endregion
+	#region Properties
+
+	public bool IsDisposed { get; private set; } = false;
+
 	#endregion
 	#region Methods
+
+	public void Dispose()
+	{
+		GC.SuppressFinalize(this);
+		Dispose(true);
+	}
+
+	private void Dispose(bool _)
+	{
+		IsDisposed = true;
+		Shutdown();
+		cmdListPool.Dispose();
+	}
+
+	public void Shutdown()
+	{
+		cmdListPool.Clear();
+	}
 
 	public bool DrawShadowMaps(
 		Scene _scene,
@@ -27,7 +61,17 @@ internal sealed class DefaultStackShadowMaps(GraphicsCore _graphicsCore, Default
 		out uint _outLightCount,
 		out uint _outLightCountShadowMapped)
 	{
+		if (IsDisposed)
+		{
+			logger.LogError("Shadow map module of default graphics stack has been disposed!");
+			_outLightCount = 0;
+			_outLightCountShadowMapped = 0;
+			return false;
+		}
 		_outLightCount = (uint)_lights.Count;
+
+		// Return all command lists to pool for re-use:
+		cmdListPool.ReturnUsedToPool();
 
 		if (!IdentifyShadowFocalPoint(_scene, _cameras, out Vector3 focalPoint))
 		{
@@ -36,7 +80,7 @@ internal sealed class DefaultStackShadowMaps(GraphicsCore _graphicsCore, Default
 			return false;
 		}
 
-		if (!graphicsCore.CreateCommandList(out CommandList? cmdList))
+		if (!cmdListPool.GetOrCreateCommandList(out CommandList? cmdList))
 		{
 			logger.LogError("Failed to create command list for rendering shadow maps!");
 			_outLightCountShadowMapped = 0;

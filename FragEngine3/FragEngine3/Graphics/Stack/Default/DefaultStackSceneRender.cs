@@ -1,6 +1,7 @@
 ﻿using FragEngine3.EngineCore;
 using FragEngine3.Graphics.Components;
 using FragEngine3.Graphics.Contexts;
+using FragEngine3.Graphics.Internal;
 using FragEngine3.Graphics.Lighting;
 using FragEngine3.Graphics.Lighting.Data;
 using Veldrid;
@@ -54,8 +55,8 @@ internal sealed class DefaultStackSceneRender(GraphicsCore _graphicsCore) : IDis
 	private readonly GraphicsCore graphicsCore = _graphicsCore;
 	private readonly Logger logger = _graphicsCore.graphicsSystem.Engine.Logger;
 
-	private readonly Stack<CommandList> commandListPool = new(4);
-	private readonly Stack<CommandList> commandListsInUse = new(4);
+	private readonly CommandListPool cmdListPool = new(_graphicsCore);
+
 	private readonly Stack<PassRendererLists> rendererListPool = new(4);
 	private readonly PassRendererLists emptyRendererList = new(0);
 
@@ -76,17 +77,8 @@ internal sealed class DefaultStackSceneRender(GraphicsCore _graphicsCore) : IDis
 	private void Dispose(bool _)
 	{
 		IsDisposed = true;
-
-		while (commandListPool.TryPop(out CommandList? cmdList))
-		{
-			cmdList?.Dispose();
-		}
-		while (commandListsInUse.TryPop(out CommandList? cmdList))
-		{
-			cmdList?.Dispose();
-		}
-		commandListPool.Clear();
-		commandListsInUse.Clear();
+		cmdListPool.Clear();
+		cmdListPool.Dispose();
 	}
 
 	public void Reset()
@@ -94,10 +86,7 @@ internal sealed class DefaultStackSceneRender(GraphicsCore _graphicsCore) : IDis
 		rendererListPool.Clear();
 		emptyRendererList.Clear();
 
-		while (commandListsInUse.TryPop(out CommandList? cmdList))
-		{
-			commandListPool.Push(cmdList);
-		}
+		cmdListPool.ReturnUsedToPool();
 	}
 
 	public bool DrawAllSceneCameras(
@@ -117,10 +106,7 @@ internal sealed class DefaultStackSceneRender(GraphicsCore _graphicsCore) : IDis
 			return false;
 		}
 
-		while (commandListsInUse.TryPop(out CommandList? cmdList))
-		{
-			commandListPool.Push(cmdList);
-		}
+		cmdListPool.ReturnUsedToPool();
 
 		List<CameraComponent> activeCameras = _cameras.Where(static o => !o.IsDisposed && o.layerMask != 0 && o.node.IsEnabledInHierarchy()).ToList();
 		if (activeCameras.Count == 0)
@@ -167,7 +153,7 @@ internal sealed class DefaultStackSceneRender(GraphicsCore _graphicsCore) : IDis
 			return false;
 		}
 
-		if (!GetOrCreateCommandList(out CommandList? cmdList))
+		if (!cmdListPool.GetOrCreateCommandList(out CommandList? cmdList))
 		{
 			logger.LogError("Failed to create command list for drawing scene camera!");
 			AbortUsingCommandList(cmdList!);
@@ -278,7 +264,6 @@ internal sealed class DefaultStackSceneRender(GraphicsCore _graphicsCore) : IDis
 		}
 
 		cmdList!.End();
-		commandListsInUse.Push(cmdList!);
 		return success;
 	}
 
@@ -322,27 +307,12 @@ internal sealed class DefaultStackSceneRender(GraphicsCore _graphicsCore) : IDis
 		return succes;
 	}
 
-	private bool GetOrCreateCommandList(out CommandList? _outCmdList)
-	{
-		bool result;
-		if (!(result = commandListPool.TryPop(out _outCmdList)))
-		{
-			result = graphicsCore.CreateCommandList(out _outCmdList);
-		}
-
-		if (result)
-		{
-			_outCmdList!.Begin();
-		}
-		return result;
-	}
-
 	private void AbortUsingCommandList(CommandList _cmdList)
 	{
 		if (_cmdList is null || _cmdList.IsDisposed) return;
 
 		_cmdList.End();
-		commandListPool.Push(_cmdList);
+		cmdListPool.ReturnCommandListToPool(_cmdList);
 	}
 
 	private bool GetRenderersVisibleToCamera(in CameraComponent _camera, in List<IRenderer> _allRenderers, out PassRendererLists? _outVisibleRenderers)
