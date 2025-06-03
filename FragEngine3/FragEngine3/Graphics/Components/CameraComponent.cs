@@ -245,17 +245,27 @@ public sealed class CameraComponent : Component, IOnNodeDestroyedListener, IOnCo
 	public bool SetOverrideCameraTarget(Framebuffer? _newOverrideTarget, bool _hasOwnershipOfFramebuffer = false)
 	{
 		// If null, unassign override slot:
-		if (_newOverrideTarget == null)
+		if (_newOverrideTarget is null)
 		{
+			overrideTarget?.Dispose();
 			overrideTarget = null;
 			return true;
 		}
 		if (_newOverrideTarget.IsDisposed)
 		{
 			Logger.LogError("Cannot set disposed framebuffer as override target on camera!");
+			overrideTarget?.Dispose();
 			overrideTarget = null;
 			return true;
 		}
+		
+		// Do nothing if the override hasn't changed:
+		if (overrideTarget is not null && _newOverrideTarget == overrideTarget.framebuffer)
+		{
+			return true;
+		}
+
+		overrideTarget?.Dispose();
 
 		// Create a new camera target around the given framebuffer:
 		Texture texColor = _newOverrideTarget.ColorTargets[0].Target;

@@ -209,20 +209,20 @@ internal sealed class DefaultStackComposition(GraphicsCore _graphicsCore) : IDis
 	{
 		if (!IsInitialized)
 		{
-			logger.LogError("Cannot composite rendering scene output of default graphics stack using uninitialized composition module!");
+			logger.LogError("Cannot composite scene output of default graphics stack using uninitialized composition module!");
 			return false;
 		}
 
 		if (!_camera.GetOrCreateCameraTarget(RenderMode.Opaque, out CameraTarget targetOpaque) ||
 			!_camera.GetOrCreateCameraTarget(RenderMode.Transparent, out CameraTarget targetTransparent))
 		{
-			logger.LogError("Cannot composite rendering scene output of default graphics stack; render targets missing for opaque or transparent pass!");
+			logger.LogError("Cannot composite scene output of default graphics stack; render targets missing for opaque or transparent pass!");
 			return false;
 		}
 
 		if (cmdListScene is null && !graphicsCore.CreateCommandList(out cmdListScene))
 		{
-			logger.LogError("Cannot composite rendering scene output of default graphics stack without command list!");
+			logger.LogError("Cannot composite scene output of default graphics stack without command list!");
 			return false;
 		}
 		cmdListScene!.Begin();
@@ -260,19 +260,91 @@ internal sealed class DefaultStackComposition(GraphicsCore _graphicsCore) : IDis
 		return success;
 	}
 
-	public bool CompositeFinalOutput()
+	public bool CompositeFinalOutput(
+		in SceneContext _sceneCtx,
+		in IList<CameraComponent> _cameras,
+		bool _rebuildResSetCamera)
+	{
+		bool success = true;
+
+		for (int cameraIdx = 0; cameraIdx < _cameras.Count; ++cameraIdx)
+		{
+			CameraComponent camera = _cameras[cameraIdx];
+
+			success &= CompositeFinalOutput(
+				in _sceneCtx,
+				in camera,
+				(uint)cameraIdx,
+				_rebuildResSetCamera);
+		}
+
+		return success;
+	}
+
+	public bool CompositeFinalOutput(
+		in SceneContext _sceneCtx,
+		in CameraComponent _camera,
+		uint _cameraIdx,
+		bool _rebuildResSetCamera)
 	{
 		if (!IsInitialized)
 		{
-			logger.LogError("Cannot composite rendering final output of default graphics stack using uninitialized composition module!");
+			logger.LogError("Cannot composite final output of default graphics stack using uninitialized composition module!");
+			return false;
+		}
+		
+		Framebuffer outputFramebuffer = graphicsCore.Device.SwapchainFramebuffer;
+
+		if (!_camera.SetOverrideCameraTarget(outputFramebuffer, false))
+		{
+			logger.LogError("Failed to set output frame buffer as camera's override render target!");
 			return false;
 		}
 
+		if (!_camera.GetOrCreateCameraTarget(RenderMode.Composition, out CameraTarget targetSceneComposition) ||
+			!_camera.GetOrCreateCameraTarget(RenderMode.UI, out CameraTarget targetUI))
+		{
+			logger.LogError("Cannot composite final output of default graphics stack; render targets missing for scene composition or UI pass!");
+			return false;
+		}
 
+		if (cmdListUI is null && !graphicsCore.CreateCommandList(out cmdListUI))
+		{
+			logger.LogError("Cannot composite final output of default graphics stack without command list!");
+			return false;
+		}
+		cmdListUI!.Begin();
 
-		//TODO
+		bool success = true;
 
-		return true;    //TEMP
+		success &= _camera.BeginPass(
+			in _sceneCtx,
+			cmdListUI,
+			RenderMode.Composition,
+			true,
+			_cameraIdx,
+			0,
+			0,
+			out CameraPassContext cameraPassCtx,
+			_rebuildResSetCamera);
+
+		Material material = rendererUI!.MaterialHandle.GetResource<Material>(true, true)!;
+		success &= material.SetResource("TexSceneColor", targetSceneComposition.texColorTarget);	//TODO [later]: Query slot indices by name during initialization, then use those at run-time.
+		success &= material.SetResource("TexSceneDepth", targetSceneComposition.texDepthTarget);
+		success &= material.SetResource("TexUIColor", targetUI.texColorTarget);
+
+		success &= rendererUI!.Draw(_sceneCtx, cameraPassCtx);
+
+		success &= _camera.EndPass();
+
+		cmdListUI!.End();
+		if (success)
+		{
+			success = graphicsCore.CommitCommandList(cmdListUI);
+		}
+
+		success &= _camera.SetOverrideCameraTarget(null);
+		return success;
 	}
 
 	#endregion

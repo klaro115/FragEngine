@@ -166,7 +166,7 @@ public sealed class DefaultGraphicsStack : IGraphicsStack
 		// Output composition:
 		if (success)
 		{
-			success &= compositionStack.CompositeFinalOutput();
+			success &= compositionStack.CompositeFinalOutput(in sceneCtx!, in _cameras, rebuildResSetCamera);
 		}
 
 		if (!EndDrawing())
