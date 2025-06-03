@@ -1,5 +1,6 @@
 ﻿using FragEngine3.EngineCore;
 using FragEngine3.Graphics.Cameras;
+using FragEngine3.Graphics.ConstantBuffers;
 using FragEngine3.Graphics.Contexts;
 using FragEngine3.Graphics.Lighting.Internal;
 using FragEngine3.Graphics.Utility;
@@ -28,6 +29,7 @@ internal sealed class DefaultStackResources(GraphicsCore _graphicsCore) : IDispo
 	private ResourceLayout? resLayoutCamera = null;
 	private ResourceLayout? resLayoutObject = null;
 
+	private CBScene cbSceneData = default;
 	private DeviceBuffer? cbScene = null;
 	private LightDataBuffer? dummyLightDataBuffer = null;
 	private ShadowMapArray? shadowMapArray = null;
@@ -114,6 +116,33 @@ internal sealed class DefaultStackResources(GraphicsCore _graphicsCore) : IDispo
 		shadowMapArray = null;
 
 		isInitialized = false;
+	}
+
+	public bool CreateOrUpdateSceneResources(Scene _scene, uint _lightCount, uint _lightCountShadowMapped, ushort _sceneResourceVersion, out SceneContext? _outSceneCtx, out bool _outRebuildResSetCamera)
+	{
+		if (!IsInitialized)
+		{
+			logger.LogError("Cannot create or update scene resources from uninitialized graphics stack resources!");
+			_outSceneCtx = null;
+			_outRebuildResSetCamera = false;
+			return false;
+		}
+
+		// Update scene constant buffer:
+		if (!CameraUtility.UpdateConstantBuffer_CBScene(
+			graphicsCore,
+			in _scene!.settings,
+			ref cbSceneData,
+			ref cbScene,
+			out _outRebuildResSetCamera))
+		{
+			logger.LogError("Failed to create or update scene constant buffer!");
+			_outSceneCtx = null;
+			return false;
+		}
+
+		bool success = CreateSceneContext(_scene, _lightCount, _lightCountShadowMapped, _sceneResourceVersion, out _outSceneCtx);
+		return success;
 	}
 
 	public bool CreateSceneContext(Scene _scene, uint _lightCount, uint _lightCountShadowMapped, ushort _sceneResourceVersion, out SceneContext? _outSceneCtx)
