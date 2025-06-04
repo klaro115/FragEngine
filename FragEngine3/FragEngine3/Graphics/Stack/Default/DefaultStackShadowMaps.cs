@@ -103,6 +103,8 @@ internal sealed class DefaultStackShadowMaps(GraphicsCore _graphicsCore, Default
 			return true;
 		}
 
+		cmdList!.Begin();
+
 		bool success = true;
 
 		uint shadowMapCounter = 0u;
@@ -122,6 +124,8 @@ internal sealed class DefaultStackShadowMaps(GraphicsCore _graphicsCore, Default
 		{
 			success &= sceneCtx!.ShadowMapArray.FinalizeProjectionMatrices(cmdList!);
 		}
+
+		cmdList!.End();
 		if (success)
 		{
 			success &= graphicsCore.CommitCommandList(cmdList!);
