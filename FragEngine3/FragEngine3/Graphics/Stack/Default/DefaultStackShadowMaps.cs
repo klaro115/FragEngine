@@ -4,6 +4,7 @@ using FragEngine3.Graphics.Contexts;
 using FragEngine3.Graphics.Internal;
 using FragEngine3.Graphics.Lighting;
 using FragEngine3.Scenes;
+using FragEngine3.Utility;
 using System.Numerics;
 using Veldrid;
 
@@ -26,6 +27,9 @@ internal sealed class DefaultStackShadowMaps(GraphicsCore _graphicsCore, Default
 	private readonly DefaultStackResources resources = _resources;
 
 	private readonly CommandListPool cmdListPool = new(_graphicsCore);
+
+	private readonly List<ILightSource> shadowCastingLights = [];
+	private readonly List<IRenderer> visibleRenderers = [];
 
 	#endregion
 	#region Properties
@@ -96,7 +100,9 @@ internal sealed class DefaultStackShadowMaps(GraphicsCore _graphicsCore, Default
 
 		//TODO [later]: Sort out all lights whose shadow maps are not visible to any of the scene's active cameras!
 
-		List<ILightSource> shadowCastingLights = _lights.Where(o => o.IsVisible && o.CastShadows).ToList();
+		shadowCastingLights.Clear();
+		shadowCastingLights.AddWhere(_lights, (light) => light.IsVisible && light.CastShadows);
+
 		_outLightCountShadowMapped = (uint)shadowCastingLights.Count;
 		if (_outLightCountShadowMapped == 0)
 		{
@@ -167,7 +173,12 @@ internal sealed class DefaultStackShadowMaps(GraphicsCore _graphicsCore, Default
 		ref uint _shadowMapIdx)
 	{
 		// Identify which renderers are visible to this light's shadow camera:
-		List<IRenderer> visibleRenderers = _renderers.Where(o => o.IsVisible && (_lightSource.LayerMask & o.LayerFlags) != 0).ToList();
+		visibleRenderers.Clear();
+		visibleRenderers.AddWhere(_renderers, (rend) =>
+		{
+			bool isVisible = rend.IsVisible && (_lightSource.LayerMask & rend.LayerFlags) != 0;
+			return isVisible;
+		});
 
 		// Start drawing:
 		if (!_lightSource.BeginDrawShadowMap(in _sceneCtx, LightConstants.directionalLightSize / 2, _shadowMapIdx))

@@ -2,8 +2,8 @@
 using FragEngine3.Graphics.Components;
 using FragEngine3.Graphics.Contexts;
 using FragEngine3.Graphics.Internal;
-using FragEngine3.Graphics.Lighting;
 using FragEngine3.Graphics.Lighting.Data;
+using FragEngine3.Utility;
 using Veldrid;
 
 namespace FragEngine3.Graphics.Stack.Default;
@@ -60,6 +60,9 @@ internal sealed class DefaultStackSceneRender(GraphicsCore _graphicsCore) : IDis
 	private readonly Stack<PassRendererLists> rendererListPool = new(4);
 	private readonly PassRendererLists emptyRendererList = new(0);
 
+	private readonly List<CameraComponent> activeCameras = [];
+	private readonly List<ILightSource> visibleLights = [];
+
 	#endregion
 	#region Properties
 
@@ -108,7 +111,12 @@ internal sealed class DefaultStackSceneRender(GraphicsCore _graphicsCore) : IDis
 
 		cmdListPool.ReturnUsedToPool();
 
-		List<CameraComponent> activeCameras = _cameras.Where(static o => !o.IsDisposed && o.layerMask != 0 && o.node.IsEnabledInHierarchy()).ToList();
+		activeCameras.Clear();
+		activeCameras.AddWhere(_cameras, (camera) =>
+		{
+			bool isActive = !camera.IsDisposed && camera.layerMask != 0 && camera.node.IsEnabledInHierarchy();
+			return isActive;
+		});
 		if (activeCameras.Count == 0)
 		{
 			logger.LogWarning("Scene contains no active cameras, cannot draw graphics stack.");
@@ -162,7 +170,7 @@ internal sealed class DefaultStackSceneRender(GraphicsCore _graphicsCore) : IDis
 		}
 
 		// Identify visible lights, and register them in the camera's 'BufLights' buffer:
-		if (!ProcessLightsVisibleToCamera(in cmdList!, in _camera, in _lights, out uint visibleLightCount, out uint visibleLightCountShadowMapped, out bool recreatedBufLights))
+		if (!ProcessLightsVisibleToCamera(in cmdList!, _camera, in _lights, out uint visibleLightCount, out uint visibleLightCountShadowMapped, out bool recreatedBufLights))
 		{
 			logger.LogError($"Failed to identify light sources that are visible by scene camera! Camera: '{_camera}'");
 			AbortUsingCommandList(cmdList!);
@@ -352,7 +360,7 @@ internal sealed class DefaultStackSceneRender(GraphicsCore _graphicsCore) : IDis
 		return true;
 	}
 
-	private bool ProcessLightsVisibleToCamera(in CommandList _cmdList, in CameraComponent _camera, in IList<ILightSource> _allLights, out uint _outVisibleLightCount, out uint _outVisibleLightCountShadowMapped, out bool _outRecreatedBufLights)
+	private bool ProcessLightsVisibleToCamera(in CommandList _cmdList, CameraComponent _camera, in IList<ILightSource> _allLights, out uint _outVisibleLightCount, out uint _outVisibleLightCountShadowMapped, out bool _outRecreatedBufLights)
 	{
 		_outVisibleLightCountShadowMapped = 0;
 		if (_allLights.Count == 0)
@@ -365,19 +373,21 @@ internal sealed class DefaultStackSceneRender(GraphicsCore _graphicsCore) : IDis
 		bool success = true;
 
 		// Identify all light sources that are active, and that will have an effect within visual range:
-		List<ILightSource> visibleLights = new(_allLights.Count);
-		foreach (ILightSource light in _allLights)
 		{
-			if (light.IsVisible && (light.LayerMask & _camera.layerMask) != 0)  //TODO/TEMP [later]: For non-directional lights, add spatial partitioning lookup here.
+			uint visibleLightCountShadowMapped = 0u;
+			visibleLights.Clear();
+			visibleLights.AddWhere(_allLights, (light) =>
 			{
-				visibleLights.Add(light);
-				if (light.CastShadows)
+				bool isVisible = light.IsVisible && (light.LayerMask & _camera.layerMask) != 0; //TODO/TEMP [later]: For non-directional lights, add spatial partitioning lookup here.
+				if (isVisible && light.CastShadows)
 				{
-					_outVisibleLightCountShadowMapped++;
+					visibleLightCountShadowMapped++;
 				}
-			}
+				return isVisible;
+			});
+			_outVisibleLightCountShadowMapped = visibleLightCountShadowMapped;
+			_outVisibleLightCount = (uint)visibleLights.Count;
 		}
-		_outVisibleLightCount = (uint)visibleLights.Count;
 
 		if (!_camera.LightDataBuffer.PrepareBufLights(_outVisibleLightCount, out _outRecreatedBufLights))
 		{
