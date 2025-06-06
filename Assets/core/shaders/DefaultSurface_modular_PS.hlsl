@@ -380,8 +380,10 @@ half3 CalculateTotalLightIntensity(const in float3 _worldPosition, const in floa
         // Shadow-casting light sources:
         for (; i < shadowMappedLightCount; ++i)
         {
-            Light light = BufLights[i];
+            totalLightIntensity += half3(0, 0.25, 0);    //TEST
 
+            Light light = BufLights[i];
+            
             const half3 lightIntensity = CalculatePhongLighting(light, _worldPosition, _worldNormal);
             const half lightWeight = CalculateShadowMapLightWeight(light, _worldPosition, _surfaceNormal);
             totalLightIntensity += lightIntensity * lightWeight;
@@ -394,8 +396,10 @@ half3 CalculateTotalLightIntensity(const in float3 _worldPosition, const in floa
         uint shadowMappedLightCount = 0;
         #endif //FEATURE_LIGHT_SHADOWMAPS
         // Simple light sources:
-        for (i = shadowMappedLightCount; i < lightCount; ++i)
+        for (i = shadowMappedLightCount; i < 2; ++i)
         {
+            totalLightIntensity += half3(0, 0.25, 0);    //TEST
+
             totalLightIntensity += CalculatePhongLighting(BufLights[i], _worldPosition, _worldNormal);
         }
     }

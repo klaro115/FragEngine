@@ -154,7 +154,7 @@ public sealed class TestApplicationLogic : ApplicationLogic
 			//light.node.SetEnabled(false);
 
 			light.LightIntensity = 0.8f;
-			light.CastShadows = true;
+			light.CastShadows = false;
 			light.ShadowCascades = 0;
 			light.ShadowNormalBias = 0.02f;
 			light.ShadowDepthBias = 0.01f;
@@ -166,7 +166,7 @@ public sealed class TestApplicationLogic : ApplicationLogic
 			//light.node.SetEnabled(false);
 
 			light.LightIntensity = 0.4f;
-			light.CastShadows = true;
+			light.CastShadows = false;
 			light.ShadowCascades = 0;
 			light.ShadowNormalBias = 0.02f;
 			light.ShadowDepthBias = 0.01f;

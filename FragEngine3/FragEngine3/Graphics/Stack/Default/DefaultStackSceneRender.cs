@@ -169,15 +169,6 @@ internal sealed class DefaultStackSceneRender(GraphicsCore _graphicsCore) : IDis
 			return false;
 		}
 
-		// Identify visible lights, and register them in the camera's 'BufLights' buffer:
-		if (!ProcessLightsVisibleToCamera(in cmdList!, _camera, in _lights, out uint visibleLightCount, out uint visibleLightCountShadowMapped, out bool recreatedBufLights))
-		{
-			logger.LogError($"Failed to identify light sources that are visible by scene camera! Camera: '{_camera}'");
-			AbortUsingCommandList(cmdList!);
-			_outRebuildResSetCamera = recreatedBufLights;
-			return false;
-		}
-
 		if (!_camera.BeginFrame(
 			_totalLightCount,
 			out _outRebuildResSetCamera))
@@ -186,9 +177,16 @@ internal sealed class DefaultStackSceneRender(GraphicsCore _graphicsCore) : IDis
 			AbortUsingCommandList(cmdList!);
 			return false;
 		}
-		_outRebuildResSetCamera |= recreatedBufLights;
 
-		bool success = true;
+		// Identify visible lights, and register them in the camera's 'BufLights' buffer:
+		bool success = ProcessLightsVisibleToCamera(in cmdList!, _camera, in _lights, out uint visibleLightCount, out uint visibleLightCountShadowMapped, out bool recreatedBufLights);
+		_outRebuildResSetCamera |= recreatedBufLights;
+		if (!success)
+		{
+			logger.LogError($"Failed to identify light sources that are visible by scene camera! Camera: '{_camera}'");
+			AbortUsingCommandList(cmdList!);
+			return false;
+		}
 
 		if (visibleRenderers is not null)
 		{
@@ -373,6 +371,7 @@ internal sealed class DefaultStackSceneRender(GraphicsCore _graphicsCore) : IDis
 		bool success = true;
 
 		// Identify all light sources that are active, and that will have an effect within visual range:
+		/*
 		{
 			uint visibleLightCountShadowMapped = 0u;
 			visibleLights.Clear();
@@ -387,6 +386,13 @@ internal sealed class DefaultStackSceneRender(GraphicsCore _graphicsCore) : IDis
 			});
 			_outVisibleLightCountShadowMapped = visibleLightCountShadowMapped;
 			_outVisibleLightCount = (uint)visibleLights.Count;
+		}
+		*/
+		{
+			visibleLights.Clear();
+			visibleLights.AddRange(_allLights);
+			_outVisibleLightCount = (uint)visibleLights.Count;
+			_outVisibleLightCountShadowMapped = _outVisibleLightCount;
 		}
 
 		if (!_camera.LightDataBuffer.PrepareBufLights(_outVisibleLightCount, out _outRecreatedBufLights))
@@ -412,7 +418,7 @@ internal sealed class DefaultStackSceneRender(GraphicsCore _graphicsCore) : IDis
 		{
 			logger.LogError($"Failed to gather light source data for scene camera render! (Camera: '{_camera}')");
 		}
-		else if (!_camera.LightDataBuffer.FinalizeBufLights(_cmdList))
+		else if (!_camera.LightDataBuffer.FinalizeBufLights())
 		{
 			logger.LogError($"Failed to finalize light data buffer for scene camera render! (Camera: '{_camera}')");
 		}
