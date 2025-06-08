@@ -341,7 +341,7 @@ public sealed class Scene : IDisposable
 	{
 		if (!IsDisposed)
 		{
-			if (_funcSelector == null)
+			if (_funcSelector is null)
 			{
 				Logger.LogError("Selector function delegate may not be null!");
 				_outNode = null;
@@ -374,7 +374,7 @@ public sealed class Scene : IDisposable
 		if (!IsDisposed)
 		{
 			_outComponent = rootNode.GetComponentInChildren<T>(_enabledOnly);
-			if (_outComponent != null && !_outComponent.IsDisposed)
+			if (_outComponent is not null && !_outComponent.IsDisposed)
 			{
 				return true;
 			}
@@ -390,7 +390,7 @@ public sealed class Scene : IDisposable
 	/// <param name="_targetList">A list in which to store all nodes. Must be non-null, and will be cleared before any nodes are added.</param>
 	/// <param name="_enabledOnly">Whether to only consider nodes that are currently enabled.</param>
 	/// <returns>True if any components were found, false otherwise.</returns>
-	public bool FindAllComponentsOfType<T>(List<Component> _targetList, bool _enabledOnly) where T : Component
+	public bool FindAllComponentsOfType<T>(List<T> _targetList, bool _enabledOnly) where T : Component
 	{
 		_targetList.Clear();
 		if (IsDisposed) return false;
@@ -399,7 +399,7 @@ public sealed class Scene : IDisposable
 		while (e.MoveNext())
 		{
 			T? component = e.Current.GetComponent<T>();
-			if (component != null && !component.IsDisposed)
+			if (component is not null && !component.IsDisposed)
 			{
 				_targetList.Add(component);
 			}

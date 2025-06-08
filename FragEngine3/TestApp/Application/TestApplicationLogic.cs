@@ -154,8 +154,8 @@ public sealed class TestApplicationLogic : ApplicationLogic
 			//light.node.SetEnabled(false);
 
 			light.LightIntensity = 0.8f;
-			light.CastShadows = false;
-			light.ShadowCascades = 0;
+			light.CastShadows = true;
+			light.ShadowCascades = 1;
 			light.ShadowNormalBias = 0.02f;
 			light.ShadowDepthBias = 0.01f;
 		}
@@ -163,7 +163,7 @@ public sealed class TestApplicationLogic : ApplicationLogic
 		{
 			light.node.WorldPosition = new Vector3(0, 5, 0);
 			light.node.SetRotationFromYawPitchRoll(-70, 20, 0, true, true);
-			//light.node.SetEnabled(false);
+			light.node.SetEnabled(false);
 
 			light.LightIntensity = 0.4f;
 			light.CastShadows = false;
@@ -517,6 +517,23 @@ public sealed class TestApplicationLogic : ApplicationLogic
 		{
 			skyboxNode.WorldPosition = CameraComponent.MainCamera.node.WorldPosition;
 		}
+
+		//TEST
+		if (Engine.InputManager.GetKeyUp(Key.P))
+		{
+			List<StaticMeshRendererComponent> renderers = new(32);
+			if (scene.FindAllComponentsOfType(renderers, true))
+			{
+				foreach (var renderer in renderers)
+				{
+					renderer.MarkDirty();
+				}
+			}
+			var projSettings = CameraComponent.MainCamera!.ProjectionSettings;
+			projSettings.FieldOfViewDegrees += 10;
+			CameraComponent.MainCamera!.ProjectionSettings = projSettings;
+		}
+		//TEST
 
 		return true;
 	}

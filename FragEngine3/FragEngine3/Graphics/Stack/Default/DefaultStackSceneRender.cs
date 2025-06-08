@@ -1,5 +1,6 @@
 ﻿using FragEngine3.EngineCore;
 using FragEngine3.Graphics.Components;
+using FragEngine3.Graphics.ConstantBuffers;
 using FragEngine3.Graphics.Contexts;
 using FragEngine3.Graphics.Internal;
 using FragEngine3.Graphics.Lighting.Data;
@@ -343,7 +344,7 @@ internal sealed class DefaultStackSceneRender(GraphicsCore _graphicsCore) : IDis
 		// Sort all renderers by render mode:
 		foreach (IRenderer renderer in _allRenderers)   //TODO/TEMP [later]: Replace this logic with spatial partitioning lookup.
 		{
-			passRendererList.Add(renderer);
+			passRendererList.Add(renderer);				//TODO: Add Z-sorting for transparent and volumetric renderers!
 		}
 
 		// Return results:
@@ -371,7 +372,6 @@ internal sealed class DefaultStackSceneRender(GraphicsCore _graphicsCore) : IDis
 		bool success = true;
 
 		// Identify all light sources that are active, and that will have an effect within visual range:
-		/*
 		{
 			uint visibleLightCountShadowMapped = 0u;
 			visibleLights.Clear();
@@ -386,13 +386,6 @@ internal sealed class DefaultStackSceneRender(GraphicsCore _graphicsCore) : IDis
 			});
 			_outVisibleLightCountShadowMapped = visibleLightCountShadowMapped;
 			_outVisibleLightCount = (uint)visibleLights.Count;
-		}
-		*/
-		{
-			visibleLights.Clear();
-			visibleLights.AddRange(_allLights);
-			_outVisibleLightCount = (uint)visibleLights.Count;
-			_outVisibleLightCountShadowMapped = _outVisibleLightCount;
 		}
 
 		if (!_camera.LightDataBuffer.PrepareBufLights(_outVisibleLightCount, out _outRecreatedBufLights))

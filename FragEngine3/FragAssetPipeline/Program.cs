@@ -64,8 +64,10 @@ internal static class Program
 	[
 		new("Basic_VS",                           "Basic_VS.hlsl",                                       "Main_Vertex", ShaderStages.Vertex,   flagsExt,   _bundlePrecompiledData: false) { descriptionTxt = shaderDescriptionTxt },
 		new("DefaultSurface_VS",                  "DefaultSurface_VS.hlsl",                              "Main_Vertex", ShaderStages.Vertex,   flagsExt,   _bundlePrecompiledData: false) { descriptionTxt = shaderDescriptionTxt },
-		new("DefaultSurface_PS",                  "DefaultSurface_modular_PS.hlsl",                      "Main_Pixel",  ShaderStages.Fragment, flagsExt,   _bundlePrecompiledData: false) { descriptionTxt = shaderDescriptionTxt },
-		new("TexturedLit_PS",                     "DefaultSurface_modular_PS.hlsl",                      "Main_Pixel",  ShaderStages.Fragment, flagsExt,   _bundlePrecompiledData: false) { descriptionTxt = shaderDescriptionTxtTexList },
+		//new("DefaultSurface_PS",                  "DefaultSurface_modular_PS.hlsl",                      "Main_Pixel",  ShaderStages.Fragment, flagsExt,   _bundlePrecompiledData: false) { descriptionTxt = shaderDescriptionTxt },
+		//new("TexturedLit_PS",                     "DefaultSurface_modular_PS.hlsl",                      "Main_Pixel",  ShaderStages.Fragment, flagsExt,   _bundlePrecompiledData: false) { descriptionTxt = shaderDescriptionTxtTexList },
+		new("DefaultSurface_PS",                  "DefaultSurface_test_PS.hlsl",                         "Main_Pixel",  ShaderStages.Fragment, flagsExt,   _bundlePrecompiledData: false) { descriptionTxt = shaderDescriptionTxt },
+		new("TexturedLit_PS",                     "DefaultSurface_test_PS.hlsl",                         "Main_Pixel",  ShaderStages.Fragment, flagsExt,   _bundlePrecompiledData: false) { descriptionTxt = shaderDescriptionTxtTexList },
 		new("Heightmap_VS",                       "Heightmap_VS.hlsl",                                   "Main_Vertex", ShaderStages.Vertex,   flagsExt,   _bundlePrecompiledData: false) { descriptionTxt = shaderDescriptionTxt },
 		new("AlphaShadow_PS",                     "shadows/AlphaShadow_PS.hlsl",                         "Main_Pixel",  ShaderStages.Fragment, flagsExt,   _bundlePrecompiledData: false) { descriptionTxt = shaderDescriptionTxt },
 		new("DefaultShadow_PS",                   "shadows/DefaultShadow_PS.hlsl",                       "Main_Pixel",  ShaderStages.Fragment, flagsExt,   _bundlePrecompiledData: false) { descriptionTxt = shaderDescriptionTxt },

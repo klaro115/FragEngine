@@ -382,13 +382,14 @@ public sealed class StaticMeshRenderer : IPhysicalRenderer
 			OnRenderModeChanged?.Invoke(this);
 		}
 
-		return !proceed || Draw_internal(
+		bool success = !proceed || Draw_internal(
 			_sceneCtx,
 			_cameraPassCtx,
 			materialScene!,
 			rendererVersionScene,
 			ref pipelineScene,
 			ref allResourceSetsScene);
+		return success;
 	}
 
 	public bool DrawShadowMap(SceneContext _sceneCtx, CameraPassContext _cameraPassCtx)
@@ -411,13 +412,14 @@ public sealed class StaticMeshRenderer : IPhysicalRenderer
 			OnRenderModeChanged?.Invoke(this);
 		}
 
-		return !proceed || Draw_internal(
+		bool success = !proceed || Draw_internal(
 			_sceneCtx,
 			_cameraPassCtx,
 			materialShadow!,
 			rendererVersionShadow,
 			ref pipelineShadow,
 			ref allResourceSetsShadow);
+		return success;
 	}
 
 	private bool Draw_internal(

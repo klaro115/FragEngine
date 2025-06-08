@@ -36,7 +36,7 @@ public struct CBCamera
         2 * 4 * sizeof(float) + // camera vectors
         3 * sizeof(uint) +      // camera idx & res
         2 * sizeof(float) +     // clip planes
-        2 * sizeof(uint);       // light counts			= 184 bytes
+        2 * sizeof(uint);       // light counts			= 188 bytes
 
     public const int packedByteSize = 192;
 
