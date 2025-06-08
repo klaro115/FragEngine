@@ -453,25 +453,25 @@ public sealed class CameraComponent : Component, IOnNodeDestroyedListener, IOnCo
 		}
 
 		//TEST TEST TEST TEST
-		try
-		{
-			DeviceBuffer cbCamera = passResources.cbCamera;
-			BufferDescription desc = new(cbCamera.SizeInBytes, BufferUsage.Staging);
-			testBuffer ??= instance.graphicsCore.MainFactory.CreateBuffer(ref desc);
-
-			_cmdList.CopyBuffer(cbCamera, 0, testBuffer, 0, cbCamera.SizeInBytes);
-			var mappedView = instance.graphicsCore.Device.Map<CBCamera>(testBuffer, MapMode.Read);
-			CBCamera[] cbCameraData = new CBCamera[1];
-			for (int i = 0; i < cbCameraData.Length; i++)
-			{
-				cbCameraData[i] = mappedView[i];
-			}
-			instance.graphicsCore.Device.Unmap(testBuffer);
-		}
-		catch (Exception ex)
-		{
-			Console.WriteLine($"nope: '{ex.Message}'");
-		}
+		//try
+		//{
+		//	DeviceBuffer cbCamera = passResources.cbCamera;
+		//	BufferDescription desc = new(cbCamera.SizeInBytes, BufferUsage.Staging);
+		//	testBuffer ??= instance.graphicsCore.MainFactory.CreateBuffer(ref desc);
+		//
+		//	_cmdList.CopyBuffer(cbCamera, 0, testBuffer, 0, cbCamera.SizeInBytes);
+		//	var mappedView = instance.graphicsCore.Device.Map<CBCamera>(testBuffer, MapMode.Read);
+		//	CBCamera[] cbCameraData = new CBCamera[1];
+		//	for (int i = 0; i < cbCameraData.Length; i++)
+		//	{
+		//		cbCameraData[i] = mappedView[i];
+		//	}
+		//	instance.graphicsCore.Device.Unmap(testBuffer);
+		//}
+		//catch (Exception ex)
+		//{
+		//	Console.WriteLine($"nope: '{ex.Message}'");
+		//}
 		//TEST TEST TEST TEST
 
 		// Always force a rebuild of the camera's resource set if either the scene resources have changed, or those owned by the camera:

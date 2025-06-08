@@ -44,4 +44,9 @@ public struct CBCamera
     public static readonly ResourceLayoutElementDescription resourceLayoutElementDesc = new(NAME_IN_SHADER, ResourceKind.UniformBuffer, ShaderStages.Vertex | ShaderStages.Fragment);
 
     #endregion
+    #region Properties
+    
+    public static BufferDescription BufferDescription => new(packedByteSize, BufferUsage.UniformBuffer | BufferUsage.Dynamic);
+
+    #endregion
 }

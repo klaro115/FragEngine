@@ -94,7 +94,7 @@ namespace FragEngine3.Graphics.Cameras
 
 				try
 				{
-					BufferDescription bufferDesc = new(CBCamera.packedByteSize, BufferUsage.UniformBuffer | BufferUsage.Dynamic);
+					BufferDescription bufferDesc = CBCamera.BufferDescription;
 
 					_cbCamera = _cameraInstance.graphicsCore.MainFactory.CreateBuffer(ref bufferDesc);
 					_cbCamera.Name = CBCamera.NAME_IN_SHADER;
