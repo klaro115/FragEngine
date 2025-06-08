@@ -31,6 +31,9 @@ public sealed class CameraComponent : Component, IOnNodeDestroyedListener, IOnCo
 
 	private readonly CameraInstance instance;
 
+	// States:
+	private bool isDrawingFrame = false;
+
 	// Content:
 	public uint cameraPriority = 1000;
 	public uint layerMask = 0xFFFFu;
@@ -156,6 +159,8 @@ public sealed class CameraComponent : Component, IOnNodeDestroyedListener, IOnCo
 	{
 		// Do not allow resetting after disposal or while actively drawing:
 		if (IsDisposed || IsDrawing) return;
+
+		isDrawingFrame = false;
 
 		// Temporarily unset camera as main camera, to reduce potential access during reset:
 		bool wasMainCamera = IsMainCamera;
@@ -346,6 +351,7 @@ public sealed class CameraComponent : Component, IOnNodeDestroyedListener, IOnCo
 
 		// Reset pass counter:
 		PassCounter = 0;
+		isDrawingFrame = true;
 		return true;
 	}
 
@@ -375,6 +381,7 @@ public sealed class CameraComponent : Component, IOnNodeDestroyedListener, IOnCo
 		// Update counters:
 		PassCounter = 0;
 		FrameCounter++;
+		isDrawingFrame = false;
 		return true;
 	}
 
@@ -398,6 +405,12 @@ public sealed class CameraComponent : Component, IOnNodeDestroyedListener, IOnCo
 		if (IsDrawing)
 		{
 			Logger.LogError("Cannot begin pass on camera that is already drawing!");
+			_outCameraPassCtx = null!;
+			return false;
+		}
+		if (!isDrawingFrame)
+		{
+			Logger.LogError($"Cannot begin pass on uninitialized camera frame! Calls to '{nameof(BeginPass)}' must be enclosed by calls to '{nameof(BeginFrame)}' and '{nameof(EndFrame)}'");
 			_outCameraPassCtx = null!;
 			return false;
 		}

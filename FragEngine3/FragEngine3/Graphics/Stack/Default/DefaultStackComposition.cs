@@ -248,7 +248,10 @@ internal sealed class DefaultStackComposition(GraphicsCore _graphicsCore) : IDis
 		success &= material.SetResource("TexTransparentColor", targetTransparent.texColorTarget);
 		success &= material.SetResource("TexTransparentDepth", targetTransparent.texDepthTarget);   //TODO [later]: Query slot indices by name during initialization, then use those at run-time.
 
-		success &= rendererScene!.Draw(_sceneCtx, cameraPassCtx);
+		if (success)
+		{
+			success &= rendererScene!.Draw(_sceneCtx, cameraPassCtx);
+		}
 
 		success &= _camera.EndPass();
 
@@ -333,7 +336,10 @@ internal sealed class DefaultStackComposition(GraphicsCore _graphicsCore) : IDis
 		success &= material.SetResource("TexSceneDepth", targetSceneComposition.texDepthTarget);
 		success &= material.SetResource("TexUIColor", targetUI.texColorTarget);
 
-		success &= rendererUI!.Draw(_sceneCtx, cameraPassCtx);
+		if (success)
+		{
+			success &= rendererUI!.Draw(_sceneCtx, cameraPassCtx);
+		}
 
 		success &= _camera.EndPass();
 
