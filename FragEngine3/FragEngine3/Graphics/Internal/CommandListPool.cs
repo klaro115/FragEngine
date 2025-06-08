@@ -1,4 +1,5 @@
 ﻿using FragEngine3.EngineCore;
+using FragEngine3.Utility;
 using Veldrid;
 
 namespace FragEngine3.Graphics.Internal;
@@ -60,16 +61,8 @@ internal sealed class CommandListPool(GraphicsCore _graphicsCore, uint _initialC
 	/// </summary>
 	public void Clear()
 	{
-		foreach (CommandList cmdList in inUse)
-		{
-			cmdList.Dispose();
-		}
-		while (pool.TryPop(out CommandList? cmdList))
-		{
-			cmdList.Dispose();
-		}
-		inUse.Clear();
-		pool.Clear();
+		inUse.DisposeAndClear();
+		pool.DisposeAndClear();
 	}
 
 	/// <summary>

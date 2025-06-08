@@ -41,5 +41,23 @@ public static class ListExt
 		return _dstList;
 	}
 
+	/// <summary>
+	/// Disposes all elements in the list, then clears the list.
+	/// </summary>
+	/// <typeparam name="T">The type of items in the list, must implement the <see cref="IDisposable"/> interface.</typeparam>
+	/// <param name="_list">This list, whose contents we want to clear out safely.</param>
+	/// <exception cref="ArgumentNullException">List may not be null!</exception>
+	public static void DisposeAndClear<T>(this List<T> _list) where T : IDisposable
+	{
+		if (_list is null)
+			throw new ArgumentNullException(nameof(_list), "List may not be null!");
+
+		foreach (T item in _list)
+		{
+			item?.Dispose();
+		}
+		_list.Clear();
+	}
+
 	#endregion
 }

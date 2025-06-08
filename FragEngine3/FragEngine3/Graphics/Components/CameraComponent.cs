@@ -7,6 +7,7 @@ using FragEngine3.Graphics.Lighting.Internal;
 using FragEngine3.Scenes;
 using FragEngine3.Scenes.Data;
 using FragEngine3.Scenes.EventSystem;
+using FragEngine3.Utility;
 using FragEngine3.Utility.Serialization;
 using System.Numerics;
 using Veldrid;
@@ -130,14 +131,8 @@ public sealed class CameraComponent : Component, IOnNodeDestroyedListener, IOnCo
 			kvp.Value.Dispose();
 		}
 
-		foreach (CameraPassResources passRes in passResourcePool)
-		{
-			passRes.Dispose();
-		}
-		foreach (CameraPassResources passRes in passResourcesInUse)
-		{
-			passRes.Dispose();
-		}
+		passResourcePool.DisposeElements();
+		passResourcesInUse.DisposeElements();
 
 		LightDataBuffer?.Dispose();
 
@@ -176,16 +171,8 @@ public sealed class CameraComponent : Component, IOnNodeDestroyedListener, IOnCo
 		}
 		targetDict.Clear();
 
-		foreach (CameraPassResources passRes in passResourcePool)
-		{
-			passRes.Dispose();
-		}
-		foreach (CameraPassResources passRes in passResourcesInUse)
-		{
-			passRes.Dispose();
-		}
-		passResourcePool.Clear();
-		passResourcesInUse.Clear();
+		passResourcePool.DisposeAndClear();
+		passResourcesInUse.DisposeAndClear();
 
 		// Reset camera instance and its external references:
 		instance.SetOverrideFramebuffer(null, false);
