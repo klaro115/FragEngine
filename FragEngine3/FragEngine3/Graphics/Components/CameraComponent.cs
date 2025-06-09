@@ -62,7 +62,7 @@ public sealed class CameraComponent : Component, IOnNodeDestroyedListener, IOnCo
 	#region Properties
 
 	public bool IsDrawing => !IsDisposed && instance.IsDrawing;
-	public bool HasOverrideFramebuffer => overrideTarget != null && !overrideTarget.IsDisposed;
+	public bool HasOverrideFramebuffer => overrideTarget is not null && !overrideTarget.IsDisposed;
 
 	public uint FrameCounter { get; private set; } = 0;
 	public uint PassCounter { get; private set; } = 0;

@@ -140,22 +140,20 @@ public sealed class DefaultGraphicsStack : IGraphicsStack
 		success &= shadowMapStack.DrawShadowMaps(_scene, in _renderers, in _cameras, in _lights, out uint lightCount, out uint lightCountShadowMapped);
 
 		// Scene render:
-		bool rebuildResSetCamera = false;
 		SceneContext? sceneCtx = null;
 		if (success)
 		{
-			success &= resources.CreateOrUpdateSceneResources(_scene, lightCount, lightCountShadowMapped, 0, out sceneCtx, out rebuildResSetCamera);
+			success &= resources.CreateOrUpdateSceneResources(_scene, lightCount, lightCountShadowMapped, 0, out sceneCtx, out _);
 		}
 		if (success)
 		{		
-			success &= sceneRenderStack.DrawAllSceneCameras(in sceneCtx!, /* _scene, */ in _renderers, in _cameras, in _lights, lightCount, lightCountShadowMapped, out bool rebuildResSetCamera2);
-			rebuildResSetCamera |= rebuildResSetCamera2;
+			success &= sceneRenderStack.DrawAllSceneCameras(in sceneCtx!, /* _scene, */ in _renderers, in _cameras, in _lights, lightCount, lightCountShadowMapped, out _);
 		}
 
 		// Scene composition:
 		if (success)
 		{
-			success &= compositionStack.CompositeSceneOutput(in sceneCtx!, in _cameras, rebuildResSetCamera);
+			success &= compositionStack.CompositeSceneOutput(in sceneCtx!, in _cameras);
 		}
 
 		// Scene post-processing:
@@ -167,7 +165,7 @@ public sealed class DefaultGraphicsStack : IGraphicsStack
 		// Output composition:
 		if (success)
 		{
-			success &= compositionStack.CompositeFinalOutput(in sceneCtx!, in _cameras, rebuildResSetCamera);
+			success &= compositionStack.CompositeFinalOutput(in sceneCtx!, in _cameras);
 		}
 
 		if (!EndDrawing())

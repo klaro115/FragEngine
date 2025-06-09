@@ -1,6 +1,5 @@
 ﻿using FragEngine3.EngineCore;
 using FragEngine3.Graphics.Components;
-using FragEngine3.Graphics.ConstantBuffers;
 using FragEngine3.Graphics.Contexts;
 using FragEngine3.Graphics.Internal;
 using FragEngine3.Graphics.Lighting.Data;
@@ -169,6 +168,7 @@ internal sealed class DefaultStackSceneRender(GraphicsCore _graphicsCore) : IDis
 			_outRebuildResSetCamera = false;
 			return false;
 		}
+		cmdList!.Begin();
 
 		if (!_camera.BeginFrame(
 			_totalLightCount,
@@ -191,7 +191,8 @@ internal sealed class DefaultStackSceneRender(GraphicsCore _graphicsCore) : IDis
 
 		if (visibleRenderers is not null)
 		{
-			success &= _camera.SetOverrideCameraTarget(null);
+			//success &= _camera.SetOverrideCameraTarget(null);
+			success &= _camera.SetOverrideCameraTarget(graphicsCore.Device.SwapchainFramebuffer);
 
 			// 1. Opaque geometry:
 			if (success)
@@ -411,7 +412,7 @@ internal sealed class DefaultStackSceneRender(GraphicsCore _graphicsCore) : IDis
 		{
 			logger.LogError($"Failed to gather light source data for scene camera render! (Camera: '{_camera}')");
 		}
-		else if (!_camera.LightDataBuffer.FinalizeBufLights())
+		else if (!_camera.LightDataBuffer.FinalizeBufLights(_cmdList))
 		{
 			logger.LogError($"Failed to finalize light data buffer for scene camera render! (Camera: '{_camera}')");
 		}

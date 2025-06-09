@@ -11,7 +11,7 @@
         "ZSortingBias": 0
     },
     "DepthStencilState": {
-        "EnableDepthTest": true,
+        "EnableDepthTest": false,
         "EnableDepthWrite": true,
         "EnableStencil": false
     },

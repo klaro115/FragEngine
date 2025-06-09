@@ -70,7 +70,9 @@ PixelOutput Main_Pixel(in VertexOutput_Basic inputBasic)
 
     // Assemble final output:
     PixelOutput o;
-    o.color = colFinal;
+    //o.color = colFinal;
+    //o.depth = depthFinal;
+    o.color = colScene;
     o.depth = depthFinal;
     return o;
 }
