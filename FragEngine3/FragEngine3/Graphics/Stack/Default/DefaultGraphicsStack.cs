@@ -16,9 +16,10 @@ public sealed class DefaultGraphicsStack : IGraphicsStack
 
 		resources = new(_graphicsCore);
 		shadowMapStack = new(_graphicsCore, resources);
+		sceneRenderStack = new(_graphicsCore);
 		compositionStack = new(_graphicsCore);
 		postProcessingStack = new();
-		sceneRenderStack = new(_graphicsCore, compositionStack, postProcessingStack);
+		cameraRenderStack = new(_graphicsCore, sceneRenderStack, compositionStack, postProcessingStack);
 	}
 
 	#endregion
@@ -28,7 +29,8 @@ public sealed class DefaultGraphicsStack : IGraphicsStack
 
 	private readonly DefaultStackResources resources;
 	private readonly DefaultStackShadowMaps shadowMapStack;
-	private readonly DefaultStackCameraRender sceneRenderStack;
+	private readonly DefaultStackSceneRender sceneRenderStack;
+	private readonly DefaultStackCameraRender cameraRenderStack;
 	private readonly DefaultStackPostProcessing postProcessingStack;
 	private readonly DefaultStackComposition compositionStack;
 
@@ -54,7 +56,7 @@ public sealed class DefaultGraphicsStack : IGraphicsStack
 	{
 		IsDisposed = true;
 
-		sceneRenderStack.Dispose();
+		cameraRenderStack.Dispose();
 		shadowMapStack.Dispose();
 		compositionStack.Dispose();
 		resources.Dispose();
@@ -107,7 +109,7 @@ public sealed class DefaultGraphicsStack : IGraphicsStack
 
 		bool success = Initialize(lastDrawnScene!);
 
-		sceneRenderStack.Reset();
+		cameraRenderStack.Reset();
 		return success;
 	}
 
@@ -148,18 +150,17 @@ public sealed class DefaultGraphicsStack : IGraphicsStack
 		}
 		if (success)
 		{		
-			success &= sceneRenderStack.DrawAllSceneCameras(in sceneCtx!, /* _scene, */ in _renderers, in _cameras, in _lights, lightCount, lightCountShadowMapped, out _);
+			success &= cameraRenderStack.DrawAllSceneCameras(in sceneCtx!, /* _scene, */ in _renderers, in _cameras, in _lights, lightCount, lightCountShadowMapped, out _);
 		}
 
 		// Output composition:
 		if (success)
 		{
-			//success &= compositionStack.CompositeFinalOutput(in sceneCtx!, in _cameras);
-			CameraComponent? mainCamera = CameraComponent.MainCamera ?? _cameras.FirstOrDefault();
-			if (mainCamera is not null)
-			{
-				success &= compositionStack.CompositeFinalOutput(in sceneCtx!, in mainCamera);
-			}
+			//CameraComponent? mainCamera = CameraComponent.MainCamera ?? _cameras.FirstOrDefault();
+			//if (mainCamera is not null)
+			//{
+			//	success &= compositionStack.CompositeFinalOutput(in sceneCtx!, in mainCamera);
+			//}
 		}
 
 		if (!EndDrawing())

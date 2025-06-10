@@ -312,7 +312,13 @@ internal sealed class DefaultStackComposition(GraphicsCore _graphicsCore) : IDis
 
 		bool success = true;
 
-		success &= _camera.BeginPass(in _sceneCtx, _cmdList, RenderMode.Composition, false, _cameraIdx, _totalLightCount, _totalLightCountShadowMapped, out CameraPassContext cameraPassCtx, _outRebuildResSetCamera);
+		//TEST
+		_camera.SetOverrideCameraTarget(graphicsCore.Device.SwapchainFramebuffer);
+		//_cmdList.SetFramebuffer(graphicsCore.Device.SwapchainFramebuffer);
+		//_cmdList.ClearColorTarget(0, RgbaFloat.CornflowerBlue);
+		//_cmdList.ClearDepthStencil(1.0f);
+
+		success &= _camera.BeginPass(in _sceneCtx, _cmdList, RenderMode.Composition, true, _cameraIdx, _totalLightCount, _totalLightCountShadowMapped, out CameraPassContext cameraPassCtx, _outRebuildResSetCamera);
 
 		Material material = rendererScene!.MaterialHandle.GetResource<Material>(true, true)!;
 		success &= material.SetResource("TexOpaqueColor", targetOpaque.texColorTarget);
@@ -329,24 +335,6 @@ internal sealed class DefaultStackComposition(GraphicsCore _graphicsCore) : IDis
 
 		return success;
 	}
-
-	/*
-	public bool CompositeFinalOutput(
-		in SceneContext _sceneCtx,
-		in IList<CameraComponent> _cameras)
-	{
-		bool success = true;
-
-		for (int cameraIdx = 0; cameraIdx < _cameras.Count; ++cameraIdx)
-		{
-			CameraComponent camera = _cameras[cameraIdx];
-
-			success &= CompositeFinalOutput(in _sceneCtx, in camera);
-		}
-
-		return success;
-	}
-	*/
 
 	public bool CompositeFinalOutput(
 		in SceneContext _sceneCtx,
