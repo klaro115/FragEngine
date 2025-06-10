@@ -8,11 +8,11 @@ using Veldrid;
 
 namespace FragEngine3.Graphics.Stack.Default;
 
-internal sealed class DefaultStackSceneRender(GraphicsCore _graphicsCore) : IDisposable
+internal sealed class DefaultStackCameraRender(GraphicsCore _graphicsCore, DefaultStackComposition _composition, DefaultStackPostProcessing _postProcessingStack) : IDisposable
 {
 	#region Constructors
 
-	~DefaultStackSceneRender()
+	~DefaultStackCameraRender()
 	{
 		if (!IsDisposed) Dispose(false);
 	}
@@ -54,6 +54,8 @@ internal sealed class DefaultStackSceneRender(GraphicsCore _graphicsCore) : IDis
 
 	private readonly GraphicsCore graphicsCore = _graphicsCore;
 	private readonly Logger logger = _graphicsCore.graphicsSystem.Engine.Logger;
+	private readonly DefaultStackComposition compositionStack = _composition;
+	private readonly DefaultStackPostProcessing postProcessingStack = _postProcessingStack;
 
 	private readonly CommandListPool cmdListPool = new(_graphicsCore);
 
@@ -153,14 +155,7 @@ internal sealed class DefaultStackSceneRender(GraphicsCore _graphicsCore) : IDis
 		uint _totalLightCountShadowMapped,
 		out bool _outRebuildResSetCamera)
 	{
-		// Identify visible renderers, and sort them by render mode:
-		if (!GetRenderersVisibleToCamera(in _camera, in _renderers, out PassRendererLists? visibleRenderers))
-		{
-			logger.LogError($"Failed to identify renderers that are visible by scene camera! Camera: '{_camera}'");
-			_outRebuildResSetCamera = false;
-			return false;
-		}
-
+		// Prepare command list and begin camera frame:
 		if (!cmdListPool.GetOrCreateCommandList(out CommandList? cmdList))
 		{
 			logger.LogError("Failed to create command list for drawing scene camera!");
@@ -179,13 +174,79 @@ internal sealed class DefaultStackSceneRender(GraphicsCore _graphicsCore) : IDis
 			return false;
 		}
 
+		bool success = true;
+
+		// Draw all geometry in the scene:
+		success &= DrawSceneGeometry(
+			in _sceneCtx,
+			in _camera,
+			_cameraIdx,
+			cmdList,
+			in _renderers,
+			in _lights,
+			_totalLightCount,
+			_totalLightCountShadowMapped,
+			ref _outRebuildResSetCamera);
+
+		// Composite scene render:
+		if (success)
+		{
+			success &= compositionStack.CompositeSceneOutput(
+				in _sceneCtx,
+				in _camera,
+				_cameraIdx,
+				cmdList,
+				_totalLightCount,
+				_totalLightCountShadowMapped,
+				ref _outRebuildResSetCamera);
+		}
+
+		// Apply post-processing:
+		if (success)
+		{
+			success &= postProcessingStack.ApplyScenePostProcessing();
+		}
+
+		// End camera frame:
+		if (success)
+		{
+			success &= _camera.EndFrame();
+		}
+
+		cmdList!.End();
+		if (success)
+		{
+			success &= graphicsCore.CommitCommandList(cmdList!);
+		}
+		return success;
+	}
+
+	private bool DrawSceneGeometry(
+		in SceneContext _sceneCtx,
+		in CameraComponent _camera,
+		uint _cameraIdx,
+		CommandList _cmdList,
+		in List<IRenderer> _renderers,
+		in IList<ILightSource> _lights,
+		uint _totalLightCount,
+		uint _totalLightCountShadowMapped,
+		ref bool _outRebuildResSetCamera)
+	{
+		// Identify visible renderers, and sort them by render mode:
+		if (!GetRenderersVisibleToCamera(in _camera, in _renderers, out PassRendererLists? visibleRenderers))
+		{
+			logger.LogError($"Failed to identify renderers that are visible by scene camera! Camera: '{_camera}'");
+			_outRebuildResSetCamera = false;
+			return false;
+		}
+
 		// Identify visible lights, and register them in the camera's 'BufLights' buffer:
-		bool success = ProcessLightsVisibleToCamera(in cmdList!, _camera, in _lights, out uint visibleLightCount, out uint visibleLightCountShadowMapped, out bool recreatedBufLights);
+		bool success = ProcessLightsVisibleToCamera(in _cmdList!, _camera, in _lights, out uint visibleLightCount, out uint visibleLightCountShadowMapped, out bool recreatedBufLights);
 		_outRebuildResSetCamera |= recreatedBufLights;
 		if (!success)
 		{
 			logger.LogError($"Failed to identify light sources that are visible by scene camera! Camera: '{_camera}'");
-			AbortUsingCommandList(cmdList!);
+			AbortUsingCommandList(_cmdList!);
 			return false;
 		}
 
@@ -199,7 +260,7 @@ internal sealed class DefaultStackSceneRender(GraphicsCore _graphicsCore) : IDis
 			{
 				success &= DrawRenderPass(
 					in _sceneCtx,
-					in cmdList!,
+					in _cmdList!,
 					in visibleRenderers.opaqueList,
 					in _camera,
 					_cameraIdx,
@@ -214,7 +275,7 @@ internal sealed class DefaultStackSceneRender(GraphicsCore _graphicsCore) : IDis
 			{
 				success &= DrawRenderPass(
 					in _sceneCtx,
-					in cmdList!,
+					in _cmdList!,
 					in visibleRenderers.transparentList,
 					in _camera,
 					_cameraIdx,
@@ -229,7 +290,7 @@ internal sealed class DefaultStackSceneRender(GraphicsCore _graphicsCore) : IDis
 			{
 				success &= DrawRenderPass(
 					in _sceneCtx,
-					in cmdList!,
+					in _cmdList!,
 					in visibleRenderers.volumetricList,
 					in _camera,
 					_cameraIdx,
@@ -250,7 +311,7 @@ internal sealed class DefaultStackSceneRender(GraphicsCore _graphicsCore) : IDis
 			// No geometry, just clear render targets:
 			success &= DrawRenderPass(
 				in _sceneCtx,
-				in cmdList!,
+				in _cmdList!,
 				in emptyRendererList.opaqueList,
 				in _camera,
 				_cameraIdx,
@@ -261,17 +322,6 @@ internal sealed class DefaultStackSceneRender(GraphicsCore _graphicsCore) : IDis
 				_outRebuildResSetCamera);
 		}
 
-		if (success)
-		{
-			success &= _camera.EndFrame();
-		}
-
-		if (success)
-		{
-			success &= graphicsCore.CommitCommandList(cmdList!);
-		}
-
-		cmdList!.End();
 		return success;
 	}
 

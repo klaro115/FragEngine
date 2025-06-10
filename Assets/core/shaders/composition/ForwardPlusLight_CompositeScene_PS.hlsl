@@ -58,14 +58,6 @@ PixelOutput Main_Pixel(in VertexOutput_Basic inputBasic)
     // Determine source pixel location from fullscreen quad's UV:
     const int3 posPixel = int3(inputBasic.uv.x * resolutionX, (1.0 - inputBasic.uv.y) * resolutionY, 0);
 
-    //TEST
-    PixelOutput o;
-    o.color = TexOpaqueColor.Load(posPixel);
-    o.depth = TexOpaqueDepth.Load(posPixel).r;
-    return o;
-    //TEST
-
-    /*
     // Load pixel color and depth for all textures:
     const half4 colOpaque = TexOpaqueColor.Load(posPixel);
     const float depthOpaque = TexOpaqueDepth.Load(posPixel).r;
@@ -84,5 +76,4 @@ PixelOutput Main_Pixel(in VertexOutput_Basic inputBasic)
     o.color = colOpaque;
     o.depth = depthOpaque;
     return o;
-    */
 }

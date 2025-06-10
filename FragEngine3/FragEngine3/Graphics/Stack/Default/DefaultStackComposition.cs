@@ -290,23 +290,12 @@ internal sealed class DefaultStackComposition(GraphicsCore _graphicsCore) : IDis
 
 	public bool CompositeSceneOutput(
 		in SceneContext _sceneCtx,
-		in IList<CameraComponent> _cameras)
-	{
-		bool success = true;
-
-		for (int cameraIdx = 0; cameraIdx < _cameras.Count; ++cameraIdx)
-		{
-			CameraComponent camera = _cameras[cameraIdx];
-
-			success &= CompositeSceneOutput(in _sceneCtx, in camera);
-		}
-
-		return success;
-	}
-
-	private bool CompositeSceneOutput(
-		in SceneContext _sceneCtx,
-		in CameraComponent _camera)
+		in CameraComponent _camera,
+		uint _cameraIdx,
+		CommandList _cmdList,
+		uint _totalLightCount,
+		uint _totalLightCountShadowMapped,
+		ref bool _outRebuildResSetCamera)
 	{
 		if (!IsInitialized)
 		{
@@ -321,25 +310,9 @@ internal sealed class DefaultStackComposition(GraphicsCore _graphicsCore) : IDis
 			return false;
 		}
 
-		if (cmdListScene is null && !graphicsCore.CreateCommandList(out cmdListScene))
-		{
-			logger.LogError("Cannot composite scene output of default graphics stack without command list!");
-			return false;
-		}
-		cmdListScene!.Begin();
-
 		bool success = true;
 
-		if (!GetOrCreateFullscreenCamera(in _sceneCtx, ref fullscreenCamera))
-		{
-			logger.LogError("Failed to initialize camera for composition of default graphics stack; !");
-			return false;
-		}
-
-		success &= fullscreenCamera!.SetOverrideFramebuffer(null, false);
-		success &= fullscreenCamera!.GetOrCreateFramebuffer(out Framebuffer framebuffer);
-
-		success &= BeginCameraPass(in _sceneCtx, cmdListScene, framebuffer, _camera.FrameCounter, _camera.PassCounter + 1, out CameraPassContext? cameraPassCtx);
+		success &= _camera.BeginPass(in _sceneCtx, _cmdList, RenderMode.Composition, false, _cameraIdx, _totalLightCount, _totalLightCountShadowMapped, out CameraPassContext cameraPassCtx, _outRebuildResSetCamera);
 
 		Material material = rendererScene!.MaterialHandle.GetResource<Material>(true, true)!;
 		success &= material.SetResource("TexOpaqueColor", targetOpaque.texColorTarget);
@@ -352,16 +325,12 @@ internal sealed class DefaultStackComposition(GraphicsCore _graphicsCore) : IDis
 			success &= rendererScene!.Draw(_sceneCtx, cameraPassCtx!);
 		}
 
-		success &= fullscreenCamera.EndDrawing();
+		success &= _camera.EndPass();
 
-		cmdListScene!.End();
-		if (success)
-		{
-			success = graphicsCore.CommitCommandList(cmdListScene);		
-		}
 		return success;
 	}
 
+	/*
 	public bool CompositeFinalOutput(
 		in SceneContext _sceneCtx,
 		in IList<CameraComponent> _cameras)
@@ -377,6 +346,7 @@ internal sealed class DefaultStackComposition(GraphicsCore _graphicsCore) : IDis
 
 		return success;
 	}
+	*/
 
 	public bool CompositeFinalOutput(
 		in SceneContext _sceneCtx,
@@ -389,6 +359,12 @@ internal sealed class DefaultStackComposition(GraphicsCore _graphicsCore) : IDis
 		}
 
 		Framebuffer outputFramebuffer = graphicsCore.Device.SwapchainFramebuffer;
+
+		if (!GetOrCreateFullscreenCamera(in _sceneCtx, ref fullscreenCamera))
+		{
+			logger.LogError("Failed to create camera instance for final output composition!");
+			return false;
+		}
 
 		if (!fullscreenCamera!.SetOverrideFramebuffer(outputFramebuffer, true))
 		{
