@@ -156,11 +156,11 @@ public sealed class DefaultGraphicsStack : IGraphicsStack
 		// Output composition:
 		if (success)
 		{
-			//CameraComponent? mainCamera = CameraComponent.MainCamera ?? _cameras.FirstOrDefault();
-			//if (mainCamera is not null)
-			//{
-			//	success &= compositionStack.CompositeFinalOutput(in sceneCtx!, in mainCamera);
-			//}
+			CameraComponent? mainCamera = CameraComponent.MainCamera ?? _cameras.FirstOrDefault();
+			if (mainCamera is not null)
+			{
+				success &= compositionStack.CompositeFinalOutput(in sceneCtx!, in mainCamera);
+			}
 		}
 
 		if (!EndDrawing())

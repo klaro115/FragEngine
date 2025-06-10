@@ -118,7 +118,7 @@ internal sealed class DefaultStackSceneRender(GraphicsCore _graphicsCore)
 					in _camera,
 					_cameraIdx,
 					RenderMode.Transparent,
-					false,
+					true,
 					visibleLightCount,
 					visibleLightCountShadowMapped,
 					_outRebuildResSetCamera);
@@ -133,7 +133,7 @@ internal sealed class DefaultStackSceneRender(GraphicsCore _graphicsCore)
 					in _camera,
 					_cameraIdx,
 					RenderMode.Volumetric,
-					false,
+					true,
 					visibleLightCount,
 					visibleLightCountShadowMapped,
 					_outRebuildResSetCamera);

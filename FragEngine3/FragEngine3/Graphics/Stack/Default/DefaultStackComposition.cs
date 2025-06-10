@@ -7,7 +7,6 @@ using FragEngine3.Graphics.Resources;
 using FragEngine3.Graphics.Resources.Materials;
 using FragEngine3.Resources;
 using FragEngine3.Scenes;
-using System.Numerics;
 using Veldrid;
 
 namespace FragEngine3.Graphics.Stack.Default;
@@ -33,12 +32,10 @@ internal sealed class DefaultStackComposition(GraphicsCore _graphicsCore) : IDis
 	private StaticMeshRendererComponent? rendererScene = null;
 	private StaticMeshRendererComponent? rendererUI = null;
 
-	private CameraInstance? fullscreenCamera = null;
-	private CameraPassResources? fullscreenCameraResources = null;		//TODO [later]: replace camera-based render passes by compute shader.
+	private CameraComponent? finalOutputCamera = null;
 
 	private ResourceHandle meshFullscreenQuad = ResourceHandle.None;
 
-	private CommandList? cmdListScene = null;
 	private CommandList? cmdListUI = null;
 
 	#endregion
@@ -52,6 +49,7 @@ internal sealed class DefaultStackComposition(GraphicsCore _graphicsCore) : IDis
 
 	private const string nodeNameCompositionScene = "GraphicsStack_CompositeScene";
 	private const string nodeNameCompositionUI = "GraphicsStack_CompositeUI";
+	private const string nodeNameFinalOutputCamera = "GraphicsStack_FinalOutputCamera";
 
 	private const string materialNameCompositeScene = "Mtl_ForwardPlusLight_CompositeScene";
 	private const string materialNameCompositeUI = "Mtl_ForwardPlusLight_CompositeUI";
@@ -77,7 +75,6 @@ internal sealed class DefaultStackComposition(GraphicsCore _graphicsCore) : IDis
 			Shutdown();
 		}
 
-		cmdListScene?.Dispose();
 		cmdListUI?.Dispose();
 	}
 
@@ -116,6 +113,12 @@ internal sealed class DefaultStackComposition(GraphicsCore _graphicsCore) : IDis
 			return false;
 		}
 
+		if (!GetOrCreateFinalOutputCamera(_scene))
+		{
+			logger.LogError("Failed to initialize camera for final output composition of default graphics stack; !");
+			return false;
+		}
+
 		//TODO [later]: Register listeners for lifecycle events of renderer components
 
 		isInitialized = true;
@@ -136,15 +139,10 @@ internal sealed class DefaultStackComposition(GraphicsCore _graphicsCore) : IDis
 			rendererUI.node.DestroyNode();
 			rendererUI = null;
 		}
-		if (fullscreenCameraResources is not null)
+		if (finalOutputCamera is not null)
 		{
-			fullscreenCameraResources.Dispose();
-			fullscreenCameraResources = null;
-		}
-		if (fullscreenCamera is not null)
-		{
-			fullscreenCamera.Dispose();
-			fullscreenCamera = null;
+			finalOutputCamera?.node.DestroyNode();
+			finalOutputCamera = null;
 		}
 		//...
 	}
@@ -168,18 +166,20 @@ internal sealed class DefaultStackComposition(GraphicsCore _graphicsCore) : IDis
 			return true;
 		}
 
+		// Get or create renderer node and component:
 		if (!_scene.FindNode(_nodeName, out SceneNode? node) || node is null)
 		{
 			node = _scene.rootNode.CreateChild(_nodeName);
 		}
 		node.WorldTransformation = Pose.Identity;
 
-		if (!node!.GetOrCreateComponent(out _renderer) || _renderer is null)
+		if (!node.GetOrCreateComponent(out _renderer) || _renderer is null)
 		{
 			return false;
 		}
 		_renderer.LayerFlags = compositionLayer;
 
+		// Load composition material:
 		if (resourceManager.IsDisposed || !resourceManager.GetAndLoadResource(_materialName, true, out ResourceHandle materialHandle))
 		{
 			return false;
@@ -189,27 +189,44 @@ internal sealed class DefaultStackComposition(GraphicsCore _graphicsCore) : IDis
 			return false;
 		}
 
+		// Configure renderer component:
 		bool success =
 			_renderer.SetMesh(meshFullscreenQuad) &&
 			_renderer.SetMaterial(materialHandle);
 		return success;
 	}
-
-	private bool GetOrCreateFullscreenCamera(in SceneContext _sceneCtx, ref CameraInstance? _camera)	//TODO [later]: Create a re-usable method for all of this in 'CameraUtility' or elsewhere.
+	
+	private bool GetOrCreateFinalOutputCamera(Scene _scene)
 	{
-		if (_camera is not null && !_camera.IsDisposed)
+		if (finalOutputCamera is not null && !finalOutputCamera.IsDisposed)
 		{
+			finalOutputCamera.layerMask = compositionLayer;
+			finalOutputCamera.node.IsEnabled = false;
+			finalOutputCamera.SetOverrideCameraTarget(null);
+			finalOutputCamera.MarkDirty();
 			return true;
 		}
 
-		// Create camera instance:
-		CameraSettings settings = new()
+		// Get or create camera node and component:
+		if (!_scene.FindNode(nodeNameFinalOutputCamera, out SceneNode? node) || node is null)
+		{
+			node = _scene.rootNode.CreateChild(nodeNameFinalOutputCamera);
+		}
+		node.WorldTransformation = Pose.Identity;
+
+		if (!node.GetOrCreateComponent(out finalOutputCamera) || finalOutputCamera is null)
+		{
+			return false;
+		}
+
+		// Configure camera component:
+		finalOutputCamera.Settings = new CameraSettings()
 		{
 			projection = new()
 			{
 				projectionType = CameraProjectionType.Orthographic,
 				nearClipPlane = 0.1f,
-				farClipPlane = 1.0f,				 
+				farClipPlane = 10.0f,
 			},
 			output = new()
 			{
@@ -230,61 +247,10 @@ internal sealed class DefaultStackComposition(GraphicsCore _graphicsCore) : IDis
 				clearStencilValue = 0,
 			},
 		};
-
-		try
-		{
-			_camera = new(graphicsCore, false)
-			{
-				Settings = settings,
-				MtxWorld = Matrix4x4.Identity,
-			};
-		}
-		catch (Exception ex)
-		{
-			logger.LogException("Failed to create camera instance for composition module!", ex);
-			return false;
-		}
-
-		if (!_camera.GetOrCreateFramebuffer(out _, false))
-		{
-			return false;
-		}
-
-		// Create camera pass resources:
-		fullscreenCameraResources?.Dispose();
-		fullscreenCameraResources = new();
-
-		// Update CBCamera:
-		if (!CameraUtility.UpdateConstantBuffer_CBCamera(
-			in _camera,
-			Pose.Identity,
-			Matrix4x4.Identity,
-			Matrix4x4.Identity,
-			0,
-			0,
-			0,
-			ref fullscreenCameraResources.cbCameraData,
-			ref fullscreenCameraResources.cbCamera!,
-			out bool _))
-		{
-			logger.LogError("Failed to allocate or update camera constant buffer!");
-			return false;
-		}
-
-		// Update ResSetCamera:
-		if (!CameraUtility.UpdateOrCreateCameraResourceSet(
-			in graphicsCore,
-			in _sceneCtx,
-			in fullscreenCameraResources.cbCamera,
-			_sceneCtx.DummyLightDataBuffer,
-			ref fullscreenCameraResources.resSetCamera,
-			out bool _,
-			true))
-		{
-			logger.LogError("Failed to allocate or update camera's default resource set!");
-			return false;
-		}
-
+		finalOutputCamera.layerMask = compositionLayer;
+		finalOutputCamera.node.IsEnabled = false;
+		finalOutputCamera.SetOverrideCameraTarget(null);
+		finalOutputCamera.MarkDirty();
 		return true;
 	}
 
@@ -313,10 +279,7 @@ internal sealed class DefaultStackComposition(GraphicsCore _graphicsCore) : IDis
 		bool success = true;
 
 		//TEST
-		_camera.SetOverrideCameraTarget(graphicsCore.Device.SwapchainFramebuffer);
-		//_cmdList.SetFramebuffer(graphicsCore.Device.SwapchainFramebuffer);
-		//_cmdList.ClearColorTarget(0, RgbaFloat.CornflowerBlue);
-		//_cmdList.ClearDepthStencil(1.0f);
+		//_camera.SetOverrideCameraTarget(graphicsCore.Device.SwapchainFramebuffer);
 
 		success &= _camera.BeginPass(in _sceneCtx, _cmdList, RenderMode.Composition, true, _cameraIdx, _totalLightCount, _totalLightCountShadowMapped, out CameraPassContext cameraPassCtx, _outRebuildResSetCamera);
 
@@ -338,7 +301,7 @@ internal sealed class DefaultStackComposition(GraphicsCore _graphicsCore) : IDis
 
 	public bool CompositeFinalOutput(
 		in SceneContext _sceneCtx,
-		in CameraComponent _camera)
+		in CameraComponent _mainCamera)
 	{
 		if (!IsInitialized)
 		{
@@ -346,24 +309,28 @@ internal sealed class DefaultStackComposition(GraphicsCore _graphicsCore) : IDis
 			return false;
 		}
 
+		// (Re)activate and prepare camera:
+		finalOutputCamera!.node.SetEnabled(true);
+
 		Framebuffer outputFramebuffer = graphicsCore.Device.SwapchainFramebuffer;
-
-		if (!GetOrCreateFullscreenCamera(in _sceneCtx, ref fullscreenCamera))
-		{
-			logger.LogError("Failed to create camera instance for final output composition!");
-			return false;
-		}
-
-		if (!fullscreenCamera!.SetOverrideFramebuffer(outputFramebuffer, true))
+		if (!finalOutputCamera.SetOverrideCameraTarget(outputFramebuffer, false))
 		{
 			logger.LogError("Failed to set output frame buffer as camera's override render target!");
 			return false;
 		}
 
-		if (!fullscreenCamera!.GetOrCreateFramebuffer(out Framebuffer framebufferSceneComposition) ||
-			!_camera.GetOrCreateCameraTarget(RenderMode.UI, out CameraTarget targetUI))
+		// Get main camera's fully composited scene render:
+		if (!_mainCamera.GetOrCreateCameraTarget(RenderMode.Composition, out CameraTarget targetComposition) ||			//TODO [later]: Change this to use post-processing output instead, if available and once implemented.
+			!_mainCamera.GetOrCreateCameraTarget(RenderMode.UI, out CameraTarget targetUI))
 		{
 			logger.LogError("Cannot composite final output of default graphics stack; render targets missing for scene composition or UI pass!");
+			return false;
+		}
+
+		// Begin drawing output frame:
+		if (!finalOutputCamera.BeginFrame(0, out bool rebuildResSetCamera))
+		{
+			logger.LogError("Failed to begin compositing final output frame!");
 			return false;
 		}
 
@@ -374,13 +341,21 @@ internal sealed class DefaultStackComposition(GraphicsCore _graphicsCore) : IDis
 		}
 		cmdListUI!.Begin();
 
+		//cmdListUI.SetFramebuffer(outputFramebuffer);
+		//cmdListUI.ClearColorTarget(0, RgbaFloat.Red);
+		//cmdListUI.ClearDepthStencil(1.0f, 0);
+
+		//cmdListUI.SetFramebuffer(targetUI.framebuffer);
+		//cmdListUI.ClearColorTarget(0, new RgbaFloat(0, 0, 0, 0));
+		//cmdListUI.ClearDepthStencil(1.0f);
+
 		bool success = true;
 
-		success &= BeginCameraPass(in _sceneCtx, cmdListUI, outputFramebuffer, _camera.FrameCounter, _camera.PassCounter + 2, out CameraPassContext? cameraPassCtx);
+		success &= finalOutputCamera.BeginPass(in _sceneCtx, cmdListUI, RenderMode.Composition, true, 100, 0, 0, out CameraPassContext cameraPassCtx, rebuildResSetCamera);
 
 		Material material = rendererUI!.MaterialHandle.GetResource<Material>(true, true)!;
-		success &= material.SetResource("TexSceneColor", framebufferSceneComposition.ColorTargets[0].Target);   //TODO [later]: Query slot indices by name during initialization, then use those at run-time.
-		success &= material.SetResource("TexSceneDepth", framebufferSceneComposition.DepthTarget!.Value.Target);
+		success &= material.SetResource("TexSceneColor", targetComposition.texColorTarget);   //TODO [later]: Query slot indices by name during initialization, then use those at run-time.
+		success &= material.SetResource("TexSceneDepth", targetComposition.texDepthTarget);
 		success &= material.SetResource("TexUIColor", targetUI.texColorTarget);
 
 		if (success)
@@ -388,43 +363,18 @@ internal sealed class DefaultStackComposition(GraphicsCore _graphicsCore) : IDis
 			success &= rendererUI!.Draw(_sceneCtx, cameraPassCtx!);
 		}
 
-		success &= fullscreenCamera.EndDrawing();
+		success &= finalOutputCamera.EndPass();
 
+		// End output frame:
 		cmdListUI!.End();
 		if (success)
 		{
 			success = graphicsCore.CommitCommandList(cmdListUI);
 		}
 
+		// Deactivate output camera again, so it won't be detected by other stack modules:
+		finalOutputCamera.node.SetEnabled(false);
 		return success;
-	}
-
-	private bool BeginCameraPass(in SceneContext _sceneCtx, CommandList _cmdList, Framebuffer _framebuffer, uint _frameIdx, uint _passIdx, out CameraPassContext? _outCameraPassCtx)
-	{
-		if (!fullscreenCamera!.BeginDrawing(_cmdList, true, true, out _))
-		{
-			logger.LogError("Failed to begin drawing composition pass!");
-			_outCameraPassCtx = null;
-			return false;
-		}
-
-		_outCameraPassCtx = new()
-		{
-			CameraInstance = fullscreenCamera,
-			CmdList = _cmdList,
-			Framebuffer = _framebuffer,
-			ResSetCamera = fullscreenCameraResources!.resSetCamera!,
-			CbCamera = fullscreenCameraResources.cbCamera!,
-			LightDataBuffer = _sceneCtx.DummyLightDataBuffer,
-			CameraResourceVersion = 0,
-			FrameIdx = _frameIdx,
-			PassIdx = _passIdx,
-			LightCountShadowMapped = 0,
-			MtxWorld2Clip = Matrix4x4.Identity,
-			OutputDesc = _framebuffer.OutputDescription,
-			MirrorY = fullscreenCamera.ProjectionSettings.mirrorY,
-		};
-		return true;
 	}
 
 	#endregion
