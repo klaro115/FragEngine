@@ -40,6 +40,16 @@ internal sealed class DefaultStackSceneRender(GraphicsCore _graphicsCore)
 		}
 	}
 
+	private sealed class PassResources
+	{
+		public required SceneContext SceneCtx { get; init; }
+		public required CameraComponent Camera { get; init; }
+		public required uint CameraIdx { get; init; }
+		public required CommandList CmdList { get; init; }
+		public required uint LightCount { get; init; }
+		public required uint LightCountShadowMapped { get; init; }
+	}
+
 	#endregion
 	#region Fields
 
@@ -89,6 +99,16 @@ internal sealed class DefaultStackSceneRender(GraphicsCore _graphicsCore)
 			return false;
 		}
 
+		PassResources passResources = new()
+		{
+			SceneCtx = _sceneCtx,
+			Camera = _camera,
+			CameraIdx = _cameraIdx,
+			CmdList = _cmdList,
+			LightCount = visibleLightCount,
+			LightCountShadowMapped = visibleLightCountShadowMapped,
+		};
+
 		if (visibleRenderers is not null)
 		{
 			success &= _camera.SetOverrideCameraTarget(null);
@@ -97,45 +117,27 @@ internal sealed class DefaultStackSceneRender(GraphicsCore _graphicsCore)
 			if (success)
 			{
 				success &= DrawRenderPass(
-					in _sceneCtx,
-					in _cmdList!,
+					passResources,
 					in visibleRenderers.opaqueList,
-					in _camera,
-					_cameraIdx,
 					RenderMode.Opaque,
-					true,
-					visibleLightCount,
-					visibleLightCountShadowMapped,
 					_outRebuildResSetCamera);
 			}
 			// 2. Transparent geometry:
 			if (success && visibleRenderers.transparentList.Count != 0)
 			{
 				success &= DrawRenderPass(
-					in _sceneCtx,
-					in _cmdList!,
+					passResources,
 					in visibleRenderers.transparentList,
-					in _camera,
-					_cameraIdx,
 					RenderMode.Transparent,
-					true,
-					visibleLightCount,
-					visibleLightCountShadowMapped,
 					_outRebuildResSetCamera);
 			}
 			// 3. Opaque geometry:
 			if (success && visibleRenderers.volumetricList.Count != 0)
 			{
 				success &= DrawRenderPass(
-					in _sceneCtx,
-					in _cmdList!,
+					passResources,
 					in visibleRenderers.volumetricList,
-					in _camera,
-					_cameraIdx,
 					RenderMode.Volumetric,
-					true,
-					visibleLightCount,
-					visibleLightCountShadowMapped,
 					_outRebuildResSetCamera);
 			}
 			//...
@@ -148,15 +150,9 @@ internal sealed class DefaultStackSceneRender(GraphicsCore _graphicsCore)
 		{
 			// No geometry, just clear render targets:
 			success &= DrawRenderPass(
-				in _sceneCtx,
-				in _cmdList!,
+				passResources,
 				in emptyRendererList.opaqueList,
-				in _camera,
-				_cameraIdx,
 				RenderMode.Opaque,
-				true,
-				_totalLightCount,
-				_totalLightCountShadowMapped,
 				_outRebuildResSetCamera);
 		}
 
@@ -164,26 +160,20 @@ internal sealed class DefaultStackSceneRender(GraphicsCore _graphicsCore)
 	}
 
 	private static bool DrawRenderPass(
-		in SceneContext _sceneCtx,
-		in CommandList _cmdList,
+		in PassResources _passResources,
 		in List<IRenderer> _renderers,
-		in CameraComponent _camera,
-		uint _cameraIdx,
 		RenderMode _renderMode,
-		bool _isFirstPass,
-		uint _lightCount,
-		uint _lightCountShadowMapped,
 		bool _rebuildResSetCamera)
 	{
 		// Begin drawing, clear render targets if needed:
-		if (!_camera.BeginPass(
-			in _sceneCtx,
-			_cmdList!,
+		if (!_passResources.Camera.BeginPass(
+			_passResources.SceneCtx,
+			_passResources.CmdList!,
 			_renderMode,
-			_isFirstPass,
-			_cameraIdx,
-			_lightCount,
-			_lightCountShadowMapped,
+			true,
+			_passResources.CameraIdx,
+			_passResources.LightCount,
+			_passResources.LightCountShadowMapped,
 			out CameraPassContext cameraPassCtx,
 			_rebuildResSetCamera))
 		{
@@ -195,11 +185,11 @@ internal sealed class DefaultStackSceneRender(GraphicsCore _graphicsCore)
 		// Render objects in the scene:
 		foreach (IRenderer renderer in _renderers)
 		{
-			succes &= renderer.Draw(_sceneCtx, cameraPassCtx);
+			succes &= renderer.Draw(_passResources.SceneCtx, cameraPassCtx);
 		}
 
 		// End frame:
-		succes &= _camera.EndPass();
+		succes &= _passResources.Camera.EndPass();
 		return succes;
 	}
 
